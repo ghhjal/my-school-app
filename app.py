@@ -62,7 +62,7 @@ if options == "إضافة طالب جديد":
     st.header("إضافة طالب جديد")
     with st.form("add_student_form"):
         name = st.text_input("الاسم الكامل")
-        student_id = st.text_input("الرقم الجامعي")
+        student_id = st.text_input("رقم الطالب")
         submitted = st.form_submit_button("حفظ الطالب")
         if submitted:
             add_entity(Student(name=name, student_id=student_id))
