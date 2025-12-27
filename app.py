@@ -10,21 +10,15 @@ st.set_page_config(page_title="نظام متابعة الطالب المتكام
 def init_db():
     conn = sqlite3.connect('school_integrated_v5.db')
     c = conn.cursor()
-    # 1. جدول السجلات اليومية (السلوك) - كما في الصورة
+    # 1. جدول السجلات اليومية (السلوك)
     c.execute('''CREATE TABLE IF NOT EXISTS daily_logs 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id TEXT, log_date TEXT, pos_behavior TEXT, neg_behavior TEXT, neg_count INTEGER, reward TEXT, notes TEXT)''')
     
     # 2. جدول الدرجات الأكاديمية الجديد
     c.execute('''CREATE TABLE IF NOT EXISTS academic_grades
-                 (student_id TEXT PRIMARY KEY,
-                  name TEXT,
-                  period1 INTEGER,
-                  period2 INTEGER,
-                  participation INTEGER,
-                  projects INTEGER,
-                  final_total INTEGER)''')
+                 (student_id TEXT PRIMARY KEY, name TEXT, period1 INTEGER, period2 INTEGER, participation INTEGER, projects INTEGER, final_total INTEGER)''')
 
-    # 3. جدول أسماء الطلاب الأساسية
+    # 3. جدول أسماء الطلاب الأساسية (Master List)
     c.execute('''CREATE TABLE IF NOT EXISTS students_master (student_id TEXT PRIMARY KEY, name TEXT)''')
     conn.commit()
     conn.close()
@@ -67,13 +61,25 @@ if menu == "لوحة المعلم 🔐":
                     s_id = df_master[df_master['name'] == selected_student_name]['student_id'].iloc[0]
                     log_date = st.date_input("اليوم / التاريخ", datetime.date.today())
                     
-                    # باقي حقول السجل اليومي... (pos_behavior, neg_behavior, neg_count, reward, notes)
-                    # ... (المنطق هو نفسه من الكود السابق، يعمل على جدول daily_logs)
+                    col_b1, col_b2 = st.columns(2)
+                    with col_b1:
+                        pos_behavior = st.text_input("السلوك الإيجابي (مثال: مشاركة)")
+                        reward = st.text_area("المكافأة / التعزيز (مثال: نجمتان)")
+                    with col_b2:
+                        neg_behavior = st.text_input("السلوك السلبي (مثال: صراخ)")
+                        neg_count = st.number_input("عدد المخالفات", 0, 100, 0)
+                    
+                    notes = st.text_area("ملاحظات (مثال: كان متعباً)")
                     
                     submit = st.form_submit_button("حفظ السجل اليومي")
+                    
                     if submit:
-                         # (كود الحفظ في daily_logs يوضع هنا)
-                         st.success(f"تم تسجيل متابعة يوم {log_date} للطالب {selected_student_name}")
+                        conn = sqlite3.connect('school_integrated_v5.db')
+                        c = conn.cursor()
+                        c.execute("INSERT INTO daily_logs (student_id, log_date, pos_behavior, neg_behavior, neg_count, reward, notes) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                                  (s_id, str(log_date), pos_behavior, neg_behavior, neg_count, reward, notes))
+                        conn.commit()
+                        st.success(f"تم تسجيل متابعة يوم {log_date} للطالب {selected_student_name}")
 
         # --- تبويب الدرجات الأكاديمية الجديدة ---
         with tab_grades:
@@ -82,7 +88,6 @@ if menu == "لوحة المعلم 🔐":
             df_master = get_master_students_df()
 
             if not df_master.empty:
-                # عرض قائمة بأسماء الطلاب مع إمكانية التعديل
                 st.dataframe(df_grades, use_container_width=True)
 
                 st.markdown("---")
@@ -91,7 +96,6 @@ if menu == "لوحة المعلم 🔐":
                 selected_student_id_for_grade = st.selectbox("اختر الرقم الأكاديمي للطالب لتعديل درجاته", df_master['student_id'].tolist())
                 student_name_for_grade = df_master[df_master['student_id'] == selected_student_id_for_grade]['name'].iloc[0]
 
-                # جلب البيانات الحالية للطالب إذا كانت موجودة
                 current_grades = df_grades[df_grades['student_id'] == selected_student_id_for_grade]
                 
                 p1_val = int(current_grades['period1'].sum()) if not current_grades.empty else 0
@@ -114,7 +118,6 @@ if menu == "لوحة المعلم 🔐":
                         total = p1 + p2 + part + proj
                         conn = sqlite3.connect('school_integrated_v5.db')
                         c = conn.cursor()
-                        # نستخدم REPLACE INTO لتحديث الصف إذا كان موجوداً أو إضافته إذا كان جديداً
                         c.execute("REPLACE INTO academic_grades VALUES (?, ?, ?, ?, ?, ?, ?)", 
                                   (selected_student_id_for_grade, student_name_for_grade, p1, p2, part, proj, total))
                         conn.commit()
@@ -125,18 +128,51 @@ if menu == "لوحة المعلم 🔐":
                 st.info("لا يوجد طلاب مسجلين بعد.")
 
 
-        # --- تبويب إدارة الطلاب الأساسية (يبقى كما هو) ---
+        # --- تبويب إدارة الطلاب الأساسية (تم إصلاح الكود هنا) ---
         with tab_master:
-            st.subheader("إدارة قائمة الطلاب الأساسية")
-            # ... (كود إضافة وحذف الطلاب الأساسيين هنا) ...
+            st.subheader("إدارة قائمة الطلاب الأساسية (إضافة وحذف)")
+            with st.form("add_master_student"):
+                new_s_id = st.text_input("الرقم الأكاديمي الجديد (مطلوب)")
+                new_s_name = st.text_input("اسم الطالب الجديد (مطلوب)")
+                if st.form_submit_button("إضافة طالب أساسي جديد"):
+                    if new_s_id and new_s_name:
+                        try:
+                            conn = sqlite3.connect('school_integrated_v5.db')
+                            c = conn.cursor()
+                            c.execute("INSERT INTO students_master VALUES (?, ?)", (new_s_id, new_s_name))
+                            conn.commit()
+                            st.success(f"تم إضافة **{new_s_name}** للقائمة الأساسية بنجاح.")
+                            st.rerun()
+                        except sqlite3.IntegrityError:
+                            st.error("الرقم الأكاديمي موجود مسبقاً. لا يمكن إضافة طالبين بنفس الرقم.")
+                    else:
+                        st.warning("الرجاء ملء حقول الاسم والرقم الأكاديمي.")
+            
+            st.markdown("---")
+            st.subheader("قائمة الطلاب الحاليين")
+            df_master_current = get_master_students_df()
+            st.dataframe(df_master_current, use_container_width=True)
 
-
+            if not df_master_current.empty:
+                student_id_to_delete = st.selectbox("اختر الرقم الأكاديمي لحذف الطالب", df_master_current['student_id'].tolist())
+                if st.button("حذف الطالب المحدد نهائياً", type="primary"):
+                    conn = sqlite3.connect('school_integrated_v5.db')
+                    c = conn.cursor()
+                    # يجب حذف الطالب من كل الجداول المرتبطة به
+                    c.execute("DELETE FROM students_master WHERE student_id=?", (student_id_to_delete,))
+                    c.execute("DELETE FROM daily_logs WHERE student_id=?", (student_id_to_delete,))
+                    c.execute("DELETE FROM academic_grades WHERE student_id=?", (student_id_to_delete,))
+                    conn.commit()
+                    st.warning(f"تم حذف الطالب ذو الرقم {student_id_to_delete} وكافة سجلاته نهائياً.")
+                    st.rerun()
+            
     else:
         st.warning("يرجى إدخال كلمة المرور الصحيحة.")
 
 # ------------------- لوحة الطالب (ولي الأمر) -------------------
 elif menu == "لوحة الطالب":
     st.header("🔍 استعلام الطالب وولي الأمر")
+    # ... (كود لوحة الطالب يبقى كما هو، يعمل بشكل صحيح) ...
     search_id = st.text_input("أدخل الرقم الأكاديمي للطالب:")
     
     if st.button("عرض ملف المتابعة والدرجات"):
@@ -148,7 +184,6 @@ elif menu == "لوحة الطالب":
                 student_name = df_name.iloc[0]['name']
                 st.subheader(f"ملف المتابعة للطالب/ة: {student_name}")
 
-                # عرض السجل السلوكي اليومي (جدول)
                 st.markdown("#### 🗓️ السجل السلوكي اليومي")
                 df_logs = pd.read_sql_query("SELECT log_date AS 'التاريخ', pos_behavior AS 'إيجابي', neg_behavior AS 'سلبي', neg_count AS 'مخالفات', reward AS 'المكافأة', notes AS 'ملاحظات' FROM daily_logs WHERE student_id=?", conn, params=(search_id,))
                 if not df_logs.empty:
@@ -156,7 +191,6 @@ elif menu == "لوحة الطالب":
                 else:
                     st.info("لا يوجد سجل سلوكي يومي لهذا الطالب حتى الآن.")
 
-                # عرض الدرجات الأكاديمية (جدول مختصر)
                 st.markdown("#### 📝 الدرجات الأكاديمية")
                 df_grades = pd.read_sql_query("SELECT period1 AS 'الفترة الأولى', period2 AS 'الفترة الثانية', participation AS 'المشاركة', projects AS 'المشاريع', final_total AS 'المجموع الكلي' FROM academic_grades WHERE student_id=?", conn, params=(search_id,))
                 if not df_grades.empty:
