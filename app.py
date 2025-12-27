@@ -2,52 +2,49 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-
-# إعداد قاعدة البيانات (SQLite)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///school.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# تعريف نموذج الطالب (Model)
+# 1. نموذج الطالب
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     student_id = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    # ربط الطالب بدرجاته (علاقة واحد لمتعدد)
+    grades = db.relationship('Grade', backref='student', lazy=True)
 
-    def __repr__(self):
-        return f'<Student {self.name}>'
+# 2. نموذج الدرجات الأكاديمية (هذا ما قد ينقصك)
+class Grade(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(100), nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    student_db_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
 
-# الصفحة الرئيسية لعرض الطلاب
 @app.route('/')
 def index():
     students = Student.query.all()
     return render_template('index.html', students=students)
 
-# دالة إضافة طالب جديد (تم تصحيحها)
-@app.route('/add_student', methods=['GET', 'POST'])
-def add_student():
+# 3. دالة حفظ الدرجة الأكاديمية
+@app.route('/add_grade/<int:student_id>', methods=['POST'])
+def add_grade(student_id):
     if request.method == 'POST':
-        # الحصول على البيانات من الفورم
-        name = request.form.get('name')
-        student_id = request.form.get('student_id')
-        email = request.form.get('email')
-
-        # إنشاء الكائن الجديد
-        new_student = Student(name=name, student_id=student_id, email=email)
-
+        subject = request.form.get('subject')
+        score = request.form.get('score')
+        
+        # إنشاء سجل درجة جديد مرتبط بالطلبة عبر الـ ID
+        new_grade = Grade(subject=subject, score=float(score), student_db_id=student_id)
+        
         try:
-            db.session.add(new_student)
-            db.session.commit()  # حفظ البيانات في قاعدة البيانات
+            db.session.add(new_grade)
+            db.session.commit() # الحفظ النهائي في قاعدة البيانات
             return redirect(url_for('index'))
         except Exception as e:
-            db.session.rollback()  # تراجع في حال حدوث خطأ
-            return f"حدث خطأ أثناء الحفظ: {str(e)}"
-            
-    return render_template('add_student.html')
+            db.session.rollback()
+            return f"خطأ في حفظ الدرجة: {str(e)}"
 
-# تشغيل التطبيق والتأكد من إنشاء الجداول
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # ينشئ ملف students.db والجداول تلقائياً
+        db.create_all() # إنشاء الجداول الجديدة (Student و Grade)
     app.run(debug=True)
