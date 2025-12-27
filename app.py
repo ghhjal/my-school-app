@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import date
 
-# --- 1. الإعدادات الملكية ---
+# --- 1. إعدادات الهوية الملكية (الأستاذ زياد المعمري) ---
 st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide", page_icon="🇬🇧")
 
 st.markdown("""
@@ -17,20 +17,20 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. الربط السحابي ---
+# --- 2. الربط السحابي مع Google Sheets ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data(sheet_name):
     try:
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception:
-        # إنشاء جداول مطابقة لترويساتك المرفقة في حال كانت الورقة فارغة
+        # إنشاء جداول مطابقة تماماً لترويساتك المرفقة في صورك
         if sheet_name == "students": return pd.DataFrame(columns=['id', 'name', 'class', 'year', 'sem']) # 
         if sheet_name == "grades": return pd.DataFrame(columns=['student_id', 'p1', 'p2', 'perf']) # [cite: 2]
         if sheet_name == "behavior": return pd.DataFrame(columns=['student_id', 'date', 'type', 'note']) # [cite: 1]
         return pd.DataFrame()
 
-# --- 3. إدارة الجلسة والدخول ---
+# --- 3. نظام الجلسة والدخول ---
 if 'logged_in' not in st.session_state:
     st.session_state.update({'logged_in': False, 'role': None, 'user_id': None})
 
@@ -38,13 +38,13 @@ if not st.session_state.logged_in:
     st.markdown('<div class="royal-header"><h1>🇬🇧 نظام الأستاذ زياد المعمري</h1></div>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔐 دخول المعلم", "🎓 دخول الطالب"])
     with t1:
-        pwd = st.text_input("كلمة المرور", type="password", key="admin_pwd")
+        pwd = st.text_input("كلمة المرور", type="password")
         if st.button("دخول"):
             if pwd == "admin123":
                 st.session_state.update({'logged_in': True, 'role': 'admin'})
                 st.rerun()
     with t2:
-        sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1, key="student_id_input")
+        sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
         if st.button("استعلام"):
             df_s = load_data("students")
             if not df_s.empty and sid_in in df_s['id'].values:
@@ -71,7 +71,7 @@ else:
                 fsem = st.selectbox("الفصل", ["الأول", "الثاني", "الثالث"])
                 if st.form_submit_button("💾 حفظ في سحابة جوجل"):
                     df_existing = load_data("students")
-                    new_row = pd.DataFrame([{"id": fid, "name": fname, "class": fclass, "year": fyear, "sem": fsem}])
+                    new_row = pd.DataFrame([{"id": fid, "name": fname, "class": fclass, "year": fyear, "sem": fsem}]) # 
                     updated_df = pd.concat([df_existing, new_row]).drop_duplicates(subset=['id'], keep='last')
                     conn.update(worksheet="students", data=updated_df)
                     st.success("تم الحفظ بنجاح!")
@@ -89,7 +89,7 @@ else:
                     pf = st.number_input("المشاركة", 0.0, 40.0)
                     if st.form_submit_button("تحديث"):
                         df_g = load_data("grades")
-                        new_g = pd.DataFrame([{"student_id": tid, "p1": p1, "p2": p2, "perf": pf}])
+                        new_g = pd.DataFrame([{"student_id": tid, "p1": p1, "p2": p2, "perf": pf}]) # [cite: 2]
                         updated_g = pd.concat([df_g, new_g]).drop_duplicates(subset=['student_id'], keep='last')
                         conn.update(worksheet="grades", data=updated_g)
                         st.success("تم التحديث")
@@ -105,7 +105,7 @@ else:
                     b_note = st.text_area("الملاحظة")
                     if st.form_submit_button("إضافة"):
                         df_b = load_data("behavior")
-                        new_b = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}])
+                        new_b = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}]) # [cite: 1]
                         updated_b = pd.concat([df_b, new_b])
                         conn.update(worksheet="behavior", data=updated_b)
                         st.success("تمت الإضافة")
@@ -120,6 +120,6 @@ else:
         grade = df_g[df_g['student_id'] == st.session_state.user_id]
         if not grade.empty:
             c1, c2, c3 = st.columns(3)
-            c1.metric("الفترة 1", grade.iloc[0]['p1'])
-            c2.metric("الفترة 2", grade.iloc[0]['p2'])
-            c3.metric("المشاركة", grade.iloc[0]['perf'])
+            c1.metric("الفترة 1", grade.iloc[0]['p1']) # [cite: 2]
+            c2.metric("الفترة 2", grade.iloc[0]['p2']) # [cite: 2]
+            c3.metric("المشاركة", grade.iloc[0]['perf']) # [cite: 2]
