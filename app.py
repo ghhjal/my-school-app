@@ -55,11 +55,13 @@ try:
         st.image("https://img.freepik.com/free-vector/education-background-concept_52683-33318.jpg", use_container_width=True)
 
     # شاشة إدارة الطلاب
+   # شاشة إدارة الطلاب
     elif page == "👥 إدارة الطلاب":
-        st.markdown("<h1>👥 تسجيل وإدارة الطلاب</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>👥 إدارة الطلاب (تعديل وحذف)</h1>", unsafe_allow_html=True)
         
-        tab1, tab2 = st.tabs(["➕ إضافة طالب جديد", "📋 عرض القائمة"])
+        tab1, tab2, tab3 = st.tabs(["➕ إضافة جديد", "📋 عرض وتعديل", "🗑️ حذف بيانات"])
         
+        # 1. إضافة طالب جديد
         with tab1:
             with st.form("add_student", clear_on_submit=True):
                 c1, c2 = st.columns(2)
@@ -74,16 +76,47 @@ try:
                     if sname:
                         sh.worksheet("students").append_row([sid, sname, sclass, syear, "الأول"])
                         st.success(f"تم تسجيل {sname} بنجاح")
-                        st.balloons()
-        
+                        st.rerun()
+
+        # 2. عرض وتعديل البيانات
         with tab2:
-            df = pd.DataFrame(sh.worksheet("students").get_all_records())
-            st.dataframe(df, use_container_width=True)
+            data = sh.worksheet("students").get_all_records()
+            if data:
+                df = pd.DataFrame(data)
+                st.write("اختر الطالب لتعديل بياناته:")
+                # اختيار الطالب للتعديل بناءً على الرقم الأكاديمي أو الاسم
+                student_to_edit = st.selectbox("اختر الطالب المراد تعديله", df['name'].tolist())
+                
+                # جلب بيانات الطالب المختار في حقول قابلة للتعديل
+                student_row = df[df['name'] == student_to_edit].iloc[0]
+                row_idx = df[df['name'] == student_to_edit].index[0] + 2 # +2 لأن جوجل شيت يبدأ من 1 وهناك رأس للجدول
+                
+                with st.expander(f"تعديل بيانات: {student_to_edit}"):
+                    new_n = st.text_input("الاسم الجديد", value=student_row['name'])
+                    new_c = st.text_input("الصف", value=student_row['class'])
+                    
+                    if st.button("تحديث البيانات الآن"):
+                        sh.worksheet("students").update_cell(row_idx, 2, new_n) # تحديث الاسم (العمود 2)
+                        sh.worksheet("students").update_cell(row_idx, 3, new_c) # تحديث الصف (العمود 3)
+                        st.success("تم التحديث بنجاح!")
+                        st.rerun()
+                
+                st.divider()
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("لا توجد بيانات لعرضها.")
 
-    # شاشة رصد الدرجات
-    elif page == "📊 رصد الدرجات":
-        st.markdown("<h1>📊 وحدة رصد الدرجات</h1>", unsafe_allow_html=True)
-        st.warning("هذه الوحدة قيد التجهيز لربطها بورقة الدرجات (grades)")
-
-except Exception as e:
-    st.error(f"خطأ في الوصول للبيانات: {e}")
+        # 3. حذف البيانات
+        with tab3:
+            if data:
+                student_to_delete = st.selectbox("اختر الطالب المراد حذفه نهائياً", df['name'].tolist(), key="del_box")
+                confirm_del = st.checkbox(f"أؤكد رغبتي في حذف الطالب: {student_to_delete}")
+                
+                if st.button("🗑️ تنفيذ الحذف النهائي"):
+                    if confirm_del:
+                        del_idx = df[df['name'] == student_to_delete].index[0] + 2
+                        sh.worksheet("students").delete_rows(del_idx)
+                        st.warning(f"تم حذف {student_to_delete} من النظام.")
+                        st.rerun()
+                    else:
+                        st.error("يرجى التأكيد أولاً عبر علامة الصح.")
