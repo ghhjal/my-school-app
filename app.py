@@ -77,38 +77,89 @@ try:
             else:
                 st.info("لا توجد بيانات مسجلة.")
 
-    # --- شاشة الدرجات والسلوك (المطلوبة الآن) ---
+   # --- 📊 شاشة رصد الدرجات والسلوك المحدثة (النسخة الاحترافية) ---
     elif page == "📊 الدرجات والسلوك":
-        st.markdown("<h1>📊 رصد الدرجات والسلوك</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>📊 سجل الدرجات والسلوك اليومي</h1>", unsafe_allow_html=True)
         
-        # جلب الأسماء من ورقة الطلاب لضمان الربط
+        # جلب البيانات لربط القوائم
         all_students = ws_students.get_all_records()
         if not all_students:
-            st.warning("⚠️ يرجى إضافة طلاب أولاً من شاشة الإدارة.")
+            st.warning("⚠️ لا توجد بيانات طلاب. يرجى الإضافة من شاشة 'إدارة الطلاب'.")
         else:
-            names_list = [r['name'] for r in all_students]
-            t1, t2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
-            
-            with t1:
-                with st.form("f1"):
-                    st.write("### رصد درجة اختبار/مشاركة")
-                    name = st.selectbox("اسم الطالب", names_list)
-                    type_g = st.selectbox("نوع التقييم", ["فتري 1", "فتري 2", "مشاركة", "نهائي"])
-                    val_g = st.number_input("الدرجة", min_value=0, max_value=100)
-                    if st.form_submit_button("حفظ الدرجة"):
-                        sh.worksheet("grades").append_row([name, type_g, val_g, str(datetime.now().date())])
-                        st.success("تم الرصد!")
-            
-            with t2:
-                with st.form("f2"):
-                    st.write("### رصد ملاحظة سلوكية")
-                    name_b = st.selectbox("اسم الطالب", names_list, key="sb")
-                    type_b = st.radio("التقييم", ["🌟 إيجابي", "⚠️ تنبيه"])
-                    note_b = st.text_area("الملاحظة")
-                    if st.form_submit_button("حفظ السلوك"):
-                        sh.worksheet("behavior").append_row([name_b, type_b, note_b, str(datetime.now().date())])
-                        st.success("تم الحفظ!")
+            df_s = pd.DataFrame(all_students)
+            names_list = df_s['name'].tolist()
 
+            t1, t2 = st.tabs(["📝 رصد وتعديل الدرجات", "🎭 سجل السلوك والمواظبة"])
+
+            # --- 1. قسم الدرجات مع جدول العرض ---
+            with t1:
+                with st.form("grades_form"):
+                    c1, c2, c3 = st.columns([2, 1, 1])
+                    with c1: student_g = st.selectbox("اختر الطالب", names_list)
+                    with c2: type_g = st.selectbox("التقييم", ["مشاركة", "واجب", "اختبار قصير", "فتري", "نهائي"])
+                    with c3: score_g = st.number_input("الدرجة", min_value=0.0, max_value=100.0)
+                    
+                    if st.form_submit_button("💾 حفظ الدرجة"):
+                        # تسجيل: الاسم، النوع، الدرجة، التاريخ، اليوم
+                        now = datetime.now()
+                        day_ar = now.strftime('%A') # سيظهر بالإنجليزية، يمكن ترجمته لاحقاً
+                        sh.worksheet("grades").append_row([student_g, type_g, score_g, str(now.date()), day_ar])
+                        st.success(f"تم رصد درجة {student_g}")
+
+                st.markdown("---")
+                st.subheader("📋 جدول الدرجات المرصودة")
+                g_data = sh.worksheet("grades").get_all_records()
+                if g_data:
+                    st.table(pd.DataFrame(g_data).tail(10)) # عرض آخر 10 درجات مرصودة
+                else: st.info("لا توجد درجات مرصودة بعد.")
+
+            # --- 2. قسم السلوك المتعدد مع جدول العرض ---
+            with t2:
+                with st.form("behavior_multi_form"):
+                    st.write("### رصد سلوك جديد")
+                    c1, c2 = st.columns(2)
+                    with c1: 
+                        student_b = st.selectbox("اسم الطالب", names_list, key="sb_multi")
+                        # رصد أكثر من سلوك في وقت واحد
+                        behaviors = st.multiselect("السلوكيات المرصودة", 
+                                                ["🌟 مشاركة متميزة", "📚 إحضار الكتاب", "✅ حل الواجب", 
+                                                 "⚠️ عدم تركيز", "🚫 غياب بدون عذر", "🔇 إزعاج"])
+                    with c2:
+                        b_date = st.date_input("تاريخ الرصد", datetime.now())
+                        b_notes = st.text_area("ملاحظات إضافية")
+                    
+                    if st.form_submit_button("🚀 حفظ السجل السلوكي"):
+                        ws_b = sh.worksheet("behavior")
+                        day_name = b_date.strftime('%A')
+                        for b in behaviors:
+                            ws_b.append_row([student_b, b, b_notes, str(b_date), day_name])
+                        st.success(f"تم تسجيل {len(behaviors)} سلوكيات للطالب {student_b}")
+
+                st.markdown("---")
+                st.subheader("📋 جدول سجل السلوك")
+                b_data = sh.worksheet("behavior").get_all_records()
+                if b_data:
+                    st.dataframe(pd.DataFrame(b_data), use_container_width=True)
+                else: st.info("سجل السلوك فارغ حالياً.")
+
+    # --- 🎓 شاشة خاصة بالطلاب (جديدة) ---
+    elif page == "🎓 شاشة الطلاب":
+        st.markdown("<h1>🎓 بوابة استعلام الطلاب</h1>", unsafe_allow_html=True)
+        search_name = st.selectbox("ابحث عن اسمك لاستعراض تقريرك:", [""] + names_list)
+        
+        if search_name:
+            col1, col2 = st.columns(2)
+            # عرض الدرجات
+            with col1:
+                st.info(f"📊 درجات الطالب: {search_name}")
+                all_g = pd.DataFrame(sh.worksheet("grades").get_all_records())
+                st.dataframe(all_g[all_g['name'] == search_name][['type', 'score', 'date']])
+            
+            # عرض السلوك
+            with col2:
+                st.warning(f"🎭 سجل سلوك: {search_name}")
+                all_b = pd.DataFrame(sh.worksheet("behavior").get_all_records())
+                st.dataframe(all_b[all_b['name'] == search_name][['behavior', 'date', 'day']])
     elif page == "🏠 الرئيسية":
         st.markdown("<h1>👑 نظام الأستاذ زياد - الصفحة الرئيسية</h1>", unsafe_allow_html=True)
         st.write("أهلاً بك في نظامك المتكامل. استخدم القائمة الجانبية للتنقل.")
