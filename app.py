@@ -1,39 +1,59 @@
 import streamlit as st
 import pandas as pd
-import webbrowser
+import requests
 
-st.set_page_config(page_title="نظام الأستاذ زياد", layout="wide")
+# إعداد الصفحة
+st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide")
 
-# رابط القراءة (CSV) الذي نجحنا فيه
-CSV_URL = "https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/gviz/tq?tqx=out:csv&sheet=students"
+# 1. رابط القراءة (CSV) لورقة "ردود النموذج 1"
+CSV_URL = "https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/gviz/tq?tqx=out:csv&sheet=ردود%20النموذج%201"
 
 st.title("👨‍🏫 إدارة بيانات الطلاب - الأستاذ زياد")
 
-# 1. عرض البيانات الحالية (للقراءة فقط)
+# عرض الجدول الحالي (مع إخفاء عمود الوقت)
 try:
     df = pd.read_csv(CSV_URL)
-    st.subheader("📋 قائمة الطلاب الحالية")
-    st.dataframe(df, use_container_width=True)
+    st.subheader("📋 قائمة الطلاب المسجلين")
+    st.dataframe(df.iloc[:, 1:], use_container_width=True) 
 except:
-    st.info("الجدول فارغ حالياً.")
+    st.info("لا توجد بيانات مسجلة بعد، قم بإضافة أول طالب.")
 
 st.divider()
 
-# 2. واجهة الإدخال
+# 2. نموذج الإضافة الآلي باستخدام الأرقام المستخرجة
 st.subheader("➕ إضافة طالب جديد")
-# ضع رابط نموذج جوجل الذي أنشأته هنا
-GOOGLE_FORM_URL = "ضع_رابط_نموذج_جوجل_هنا"
-
-with st.form("entry_form"):
-    fid = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
-    fname = st.text_input("اسم الطالب")
-    fclass = st.text_input("الصف")
-    submit = st.form_submit_button("إرسال البيانات إلى السحابة")
+with st.form("auto_entry_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        fid = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
+        fname = st.text_input("اسم الطالب الكامل")
+    with col2:
+        fclass = st.text_input("الصف")
+    
+    submit = st.form_submit_button("🚀 حفظ البيانات فوراً")
 
     if submit:
         if fname:
-            st.success(f"تم تسجيل الطالب {fname} بنجاح!")
-            # سيفتح النموذج في صفحة جديدة ليقوم بالحفظ الأكيد
-            st.markdown(f'<a href="{GOOGLE_FORM_URL}" target="_blank">انقر هنا لتأكيد الحفظ النهائي في جوجل شيت</a>', unsafe_allow_html=True)
+            # رابط إرسال النموذج المباشر
+            FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdyE_7B-6WvG99pA/formResponse"
+            
+            # البيانات مع أرقام entry المستخرجة من صورتك
+            payload = {
+                "entry.1776082434": fid,   # الرقم الأكاديمي
+                "entry.64593526": fname,   # اسم الطالب
+                "entry.1340307757": fclass # الصف
+            }
+            
+            try:
+                # إرسال البيانات في الخلفية
+                response = requests.post(FORM_URL, data=payload)
+                if response.status_code == 200:
+                    st.success(f"✅ تم حفظ الطالب {fname} بنجاح في جوجل شيت!")
+                    st.balloons()
+                    st.info("يرجى تحديث الصفحة لرؤية البيانات الجديدة في الجدول.")
+                else:
+                    st.error("فشل في الحفظ التلقائي، يرجى التأكد من اتصال الإنترنت.")
+            except Exception as e:
+                st.error(f"خطأ في الاتصال: {e}")
         else:
-            st.error("يرجى كتابة الاسم.")
+            st.warning("يرجى كتابة اسم الطالب أولاً.")
