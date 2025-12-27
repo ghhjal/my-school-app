@@ -2,9 +2,10 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+from datetime import datetime
 
-# 1. إعدادات الصفحة الفخمة
-st.set_page_config(page_title="نظام الأستاذ زياد - الإدارة الذكية", layout="wide")
+# 1. إعدادات الصفحة الملكية
+st.set_page_config(page_title="نظام الأستاذ زياد التعليمي", layout="wide")
 
 st.markdown("""
     <style>
@@ -26,23 +27,24 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
     return gspread.authorize(creds)
 
+# 3. تشغيل النظام
 try:
     client = get_gspread_client()
     sh = client.open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
-    ws = sh.worksheet("students")
+    ws_students = sh.worksheet("students")
 
     # القائمة الجانبية
     with st.sidebar:
         st.title("بوابة الأستاذ زياد")
-        page = st.radio("القوائم:", ["🏠 الرئيسية", "👥 إدارة الطلاب والتحكم", "📊 الدرجات والسلوك"])
+        page = st.radio("القوائم المتاحة:", ["🏠 الرئيسية", "👥 إدارة الطلاب والتحكم", "📊 الدرجات والسلوك"])
         st.divider()
-        st.info("v4.0 النسخة المستقرة")
+        st.info("النسخة المستقرة v4.0")
 
-    # --- شاشة إدارة الطلاب ---
+    # --- شاشة إدارة الطلاب (التي أعجبتك) ---
     if page == "👥 إدارة الطلاب والتحكم":
-        st.markdown("<h1>👥 إدارة الطلاب (النسخة الملكية)</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>👥 إدارة شؤون الطلاب</h1>", unsafe_allow_html=True)
         tab1, tab2 = st.tabs(["➕ تسجيل طالب جديد", "🛠️ عرض وتحكم"])
-
+        
         with tab1:
             with st.form("new_student_form", clear_on_submit=True):
                 c1, c2 = st.columns(2)
@@ -54,42 +56,62 @@ try:
                     sclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                     syear = st.selectbox("السنة الدراسية", ["1446هـ", "1447هـ", "1448هـ"])
                     ssubject = st.text_input("المادة", value="اللغة الإنجليزية")
-                
                 if st.form_submit_button("✨ حفظ في السحابة"):
-                    ws.append_row([int(sid), sname, sphase, sclass, syear, ssubject])
+                    ws_students.append_row([int(sid), sname, sphase, sclass, syear, ssubject])
                     st.success("تم الحفظ بنجاح!")
                     st.rerun()
 
         with tab2:
-            all_data = ws.get_all_records()
+            all_data = ws_students.get_all_records()
             if all_data:
                 df = pd.DataFrame(all_data)
                 for index, row in df.iterrows():
-                    # عرض الكروت الملكية
-                    st.markdown(f"""
-                    <div class="student-card">
-                        <strong>🆔 {row.get('id', index+1)} | 👤 {row.get('name', 'طالب جديد')}</strong><br>
+                    st.markdown(f"""<div class="student-card">
+                        <strong>🆔 {row.get('id', index+1)} | 👤 {row.get('name', 'طالب')}</strong><br>
                         <small>المرحلة: {row.get('phase', 'غير محدد')} | الصف: {row.get('class', '-')} | المادة: {row.get('subject', 'الإنجليزية')}</small>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # أزرار الحذف والتعديل تحت كل كرت
-                    col_del, col_empty = st.columns([1, 4])
-                    with col_del:
-                        if st.button("🗑️ حذف", key=f"del_{index}"):
-                            ws.delete_rows(int(index) + 2)
-                            st.warning(f"تم حذف {row.get('name')}")
-                            st.rerun()
+                    </div>""", unsafe_allow_html=True)
+                    if st.button("🗑️ حذف الطالب", key=f"del_{index}"):
+                        ws_students.delete_rows(int(index) + 2)
+                        st.warning("تم الحذف.")
+                        st.rerun()
             else:
-                st.info("قائمة الطلاب فارغة حالياً.")
+                st.info("لا توجد بيانات مسجلة.")
 
-    elif page == "🏠 الرئيسية":
-        st.markdown("<h1>👋 أهلاً بك أستاذ زياد</h1>", unsafe_allow_html=True)
-        st.write("هذا النظام صمم خصيصاً لإدارة بيانات طلابك بكل سهولة واحترافية.")
-
+    # --- شاشة الدرجات والسلوك (المطلوبة الآن) ---
     elif page == "📊 الدرجات والسلوك":
         st.markdown("<h1>📊 رصد الدرجات والسلوك</h1>", unsafe_allow_html=True)
-        st.info("سيتم ربط بيانات الطلاب المسجلين هنا في التحديث القادم.")
+        
+        # جلب الأسماء من ورقة الطلاب لضمان الربط
+        all_students = ws_students.get_all_records()
+        if not all_students:
+            st.warning("⚠️ يرجى إضافة طلاب أولاً من شاشة الإدارة.")
+        else:
+            names_list = [r['name'] for r in all_students]
+            t1, t2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
+            
+            with t1:
+                with st.form("f1"):
+                    st.write("### رصد درجة اختبار/مشاركة")
+                    name = st.selectbox("اسم الطالب", names_list)
+                    type_g = st.selectbox("نوع التقييم", ["فتري 1", "فتري 2", "مشاركة", "نهائي"])
+                    val_g = st.number_input("الدرجة", min_value=0, max_value=100)
+                    if st.form_submit_button("حفظ الدرجة"):
+                        sh.worksheet("grades").append_row([name, type_g, val_g, str(datetime.now().date())])
+                        st.success("تم الرصد!")
+            
+            with t2:
+                with st.form("f2"):
+                    st.write("### رصد ملاحظة سلوكية")
+                    name_b = st.selectbox("اسم الطالب", names_list, key="sb")
+                    type_b = st.radio("التقييم", ["🌟 إيجابي", "⚠️ تنبيه"])
+                    note_b = st.text_area("الملاحظة")
+                    if st.form_submit_button("حفظ السلوك"):
+                        sh.worksheet("behavior").append_row([name_b, type_b, note_b, str(datetime.now().date())])
+                        st.success("تم الحفظ!")
+
+    elif page == "🏠 الرئيسية":
+        st.markdown("<h1>👑 نظام الأستاذ زياد - الصفحة الرئيسية</h1>", unsafe_allow_html=True)
+        st.write("أهلاً بك في نظامك المتكامل. استخدم القائمة الجانبية للتنقل.")
 
 except Exception as e:
-    st.error(f"تنبيه: {e}")
+    st.error(f"خطأ: {e}")
