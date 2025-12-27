@@ -1,109 +1,161 @@
 import streamlit as st
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.ext.declarative import declarative_base
-import os
 import pandas as pd
+import sqlite3
+import plotly.express as px
+from io import BytesIO
 
-# --- إعداد قاعدة البيانات والنموذج (كود الخلفية/البزنس لوجيك) ---
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, 'school.db')
-DATABASE_URL = f"sqlite:///{db_path}"
+# --- إعدادات الصفحة ---
+st.set_page_config(page_title="نظام مدرستي المحمي", layout="wide", page_icon="🔐")
 
-Base = declarative_base()
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
-# استخدم session_state لتخزين الجلسة وضمان عدم إنشائها مع كل إعادة تشغيل
-if 'session' not in st.session_state:
-    st.session_state['session'] = Session()
-session = st.session_state['session']
+# --- تهيئة قاعدة البيانات ---
+conn = sqlite3.connect('school_data.db', check_same_thread=False)
+c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS students 
+             (id INTEGER PRIMARY KEY, name TEXT, age INTEGER, level TEXT)''')
+c.execute('''CREATE TABLE IF NOT EXISTS grades 
+             (student_id INTEGER, subject TEXT, grade REAL, 
+             FOREIGN KEY(student_id) REFERENCES students(id))''')
+conn.commit()
 
-class Student(Base):
-    __tablename__ = 'students'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    student_id = Column(String(20), unique=True, nullable=False)
-    grades = relationship('Grade', backref='student', cascade="all, delete-orphan") # حذف الدرجات عند حذف الطالب
+# --- إدارة الجلسة (Login Session) ---
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'role' not in st.session_state:
+    st.session_state['role'] = None
+if 'user_id' not in st.session_state:
+    st.session_state['user_id'] = None
 
-class Grade(Base):
-    __tablename__ = 'grades'
-    id = Column(Integer, primary_key=True)
-    subject = Column(String(100), nullable=False)
-    score = Column(Integer, nullable=False)
-    student_db_id = Column(Integer, ForeignKey('students.id'), nullable=False)
+# --- دالة تسجيل الخروج ---
+def logout():
+    st.session_state['logged_in'] = False
+    st.session_state['role'] = None
+    st.session_state['user_id'] = None
+    st.rerun()
 
-Base.metadata.create_all(engine)
-
-# --- وظائف إدارة البيانات (CRUD Functions) ---
-def add_entity(entity):
-    try:
-        session.add(entity)
-        session.commit()
-        st.success("تم الحفظ بنجاح!")
-    except Exception as e:
-        st.error(f"حدث خطأ: {e}")
-        session.rollback()
-
-def delete_student(student_id):
-    student = session.query(Student).get(student_id)
-    if student:
-        session.delete(student)
-        session.commit()
-        st.warning("تم حذف الطالب وجميع درجاته بنجاح.")
-
-# --- واجهة المستخدم Streamlit (الـ UI) ---
-st.title("👨‍🎓 نظام إدارة الطلاب والدرجات المتكامل")
-
-# استخدام الأشرطة الجانبية (Sidebar) لتنظيم أفضل
-st.sidebar.header("إدارة النظام")
-options = st.sidebar.selectbox("اختر الإجراء:", ["عرض البيانات", "إضافة طالب جديد", "إضافة درجة أكاديمية"])
-
-if options == "إضافة طالب جديد":
-    st.header("إضافة طالب جديد")
-    with st.form("add_student_form"):
-        name = st.text_input("الاسم الكامل")
-        student_id = st.text_input("رقم الطالب")
-        submitted = st.form_submit_button("حفظ الطالب")
-        if submitted:
-            add_entity(Student(name=name, student_id=student_id))
-
-elif options == "إضافة درجة أكاديمية":
-    st.header("إضافة درجة أكاديمية")
-    students = session.query(Student).all()
-    if students:
-        student_options = {f"{s.name} ({s.student_id})": s.id for s in students}
-        with st.form("add_grade_form"):
-            selected_student_name = st.selectbox("اختر الطالب", list(student_options.keys()))
-            subject = st.text_input("المادة الدراسية")
-            score = st.number_input("الدرجة", min_value=0, max_value=100)
-            submitted_grade = st.form_submit_button("حفظ الدرجة")
-            if submitted_grade:
-                student_db_id = student_options[selected_student_name]
-                add_entity(Grade(subject=subject, score=score, student_db_id=student_db_id))
-    else:
-        st.warning("الرجاء إضافة طالب واحد على الأقل أولاً.")
-
-elif options == "عرض البيانات":
-    st.header("البيانات المخزنة وإدارة الطلاب")
+# --- شاشة تسجيل الدخول ---
+if not st.session_state['logged_in']:
+    st.title("🛡️ بوابة الدخول للنظام التعليمي")
     
-    st.subheader("جدول الطلاب")
-    students_data = session.query(Student).all()
-    # استخدام st.data_editor لإتاحة التعديل والحذف السهل
-    if students_data:
-        df_students = pd.DataFrame([{"ID": s.id, "الاسم": s.name, "رقم الطالب": s.student_id, "عدد الدرجات": len(s.grades)} for s in students_data])
-        st.dataframe(df_students, use_container_width=True)
+    tab1, tab2 = st.tabs(["تسجيل دخول المدير", "دخول الطالب"])
+    
+    with tab1:
+        admin_password = st.text_input("أدخل الرقم السري للمدير", type="password")
+        if st.button("دخول الإدارة"):
+            if admin_password == "admin123": # يمكنك تغيير كلمة السر هنا
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = 'admin'
+                st.rerun()
+            else:
+                st.error("كلمة السر خاطئة!")
+                
+    with tab2:
+        student_id_input = st.number_input("أدخل رقمك الأكاديمي (ID)", min_value=1, step=1)
+        if st.button("عرض درجاتي"):
+            # التحقق من وجود الطالب في القاعدة
+            check = pd.read_sql_query(f"SELECT * FROM students WHERE id = {student_id_input}", conn)
+            if not check.empty:
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = 'student'
+                st.session_state['user_id'] = student_id_input
+                st.rerun()
+            else:
+                st.error("رقم الطالب غير مسجل في النظام!")
+
+# --- منطق التطبيق بعد تسجيل الدخول ---
+else:
+    st.sidebar.warning(f"مرحباً بك: {st.session_state['role'].upper()}")
+    if st.sidebar.button("تسجيل الخروج"):
+        logout()
+
+    # --- 1. واجهة المدير (Admin) ---
+    if st.session_state['role'] == 'admin':
+        menu = ["لوحة التحكم", "إدارة الطلاب", "رصد الدرجات", "حذف بيانات"]
+        choice = st.sidebar.selectbox("القائمة الإدارية", menu)
+
+        if choice == "لوحة التحكم":
+            st.title("📊 التقارير العامة")
+            df_all = pd.read_sql_query('''SELECT students.name, grades.subject, grades.grade 
+                                         FROM students JOIN grades ON students.id = grades.student_id''', conn)
+            if not df_all.empty:
+                fig = px.bar(df_all, x="name", y="grade", color="subject", barmode="group")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("لا توجد بيانات حالياً.")
+
+        elif choice == "إدارة الطلاب":
+            st.header("👤 إضافة وتعديل الطلاب")
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                s_id = st.number_input("رقم الطالب", min_value=1)
+                s_name = st.text_input("اسم الطالب")
+                s_level = st.selectbox("المستوى", ["ابتدائي", "متوسط", "ثانوي"])
+                if st.button("حفظ"):
+                    try:
+                        c.execute("INSERT INTO students VALUES (?,?,10,?)", (s_id, s_name, s_level))
+                        conn.commit()
+                        st.success("تم الحفظ")
+                    except: st.error("الرقم موجود مسبقاً!")
+            with col2:
+                df = pd.read_sql_query("SELECT * FROM students", conn)
+                st.dataframe(df)
+
+        elif choice == "رصد الدرجات":
+            st.header("📝 إدخال الدرجات")
+            df_s = pd.read_sql_query("SELECT id, name FROM students", conn)
+            s_choice = st.selectbox("اختر الطالب", df_s['name'])
+            s_id = df_s[df_s['name'] == s_choice]['id'].values[0]
+            subj = st.selectbox("المادة", ["الرياضيات", "العلوم", "العربية"])
+            grd = st.number_input("الدرجة", 0, 100)
+            if st.button("رصد"):
+                c.execute("INSERT INTO grades VALUES (?,?,?)", (s_id, subj, grd))
+                conn.commit()
+                st.success("تم الرصد")
+
+        elif choice == "حذف بيانات":
+            st.header("🗑️ منطقة الحذف")
+            target = st.radio("ماذا تريد أن تحذف؟", ["طالب", "درجة مادة"])
+            
+            if target == "طالب":
+                df_s = pd.read_sql_query("SELECT * FROM students", conn)
+                to_del = st.selectbox("اختر الطالب لحذفه نهائياً", df_s['name'])
+                if st.button("⚠️ تأكيد الحذف"):
+                    c.execute(f"DELETE FROM students WHERE name = '{to_del}'")
+                    conn.commit()
+                    st.warning(f"تم حذف {to_del} وجميع بياناته.")
+            
+            else:
+                df_g = pd.read_sql_query('''SELECT grades.rowid, students.name, grades.subject, grades.grade 
+                                           FROM grades JOIN students ON grades.student_id = students.id''', conn)
+                st.write("اختر السجل المراد حذفه:")
+                st.dataframe(df_g)
+                row_to_del = st.number_input("أدخل رقم السجل (rowid) للحذف", min_value=1)
+                if st.button("حذف السجل"):
+                    c.execute(f"DELETE FROM grades WHERE rowid = {row_to_del}")
+                    conn.commit()
+                    st.success("تم حذف الدرجة")
+
+    # --- 2. واجهة الطالب (Student) ---
+    elif st.session_state['role'] == 'student':
+        st.title("🎓 لوحة نتائج الطالب")
+        s_id = st.session_state['user_id']
         
-        # إضافة إمكانية حذف طالب محدد
-        st.subheader("حذف طالب")
-        student_ids = [s.id for s in students_data]
-        id_to_delete = st.selectbox("اختر ID الطالب لحذفه (سيتم حذف درجاته تلقائياً)", student_ids)
-        if st.button("تأكيد حذف الطالب"):
-            delete_student(id_to_delete)
-            st.experimental_rerun() # إعادة تشغيل التطبيق لعرض التحديث
+        # جلب بيانات الطالب
+        student_info = pd.read_sql_query(f"SELECT * FROM students WHERE id = {s_id}", conn).iloc[0]
+        st.subheader(f"الاسم: {student_info['name']} | الرقم الأكاديمي: {s_id}")
+        
+        # جلب الدرجات
+        df_grades = pd.read_sql_query(f"SELECT subject as 'المادة', grade as 'الدرجة' FROM grades WHERE student_id = {s_id}", conn)
+        
+        if df_grades.empty:
+            st.info("لم يتم رصد درجات لك بعد.")
+        else:
+            st.table(df_grades)
+            avg = df_grades['الدرجة'].mean()
+            st.metric("المعدل التراكمي", f"{avg:.2f}%")
+            
+            if avg >= 50:
+                st.success("الحالة: ناجح 🎉")
+            else:
+                st.error("الحالة: راسب ⚠️")
 
-    st.subheader("جدول الدرجات الأكاديمية")
-    grades_data = session.query(Grade, Student.name).join(Student).all()
-    if grades_data:
-        grades_list = [{"الطالب": name, "المادة": g.subject, "الدرجة": g.score, "ID الدرجة": g.id} for g, name in grades_data]
-        st.dataframe(pd.DataFrame(grades_list), use_container_width=True)
-
+        st.info("نصيحة: يمكنك تصوير الشاشة أو طباعتها كشهادة رسمية.")
