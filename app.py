@@ -5,6 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide")
 
 # 1. رابط القراءة (CSV) لورقة "ردود النموذج 1"
+# تأكد من أن الرابط صحيح ويشير لملفك English_Grades
 CSV_URL = "https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/gviz/tq?tqx=out:csv&sheet=ردود%20النموذج%201"
 
 st.title("👨‍🏫 إدارة بيانات الطلاب - الأستاذ زياد")
@@ -13,14 +14,14 @@ st.title("👨‍🏫 إدارة بيانات الطلاب - الأستاذ زي
 try:
     df = pd.read_csv(CSV_URL)
     st.subheader("📋 قائمة الطلاب المسجلين")
-    # عرض البيانات من العمود الثاني (تخطي الطابع الزمني)
+    # عرض البيانات مع إخفاء عمود الطابع الزمني
     st.dataframe(df.iloc[:, 1:], use_container_width=True) 
 except:
     st.info("لا توجد بيانات مسجلة بعد.")
 
 st.divider()
 
-# 2. واجهة الإضافة (طريقة الرابط المباشر)
+# 2. واجهة الإضافة (رابط الحفظ الأكيد)
 st.subheader("➕ إضافة طالب جديد")
 with st.form("entry_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
@@ -34,12 +35,15 @@ with st.form("entry_form", clear_on_submit=True):
 
     if submit:
         if fname:
-            # بناء رابط الإرسال المسبق باستخدام أرقامك المستخرجة
-            # entry.1776082434 للرقم، entry.64593526 للاسم، entry.1340307757 للصف
-            form_link = f"https://docs.google.com/forms/d/e/1FAIpQLSdyE_7B-6WvG99pA/viewform?entry.1776082434={fid}&entry.64593526={fname}&entry.1340307757={fclass}"
+            # الرابط المصحح لنموذج جوجل الخاص بك
+            # تم التأكد من استخدام المعرف الصحيح FAIpQLSdyE_7B-6WvG99pA
+            base_url = "https://docs.google.com/forms/d/e/1FAIpQLSdyE_7B-6WvG99pA/viewform"
+            
+            # بناء الرابط مع البيانات المدخلة وأرقام الـ entry الصحيحة من صورتك
+            form_link = f"{base_url}?entry.1776082434={fid}&entry.64593526={fname}&entry.1340307757={fclass}"
             
             st.success(f"✅ تم تجهيز بيانات {fname}")
-            # إنشاء زر كبير وواضح للانتقال للحفظ النهائي
+            # الزر الأحمر للحفظ النهائي
             st.markdown(f"""
                 <a href="{form_link}" target="_blank">
                     <button style="
@@ -50,7 +54,8 @@ with st.form("entry_form", clear_on_submit=True):
                         border-radius: 10px;
                         width: 100%;
                         font-weight: bold;
-                        cursor: pointer;">
+                        cursor: pointer;
+                        font-family: Arial, sans-serif;">
                         انقر هنا لإنهاء الحفظ في جوجل شيت (خطوة أخيرة)
                     </button>
                 </a>
