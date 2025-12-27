@@ -44,10 +44,11 @@ try:
         st.divider()
         st.info("v5.0 - النسخة الاحترافية")
 
-    # --- 👥 شاشة إدارة الطلاب (المستقرة) ---
+   # --- شاشة إدارة الطلاب (المستقرة) ---
     if page == "👥 إدارة الطلاب":
         st.markdown("<h1>👥 إدارة شؤون الطلاب</h1>", unsafe_allow_html=True)
-        tab1, tab2 = st.tabs(["➕ تسجيل جديد", "📋 قائمة الطلاب"])
+        tab1, tab2 = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب"])
+        
         with tab1:
             with st.form("add_student", clear_on_submit=True):
                 c1, c2 = st.columns(2)
@@ -59,18 +60,50 @@ try:
                     sclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                     syear = st.selectbox("السنة", ["1446هـ", "1447هـ", "1448هـ"])
                     ssubject = st.text_input("المادة", value="اللغة الإنجليزية")
+                
                 if st.form_submit_button("حفظ"):
                     ws_students.append_row([int(sid), sname, sphase, sclass, syear, ssubject])
                     st.success("تم الحفظ")
                     st.rerun()
+
         with tab2:
             data = ws_students.get_all_records()
             if data:
+                import pandas as pd
                 df = pd.DataFrame(data)
                 for i, r in df.iterrows():
-                    st.markdown(f'<div class="student-card"><strong>{r.get("name", "؟؟")}</strong> (ID: {r.get("id", i)})</div>', unsafe_allow_html=True)
+                    # جلب الاسم والتعامل مع حالات عدم وجوده
+                    student_name = r.get("name", "؟؟")
+                    
+                    st.markdown(f'<div class="student-card"><strong>{student_name}</strong> (ID: {r.get("id", i)})</div>', unsafe_allow_html=True)
+                    
                     if st.button("🗑️ حذف", key=f"ds_{i}"):
-                        ws_students.delete_rows(i + 2); st.rerun()
+                        try:
+                            # 1. الحذف من ورقة الطلاب الرئيسية
+                            ws_students.delete_rows(i + 2)
+                            
+                            # 2. الحذف الذكي من ورقة الدرجات
+                            try:
+                                ws_g = sh.worksheet("grades")
+                                g_data = ws_g.get_all_values()
+                                for r_idx in range(len(g_data), 1, -1):
+                                    if g_data[r_idx-1][0] == student_name:
+                                        ws_g.delete_rows(r_idx)
+                            except: pass
+
+                            # 3. الحذف الذكي من ورقة السلوك
+                            try:
+                                ws_b = sh.worksheet("behavior")
+                                b_data = ws_b.get_all_values()
+                                for r_idx in range(len(b_data), 1, -1):
+                                    if b_data[r_idx-1][0] == student_name:
+                                        ws_b.delete_rows(r_idx)
+                            except: pass
+                            
+                            st.success(f"تم حذف {student_name} وسجلاته")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"خطأ: {e}")
 
  # --- 📊 شاشة الدرجات والسلوك (إصلاح تضارب رسائل الخطأ) ---
     elif page == "📊 الدرجات والسلوك":
