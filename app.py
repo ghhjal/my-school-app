@@ -3,8 +3,8 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import date
 
-# --- 1. الإعدادات الملكية (نظام الأستاذ زياد المعمري) ---
-st.set_page_config(page_title="نظام الأستاذ زياد المعمري السحابي", layout="wide", page_icon="🇬🇧")
+# --- 1. الإعدادات الملكية ---
+st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide", page_icon="🇬🇧")
 
 st.markdown("""
     <style>
@@ -13,22 +13,21 @@ st.markdown("""
         color: white; padding: 25px; border-radius: 15px; text-align: center;
         margin-bottom: 25px; border-bottom: 5px solid #fbbf24;
     }
-    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; height: 3em; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. الربط السحابي (تأكد من وضع الرابط في Secrets) ---
+# --- 2. الربط السحابي ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data(sheet_name):
     try:
-        # قراءة البيانات مع ضمان التحديث الفوري
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception:
-        # إنشاء ترويسات مطابقة تماماً لملفاتك الحالية في حال الخطأ
-        if sheet_name == "students": return pd.DataFrame(columns=['id', 'name', 'class', 'year', 'sem'])
-        if sheet_name == "grades": return pd.DataFrame(columns=['student_id', 'p1', 'p2', 'perf'])
-        if sheet_name == "behavior": return pd.DataFrame(columns=['student_id', 'date', 'type', 'note'])
+        # إنشاء جداول مطابقة لترويساتك المرفقة في حال كانت الورقة فارغة
+        if sheet_name == "students": return pd.DataFrame(columns=['id', 'name', 'class', 'year', 'sem']) # 
+        if sheet_name == "grades": return pd.DataFrame(columns=['student_id', 'p1', 'p2', 'perf']) # [cite: 2]
+        if sheet_name == "behavior": return pd.DataFrame(columns=['student_id', 'date', 'type', 'note']) # [cite: 1]
         return pd.DataFrame()
 
 # --- 3. إدارة الجلسة والدخول ---
@@ -39,23 +38,23 @@ if not st.session_state.logged_in:
     st.markdown('<div class="royal-header"><h1>🇬🇧 نظام الأستاذ زياد المعمري</h1></div>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔐 دخول المعلم", "🎓 دخول الطالب"])
     with t1:
-        pwd = st.text_input("كلمة المرور", type="password")
+        pwd = st.text_input("كلمة المرور", type="password", key="admin_pwd")
         if st.button("دخول"):
             if pwd == "admin123":
                 st.session_state.update({'logged_in': True, 'role': 'admin'})
                 st.rerun()
     with t2:
-        sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
-        if st.button("عرض النتيجة"):
+        sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1, key="student_id_input")
+        if st.button("استعلام"):
             df_s = load_data("students")
             if not df_s.empty and sid_in in df_s['id'].values:
                 st.session_state.update({'logged_in': True, 'role': 'student', 'user_id': int(sid_in)})
                 st.rerun()
-            else: st.error("عذراً، الرقم غير مسجل.")
+            else: st.error("الرقم غير مسجل.")
 
-# --- 4. واجهات النظام ---
+# --- 4. واجهة المعلم بعد الإصلاح ---
 else:
-    if st.sidebar.button("🚪 تسجيل الخروج"):
+    if st.sidebar.button("🚪 خروج"):
         st.session_state.clear()
         st.rerun()
 
@@ -63,19 +62,19 @@ else:
         menu = st.sidebar.radio("القائمة", ["👥 إدارة الطلاب", "📊 رصد الدرجات", "📅 سجل السلوك"])
 
         if menu == "👥 إدارة الطلاب":
-            st.header("إدارة بيانات الطلاب")
+            st.header("إدارة الطلاب")
             with st.form("add_st"):
                 fid = st.number_input("الرقم الأكاديمي", min_value=1)
                 fname = st.text_input("اسم الطالب")
                 fclass = st.text_input("الصف")
-                fyear = st.selectbox("العام الدراسي", ["1447هـ", "1448هـ", "1449هـ"])
+                fyear = st.selectbox("العام", ["1447هـ", "1448هـ", "1449هـ"])
                 fsem = st.selectbox("الفصل", ["الأول", "الثاني", "الثالث"])
                 if st.form_submit_button("💾 حفظ في سحابة جوجل"):
                     df_existing = load_data("students")
                     new_row = pd.DataFrame([{"id": fid, "name": fname, "class": fclass, "year": fyear, "sem": fsem}])
                     updated_df = pd.concat([df_existing, new_row]).drop_duplicates(subset=['id'], keep='last')
                     conn.update(worksheet="students", data=updated_df)
-                    st.success("تم الحفظ والمزامنة بنجاح!")
+                    st.success("تم الحفظ بنجاح!")
             st.dataframe(load_data("students"), use_container_width=True)
 
         elif menu == "📊 رصد الدرجات":
@@ -93,10 +92,10 @@ else:
                         new_g = pd.DataFrame([{"student_id": tid, "p1": p1, "p2": p2, "perf": pf}])
                         updated_g = pd.concat([df_g, new_g]).drop_duplicates(subset=['student_id'], keep='last')
                         conn.update(worksheet="grades", data=updated_g)
-                        st.success("تم التحديث بنجاح")
+                        st.success("تم التحديث")
 
         elif menu == "📅 سجل السلوك":
-            st.header("سجل السلوك والملاحظات")
+            st.header("سجل السلوك")
             df_st = load_data("students")
             if not df_st.empty:
                 target = st.selectbox("الطالب", df_st['name'])
@@ -104,12 +103,12 @@ else:
                 with st.form("bh_form"):
                     b_type = st.selectbox("النوع", ["إيجابي ✅", "سلبي ⚠️"])
                     b_note = st.text_area("الملاحظة")
-                    if st.form_submit_button("إضافة ملاحظة"):
+                    if st.form_submit_button("إضافة"):
                         df_b = load_data("behavior")
-                        new_beh = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}])
-                        updated_b = pd.concat([df_b, new_beh])
+                        new_b = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}])
+                        updated_b = pd.concat([df_b, new_b])
                         conn.update(worksheet="behavior", data=updated_b)
-                        st.success("تمت الإضافة للسجل السحابي")
+                        st.success("تمت الإضافة")
 
     elif st.session_state.role == 'student':
         st.markdown("<style>section[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
