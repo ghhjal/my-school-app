@@ -5,19 +5,30 @@ import plotly.express as px
 from io import BytesIO
 
 # --- إعدادات الصفحة ---
-st.set_page_config(page_title="نظام مدرستي المحمي", layout="wide", page_icon="🔐")
+st.set_page_config(page_title="نظام الدرجات - اللغة الإنجليزية", layout="wide", page_icon="🇬🇧")
 
 # --- تهيئة قاعدة البيانات ---
-conn = sqlite3.connect('school_data.db', check_same_thread=False)
+# استخدمنا اسم ملف جديد لضمان عدم حدوث تداخل مع البيانات القديمة
+conn = sqlite3.connect('school_system_new.db', check_same_thread=False)
 c = conn.cursor()
+
+# إنشاء جدول الطلاب
 c.execute('''CREATE TABLE IF NOT EXISTS students 
-             (id INTEGER PRIMARY KEY, name TEXT, age INTEGER, level TEXT)''')
+             (id INTEGER PRIMARY KEY, name TEXT, level TEXT)''')
+
+# إنشاء جدول الدرجات
 c.execute('''CREATE TABLE IF NOT EXISTS grades 
-             (student_id INTEGER, subject TEXT, grade REAL, 
-             FOREIGN KEY(student_id) REFERENCES students(id))''')
+             (student_id INTEGER, 
+              subject TEXT, 
+              period_1 REAL, 
+              period_2 REAL, 
+              participation REAL, 
+              projects REAL,
+              total REAL,
+              FOREIGN KEY(student_id) REFERENCES students(id))''')
 conn.commit()
 
-# --- إدارة الجلسة (Login Session) ---
+# --- إدارة الجلسة (تسجيل الدخول) ---
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 if 'role' not in st.session_state:
@@ -25,137 +36,151 @@ if 'role' not in st.session_state:
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = None
 
-# --- دالة تسجيل الخروج ---
 def logout():
-    st.session_state['logged_in'] = False
-    st.session_state['role'] = None
-    st.session_state['user_id'] = None
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.rerun()
 
-# --- شاشة تسجيل الدخول ---
+# --- واجهة تسجيل الدخول ---
 if not st.session_state['logged_in']:
-    st.title("🛡️ بوابة الدخول للنظام التعليمي")
-    
-    tab1, tab2 = st.tabs(["تسجيل دخول المدير", "دخول الطالب"])
+    st.title("🔐 نظام الإدارة المدرسية")
+    tab1, tab2 = st.tabs(["بوابة المدير", "بوابة الطالب"])
     
     with tab1:
-        admin_password = st.text_input("أدخل الرقم السري للمدير", type="password")
+        pwd = st.text_input("كلمة مرور المدير", type="password")
         if st.button("دخول الإدارة"):
-            if admin_password == "admin123": # يمكنك تغيير كلمة السر هنا
-                st.session_state['logged_in'] = True
-                st.session_state['role'] = 'admin'
+            if pwd == "admin123":
+                st.session_state.update({'logged_in': True, 'role': 'admin'})
                 st.rerun()
-            else:
-                st.error("كلمة السر خاطئة!")
+            else: st.error("كلمة المرور غير صحيحة")
                 
     with tab2:
-        student_id_input = st.number_input("أدخل رقمك الأكاديمي (ID)", min_value=1, step=1)
-        if st.button("عرض درجاتي"):
-            # التحقق من وجود الطالب في القاعدة
-            check = pd.read_sql_query(f"SELECT * FROM students WHERE id = {student_id_input}", conn)
+        sid = st.number_input("أدخل رقم الطالب الأكاديمي", min_value=1, step=1)
+        if st.button("دخول الطالب"):
+            check = pd.read_sql_query(f"SELECT * FROM students WHERE id = {sid}", conn)
             if not check.empty:
-                st.session_state['logged_in'] = True
-                st.session_state['role'] = 'student'
-                st.session_state['user_id'] = student_id_input
+                st.session_state.update({'logged_in': True, 'role': 'student', 'user_id': sid})
                 st.rerun()
-            else:
-                st.error("رقم الطالب غير مسجل في النظام!")
+            else: st.error("عذراً، هذا الرقم غير مسجل لدينا")
 
-# --- منطق التطبيق بعد تسجيل الدخول ---
+# --- بعد تسجيل الدخول ---
 else:
-    st.sidebar.warning(f"مرحباً بك: {st.session_state['role'].upper()}")
-    if st.sidebar.button("تسجيل الخروج"):
-        logout()
+    st.sidebar.title(f"👤 {st.session_state['role'].upper()}")
+    if st.sidebar.button("تسجيل الخروج"): logout()
 
-    # --- 1. واجهة المدير (Admin) ---
+    # --- واجهة المدير ---
     if st.session_state['role'] == 'admin':
-        menu = ["لوحة التحكم", "إدارة الطلاب", "رصد الدرجات", "حذف بيانات"]
-        choice = st.sidebar.selectbox("القائمة الإدارية", menu)
+        menu = ["إدارة الطلاب", "رصد درجات اللغة الإنجليزية", "حذف بيانات"]
+        choice = st.sidebar.selectbox("القائمة", menu)
 
-        if choice == "لوحة التحكم":
-            st.title("📊 التقارير العامة")
-            df_all = pd.read_sql_query('''SELECT students.name, grades.subject, grades.grade 
-                                         FROM students JOIN grades ON students.id = grades.student_id''', conn)
-            if not df_all.empty:
-                fig = px.bar(df_all, x="name", y="grade", color="subject", barmode="group")
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("لا توجد بيانات حالياً.")
+        if choice == "إدارة الطلاب":
+            st.header("👥 إضافة وتعديل بيانات الطلاب")
+            action = st.radio("العملية:", ["إضافة طالب جديد", "تعديل طالب موجود"])
+            
+            if action == "إضافة طالب جديد":
+                with st.form("add_student"):
+                    c1, c2, c3 = st.columns(3)
+                    nid = c1.number_input("رقم الطالب", min_value=1)
+                    nname = c2.text_input("اسم الطالب")
+                    nlevel = c3.selectbox("المستوى", ["ابتدائي", "متوسط", "ثانوي"])
+                    if st.form_submit_button("حفظ"):
+                        try:
+                            c.execute("INSERT INTO students VALUES (?,?,?)", (nid, nname, nlevel))
+                            conn.commit()
+                            st.success("تم تسجيل الطالب بنجاح")
+                            st.rerun()
+                        except: st.error("رقم الطالب موجود بالفعل")
+            
+            elif action == "تعديل طالب موجود":
+                df_s = pd.read_sql_query("SELECT * FROM students", conn)
+                if not df_s.empty:
+                    target = st.selectbox("اختر الطالب لتعديله", df_s['name'])
+                    old = df_s[df_s['name'] == target].iloc[0]
+                    with st.form("edit"):
+                        uname = st.text_input("الاسم الجديد", value=old['name'])
+                        ulevel = st.selectbox("المستوى", ["ابتدائي", "متوسط", "ثانوي"], index=["ابتدائي", "متوسط", "ثانوي"].index(old['level']))
+                        if st.form_submit_button("تحديث"):
+                            c.execute("UPDATE students SET name=?, level=? WHERE id=?", (uname, ulevel, old['id']))
+                            conn.commit()
+                            st.success("تم التحديث")
+                            st.rerun()
 
-        elif choice == "إدارة الطلاب":
-            st.header("👤 إضافة وتعديل الطلاب")
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                s_id = st.number_input("رقم الطالب", min_value=1)
-                s_name = st.text_input("اسم الطالب")
-                s_level = st.selectbox("المستوى", ["ابتدائي", "متوسط", "ثانوي"])
-                if st.button("حفظ"):
-                    try:
-                        c.execute("INSERT INTO students VALUES (?,?,10,?)", (s_id, s_name, s_level))
-                        conn.commit()
-                        st.success("تم الحفظ")
-                    except: st.error("الرقم موجود مسبقاً!")
-            with col2:
-                df = pd.read_sql_query("SELECT * FROM students", conn)
-                st.dataframe(df)
+            st.write("---")
+            st.subheader("جدول الطلاب")
+            st.dataframe(pd.read_sql_query("SELECT * FROM students", conn), use_container_width=True)
 
-        elif choice == "رصد الدرجات":
-            st.header("📝 إدخال الدرجات")
+        elif choice == "رصد درجات اللغة الإنجليزية":
+            st.header("📝 رصد الدرجات: مادة اللغة الإنجليزية")
             df_s = pd.read_sql_query("SELECT id, name FROM students", conn)
-            s_choice = st.selectbox("اختر الطالب", df_s['name'])
-            s_id = df_s[df_s['name'] == s_choice]['id'].values[0]
-            subj = st.selectbox("المادة", ["الرياضيات", "العلوم", "العربية"])
-            grd = st.number_input("الدرجة", 0, 100)
-            if st.button("رصد"):
-                c.execute("INSERT INTO grades VALUES (?,?,?)", (s_id, subj, grd))
-                conn.commit()
-                st.success("تم الرصد")
+            if not df_s.empty:
+                with st.form("grade_form"):
+                    s_name = st.selectbox("اختر الطالب", df_s['name'])
+                    sid = df_s[df_s['name'] == s_name]['id'].values[0]
+                    
+                    # تم قصر المادة على اللغة الإنجليزية فقط
+                    subj = "اللغة الإنجليزية"
+                    st.info(f"المادة الحالية: {subj}")
+                    
+                    col1, col2 = st.columns(2)
+                    p1 = col1.number_input("درجة الفترة الأولى (20)", 0.0, 20.0)
+                    p2 = col2.number_input("درجة الفترة الثانية (20)", 0.0, 20.0)
+                    part = col1.number_input("المشاركة (10)", 0.0, 10.0)
+                    proj = col2.number_input("المشاريع (10)", 0.0, 10.0)
+                    
+                    total = p1 + p2 + part + proj
+                    
+                    if st.form_submit_button("حفظ الدرجة"):
+                        # تحديث إذا كانت المادة موجودة، أو إضافتها إذا لم تكن موجودة
+                        c.execute("DELETE FROM grades WHERE student_id=? AND subject=?", (sid, subj))
+                        c.execute("INSERT INTO grades VALUES (?,?,?,?,?,?,?)", (sid, subj, p1, p2, part, proj, total))
+                        conn.commit()
+                        st.success(f"تم الحفظ! المجموع الكلي للطالب {s_name} هو: {total}")
+            else: st.warning("يجب إضافة طلاب أولاً من قائمة 'إدارة الطلاب'")
 
         elif choice == "حذف بيانات":
-            st.header("🗑️ منطقة الحذف")
-            target = st.radio("ماذا تريد أن تحذف؟", ["طالب", "درجة مادة"])
-            
+            st.header("🗑️ حذف السجلات")
+            target = st.radio("نوع الحذف", ["طالب", "سجل درجة"])
             if target == "طالب":
-                df_s = pd.read_sql_query("SELECT * FROM students", conn)
-                to_del = st.selectbox("اختر الطالب لحذفه نهائياً", df_s['name'])
-                if st.button("⚠️ تأكيد الحذف"):
-                    c.execute(f"DELETE FROM students WHERE name = '{to_del}'")
+                df_s = pd.read_sql_query("SELECT name FROM students", conn)
+                to_del = st.selectbox("اختر الطالب للحذف", df_s)
+                if st.button("حذف الطالب نهائياً"):
+                    c.execute("DELETE FROM students WHERE name=?", (to_del,))
                     conn.commit()
-                    st.warning(f"تم حذف {to_del} وجميع بياناته.")
-            
+                    st.rerun()
             else:
-                df_g = pd.read_sql_query('''SELECT grades.rowid, students.name, grades.subject, grades.grade 
-                                           FROM grades JOIN students ON grades.student_id = students.id''', conn)
-                st.write("اختر السجل المراد حذفه:")
+                df_g = pd.read_sql_query("SELECT rowid, student_id, subject, total FROM grades", conn)
                 st.dataframe(df_g)
-                row_to_del = st.number_input("أدخل رقم السجل (rowid) للحذف", min_value=1)
-                if st.button("حذف السجل"):
-                    c.execute(f"DELETE FROM grades WHERE rowid = {row_to_del}")
+                rid = st.number_input("رقم السجل (rowid) لحذفه", min_value=1)
+                if st.button("حذف الدرجة"):
+                    c.execute("DELETE FROM grades WHERE rowid=?", (rid,))
                     conn.commit()
-                    st.success("تم حذف الدرجة")
+                    st.rerun()
 
-    # --- 2. واجهة الطالب (Student) ---
+    # --- واجهة الطالب ---
     elif st.session_state['role'] == 'student':
-        st.title("🎓 لوحة نتائج الطالب")
-        s_id = st.session_state['user_id']
+        st.title("🎓 كشف الدرجات التفصيلي")
+        sid = st.session_state['user_id']
         
-        # جلب بيانات الطالب
-        student_info = pd.read_sql_query(f"SELECT * FROM students WHERE id = {s_id}", conn).iloc[0]
-        st.subheader(f"الاسم: {student_info['name']} | الرقم الأكاديمي: {s_id}")
+        s_info = pd.read_sql_query(f"SELECT * FROM students WHERE id = {sid}", conn).iloc[0]
+        st.markdown(f"**اسم الطالب:** {s_info['name']} | **الرقم الأكاديمي:** {sid}")
         
-        # جلب الدرجات
-        df_grades = pd.read_sql_query(f"SELECT subject as 'المادة', grade as 'الدرجة' FROM grades WHERE student_id = {s_id}", conn)
+        # جلب درجات اللغة الإنجليزية
+        df_grades = pd.read_sql_query(f"""SELECT subject as 'المادة', 
+                                              period_1 as 'الفترة 1', 
+                                              period_2 as 'الفترة 2', 
+                                              participation as 'المشاركة', 
+                                              projects as 'المشاريع', 
+                                              total as 'المجموع' 
+                                       FROM grades WHERE student_id = {sid}""", conn)
         
-        if df_grades.empty:
-            st.info("لم يتم رصد درجات لك بعد.")
-        else:
+        if not df_grades.empty:
             st.table(df_grades)
-            avg = df_grades['الدرجة'].mean()
-            st.metric("المعدل التراكمي", f"{avg:.2f}%")
+            total_sum = df_grades['المجموع'].values[0]
+            st.metric("المجموع النهائي", f"{total_sum} / 60")
             
-            if avg >= 50:
-                st.success("الحالة: ناجح 🎉")
+            if total_sum >= 30:
+                st.success("النتيجة: ناجح (Passed)")
             else:
-                st.error("الحالة: راسب ⚠️")
-
-        st.info("نصيحة: يمكنك تصوير الشاشة أو طباعتها كشهادة رسمية.")
+                st.error("النتيجة: لم يكمل متطلبات النجاح")
+        else:
+            st.info("لم يتم رصد درجات مادة اللغة الإنجليزية لك حتى الآن.")
