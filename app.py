@@ -1,66 +1,60 @@
 import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
 
 # إعداد الصفحة
 st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide")
 
-# 1. رابط القراءة (CSV) لورقة "ردود النموذج 1"
-CSV_URL = "https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/gviz/tq?tqx=out:csv&sheet=ردود%20النموذج%201"
+# دالة الاتصال بجوجل شيت باستخدام المفتاح السري
+def get_gspread_client():
+    scope = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+    return gspread.authorize(creds)
 
-st.title("👨‍🏫 نظام الأستاذ زياد - إدارة الطلاب")
+st.title("👨‍🏫 نظام الأستاذ زياد - الإدارة الذكية")
 
-# الجزء الأول: عرض البيانات
-st.subheader("📋 قائمة الطلاب المسجلين حالياً")
 try:
-    # قراءة البيانات وعرضها
-    df = pd.read_csv(CSV_URL)
-    # إخفاء عمود الطابع الزمني لجمالية العرض
-    st.dataframe(df.iloc[:, 1:], use_container_width=True)
-except Exception:
-    st.info("الجدول فارغ حالياً أو بانتظار أول عملية تسجيل.")
+    # الاتصال بالملف (تأكد أن اسم الورقة هو students)
+    client = get_gspread_client()
+    sh = client.open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
+    worksheet = sh.worksheet("students")
+    
+    # قراءة البيانات الحالية
+    data = worksheet.get_all_records()
+    df = pd.DataFrame(data)
 
-st.divider()
+    # عرض الجدول
+    st.subheader("📋 قائمة الطلاب الحالية")
+    st.dataframe(df, use_container_width=True)
 
-# الجزء الثاني: إضافة البيانات (روابط مباشرة)
-st.subheader("➕ إضافة وإدارة البيانات")
+    st.divider()
 
-col1, col2 = st.columns(2)
+    # نموذج إضافة طالب (حفظ داخلي مباشر)
+    st.subheader("➕ إضافة طالب جديد")
+    with st.form("add_student", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            new_id = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
+            new_name = st.text_input("اسم الطالب")
+        with col2:
+            new_class = st.text_input("الصف")
+            # قيم افتراضية
+            new_year = "1447هـ"
+            new_sem = "الأول"
+        
+        submit_btn = st.form_submit_button("✅ حفظ البيانات فوراً")
 
-with col1:
-    st.info("لإضافة طالب جديد، استخدم النموذج الرسمي:")
-    # الرابط المختصر الذي أرسلته أنت والذي يعمل يقيناً
-    st.markdown(f'''
-        <a href="https://forms.gle/MCXFKq12xmmE3XMf8" target="_blank">
-            <button style="
-                background-color: #4CAF50;
-                color: white;
-                padding: 15px;
-                width: 100%;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: bold;">
-                📝 فتح نموذج تسجيل الطلاب
-            </button>
-        </a>
-        ''', unsafe_allow_html=True)
+        if submit_btn:
+            if new_name:
+                # الحفظ الصامت في السطر التالي
+                worksheet.append_row([new_id, new_name, new_class, new_year, new_sem])
+                st.success(f"تم حفظ الطالب {new_name} بنجاح!")
+                st.balloons()
+                st.rerun() # لتحديث الجدول فوراً
+            else:
+                st.warning("يرجى كتابة الاسم.")
 
-with col2:
-    st.info("للوصول المباشر لملف الإكسيل (جوجل شيت):")
-    st.markdown(f'''
-        <a href="https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/edit" target="_blank">
-            <button style="
-                background-color: #008CBA;
-                color: white;
-                padding: 15px;
-                width: 100%;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: bold;">
-                📊 فتح ملف English_Grades
-            </button>
-        </a>
-        ''', unsafe_allow_html=True)
-
-st.success("بعد تعبئة النموذج، قم بتحديث هذه الصفحة لرؤية الاسم الجديد في الجدول أعلاه.")
+except Exception as e:
+    st.error("تأكد من وضع الـ Secrets بشكل صحيح ومشاركة الملف مع إيميل الخدمة.")
+    st.info(f"تفاصيل الخطأ: {e}")
