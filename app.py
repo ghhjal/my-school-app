@@ -1,201 +1,53 @@
-import streamlit as st
-import pandas as pd
-import sqlite3
-import datetime
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 
-# --- إعدادات الصفحة ---
-st.set_page_config(page_title="نظام متابعة الطالب المتكامل", layout="wide")
+app = Flask(__name__)
 
-# --- وظائف قاعدة البيانات (تبقى كما هي) ---
-def init_db():
-    conn = sqlite3.connect('school_integrated_v5.db')
-    c = conn.cursor()
-    # 1. جدول السجلات اليومية (السلوك)
-    c.execute('''CREATE TABLE IF NOT EXISTS daily_logs 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id TEXT, log_date TEXT, pos_behavior TEXT, neg_behavior TEXT, neg_count INTEGER, reward TEXT, notes TEXT)''')
-    
-    # 2. جدول الدرجات الأكاديمية 
-    c.execute('''CREATE TABLE IF NOT EXISTS academic_grades
-                 (student_id TEXT PRIMARY KEY, name TEXT, period1 INTEGER, period2 INTEGER, participation INTEGER, projects INTEGER, final_total INTEGER)''')
+# إعداد قاعدة البيانات (SQLite)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-    # 3. جدول أسماء الطلاب الأساسية (Master List)
-    c.execute('''CREATE TABLE IF NOT EXISTS students_master (student_id TEXT PRIMARY KEY, name TEXT)''')
-    conn.commit()
-    conn.close()
+# تعريف نموذج الطالب (Model)
+class Student(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    student_id = db.Column(db.String(20), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
 
-def get_master_students_df():
-    conn = sqlite3.connect('school_integrated_v5.db')
-    df = pd.read_sql_query("SELECT * FROM students_master", conn)
-    conn.close()
-    return df
+    def __repr__(self):
+        return f'<Student {self.name}>'
 
-def get_academic_grades_df():
-    conn = sqlite3.connect('school_integrated_v5.db')
-    df = pd.read_sql_query("SELECT * FROM academic_grades", conn)
-    conn.close()
-    return df
+# الصفحة الرئيسية لعرض الطلاب
+@app.route('/')
+def index():
+    students = Student.query.all()
+    return render_template('index.html', students=students)
 
-# --- واجهة البرنامج الرئيسية ---
-init_db()
-st.title("🎓 نظام متابعة الطالب المتكامل")
+# دالة إضافة طالب جديد (تم تصحيحها)
+@app.route('/add_student', methods=['GET', 'POST'])
+def add_student():
+    if request.method == 'POST':
+        # الحصول على البيانات من الفورم
+        name = request.form.get('name')
+        student_id = request.form.get('student_id')
+        email = request.form.get('email')
 
-menu = st.sidebar.selectbox("اختر نوع الدخول:", ["لوحة الطالب", "لوحة المعلم 🔐"])
+        # إنشاء الكائن الجديد
+        new_student = Student(name=name, student_id=student_id, email=email)
 
-# ------------------- لوحة المعلم (تبقى كما هي وظيفياً) -------------------
-if menu == "لوحة المعلم 🔐":
-    password = st.sidebar.text_input("أدخل كلمة مرور المعلم", type="password")
-    if password == "1234": 
-        st.sidebar.success("تم الدخول بنجاح")
-        tab_daily, tab_grades, tab_master = st.tabs(["📊 السجل اليومي (السلوك)", "📝 الدرجات الأكاديمية", "🧑‍🎓 إدارة الطلاب الأساسية"])
-        
-        with tab_daily:
-            # ... (كود إضافة السجل اليومي هنا) ...
-            st.subheader("إضافة سجل متابعة يومي جديد")
-            df_master = get_master_students_df()
-            if df_master.empty:
-                st.warning("الرجاء إضافة أسماء الطلاب أولاً في التبويب الأخير.")
-            else:
-                with st.form("daily_log_form"):
-                    selected_student_name = st.selectbox("اختر اسم الطالب", df_master['name'].tolist())
-                    s_id = df_master[df_master['name'] == selected_student_name]['student_id'].iloc
-                    log_date = st.date_input("اليوم / التاريخ", datetime.date.today())
-                    col_b1, col_b2 = st.columns(2)
-                    with col_b1:
-                        pos_behavior = st.text_input("السلوك الإيجابي (مثال: مشاركة)")
-                        reward = st.text_area("المكافأة / التعزيز (مثال: نجمتان)")
-                    with col_b2:
-                        neg_behavior = st.text_input("السلوك السلبي (مثال: صراخ)")
-                        neg_count = st.number_input("عدد المخالفات", 0, 100, 0)
-                    notes = st.text_area("ملاحظات (مثال: كان متعباً)")
-                    submit = st.form_submit_button("حفظ السجل اليومي")
-                    if submit:
-                        conn = sqlite3.connect('school_integrated_v5.db')
-                        c = conn.cursor()
-                        c.execute("INSERT INTO daily_logs (student_id, log_date, pos_behavior, neg_behavior, neg_count, reward, notes) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-                                  (s_id, str(log_date), pos_behavior, neg_behavior, neg_count, reward, notes))
-                        conn.commit()
-                        st.success(f"تم تسجيل متابعة يوم {log_date} للطالب {selected_student_name}")
-
-        with tab_grades:
-            # ... (كود الدرجات الأكاديمية هنا) ...
-             st.subheader("إدخال وتعديل الدرجات الأكاديمية")
-             df_grades = get_academic_grades_df()
-             df_master = get_master_students_df()
-             if not df_master.empty:
-                 st.dataframe(df_grades[['name', 'period1', 'period2', 'participation', 'projects', 'final_total']], use_container_width=True)
-                 # ... (باقي كود التعديل باستخدام النموذج) ...
-                 st.markdown("---")
-                 st.markdown("**تحديث درجات طالب محدد:**")
-                 selected_student_id_for_grade = st.selectbox("اختر الرقم الأكاديمي للطالب لتعديل درجاته", df_master['student_id'].tolist())
-                 student_name_for_grade = df_master[df_master['student_id'] == selected_student_id_for_grade]['name'].iloc
-                 current_grades = df_grades[df_grades['student_id'] == selected_student_id_for_grade]
-                 p1_val = int(current_grades['period1'].sum()) if not current_grades.empty else 0
-                 p2_val = int(current_grades['period2'].sum()) if not current_grades.empty else 0
-                 part_val = int(current_grades['participation'].sum()) if not current_grades.empty else 0
-                 proj_val = int(current_grades['projects'].sum()) if not current_grades.empty else 0
-                 with st.form("update_grades_form"):
-                     col_g1, col_g2 = st.columns(2)
-                     with col_g1:
-                         p1 = st.number_input("درجة اختبار الفترة الأولى", 0, 100, p1_val)
-                         p2 = st.number_input("درجة اختبار الفترة الثانية", 0, 100, p2_val)
-                     with col_g2:
-                         part = st.number_input("درجة المشاركة", 0, 100, part_val)
-                         proj = st.number_input("درجة المهام والمشاريع", 0, 100, proj_val)
-                     submit_grades = st.form_submit_button(f"حفظ درجات {student_name_for_grade}")
-                     if submit_grades:
-                         total = p1 + p2 + part + proj
-                         conn = sqlite3.connect('school_integrated_v5.db')
-                         c = conn.cursor()
-                         c.execute("REPLACE INTO academic_grades VALUES (?, ?, ?, ?, ?, ?, ?)", (selected_student_id_for_grade, student_name_for_grade, p1, p2, part, proj, total))
-                         conn.commit()
-                         st.success(f"تم تحديث الدرجات النهائية بنجاح للطالب {student_name_for_grade}. المجموع: {total}")
-                         st.rerun()
-             else:
-                 st.info("لا يوجد طلاب مسجلين بعد.")
-
-        with tab_master:
-            # ... (كود إدارة الطلاب الأساسية) ...
-            st.subheader("إدارة قائمة الطلاب الأساسية (إضافة وحذف)")
-            with st.form("add_master_student"):
-                new_s_id = st.text_input("الرقم الأكاديمي الجديد (مطلوب)")
-                new_s_name = st.text_input("اسم الطالب الجديد (مطلوب)")
-                if st.form_submit_button("إضافة طالب أساسي جديد"):
-                    if new_s_id and new_s_name:
-                        try:
-                            conn = sqlite3.connect('school_integrated_v5.db')
-                            c = conn.cursor()
-                            c.execute("INSERT INTO students_master VALUES (?, ?)", (new_s_id, new_s_name))
-                            conn.commit()
-                            st.success(f"تم إضافة **{new_s_name}** للقائمة الأساسية بنجاح.")
-                            st.rerun()
-                        except sqlite3.IntegrityError:
-                            st.error("الرقم الأكاديمي موجود مسبقاً. لا يمكن إضافة طالبين بنفس الرقم.")
-                    else:
-                        st.warning("الرجاء ملء حقول الاسم والرقم الأكاديمي.")
-            st.markdown("---")
-            st.subheader("قائمة الطلاب الحاليين")
-            df_master_current = get_master_students_df()
-            st.dataframe(df_master_current, use_container_width=True)
-            if not df_master_current.empty:
-                student_id_to_delete = st.selectbox("اختر الرقم الأكاديمي لحذف الطالب", df_master_current['student_id'].tolist())
-                if st.button("حذف الطالب المحدد نهائياً", type="primary"):
-                    conn = sqlite3.connect('school_integrated_v5.db')
-                    c = conn.cursor()
-                    c.execute("DELETE FROM students_master WHERE student_id=?", (student_id_to_delete,))
-                    c.execute("DELETE FROM daily_logs WHERE student_id=?", (student_id_to_delete,))
-                    c.execute("DELETE FROM academic_grades WHERE student_id=?", (student_id_to_delete,))
-                    conn.commit()
-                    st.warning(f"تم حذف الطالب ذو الرقم {student_id_to_delete} وكافة سجلاته نهائياً.")
-                    st.rerun()
+        try:
+            db.session.add(new_student)
+            db.session.commit()  # حفظ البيانات في قاعدة البيانات
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()  # تراجع في حال حدوث خطأ
+            return f"حدث خطأ أثناء الحفظ: {str(e)}"
             
-    else:
-        st.warning("يرجى إدخال كلمة المرور الصحيحة.")
+    return render_template('add_student.html')
 
-# ------------------- لوحة الطالب (ولي الأمر) - تم التعديل هنا -------------------
-elif menu == "لوحة الطالب":
-    st.header("🔍 استعلام الطالب وولي الأمر")
-    search_id = st.text_input("أدخل الرقم الأكاديمي للطالب:")
-    
-    if st.button("عرض ملف المتابعة والدرجات"):
-        if search_id:
-            conn = sqlite3.connect('school_integrated_v5.db')
-            df_name = pd.read_sql_query("SELECT name FROM students_master WHERE student_id=?", conn, params=(search_id,))
-            
-            if not df_name.empty:
-                student_name = df_name.iloc[0]['name']
-                st.subheader(f"ملف المتابعة للطالب/ة: {student_name}")
-
-                # عرض الدرجات الأكاديمية (بالتنسيق الجديد في صفوف منفصلة)
-                st.markdown("#### 📝 الدرجات الأكاديمية")
-                df_grades = pd.read_sql_query("SELECT period1, period2, participation, projects, final_total FROM academic_grades WHERE student_id=?", conn, params=(search_id,))
-                
-                if not df_grades.empty:
-                    grades = df_grades.iloc[0]
-                    
-                    st.markdown("**الجزء الأول: الفترة الأولى والمتابعة**")
-                    col_p1_1, col_p1_2, col_p1_3, col_p1_4 = st.columns(4)
-                    col_p1_1.metric("درجة الفترة الأولى", grades['period1'])
-                    col_p1_2.metric("درجة المشاركة", grades['participation'])
-                    col_p1_3.metric("درجة المشاريع", grades['projects'])
-                    col_p1_4.metric("المجموع الجزئي الأول", grades['period1'] + grades['participation'] + grades['projects'])
-                    
-                    st.markdown("---")
-                    st.markdown("**الجزء الثاني: الفترة الثانية والنتيجة النهائية**")
-                    col_p2_1, col_p2_2 = st.columns(2)
-                    col_p2_1.metric("درجة الفترة الثانية", grades['period2'])
-                    col_p2_2.metric("المجموع الكلي النهائي", grades['final_total'], delta=f"الفرق: {grades['final_total'] - (grades['period1'] + grades['participation'] + grades['projects'] + grades['period2'])}")
-                    
-                else:
-                    st.info("لم يتم إدخال الدرجات الأكاديمية بعد.")
-                
-                st.markdown("#### 🗓️ السجل السلوكي اليومي")
-                df_logs = pd.read_sql_query("SELECT log_date AS 'التاريخ', pos_behavior AS 'إيجابي', neg_behavior AS 'سلبي', neg_count AS 'مخالفات', reward AS 'المكافأة', notes AS 'ملاحظات' FROM daily_logs WHERE student_id=?", conn, params=(search_id,))
-                if not df_logs.empty:
-                    st.table(df_logs)
-                else:
-                    st.info("لا يوجد سجل سلوكي يومي لهذا الطالب حتى الآن.")
-                
-            else:
-                st.error("عذراً، هذا الرقم الأكاديمي غير مسجل في النظام.")
-        else:
-            st.warning("يرجى إدخال الرقم أولاً")
+# تشغيل التطبيق والتأكد من إنشاء الجداول
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # ينشئ ملف students.db والجداول تلقائياً
+    app.run(debug=True)
