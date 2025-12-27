@@ -72,75 +72,95 @@ try:
                     if st.button("🗑️ حذف", key=f"ds_{i}"):
                         ws_students.delete_rows(i + 2); st.rerun()
 
-   # --- 📊 شاشة الدرجات والسلوك (مطابقة لمخطط جداول قوقل) ---
+   # --- 📊 شاشة الدرجات والسلوك (النسخة الاحترافية المعتمدة) ---
     elif page == "📊 الدرجات والسلوك":
         st.markdown("<h1>📊 سجل الدرجات والسلوك</h1>", unsafe_allow_html=True)
         
-        all_s = ws_students.get_all_records()
-        if not all_s:
+        # جلب الطلاب مع دعم مسميات مختلفة للأعمدة
+        all_students = ws_students.get_all_records()
+        if not all_students:
             st.warning("⚠️ يرجى إضافة طلاب أولاً.")
         else:
-            # استخدام عمود Name من جدول Students
-            names = [r.get('Name', r.get('name', 'بدون اسم')) for r in all_s]
-            t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك"])
+            names_list = [r.get('Name', r.get('name', 'بدون اسم')) for r in all_students]
+            t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك والمواظبة"])
             
+            # مصفوفة الأيام بالعربية
             days_ar = {"Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", 
                        "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"}
 
-            # --- 1. تبويب الدرجات (مطابق لجدول Grades: Student_id, P1, P2, perf) ---
+            # --- 1. قسم الدرجات (P1, P2, perf) ---
             with t1:
-                with st.form("grades_final"):
-                    st_g = st.selectbox("الطالب", names)
+                with st.form("grades_form_final"):
+                    sel_student = st.selectbox("الطالب", names_list)
                     c1, c2, c3 = st.columns(3)
-                    with c1: p1 = st.number_input("درجة P1", min_value=0.0)
-                    with c2: p2 = st.number_input("درجة P2", min_value=0.0)
-                    with c3: perf = st.number_input("الأداء (perf)", min_value=0.0)
+                    with c1: v_p1 = st.number_input("درجة P1", min_value=0.0)
+                    with c2: v_p2 = st.number_input("درجة P2", min_value=0.0)
+                    with c3: v_perf = st.number_input("الأداء (perf)", min_value=0.0)
                     
-                    if st.form_submit_button("✅ حفظ في Grades"):
-                        # الحفظ حسب ترتيب جدولك
-                        sh.worksheet("Grades").append_row([st_g, p1, p2, perf])
-                        st.success("تم الحفظ"); st.rerun()
+                    if st.form_submit_button("✅ حفظ الدرجات"):
+                        try:
+                            # محاولة الوصول للورقة بأي مسمى محتمل لتجنب خطأ الصورة
+                            ws_g = sh.worksheet("Grades") if "Grades" in [w.title for w in sh.worksheets()] else sh.worksheet("grades")
+                            ws_g.append_row([sel_student, v_p1, v_p2, v_perf])
+                            st.success("تم الحفظ بنجاح")
+                            st.rerun()
+                        except Exception as e: st.error(f"خطأ في الوصول لجدول الدرجات: {e}")
 
-                st.subheader("📋 سجل الدرجات")
-                g_records = sh.worksheet("Grades").get_all_records()
-                if g_records:
-                    for i, row in enumerate(g_records):
-                        c_info, c_del = st.columns([5, 1])
-                        with c_info:
-                            # عرض البيانات حسب مسميات جدولك
-                            st.info(f"👤 **{row.get('Student_id', '؟؟')}** | P1: {row.get('P1', 0)} | P2: {row.get('P2', 0)} | الأداء: {row.get('perf', 0)}")
-                        with c_del:
-                            if st.button("🗑️ حذف", key=f"dg_{i}"):
-                                sh.worksheet("Grades").delete_rows(i+2); st.rerun()
+                st.markdown("---")
+                st.subheader("📋 سجل الدرجات الحالي (تعديل/حذف)")
+                try:
+                    ws_g = sh.worksheet("Grades") if "Grades" in [w.title for w in sh.worksheets()] else sh.worksheet("grades")
+                    g_data = ws_g.get_all_values()
+                    if len(g_data) > 1:
+                        for i, row in enumerate(g_data[1:]):
+                            col_txt, col_del = st.columns([5, 1])
+                            with col_txt:
+                                st.info(f"👤 **{row[0]}** | P1: `{row[1]}` | P2: `{row[2]}` | الأداء: `{row[3]}`")
+                            with col_del:
+                                if st.button("🗑️", key=f"del_g_{i}"):
+                                    ws_g.delete_rows(i + 2); st.rerun()
+                    else: st.info("السجل فارغ.")
+                except: st.warning("تأكد من وجود ورقة باسم Grades في ملفك.")
 
-            # --- 2. تبويب السلوك (مطابق لجدول Behavior: Student_id, Date, Type, note) ---
+            # --- 2. قسم السلوك (مع خيار أخرى وحذف جانبي) ---
             with t2:
-                with st.form("behav_final"):
-                    st_b = st.selectbox("الطالب", names, key="sb_final")
-                    # Type سيخزن نوع السلوك، و Note سنخزن فيها اليوم
-                    b_type = st.multiselect("السلوكيات (Type)", ["🌟 تميز", "📚 كتاب", "✅ واجب", "⚠️ إزعاج", "أخرى..."])
-                    other = st.text_input("سلوك مخصص:") if "أخرى..." in b_type else ""
+                with st.form("behavior_form_final"):
+                    sel_b_student = st.selectbox("اسم الطالب", names_list)
+                    b_options = ["🌟 تميز", "📚 إحضار الكتاب", "✅ حل الواجب", "⚠️ إزعاج", "أخرى..."]
+                    selected_behaviors = st.multiselect("السلوكيات", b_options)
                     
-                    if st.form_submit_button("🚀 رصد في Behavior"):
-                        now = datetime.now()
-                        ws_b = sh.worksheet("Behavior")
-                        for b in b_type:
-                            final_val = other if b == "أخرى..." else b
-                            # الترتيب حسب جدولك: Student_id | Date | Type | note
-                            ws_b.append_row([st_b, str(now.date()), final_val, days_ar.get(now.strftime('%A'))])
-                        st.success("تم رصد السلوك"); st.rerun()
+                    custom_b = ""
+                    if "أخرى..." in selected_behaviors:
+                        custom_b = st.text_input("اكتب السلوك المخصص هنا:")
+                    
+                    if st.form_submit_button("🚀 رصد السلوك"):
+                        try:
+                            ws_b = sh.worksheet("Behavior") if "Behavior" in [w.title for w in sh.worksheets()] else sh.worksheet("behavior")
+                            now = datetime.now()
+                            for b in selected_behaviors:
+                                final_val = custom_b if b == "أخرى..." else b
+                                # الترتيب: Student_id | Date | Type | note (اليوم)
+                                ws_b.append_row([sel_b_student, str(now.date()), final_val, days_ar.get(now.strftime('%A'))])
+                            st.success("تم الرصد!")
+                            st.rerun()
+                        except Exception as e: st.error(f"خطأ في الوصول لجدول السلوك: {e}")
 
-                st.subheader("📋 سجل السلوك")
-                b_records = sh.worksheet("Behavior").get_all_records()
-                if b_records:
-                    for i, row in enumerate(b_records):
-                        c_info, c_del = st.columns([5, 1])
-                        with c_info:
-                            # عرض البيانات بناءً على أعمدة جدولك
-                            st.warning(f"🎭 **{row.get('Student_id', '؟؟')}** | {row.get('Type', '-')} — 🗓️ {row.get('note', '')} ({row.get('Date', '')})")
-                        with col_del:
-                             if st.button("🗑️ حذف", key=f"db_{i}"):
-                                sh.worksheet("Behavior").delete_rows(i+2); st.rerun()
+                st.markdown("---")
+                st.subheader("📋 سجل السلوك (حذف مباشر)")
+                try:
+                    ws_b = sh.worksheet("Behavior") if "Behavior" in [w.title for w in sh.worksheets()] else sh.worksheet("behavior")
+                    b_data = ws_b.get_all_values()
+                    if len(b_data) > 1:
+                        for i, row in enumerate(b_data[1:]):
+                            c_info, c_del = st.columns([5, 1])
+                            with c_info:
+                                # عرض: الطالب | السلوك | التاريخ (اليوم)
+                                st.warning(f"🎭 **{row[0]}** | {row[2]} — 🗓️ {row[1]} ({row[3] if len(row)>3 else ''})")
+                            with c_del:
+                                if st.button("🗑️", key=f"del_b_{i}"):
+                                    ws_b.delete_rows(i + 2); st.rerun()
+                    else: st.info("لا توجد سلوكيات مرصودة.")
+                except: st.warning("تأكد من وجود ورقة باسم Behavior في ملفك.")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
