@@ -3,16 +3,15 @@ import pandas as pd
 import sqlite3
 
 # --- 1. إعدادات الصفحة وقاعدة البيانات ---
-st.set_page_config(page_title="نظام معلم اللغة الإنجليزية", layout="wide", page_icon="🇬🇧")
+st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide", page_icon="🇬🇧")
 
 def get_connection():
-    # قاعدة بيانات محدثة لدعم التخصص الجديد
-    return sqlite3.connect('english_teacher_v14.db', check_same_thread=False)
+    return sqlite3.connect('english_system_ziad.db', check_same_thread=False)
 
 conn = get_connection()
 c = conn.cursor()
 
-# إنشاء الجداول وتحديث الهيكلية
+# إنشاء الجداول
 c.execute('''CREATE TABLE IF NOT EXISTS students 
              (id INTEGER PRIMARY KEY, name TEXT, level TEXT, grade_class TEXT, academic_year TEXT, semester TEXT, subject TEXT)''')
 c.execute('''CREATE TABLE IF NOT EXISTS grades 
@@ -21,7 +20,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS behavior
              (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, date TEXT, day TEXT, type TEXT, note TEXT)''')
 conn.commit()
 
-# --- 2. وظيفة تفريغ الحقول (إضافة طالب جديد) ---
+# --- 2. وظيفة تفريغ الحقول ---
 def clear_student_form():
     st.session_state["id_key"] = 1
     st.session_state["name_key"] = ""
@@ -35,17 +34,19 @@ if 'logged_in' not in st.session_state:
     st.session_state.update({'logged_in': False, 'role': None, 'user_id': None})
 
 if not st.session_state.logged_in:
-    st.title("🇬🇧 نظام إدارة درجات اللغة الإنجليزية")
-    t1, t2 = st.tabs(["بوابة المعلم", "بوابة الطالب"])
+    st.title("🇬🇧 نظام رصد درجات اللغة الإنجليزية")
+    st.subheader("بإشراف الأستاذ: زياد المعمري")
+    
+    t1, t2 = st.tabs(["🔐 بوابة المعلم", "🎓 بوابة الطالب"])
     with t1:
         pwd = st.text_input("كلمة المرور", type="password")
-        if st.button("دخول المعلم"):
+        if st.button("دخول"):
             if pwd == "admin123":
                 st.session_state.update({'logged_in': True, 'role': 'admin'})
                 st.rerun()
     with t2:
-        sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
-        if st.button("عرض تقرير المادة"):
+        sid_in = st.number_input("الرقم الأكاديمي للطالب", min_value=1, step=1)
+        if st.button("عرض التقرير"):
             res = pd.read_sql_query("SELECT * FROM students WHERE id=?", conn, params=(int(sid_in),))
             if not res.empty:
                 st.session_state.update({'logged_in': True, 'role': 'student', 'user_id': int(sid_in)})
@@ -59,8 +60,8 @@ else:
         st.rerun()
 
     if st.session_state.role == 'admin':
-        st.sidebar.title("إعدادات المعلم")
-        menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 رصد درجات الإنجليزي", "📅 سجل السلوك"])
+        st.sidebar.write("👤 مرحباً أ/ زياد")
+        menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 رصد الدرجات", "📅 سجل السلوك"])
 
         # القسم 1: إدارة الطلاب
         if menu == "👥 إدارة الطلاب":
@@ -74,40 +75,37 @@ else:
                 
                 c3, c4 = st.columns(2)
                 flevel = c3.selectbox("المرحلة الدراسية", ["ابتدائي", "متوسط", "ثانوي"], key="level_key")
-                fclass = c4.text_input("الصف (مثلاً: 1/أ)", key="class_key")
+                fclass = c4.text_input("الصف", key="class_key")
                 
                 c5, c6 = st.columns(2)
                 fyear = c5.selectbox("العام الدراسي", ["1447هـ", "1448هـ", "1449هـ", "1450هـ"], key="year_key")
                 fsem = c6.selectbox("الفصل الدراسي", ["الفصل الأول", "الفصل الثاني", "الفصل الثالث"], key="sem_key")
                 
-                # إضافة المادة بشكل مخفي أو ثابت بما أنه خاص بمعلم الإنجليزي
-                fsubject = "اللغة الإنجليزية"
-                
-                if st.form_submit_button("حفظ بيانات الطالب"):
-                    if fname.strip() == "": st.error("الاسم مطلوب!")
+                if st.form_submit_button("حفظ الطالب"):
+                    if fname.strip() == "": st.error("الاسم مطلوب")
                     else:
                         c.execute("INSERT OR REPLACE INTO students VALUES (?,?,?,?,?,?,?)", 
-                                  (int(fid), fname, flevel, fclass, fyear, fsem, fsubject))
+                                  (int(fid), fname, flevel, fclass, fyear, fsem, "اللغة الإنجليزية"))
                         conn.commit()
-                        st.success(f"تم حفظ بيانات الطالب في مادة {fsubject}")
+                        st.success(f"تم حفظ بيانات الطالب بنجاح")
                         st.rerun()
 
             st.divider()
-            st.subheader("📋 قائمة الطلاب المسجلين")
+            st.subheader("📋 قائمة الطلاب")
             df_s = pd.read_sql_query("SELECT * FROM students", conn)
             for _, r in df_s.iterrows():
                 with st.container(border=True):
                     col1, col2, col3 = st.columns([3, 3, 1])
                     col1.write(f"👤 **{r['name']}** (ID: {r['id']})")
-                    col2.write(f"📚 {r['subject']} | 📅 {r['academic_year']} \n\n 🏫 {r['level']} | {r['grade_class']}")
+                    col2.write(f"🏫 {r['level']} | {r['grade_class']} \n\n 🗓️ {r['academic_year']} | {r['semester']}")
                     if col3.button("🗑️ حذف", key=f"del_{r['id']}"):
                         c.execute("DELETE FROM students WHERE id=?", (r['id'],))
                         conn.commit()
                         st.rerun()
 
         # القسم 2: رصد الدرجات
-        elif menu == "📝 رصد درجات الإنجليزي":
-            st.header("📝 رصد وتعديل درجات اللغة الإنجليزية")
+        elif menu == "📝 رصد الدرجات":
+            st.header("📝 رصد وتعديل الدرجات")
             st_df = pd.read_sql_query("SELECT id, name FROM students", conn)
             if not st_df.empty:
                 target_name = st.selectbox("اختر الطالب", st_df['name'])
@@ -117,37 +115,36 @@ else:
                 v1, v2, v3 = (0.0, 0.0, 0.0) if cur_g.empty else (cur_g.iloc[0]['p1'], cur_g.iloc[0]['p2'], cur_g.iloc[0]['perf'])
 
                 with st.form("gr_form"):
-                    st.write(f"🖊️ رصد درجات: **{target_name}**")
+                    st.write(f"🖊️ رصد درجات مادة الإنجليزي لـ: **{target_name}**")
                     g1, g2, g3 = st.columns(3)
-                    p1 = g1.number_input("اختبار الفترة 1", 0.0, 20.0, value=v1)
-                    p2 = g2.number_input("اختبار الفترة 2", 0.0, 20.0, value=v2)
-                    pf = g3.number_input("المشاركة والمهام", 0.0, 40.0, value=v3)
-                    if st.form_submit_button("✅ حفظ الدرجات"):
+                    p1 = g1.number_input("الفترة 1", 0.0, 20.0, value=v1)
+                    p2 = g2.number_input("الفترة 2", 0.0, 20.0, value=v2)
+                    pf = g3.number_input("المشاركة", 0.0, 40.0, value=v3)
+                    if st.form_submit_button("✅ حفظ"):
                         c.execute("INSERT OR REPLACE INTO grades VALUES (?,?,?,?)", (tid, p1, p2, pf))
                         conn.commit()
-                        st.success("تم تحديث الدرجات بنجاح")
+                        st.success("تم الحفظ")
                         st.rerun()
                 
                 if not cur_g.empty:
-                    st.divider()
-                    if st.button(f"🗑️ حذف درجات مادة الإنجليزي لـ {target_name}"):
+                    if st.button("🗑️ حذف الدرجات"):
                         c.execute("DELETE FROM grades WHERE student_id=?", (tid,))
                         conn.commit()
                         st.rerun()
-            else: st.warning("يجب إضافة طلاب أولاً")
+            else: st.warning("أضف طلاباً أولاً")
 
         # القسم 3: سجل السلوك
         elif menu == "📅 سجل السلوك":
-            st.header("📅 ملاحظات السلوك والمواقف")
+            st.header("📅 سجل السلوك")
             st_df = pd.read_sql_query("SELECT id, name FROM students", conn)
             if not st_df.empty:
                 target_name = st.selectbox("الطالب", st_df['name'])
                 tid = int(st_df[st_df['name'] == target_name]['id'].values[0])
                 with st.form("b_form"):
                     dt = st.date_input("التاريخ")
-                    tp = st.selectbox("نوع الموقف", ["إيجابي ✅", "سلبي ⚠️"])
+                    tp = st.selectbox("النوع", ["إيجابي ✅", "سلبي ⚠️"])
                     nt = st.text_area("الملاحظة")
-                    if st.form_submit_button("إضافة للسجل"):
+                    if st.form_submit_button("إضافة"):
                         day_ar = {"Monday":"الاثنين","Tuesday":"الثلاثاء","Wednesday":"الأربعاء","Thursday":"الخميس","Friday":"الجمعة","Saturday":"السبت","Sunday":"الأحد"}[dt.strftime('%A')]
                         c.execute("INSERT INTO behavior (student_id, date, day, type, note) VALUES (?,?,?,?,?)", (tid, dt.isoformat(), day_ar, tp, nt))
                         conn.commit()
@@ -155,44 +152,40 @@ else:
                 
                 logs = pd.read_sql_query("SELECT * FROM behavior WHERE student_id=?", conn, params=(tid,))
                 for _, ln in logs.iterrows():
-                    with st.container(border=True):
-                        ca, cb = st.columns([5, 1])
-                        ca.write(f"📅 {ln['date']} ({ln['day']}) | {ln['type']}: {ln['note']}")
-                        if cb.button("🗑️", key=f"db_{ln['id']}"):
-                            c.execute("DELETE FROM behavior WHERE id=?", (ln['id'],))
-                            conn.commit()
-                            st.rerun()
+                    st.info(f"📅 {ln['date']} ({ln['day']}) | {ln['type']}: {ln['note']}")
 
-    # --- واجهة الطالب (تقرير اللغة الإنجليزية) ---
+    # --- واجهة الطالب (التقرير النهائي بإشرافك) ---
     elif st.session_state.role == 'student':
         sid = st.session_state.user_id
         info = pd.read_sql_query("SELECT * FROM students WHERE id=?", conn, params=(sid,)).iloc[0]
         
         st.title(f"🎓 تقرير مادة {info['subject']}")
-        st.subheader(f"الطالب: {info['name']}")
+        st.markdown(f"### بإشراف الأستاذ: زياد المعمري")
+        st.divider()
         
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown(f"🗓️ **العام الدراسي:** {info['academic_year']}")
-            st.markdown(f"📖 **الفصل:** {info['semester']}")
-        with col_b:
-            st.markdown(f"🏫 **المرحلة:** {info['level']}")
-            st.markdown(f"📝 **الصف:** {info['grade_class']}")
+        st.subheader(f"بيانات الطالب: {info['name']}")
+        c_a, c_b = st.columns(2)
+        with c_a:
+            st.write(f"🗓️ **العام:** {info['academic_year']}")
+            st.write(f"🏫 **المرحلة:** {info['level']}")
+        with c_b:
+            st.write(f"📖 **الفصل:** {info['semester']}")
+            st.write(f"📝 **الصف:** {info['grade_class']}")
             
         st.divider()
-        st.write("### 📊 نتائج مادة اللغة الإنجليزية")
+        st.write("### 📊 درجات اللغة الإنجليزية")
         g_data = pd.read_sql_query("SELECT * FROM grades WHERE student_id=?", conn, params=(sid,))
         if not g_data.empty:
             c1, c2, c3 = st.columns(3)
-            c1.metric("اختبار 1", g_data.iloc[0]['p1'])
-            c2.metric("اختبار 2", g_data.iloc[0]['p2'])
-            c3.metric("مشاركة ومهام", g_data.iloc[0]['perf'])
+            c1.metric("الفترة 1", g_data.iloc[0]['p1'])
+            c2.metric("الفترة 2", g_data.iloc[0]['p2'])
+            c3.metric("المشاركة", g_data.iloc[0]['perf'])
             
             total = g_data.iloc[0]['p1'] + g_data.iloc[0]['p2'] + g_data.iloc[0]['perf']
-            st.info(f"إجمالي الدرجة المرصودة: {total} / 80")
+            st.info(f"المجموع النهائي للمادة: {total} / 80")
         
         st.divider()
-        st.write("### 📅 ملاحظات المعلم")
-        b_data = pd.read_sql_query("SELECT date AS التاريخ, type AS النوع, note AS الملاحظة FROM behavior WHERE student_id=?", conn, params=(sid,))
+        st.write("### 📅 ملاحظات السلوك")
+        b_data = pd.read_sql_query("SELECT date, type, note FROM behavior WHERE student_id=?", conn, params=(sid,))
         if not b_data.empty: st.table(b_data)
-        else: st.info("لا توجد ملاحظات مسجلة.")
+        else: st.info("السجل نظيف")
