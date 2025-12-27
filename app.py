@@ -4,117 +4,107 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 
 # 1. إعدادات الصفحة الملكية
-st.set_page_config(page_title="نظام الأستاذ زياد التعليمي", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="نظام الأستاذ زياد التعليمي", layout="wide")
 
-# تطبيق ثيم ملكي فخم وألوان متناسقة
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
-    .stButton>button {
-        background-color: #d4af37; color: white; border-radius: 12px;
-        border: none; padding: 10px; font-weight: bold; width: 100%;
-    }
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: #f0f2f6; border-radius: 10px 10px 0 0; padding: 10px; }
-    .stTabs [aria-selected="true"] { background-color: #d4af37; color: white; }
-    h1 { color: #2c3e50; font-family: 'Amiri', serif; text-align: center; border-bottom: 3px solid #d4af37; padding-bottom: 10px; }
+    .stButton>button { background-color: #d4af37; color: white; border-radius: 12px; font-weight: bold; }
+    h1 { color: #2c3e50; font-family: 'Amiri', serif; text-align: center; border-bottom: 3px solid #d4af37; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. وظيفة الربط السحابي (أداء سريع)
+# 2. وظيفة الربط السحابي
 @st.cache_resource
 def get_gspread_client():
     scope = ["https://www.googleapis.com/auth/spreadsheets"]
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
     return gspread.authorize(creds)
 
-# 3. القائمة الجانبية (Sidebar) بتصميم جديد
+# 3. القائمة الجانبية
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3426/3426653.png", width=80)
     st.title("القائمة الرئيسية")
-    page = st.radio("انتقل إلى:", ["🏠 الشاشة الرئيسية", "👥 إدارة الطلاب", "📊 رصد الدرجات"])
+    page = st.radio("انتقل إلى:", ["🏠 الشاشة الرئيسية", "👥 إدارة الطلاب", "📊 رصد الدرجات", "🎭 رصد السلوك"])
     st.divider()
-    st.markdown(f"<div style='text-align: center; color: #d4af37;'>v2.5 نظام الأستاذ زياد</div>", unsafe_allow_html=True)
+    st.markdown("v3.0 نظام الأستاذ زياد")
 
-# 4. تشغيل النظام والمعالجة
 try:
     client = get_gspread_client()
-    # فتح الملف باستخدام المعرف الخاص بك
     sh = client.open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
-    ws = sh.worksheet("students")
 
-    # --- الشاشة الرئيسية ---
+    # --- 🏠 الشاشة الرئيسية ---
     if page == "🏠 الشاشة الرئيسية":
         st.markdown("<h1>👑 لوحة التحكم الملكية</h1>", unsafe_allow_html=True)
-        all_data = ws.get_all_records()
-        col1, col2, col3 = st.columns(3)
-        with col1: st.metric("إجمالي الطلاب", len(all_data))
-        with col2: st.metric("حالة الربط", "آمن ✅")
-        with col3: st.metric("العام الدراسي", "1447هـ")
         st.image("https://img.freepik.com/free-vector/education-background-concept_52683-33318.jpg", use_container_width=True)
 
-    # --- شاشة إدارة الطلاب ---
+    # --- 👥 إدارة الطلاب (إضافة المرحلة والسنة والمادة) ---
     elif page == "👥 إدارة الطلاب":
         st.markdown("<h1>👥 إدارة شؤون الطلاب</h1>", unsafe_allow_html=True)
-        tab1, tab2, tab3 = st.tabs(["➕ إضافة طالب", "✏️ تعديل بيانات", "🗑️ حذف طالب"])
-
-        # جلب البيانات وتحويلها لتنسيق مناسب لمنع خطأ int64
-        all_data = ws.get_all_records()
-        df = pd.DataFrame(all_data)
+        ws_students = sh.worksheet("students")
+        tab1, tab2 = st.tabs(["➕ إضافة وتعديل", "📋 عرض القائمة"])
 
         with tab1:
-            with st.form("add_form", clear_on_submit=True):
-                c1, c2 = st.columns(2)
+            with st.form("student_form", clear_on_submit=True):
+                c1, c2, c3 = st.columns(3)
                 with c1:
                     sid = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
-                    sname = st.text_input("اسم الطالب")
+                    sname = st.text_input("اسم الطالب الثلاثي")
                 with c2:
+                    sphase = st.selectbox("المرحلة الدراسية", ["الابتدائية", "المتوسطة"])
                     sclass = st.selectbox("الصف", ["خامس أ", "خامس ب", "سادس أ", "سادس ب"])
-                    syear = "1447هـ"
+                with c3:
+                    syear = st.selectbox("السنة الدراسية", ["1446هـ", "1447هـ"])
+                    ssubject = st.text_input("المادة", value="اللغة الإنجليزية")
+                
                 if st.form_submit_button("حفظ الطالب"):
-                    if sname:
-                        ws.append_row([int(sid), sname, sclass, syear, "الأول"])
-                        st.success("✅ تم الحفظ بنجاح")
-                        st.rerun()
+                    ws_students.append_row([int(sid), sname, sphase, sclass, syear, ssubject])
+                    st.success(f"تم حفظ الطالب {sname} بنجاح")
+                    st.rerun()
 
         with tab2:
-            if not df.empty:
-                target_name = st.selectbox("اختر الطالب للتعديل", df['name'].tolist())
-                student_row = df[df['name'] == target_name].iloc[0]
-                # تحديد رقم السطر في جوجل شيت
-                real_row_idx = int(df[df['name'] == target_name].index[0]) + 2
-                
-                with st.expander(f"تعديل بيانات: {target_name}"):
-                    new_n = st.text_input("الاسم", value=str(student_row['name']))
-                    new_c = st.text_input("الصف", value=str(student_row['class']))
-                    if st.button("تحديث الآن"):
-                        ws.update_cell(real_row_idx, 2, new_n)
-                        ws.update_cell(real_row_idx, 3, new_c)
-                        st.success("تم التعديل!")
-                        st.rerun()
-                st.dataframe(df, use_container_width=True)
+            df_s = pd.DataFrame(ws_students.get_all_records())
+            st.dataframe(df_s, use_container_width=True)
 
-        with tab3:
-            if not df.empty:
-                st.write("### ⚠️ منطقة الحذف النهائي")
-                del_name = st.selectbox("اختر الطالب المراد حذفه", df['name'].tolist(), key="del_select")
-                confirm = st.checkbox(f"أوافق على حذف {del_name} نهائياً")
-                
-                if st.button("حذف نهائي"):
-                    if confirm:
-                        # تحويل الـ index إلى رقم صحيح عادي لتجنب خطأ int64
-                        idx = int(df[df['name'] == del_name].index[0])
-                        ws.delete_rows(idx + 2)
-                        st.warning(f"تم حذف {del_name} بنجاح.")
-                        st.rerun()
-                    else:
-                        st.error("يرجى التأكيد أولاً عبر علامة الصح.")
-
-    # --- شاشة رصد الدرجات ---
+    # --- 📊 رصد الدرجات (مرتبط بورقة grades) ---
     elif page == "📊 رصد الدرجات":
-        st.markdown("<h1>📊 رصد الدرجات</h1>", unsafe_allow_html=True)
-        st.info("سيتم ربط هذا القسم بورقة الدرجات (grades) قريباً...")
+        st.markdown("<h1>📊 وحدة رصد الدرجات</h1>", unsafe_allow_html=True)
+        ws_grades = sh.worksheet("grades") # تأكد من وجود ورقة بهذا الاسم
+        
+        # جلب قائمة الطلاب من ورقة الطلاب للاختيار منهم
+        students_list = pd.DataFrame(sh.worksheet("students").get_all_records())['name'].tolist()
+        
+        with st.form("grades_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                student_name = st.selectbox("اختر الطالب", students_list)
+                exam_type = st.selectbox("نوع الاختبار", ["فتري 1", "فتري 2", "نهائي"])
+            with col2:
+                grade = st.number_input("الدرجة المستحقة", min_value=0, max_value=100)
+                note = st.text_input("ملاحظات المعلم")
+            
+            if st.form_submit_button("رصد الدرجة"):
+                ws_grades.append_row([student_name, exam_type, grade, note])
+                st.success("تم رصد الدرجة بنجاح")
+
+    # --- 🎭 رصد السلوك (مرتبط بورقة behavior) ---
+    elif page == "🎭 رصد السلوك":
+        st.markdown("<h1>🎭 وحدة رصد السلوك والمواظبة</h1>", unsafe_allow_html=True)
+        ws_behavior = sh.worksheet("behavior") # تأكد من وجود ورقة بهذا الاسم
+        
+        students_list = pd.DataFrame(sh.worksheet("students").get_all_records())['name'].tolist()
+        
+        with st.form("behavior_form"):
+            c1, c2 = st.columns(2)
+            with c1:
+                b_name = st.selectbox("اسم الطالب", students_list)
+                b_type = st.selectbox("نوع السلوك", ["إيجابي (+)", "ملاحظة (-)"])
+            with c2:
+                b_desc = st.text_area("وصف السلوك (المشاركة، الانضباط، إلخ)")
+            
+            if st.form_submit_button("حفظ السلوك"):
+                ws_behavior.append_row([b_name, b_type, b_desc])
+                st.success("تم الحفظ بنجاح")
 
 except Exception as e:
-    st.error(f"حدث خطأ في النظام: {e}")
-    st.info("نصيحة: تأكد من مشاركة الملف مع إيميل الخدمة بشكل Editor.")
+    st.error(f"خطأ في النظام: {e}")
