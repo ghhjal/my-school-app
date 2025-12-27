@@ -3,10 +3,10 @@ import pandas as pd
 import sqlite3
 
 # --- 1. إعدادات الصفحة وقاعدة البيانات ---
-st.set_page_config(page_title="نظام رصد الدرجات والسلوك", layout="wide", page_icon="📝")
+st.set_page_config(page_title="نظام الإدارة المدرسية المطور", layout="wide", page_icon="🎓")
 
 def get_connection():
-    return sqlite3.connect('school_system_v5.db', check_same_thread=False)
+    return sqlite3.connect('school_system_final.db', check_same_thread=False)
 
 conn = get_connection()
 c = conn.cursor()
@@ -52,74 +52,96 @@ else:
         choice = st.sidebar.selectbox("القائمة الإدارية", menu)
 
         if choice == "إدارة الطلاب":
-            st.header("👤 تسجيل وتعديل الطلاب")
-            with st.form("add_student_form"):
-                c1, c2, c3 = st.columns(3)
-                nid = c1.number_input("الرقم الأكاديمي", min_value=1)
-                nname = c2.text_input("اسم الطالب")
-                nlevel = c3.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                if st.form_submit_button("حفظ الطالب"):
-                    c.execute("INSERT OR REPLACE INTO students VALUES (?,?,?)", (int(nid), nname, nlevel))
-                    conn.commit()
-                    st.success("تم الحفظ بنجاح")
+            st.header("👤 إدارة الطلاب (إضافة / تعديل / حذف)")
             
+            # قسم الإضافة
+            with st.expander("➕ إضافة طالب جديد"):
+                with st.form("add_form"):
+                    c1, c2, c3 = st.columns(3)
+                    nid = c1.number_input("الرقم الأكاديمي", min_value=1)
+                    nname = c2.text_input("اسم الطالب")
+                    nlevel = c3.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                    if st.form_submit_button("إضافة الطالب"):
+                        c.execute("INSERT OR REPLACE INTO students VALUES (?,?,?)", (int(nid), nname, nlevel))
+                        conn.commit()
+                        st.success("تمت الإضافة بنجاح")
+                        st.rerun()
+
             st.write("---")
-            st.subheader("جدول الطلاب المسجلين")
-            st.dataframe(pd.read_sql_query("SELECT * FROM students", conn), use_container_width=True)
+            
+            # عرض الطلاب مع خيارات التعديل والحذف
+            df_students = pd.read_sql_query("SELECT * FROM students", conn)
+            if not df_students.empty:
+                st.subheader("قائمة الطلاب الحالية")
+                for index, row in df_students.iterrows():
+                    with st.container(border=True):
+                        col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 1, 1])
+                        col1.write(f"ID: {row['id']}")
+                        col2.write(f"الاسم: {row['name']}")
+                        col3.write(f"المرحلة: {row['level']}")
+                        
+                        # زر التعديل
+                        if col4.button("تعديل", key=f"edit_{row['id']}"):
+                            st.session_state[f"editing_{row['id']}"] = True
+                        
+                        # زر الحذف
+                        if col5.button("حذف", key=f"del_{row['id']}"):
+                            c.execute("DELETE FROM students WHERE id = ?", (row['id'],))
+                            c.execute("DELETE FROM grades WHERE student_id = ?", (row['id'],))
+                            conn.commit()
+                            st.warning(f"تم حذف الطالب {row['name']} بنجاح")
+                            st.rerun()
+
+                        # نموذج التعديل (يظهر فقط عند الضغط على زر تعديل)
+                        if st.session_state.get(f"editing_{row['id']}", False):
+                            with st.form(key=f"form_edit_{row['id']}"):
+                                up_name = st.text_input("الاسم الجديد", value=row['name'])
+                                up_level = st.selectbox("المرحلة الجديدة", ["ابتدائي", "متوسط", "ثانوي"], index=["ابتدائي", "متوسط", "ثانوي"].index(row['level']))
+                                if st.form_submit_button("تحديث البيانات"):
+                                    c.execute("UPDATE students SET name=?, level=? WHERE id=?", (up_name, up_level, row['id']))
+                                    conn.commit()
+                                    st.session_state[f"editing_{row['id']}"] = False
+                                    st.success("تم التحديث")
+                                    st.rerun()
+            else:
+                st.info("لا يوجد طلاب مسجلين حالياً.")
 
         elif choice == "رصد الدرجات والسلوك":
+            # (نفس كود رصد الدرجات السابق لضمان الاستمرارية)
             st.header("📝 رصد الدرجات والملاحظات")
             students_df = pd.read_sql_query("SELECT id, name FROM students", conn)
-            
             if not students_df.empty:
                 s_name = st.selectbox("اختر الطالب", students_df['name'])
                 sid = int(students_df[students_df['name'] == s_name]['id'].values[0])
-                
                 with st.form("grade_form"):
-                    st.subheader("📊 درجات اللغة الإنجليزية")
                     col1, col2, col3 = st.columns(3)
-                    p1 = col1.number_input("الفترة الأولى (20)", 0.0, 20.0)
-                    p2 = col2.number_input("الفترة الثانية (20)", 0.0, 20.0)
-                    perf_part = col3.number_input("المهام والمشاركة (40)", 0.0, 40.0)
-                    
-                    st.subheader("🎭 السلوك والملاحظات")
-                    pos_b = st.text_area("إيجابيات وملاحظات تميز")
-                    neg_b = st.text_area("ملاحظات تحتاج تحسين")
-                    
-                    if st.form_submit_button("حفظ السجل"):
+                    p1 = col1.number_input("الفترة 1", 0.0, 20.0)
+                    p2 = col2.number_input("الفترة 2", 0.0, 20.0)
+                    perf_part = col3.number_input("المهام والمشاركة", 0.0, 40.0)
+                    pos_b = st.text_area("إيجابيات")
+                    neg_b = st.text_area("ملاحظات للتحسين")
+                    if st.form_submit_button("حفظ"):
                         c.execute("DELETE FROM grades WHERE student_id=?", (sid,))
-                        c.execute("INSERT INTO grades VALUES (?,?,?,?,?,?)", 
-                                  (sid, p1, p2, perf_part, pos_b, neg_b))
+                        c.execute("INSERT INTO grades VALUES (?,?,?,?,?,?)", (sid, p1, p2, perf_part, pos_b, neg_b))
                         conn.commit()
-                        st.success(f"تم حفظ بيانات الطالب {s_name} بنجاح")
-            else: st.warning("لا يوجد طلاب مسجلين.")
+                        st.success("تم الحفظ")
+            else: st.warning("أضف طلاباً أولاً")
 
     elif st.session_state.role == 'student':
+        # (نفس كود الطالب السابق)
         sid = int(st.session_state.user_id)
-        name = pd.read_sql_query("SELECT name FROM students WHERE id = ?", conn, params=(sid,)).iloc[0,0]
-        
+        name_df = pd.read_sql_query("SELECT name FROM students WHERE id = ?", conn, params=(sid,))
         st.title("🎓 كشف الدرجات والسلوك")
-        st.subheader(f"الطالب: {name} | الرقم الأكاديمي: {sid}")
-
-        res = pd.read_sql_query("SELECT * FROM grades WHERE student_id = ?", conn, params=(sid,))
-        
-        if not res.empty:
-            st.write("---")
-            # عرض الدرجات فقط بدون المجموع
-            st.subheader("📊 تفاصيل الدرجات")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("الفترة 1 (20)", res.iloc[0]['p1'])
-            c2.metric("الفترة 2 (20)", res.iloc[0]['p2'])
-            c3.metric("المهام والمشاركة (40)", res.iloc[0]['performance_part'])
-            
-            # عرض السلوك
-            st.write("---")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.success("🌟 ملاحظات التميز")
-                st.write(res.iloc[0]['pos_behavior'] if res.iloc[0]['pos_behavior'] else "لا يوجد")
-            with col_b:
-                st.error("⚠️ ملاحظات للتحسين")
-                st.write(res.iloc[0]['neg_behavior'] if res.iloc[0]['neg_behavior'] else "لا يوجد")
-        else:
-            st.warning("لم يتم رصد درجاتك بعد.")
+        if not name_df.empty:
+            st.subheader(f"الطالب: {name_df.iloc[0,0]} | الرقم: {sid}")
+            res = pd.read_sql_query("SELECT * FROM grades WHERE student_id = ?", conn, params=(sid,))
+            if not res.empty:
+                c1, c2, c3 = st.columns(3)
+                c1.metric("الفترة 1", res.iloc[0]['p1'])
+                c2.metric("الفترة 2", res.iloc[0]['p2'])
+                c3.metric("المهام والمشاركة", res.iloc[0]['performance_part'])
+                st.write("---")
+                ca, cb = st.columns(2)
+                ca.success(f"🌟 إيجابيات: {res.iloc[0]['pos_behavior']}")
+                cb.error(f"⚠️ تحسين: {res.iloc[0]['neg_behavior']}")
+            else: st.warning("لم ترصد درجات بعد")
