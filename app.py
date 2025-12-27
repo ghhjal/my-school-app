@@ -124,8 +124,8 @@ else:
                     col1, col2 = st.columns(2)
                     p1 = col1.number_input("درجة الفترة الأولى (20)", 0.0, 20.0)
                     p2 = col2.number_input("درجة الفترة الثانية (20)", 0.0, 20.0)
-                    part = col1.number_input("المشاركة (10)", 0.0, 10.0)
-                    proj = col2.number_input("المشاريع (10)", 0.0, 10.0)
+                    part = col1.number_input("المشاركة (40)", 0.0, 40.0)
+                    proj = col2.number_input("المشاريع (40)", 0.0, 40.0)
                     
                     total = p1 + p2 + part + proj
                     
