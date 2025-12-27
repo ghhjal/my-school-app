@@ -80,7 +80,7 @@ try:
         if not all_s: 
             st.warning("⚠️ يرجى إضافة طلاب أولاً من شاشة الإدارة.")
         else:
-            names = [r['name'] for r in all_s]
+            names = [r[name] for r in all_s]
             t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك"])
             
             # --- قسم الدرجات مع الحذف الجانبي ---
@@ -103,7 +103,7 @@ try:
                     for i, row in df_g.iterrows():
                         col_text, col_del = st.columns([5, 1])
                         with col_text:
-                            st.markdown(f"🔹 **{row['name']}** | {row['type']} | الدرجة: `{row['score']}` | {row['date']} ({row['day']})")
+                            st.markdown(f"🔹 **{row[name]}** | {row['type']} | الدرجة: `{row['score']}` | {row['date']} ({row['day']})")
                         with col_del:
                             if st.button("🗑️ حذف", key=f"dg_{i}"):
                                 ws_g.delete_rows(i + 2); st.rerun()
@@ -137,7 +137,7 @@ try:
                     for i, row in df_b.iterrows():
                         c_info, c_btn = st.columns([5, 1])
                         with c_info:
-                            st.markdown(f"🎭 **{row['name']}**: {row['behavior']} — _{row['date']} ({row['day']})_")
+                            st.markdown(f"🎭 **{row[name]}**: {row['behavior']} — _{row['date']} ({row['day']})_")
                         with c_btn:
                             if st.button("🗑️ حذف", key=f"db_{i}"):
                                 ws_bh.delete_rows(i + 2); st.rerun()
