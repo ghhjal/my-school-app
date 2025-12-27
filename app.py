@@ -90,7 +90,7 @@ elif options == "عرض البيانات":
     students_data = session.query(Student).all()
     # استخدام st.data_editor لإتاحة التعديل والحذف السهل
     if students_data:
-        df_students = pd.DataFrame([{"ID": s.id, "الاسم": s.name, "الرقم الجامعي": s.student_id, "عدد الدرجات": len(s.grades)} for s in students_data])
+        df_students = pd.DataFrame([{"ID": s.id, "الاسم": s.name, "رقم الطالب": s.student_id, "عدد الدرجات": len(s.grades)} for s in students_data])
         st.dataframe(df_students, use_container_width=True)
         
         # إضافة إمكانية حذف طالب محدد
