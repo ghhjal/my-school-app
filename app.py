@@ -72,6 +72,51 @@ try:
                     if st.button("🗑️ حذف", key=f"ds_{i}"):
                         ws_students.delete_rows(i + 2); st.rerun()
 
+    # --- 📊 شاشة الدرجات والسلوك (متوافق مع ملفك الحالي) ---
+    elif page == "📊 الدرجات والسلوك":
+        st.markdown("<h1>📊 سجل الدرجات والسلوك</h1>", unsafe_allow_html=True)
+        
+        all_s = ws_students.get_all_records()
+        if not all_s:
+            st.warning("⚠️ أضف طلاباً أولاً")
+        else:
+            names = [r.get('name', 'بدون اسم') for r in all_s]
+            t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك"])
+
+            # --- تبويب السلوك (مطابق لصورة الإكسيل الخاصة بك) ---
+            with t2:
+                with st.form("b_fix_form"):
+                    sb_name = st.selectbox("اسم الطالب", names)
+                    behav_opts = ["🌟 تميز", "📚 كتاب", "✅ واجب", "أخرى..."]
+                    select_b = st.multiselect("السلوكيات", behav_opts)
+                    other_txt = st.text_input("اكتب السلوك المخصص:") if "أخرى..." in select_b else ""
+                    if st.form_submit_button("رصد"):
+                        now = datetime.now()
+                        ws_bh = sh.worksheet("behavior")
+                        for b in select_b:
+                            val = other_txt if b == "أخرى..." else b
+                            # الترتيب حسب صورتك: student_id | date | type | note
+                            # سنضع الاسم في خانة student_id لكي يظهر لك
+                            ws_bh.append_row([sb_name, str(now.date()), val, get_day_ar(now.strftime('%A'))])
+                        st.success("تم الحفظ"); st.rerun()
+
+                st.markdown("### 📋 سجل السلوك الحالي")
+                ws_bh = sh.worksheet("behavior")
+                b_records = ws_bh.get_all_records()
+                if b_records:
+                    for i, row in enumerate(b_records):
+                        # قراءة البيانات حسب مسميات أعمدتك في الصورة
+                        bn = row.get('student_id', '؟؟')
+                        bd = row.get('date', '')
+                        bt = row.get('type', '-') # هنا يظهر السلوك (مثل إيجابي)
+                        
+                        col_info, col_del = st.columns([5, 1])
+                        with col_info:
+                            st.warning(f"🎭 **{bn}**: {bt} — بتاريخ: {bd}")
+                        with col_del:
+                            if st.button("🗑️ حذف", key=f"db_fix_{i}"):
+                                ws_bh.delete_rows(i + 2); st.rerun()
+                                
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
         st.markdown("<h1>🎓 بوابة الطلاب</h1>", unsafe_allow_html=True)
