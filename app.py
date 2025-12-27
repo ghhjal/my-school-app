@@ -77,71 +77,89 @@ try:
             else:
                 st.info("لا توجد بيانات مسجلة.")
 
-   # --- 📊 شاشة رصد الدرجات والسلوك المحدثة (النسخة الاحترافية) ---
+   # --- 📊 شاشة رصد الدرجات والسلوك (النسخة الاحترافية المحدثة) ---
     elif page == "📊 الدرجات والسلوك":
-        st.markdown("<h1>📊 سجل الدرجات والسلوك اليومي</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>📊 سجل الدرجات والسلوك الذكي</h1>", unsafe_allow_html=True)
         
-        # جلب البيانات لربط القوائم
         all_students = ws_students.get_all_records()
         if not all_students:
-            st.warning("⚠️ لا توجد بيانات طلاب. يرجى الإضافة من شاشة 'إدارة الطلاب'.")
+            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
         else:
             df_s = pd.DataFrame(all_students)
             names_list = df_s['name'].tolist()
+            
+            # مصفوفة ترجمة أيام الأسبوع للعربية
+            days_ar = {"Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", 
+                       "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"}
 
-            t1, t2 = st.tabs(["📝 رصد وتعديل الدرجات", "🎭 سجل السلوك والمواظبة"])
+            t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك والمواظبة"])
 
-            # --- 1. قسم الدرجات مع جدول العرض ---
+            # --- 1. قسم الدرجات (رصد + تعديل + حذف) ---
             with t1:
                 with st.form("grades_form"):
                     c1, c2, c3 = st.columns([2, 1, 1])
-                    with c1: student_g = st.selectbox("اختر الطالب", names_list)
-                    with c2: type_g = st.selectbox("التقييم", ["مشاركة", "واجب", "اختبار قصير", "فتري", "نهائي"])
-                    with c3: score_g = st.number_input("الدرجة", min_value=0.0, max_value=100.0)
-                    
+                    with c1: st_g = st.selectbox("الطالب", names_list)
+                    with c2: tp_g = st.selectbox("النوع", ["مشاركة", "واجب", "اختبار قصير", "فتري", "نهائي"])
+                    with c3: sc_g = st.number_input("الدرجة", min_value=0.0, max_value=100.0)
                     if st.form_submit_button("💾 حفظ الدرجة"):
-                        # تسجيل: الاسم، النوع، الدرجة، التاريخ، اليوم
                         now = datetime.now()
-                        day_ar = now.strftime('%A') # سيظهر بالإنجليزية، يمكن ترجمته لاحقاً
-                        sh.worksheet("grades").append_row([student_g, type_g, score_g, str(now.date()), day_ar])
-                        st.success(f"تم رصد درجة {student_g}")
+                        sh.worksheet("grades").append_row([st_g, tp_g, sc_g, str(now.date()), days_ar.get(now.strftime('%A'))])
+                        st.success("تم الحفظ!")
+                        st.rerun()
 
                 st.markdown("---")
-                st.subheader("📋 جدول الدرجات المرصودة")
-                g_data = sh.worksheet("grades").get_all_records()
+                st.subheader("📋 سجل الدرجات (تعديل/حذف)")
+                ws_g = sh.worksheet("grades")
+                g_data = ws_g.get_all_records()
                 if g_data:
-                    st.table(pd.DataFrame(g_data).tail(10)) # عرض آخر 10 درجات مرصودة
-                else: st.info("لا توجد درجات مرصودة بعد.")
+                    df_g = pd.DataFrame(g_data)
+                    for i, row in df_g.iterrows():
+                        with st.expander(f"📝 {row['name']} - {row['type']} ({row['score']})"):
+                            c_edit, c_del = st.columns(2)
+                            new_score = st.number_input("تعديل الدرجة", value=float(row['score']), key=f"eg_{i}")
+                            if st.button("✅ تحديث", key=f"upg_{i}"):
+                                ws_g.update_cell(i + 2, 3, new_score) # تحديث عمود الدرجة
+                                st.success("تم التعديل")
+                                st.rerun()
+                            if st.button("🗑️ حذف الدرجة", key=f"dlg_{i}"):
+                                ws_g.delete_rows(i + 2)
+                                st.rerun()
+                else: st.info("السجل فارغ.")
 
-            # --- 2. قسم السلوك المتعدد مع جدول العرض ---
+            # --- 2. قسم السلوك (رصد متعدد + خيار أخرى + حذف) ---
             with t2:
-                with st.form("behavior_multi_form"):
-                    st.write("### رصد سلوك جديد")
-                    c1, c2 = st.columns(2)
-                    with c1: 
-                        student_b = st.selectbox("اسم الطالب", names_list, key="sb_multi")
-                        # رصد أكثر من سلوك في وقت واحد
-                        behaviors = st.multiselect("السلوكيات المرصودة", 
-                                                ["🌟 مشاركة متميزة", "📚 إحضار الكتاب", "✅ حل الواجب", 
-                                                 "⚠️ عدم تركيز", "🚫 غياب بدون عذر", "🔇 إزعاج"])
-                    with c2:
-                        b_date = st.date_input("تاريخ الرصد", datetime.now())
-                        b_notes = st.text_area("ملاحظات إضافية")
+                with st.form("behavior_form"):
+                    st_b = st.selectbox("اسم الطالب", names_list, key="st_b")
+                    # إضافة خيار "أخرى" كما طلبت
+                    b_options = ["🌟 مشاركة متميزة", "📚 إحضار الكتاب", "✅ حل الواجب", "⚠️ عدم تركيز", "🚫 غياب بدون عذر", "أخرى..."]
+                    behaviors = st.multiselect("السلوكيات", b_options)
                     
-                    if st.form_submit_button("🚀 حفظ السجل السلوكي"):
+                    other_b = ""
+                    if "أخرى..." in behaviors:
+                        other_b = st.text_input("اكتب السلوك الآخر هنا:")
+                    
+                    b_notes = st.text_area("ملاحظات إضافية")
+                    if st.form_submit_button("🚀 رصد السلوك"):
                         ws_b = sh.worksheet("behavior")
-                        day_name = b_date.strftime('%A')
+                        now = datetime.now()
                         for b in behaviors:
-                            ws_b.append_row([student_b, b, b_notes, str(b_date), day_name])
-                        st.success(f"تم تسجيل {len(behaviors)} سلوكيات للطالب {student_b}")
+                            final_b = other_b if b == "أخرى..." else b
+                            ws_b.append_row([st_b, final_b, b_notes, str(now.date()), days_ar.get(now.strftime('%A'))])
+                        st.success("تم التسجيل!")
+                        st.rerun()
 
                 st.markdown("---")
-                st.subheader("📋 جدول سجل السلوك")
-                b_data = sh.worksheet("behavior").get_all_records()
+                st.subheader("📋 سجل السلوك (تحكم)")
+                ws_bh = sh.worksheet("behavior")
+                b_data = ws_bh.get_all_records()
                 if b_data:
-                    st.dataframe(pd.DataFrame(b_data), use_container_width=True)
-                else: st.info("سجل السلوك فارغ حالياً.")
-
+                    df_b = pd.DataFrame(b_data)
+                    for i, row in df_b.iterrows():
+                        with st.expander(f"🎭 {row['name']} - {row['behavior']} ({row['date']})"):
+                            st.write(f"الملاحظة: {row.get('notes', 'لا يوجد')}")
+                            if st.button("🗑️ حذف السلوك", key=f"dlb_{i}"):
+                                ws_bh.delete_rows(i + 2)
+                                st.rerun()
     # --- 🎓 شاشة خاصة بالطلاب (جديدة) ---
     elif page == "🎓 شاشة الطلاب":
         st.markdown("<h1>🎓 بوابة استعلام الطلاب</h1>", unsafe_allow_html=True)
