@@ -6,7 +6,7 @@ import sqlite3
 st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide", page_icon="🇬🇧")
 
 def get_connection():
-    return sqlite3.connect('english_system_ziad.db', check_same_thread=False)
+    return sqlite3.connect('english_system_ziad_v2.db', check_same_thread=False)
 
 conn = get_connection()
 c = conn.cursor()
@@ -63,7 +63,6 @@ else:
         st.sidebar.write("👤 مرحباً أ/ زياد")
         menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 رصد الدرجات", "📅 سجل السلوك"])
 
-        # القسم 1: إدارة الطلاب
         if menu == "👥 إدارة الطلاب":
             st.header("👤 تسجيل وتعديل بيانات الطلاب")
             st.button("➕ إضافة طالب جديد (تفريغ الحقول)", on_click=clear_student_form)
@@ -103,7 +102,6 @@ else:
                         conn.commit()
                         st.rerun()
 
-        # القسم 2: رصد الدرجات
         elif menu == "📝 رصد الدرجات":
             st.header("📝 رصد وتعديل الدرجات")
             st_df = pd.read_sql_query("SELECT id, name FROM students", conn)
@@ -133,7 +131,6 @@ else:
                         st.rerun()
             else: st.warning("أضف طلاباً أولاً")
 
-        # القسم 3: سجل السلوك
         elif menu == "📅 سجل السلوك":
             st.header("📅 سجل السلوك")
             st_df = pd.read_sql_query("SELECT id, name FROM students", conn)
@@ -154,7 +151,7 @@ else:
                 for _, ln in logs.iterrows():
                     st.info(f"📅 {ln['date']} ({ln['day']}) | {ln['type']}: {ln['note']}")
 
-    # --- واجهة الطالب (التقرير النهائي بإشرافك) ---
+    # --- واجهة الطالب (بدون المجموع الكلي) ---
     elif st.session_state.role == 'student':
         sid = st.session_state.user_id
         info = pd.read_sql_query("SELECT * FROM students WHERE id=?", conn, params=(sid,)).iloc[0]
@@ -179,10 +176,8 @@ else:
             c1, c2, c3 = st.columns(3)
             c1.metric("الفترة 1", g_data.iloc[0]['p1'])
             c2.metric("الفترة 2", g_data.iloc[0]['p2'])
-            c3.metric("المشاركة", g_data.iloc[0]['perf'])
-            
-            total = g_data.iloc[0]['p1'] + g_data.iloc[0]['p2'] + g_data.iloc[0]['perf']
-            st.info(f"المجموع النهائي للمادة: {total} / 80")
+            c3.metric("المشاركة والمهام", g_data.iloc[0]['perf'])
+            # تم حذف سطر المجموع النهائي بناءً على طلبك
         
         st.divider()
         st.write("### 📅 ملاحظات السلوك")
