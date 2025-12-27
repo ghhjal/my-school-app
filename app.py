@@ -4,8 +4,7 @@ import pandas as pd
 # إعداد الصفحة
 st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide")
 
-# 1. رابط القراءة (CSV) لورقة "ردود النموذج 1"
-# تأكد من أن الرابط صحيح ويشير لملفك English_Grades
+# 1. رابط القراءة (CSV) لورقة "ردود النموذج 1" لضمان عرض البيانات
 CSV_URL = "https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/gviz/tq?tqx=out:csv&sheet=ردود%20النموذج%201"
 
 st.title("👨‍🏫 إدارة بيانات الطلاب - الأستاذ زياد")
@@ -21,7 +20,7 @@ except:
 
 st.divider()
 
-# 2. واجهة الإضافة (رابط الحفظ الأكيد)
+# 2. واجهة الإضافة (استخدام الرابط المختصر الجديد)
 st.subheader("➕ إضافة طالب جديد")
 with st.form("entry_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
@@ -31,34 +30,34 @@ with st.form("entry_form", clear_on_submit=True):
     with col2:
         fclass = st.text_input("الصف")
     
-    submit = st.form_submit_button("🚀 تجهيز الحفظ")
+    submit = st.form_submit_button("🚀 تجهيز بيانات الحفظ")
 
     if submit:
         if fname:
-            # الرابط المصحح لنموذج جوجل الخاص بك
-            # تم التأكد من استخدام المعرف الصحيح FAIpQLSdyE_7B-6WvG99pA
+            # الرابط الأساسي الذي أرسلته أنت
             base_url = "https://docs.google.com/forms/d/e/1FAIpQLSdyE_7B-6WvG99pA/viewform"
             
-            # بناء الرابط مع البيانات المدخلة وأرقام الـ entry الصحيحة من صورتك
-            form_link = f"{base_url}?entry.1776082434={fid}&entry.64593526={fname}&entry.1340307757={fclass}"
+            # بناء رابط التعبئة التلقائية باستخدام أرقام entry من صورتك السابقة
+            final_link = f"{base_url}?entry.1776082434={fid}&entry.64593526={fname}&entry.1340307757={fclass}"
             
-            st.success(f"✅ تم تجهيز بيانات {fname}")
-            # الزر الأحمر للحفظ النهائي
+            st.success(f"✅ تم تجهيز بيانات الطالب: {fname}")
+            
+            # الزر الكبير للحفظ النهائي
             st.markdown(f"""
-                <a href="{form_link}" target="_blank">
+                <a href="{final_link}" target="_blank">
                     <button style="
                         background-color: #ff4b4b;
                         color: white;
-                        padding: 20px;
+                        padding: 18px;
                         border: none;
-                        border-radius: 10px;
+                        border-radius: 12px;
                         width: 100%;
                         font-weight: bold;
-                        cursor: pointer;
-                        font-family: Arial, sans-serif;">
-                        انقر هنا لإنهاء الحفظ في جوجل شيت (خطوة أخيرة)
+                        font-size: 18px;
+                        cursor: pointer;">
+                        اضغط هنا لإتمام الحفظ في جوجل شيت (خطوة أخيرة)
                     </button>
                 </a>
             """, unsafe_allow_html=True)
         else:
-            st.warning("يرجى كتابة اسم الطالب.")
+            st.warning("يرجى إدخال اسم الطالب.")
