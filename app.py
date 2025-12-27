@@ -3,8 +3,8 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import date
 
-# --- 1. إعدادات الهوية الملكية (الأستاذ زياد المعمري) ---
-st.set_page_config(page_title="نظام الأستاذ زياد المعمري", layout="wide")
+# --- 1. الإعدادات الملكية (نظام الأستاذ زياد المعمري) ---
+st.set_page_config(page_title="نظام الأستاذ زياد المعمري السحابي", layout="wide", page_icon="🇬🇧")
 
 st.markdown("""
     <style>
@@ -13,25 +13,25 @@ st.markdown("""
         color: white; padding: 25px; border-radius: 15px; text-align: center;
         margin-bottom: 25px; border-bottom: 5px solid #fbbf24;
     }
-    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; height: 3em; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. الربط السحابي مع Google Sheets ---
-# سيستخدم البرنامج الرابط الموجود في Secrets تلقائياً
+# --- 2. الربط السحابي (تأكد من وضع الرابط في Secrets) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data(sheet_name):
     try:
+        # قراءة البيانات مع ضمان التحديث الفوري
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception:
-        # إنشاء جداول فارغة بالترويسات الصحيحة في حال حدوث خطأ
+        # إنشاء ترويسات مطابقة تماماً لملفاتك الحالية في حال الخطأ
         if sheet_name == "students": return pd.DataFrame(columns=['id', 'name', 'class', 'year', 'sem'])
         if sheet_name == "grades": return pd.DataFrame(columns=['student_id', 'p1', 'p2', 'perf'])
         if sheet_name == "behavior": return pd.DataFrame(columns=['student_id', 'date', 'type', 'note'])
         return pd.DataFrame()
 
-# --- 3. نظام الجلسة والدخول ---
+# --- 3. إدارة الجلسة والدخول ---
 if 'logged_in' not in st.session_state:
     st.session_state.update({'logged_in': False, 'role': None, 'user_id': None})
 
@@ -46,16 +46,16 @@ if not st.session_state.logged_in:
                 st.rerun()
     with t2:
         sid_in = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
-        if st.button("استعلام"):
+        if st.button("عرض النتيجة"):
             df_s = load_data("students")
             if not df_s.empty and sid_in in df_s['id'].values:
                 st.session_state.update({'logged_in': True, 'role': 'student', 'user_id': int(sid_in)})
                 st.rerun()
-            else: st.error("الرقم غير مسجل.")
+            else: st.error("عذراً، الرقم غير مسجل.")
 
 # --- 4. واجهات النظام ---
 else:
-    if st.sidebar.button("🚪 خروج"):
+    if st.sidebar.button("🚪 تسجيل الخروج"):
         st.session_state.clear()
         st.rerun()
 
@@ -63,12 +63,12 @@ else:
         menu = st.sidebar.radio("القائمة", ["👥 إدارة الطلاب", "📊 رصد الدرجات", "📅 سجل السلوك"])
 
         if menu == "👥 إدارة الطلاب":
-            st.header("إدارة الطلاب")
+            st.header("إدارة بيانات الطلاب")
             with st.form("add_st"):
                 fid = st.number_input("الرقم الأكاديمي", min_value=1)
                 fname = st.text_input("اسم الطالب")
                 fclass = st.text_input("الصف")
-                fyear = st.selectbox("العام", ["1447هـ", "1448هـ", "1449هـ"])
+                fyear = st.selectbox("العام الدراسي", ["1447هـ", "1448هـ", "1449هـ"])
                 fsem = st.selectbox("الفصل", ["الأول", "الثاني", "الثالث"])
                 if st.form_submit_button("💾 حفظ في سحابة جوجل"):
                     df_existing = load_data("students")
@@ -88,15 +88,15 @@ else:
                     p1 = st.number_input("الفترة 1", 0.0, 20.0)
                     p2 = st.number_input("الفترة 2", 0.0, 20.0)
                     pf = st.number_input("المشاركة", 0.0, 40.0)
-                    if st.form_submit_button("تحديث الدرجات"):
+                    if st.form_submit_button("تحديث"):
                         df_g = load_data("grades")
                         new_g = pd.DataFrame([{"student_id": tid, "p1": p1, "p2": p2, "perf": pf}])
                         updated_g = pd.concat([df_g, new_g]).drop_duplicates(subset=['student_id'], keep='last')
                         conn.update(worksheet="grades", data=updated_g)
-                        st.success("تم تحديث الدرجات")
+                        st.success("تم التحديث بنجاح")
 
         elif menu == "📅 سجل السلوك":
-            st.header("سجل السلوك")
+            st.header("سجل السلوك والملاحظات")
             df_st = load_data("students")
             if not df_st.empty:
                 target = st.selectbox("الطالب", df_st['name'])
@@ -106,14 +106,21 @@ else:
                     b_note = st.text_area("الملاحظة")
                     if st.form_submit_button("إضافة ملاحظة"):
                         df_b = load_data("behavior")
-                        new_b = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}])
-                        updated_b = pd.concat([df_b, new_b])
+                        new_beh = pd.DataFrame([{"student_id": tid, "date": str(date.today()), "type": b_type, "note": b_note}])
+                        updated_b = pd.concat([df_b, new_beh])
                         conn.update(worksheet="behavior", data=updated_b)
-                        st.success("تمت الإضافة للسجل")
+                        st.success("تمت الإضافة للسجل السحابي")
 
     elif st.session_state.role == 'student':
         st.markdown("<style>section[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
         df_s = load_data("students")
         info = df_s[df_s['id'] == st.session_state.user_id].iloc[0]
         st.markdown(f'<div class="royal-header"><h1>🎓 تقرير الطالب: {info["name"]}</h1></div>', unsafe_allow_html=True)
-        # عرض البيانات كما في النسخة السابقة...
+        
+        df_g = load_data("grades")
+        grade = df_g[df_g['student_id'] == st.session_state.user_id]
+        if not grade.empty:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("الفترة 1", grade.iloc[0]['p1'])
+            c2.metric("الفترة 2", grade.iloc[0]['p2'])
+            c3.metric("المشاركة", grade.iloc[0]['perf'])
