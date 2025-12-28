@@ -105,21 +105,23 @@ try:
                         except Exception as e:
                             st.error(f"خطأ: {e}")
 
- # --- 📊 شاشة الدرجات والسلوك (النسخة الاحترافية v5.0) ---
+# --- 📊 شاشة الدرجات والسلوك (النسخة المستقرة v6.0) ---
     elif page == "📊 الدرجات والسلوك":
         st.markdown("<h1>📊 سجل الدرجات والسلوك</h1>", unsafe_allow_html=True)
         
         all_students = ws_students.get_all_records()
         if not all_students:
-            st.warning("⚠️ يرجى إضافة طلاب أولاً من شاشة إدارة الطلاب.")
+            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
         else:
             names_list = [r.get('Name', r.get('name', 'بدون اسم')) for r in all_students]
             t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك والمواظبة"])
             
-            days_ar = {"Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", 
-                       "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"}
+            days_map = {
+                "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
+                "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
+            }
 
-            # --- 1. تبويب الدرجات (تحديث السجل الحالي بدون تكرار) ---
+            # --- 1. تبويب الدرجات (تحديث بدون تكرار) ---
             with t1:
                 with st.form("f_grades_final", clear_on_submit=True):
                     sel_st = st.selectbox("اختر الطالب", names_list)
@@ -134,110 +136,59 @@ try:
                             all_g = ws_g.get_all_values()
                             found = False
                             for idx, row in enumerate(all_g):
-                                if row[0] == sel_st: # إذا وجد اسم الطالب
+                                if row[0] == sel_st:
                                     ws_g.update(f"A{idx+1}:D{idx+1}", [[sel_st, v1, v2, vp]])
                                     found = True; break
                             if not found:
                                 ws_g.append_row([sel_st, v1, v2, vp])
-                            st.success(f"تمت العملية لـ {sel_st}")
-                        except: st.error("تأكد من ورقة 'grades'")
+                            st.success(f"تم تحديث بيانات {sel_st}")
+                        except: st.error("خطأ في ورقة grades")
 
-                st.markdown("### 📋 سجل الدرجات الحالي")
-                try:
-                    ws_g_view = sh.worksheet("grades")
-                    g_vals = ws_g_view.get_all_values()
-                    if len(g_vals) > 1:
-                        for i, row in enumerate(g_vals[1:]):
-                            ci, cd = st.columns([5, 1])
-                            with ci: st.info(f"👤 **{row[0]}** | P1: `{row[1]}` | P2: `{row[2]}` | الأداء: `{row[3]}`")
-                            with cd:
-                                if st.button("🗑️", key=f"dg_del_{i}"):
-                                    ws_g_view.delete_rows(i + 2); st.rerun()
-                except: st.info("جاري التحميل...")
-
-           # --- 2. تبويب السلوك (تحديث تلقائي لليوم بناءً على التاريخ) ---
+            # --- 2. تبويب السلوك (اليوم التلقائي + منع الأخطاء) ---
             with t2:
-                with st.form("f_behavior_smart_v3", clear_on_submit=True):
+                # تصميم واجهة الرصد
+                with st.form("f_behavior_smart", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
-                    
-                    # اختيار نوع السلوك
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
-                    
                     b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
                     selected_b = st.multiselect("وصف السلوك", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
                     
-                    # --- الربط الذكي بين التاريخ واليوم ---
                     c1, c2 = st.columns(2)
                     with c1:
-                        # حقل التاريخ
                         sel_date = st.date_input("اختر التاريخ", value=datetime.now())
-                    
                     with c2:
-                        # استخراج اسم اليوم بالإنجليزية ثم تحويله للعربية
+                        # استخراج اليوم تلقائياً من التاريخ المختصر
                         day_en = sel_date.strftime('%A')
-                        # قاموس الأيام للتحويل
-                        days_map = {
-                            "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
-                            "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
-                        }
                         current_day_ar = days_map.get(day_en, "الأحد")
-                        
-                        # جعل اليوم تلقائياً بناءً على التاريخ المختار
-                        sel_day = st.selectbox("اليوم (تلقائي)", list(days_map.values()), 
-                                               index=list(days_map.values()).index(current_day_ar))
+                        st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
                     
                     if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # إرسال البيانات المرتبة لـ Google Sheets
-                                ws_b.append_row([sel_b, b_type, val, str(sel_date), sel_day])
+                                # إرسال البيانات: [الاسم, النوع, الوصف, التاريخ, اليوم]
+                                ws_b.append_row([sel_b, b_type, val, str(sel_date), current_day_ar])
                             st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
-                            st.rerun()
-                        except: st.error("خطأ: تأكد من وجود ورقة behavior")
+                        except: st.error("تأكد من وجود ورقة behavior")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
+                    # عرض آمن يمنع الرسالة الحمراء
                     ws_b_view = sh.worksheet("behavior")
                     b_vals = ws_b_view.get_all_values()
                     if len(b_vals) > 1:
                         for i, row in enumerate(b_vals[1:]):
                             ci, cd = st.columns([5, 1])
                             with ci:
-                                # عرض السجل الكامل: الطالب | النوع | الوصف | التاريخ (اليوم)
-                                st.warning(f"👤 **{row[0]}** | {row[1]} | 🎭 {row[2]} | 🗓️ {row[3]} ({row[4]})")
-                            with cd:
-                                if st.button("🗑️", key=f"db_del_v3_{i}"):
-                                    ws_b_view.delete_rows(i + 2); st.rerun()
-                except: st.info("جاري المزامنة...")
-
-                st.markdown("### 📋 سجل السلوك الحالي")
-                try:
-                    ws_b_view = sh.worksheet("behavior")
-                    b_vals = ws_b_view.get_all_values()
-                    if len(b_vals) > 1:
-                        for i, row in enumerate(b_vals[1:]):
-                            ci, cd = st.columns([5, 1])
-                            with ci:
-                                # عرض البيانات المختارة يدوياً
-                                st.warning(f"👤 **{row[0]}** | {row[1]} | 🎭 {row[2]} | 🗓️ {row[3]} ({row[4]})")
-                            with cd:
-                                if st.button("🗑️", key=f"db_del_v2_{i}"):
-                                    ws_b_view.delete_rows(i + 2); st.rerun()
-                except: st.info("جاري تحديث السجل...")
-
-                st.markdown("### 📋 سجل السلوك الحالي")
-                try:
-                    ws_b_view = sh.worksheet("behavior")
-                    b_vals = ws_b_view.get_all_values()
-                    if len(b_vals) > 1:
-                        for i, row in enumerate(b_vals[1:]):
-                            ci, cd = st.columns([5, 1])
-                            with ci:
-                                # عرض الحقول الأربعة: الطالب - النوع - التاريخ - اليوم
-                                st.warning(f"👤 **{row[0]}** | 🎭 {row[1]} | 🗓️ {row[2]} ({row[3]})")
+                                # معالجة مرنة للأعمدة
+                                n = row[0] if len(row)>0 else "?"
+                                t = row[1] if len(row)>1 else ""
+                                v = row[2] if len(row)>2 else ""
+                                d = row[3] if len(row)>3 else ""
+                                dy = row[4] if len(row)>4 else ""
+                                st.warning(f"👤 **{n}** | {t} | 🎭 {v} | 🗓️ {d} ({dy})")
                             with cd:
                                 if st.button("🗑️", key=f"db_del_{i}"):
                                     ws_b_view.delete_rows(i + 2); st.rerun()
