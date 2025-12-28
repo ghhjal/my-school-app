@@ -163,15 +163,25 @@ try:
                         current_day_ar = days_map.get(day_en, "الأحد")
                         st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
                     
-                    if st.form_submit_button("🚀 رصد السلوك"):
+                   if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
+                            # التأكد من التاريخ بصيغة نصية واضحة لقوقل شيت
+                            formatted_date = sel_date.strftime('%Y-%m-%d')
+                            
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # إرسال البيانات: [الاسم, النوع, الوصف, التاريخ, اليوم]
-                                ws_b.append_row([sel_b, b_type, val, str(sel_date), current_day_ar])
+                                
+                                # الترتيب الصحيح حسب أعمدة ملفك:
+                                # A: الاسم | B: النوع | C: الوصف | D: التاريخ | E: اليوم
+                                row_to_add = [sel_b, b_type, val, formatted_date, current_day_ar]
+                                
+                                ws_b.append_row(row_to_add)
+                            
                             st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
-                        except: st.error("تأكد من وجود ورقة behavior")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"خطأ في المزامنة: {e}")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
