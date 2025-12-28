@@ -209,22 +209,20 @@ try:
                     # في حال انشغال جوجل شيت، يظهر هذا النص فقط
                     st.write("⌛ جاري استرجاع سجل السلوك...")
                                 
-    # --- 🎓 شاشة الطلاب ---
-    elif page == "🎓 شاشة الطلاب":
-        st.markdown("<h1>🎓 بوابة الطلاب</h1>", unsafe_allow_html=True)
-        all_s = ws_students.get_all_records()
-        if all_s:
-            s_name = st.selectbox("اختر اسمك للعرض:", [r['name'] for r in all_s])
-            if s_name:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.info("📊 درجاتك")
-                    dg = pd.DataFrame(sh.worksheet("grades").get_all_records())
-                    st.dataframe(dg[dg['name']==s_name])
-                with c2:
-                    st.warning("🎭 سلوكك")
-                    db = pd.DataFrame(sh.worksheet("behavior").get_all_records())
-                    st.dataframe(db[db['name']==s_name])
-
-except Exception as e:
-    st.error(f"حدث خطأ: {e}")
+    with t3:
+                st.subheader("🔍 استعلام بيانات الطالب")
+                # اختيار الطالب للمعاينة
+                selected_student = st.selectbox("اختر اسم الطالب لعرض ملفه", names_list)
+                
+                if selected_student:
+                    # تقسيم الشاشة لبطاقات إحصائية
+                    col_info, col_chart = st.columns([2, 1])
+                    
+                    with col_info:
+                        st.info(f"👤 ملف الطالب: **{selected_student}**")
+                        # هنا سنقوم بجلب الدرجات والسلوكيات الخاصة بهذا الطالب فقط
+                        # (سأزودك بكود الربط الذكي لها فور جاهزيتك)
+                    
+                    with col_chart:
+                        st.metric(label="✅ السلوك الإيجابي", value="12") # مثال رقمي
+                        st.metric(label="❌ السلوك السلبي", value="2")  # مثال رقمي
