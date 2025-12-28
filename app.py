@@ -109,7 +109,42 @@ if st.session_state.role == "teacher":
             except: st.info("القائمة فارغة")
 
     elif menu == "📊 الدرجات والسلوك":
-        st.header("📊 رصد الدرجات والسلوك")
+        with t_b:
+                # 1. جلب بيانات السلوك وتخزينها في الجلسة لضمان ثبات العرض
+                if 'behavior_df' not in st.session_state:
+                    try:
+                        st.session_state.behavior_df = pd.DataFrame(sh.worksheet("behavior").get_all_records())
+                    except:
+                        st.session_state.behavior_df = pd.DataFrame(columns=["student_id", "date", "type", "note"])
+
+                # 2. نموذج رصد السلوك
+                with st.form("beh_form_final"):
+                    b_st = st.selectbox("اختر الطالب", names, key="b_select_final")
+                    b_t = st.radio("النوع", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+                    b_n = st.text_input("الملاحظة / وصف السلوك")
+                    
+                    if st.form_submit_button("رصد السلوك"):
+                        with st.spinner("جاري الحفظ..."):
+                            # إضافة الصف الجديد في جوجل شيت
+                            new_entry = [b_st, str(datetime.now().date()), b_t, b_n]
+                            sh.worksheet("behavior").append_row(new_entry)
+                            
+                            # تحديث جدول العرض في الجلسة فوراً
+                            st.session_state.behavior_df = pd.DataFrame(sh.worksheet("behavior").get_all_records())
+                            st.success(f"✅ تم رصد سلوك الطالب {b_st} بنجاح")
+                            st.rerun()
+                
+                # 3. عرض الجدول بالأسفل (مثل قسم الدرجات)
+                st.subheader("📋 سجل السلوكيات المرصودة")
+                if not st.session_state.behavior_df.empty:
+                    # عرض الجدول مع تحسين المظهر
+                    st.dataframe(
+                        st.session_state.behavior_df, 
+                        use_container_width=True, 
+                        hide_index=True
+                    )
+                else:
+                    st.info("لا توجد سلوكيات مرصودة حالياً.")
         
         # جلب البيانات مرة واحدة في بداية القسم لتجنب الاختفاء
         if 'grades_df' not in st.session_state:
