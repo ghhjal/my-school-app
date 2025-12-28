@@ -155,24 +155,53 @@ try:
                                     ws_g_view.delete_rows(i + 2); st.rerun()
                 except: st.info("جاري التحميل...")
 
-            # --- 2. تبويب السلوك (التوافق مع: الطالب - النوع - التاريخ - اليوم) ---
+           # --- 2. تبويب السلوك (اختيار يدوي: نوع السلوك - التاريخ - اليوم) ---
             with t2:
-                with st.form("f_behavior_final", clear_on_submit=True):
+                with st.form("f_behavior_final_v2", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
-                    b_opts = ["🌟 تميز", "📚 إحضار الكتاب", "✅ حل الواجب", "⚠️ إزعاج", "أخرى..."]
-                    selected_b = st.multiselect("السلوكيات المرصودة", b_opts)
+                    
+                    # 1. إضافة اختيار نوع السلوك (إيجابي / سلبي)
+                    b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+                    
+                    b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
+                    selected_b = st.multiselect("وصف السلوك", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
+                    
+                    # 2. إضافة اختيار التاريخ واليوم يدوياً
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        sel_date = st.date_input("اختر التاريخ", value=datetime.now())
+                    with c2:
+                        # استخراج اليوم تلقائياً من التاريخ المختصر لتسهيل الأمر عليك
+                        day_name_en = sel_date.strftime('%A')
+                        sel_day = st.selectbox("اليوم", list(days_ar.values()), 
+                                               index=list(days_ar.keys()).index(day_name_en))
                     
                     if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
-                            now = datetime.now()
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # الترتيب المطلوب: [اسم الطالب, نوع السلوك, التاريخ, اليوم]
-                                ws_b.append_row([sel_b, val, str(now.date()), days_ar.get(now.strftime('%A'))])
-                            st.success("تم الرصد بنجاح!")
-                        except: st.error("تأكد من ورقة 'behavior'")
+                                # إرسال البيانات: [الاسم, النوع (إيجابي/سلبي), وصف السلوك, التاريخ المختصر, اليوم]
+                                # ملاحظة: تأكد من وجود أعمدة كافية في شيت behavior لهذه البيانات
+                                ws_b.append_row([sel_b, b_type, val, str(sel_date), sel_day])
+                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح!")
+                        except: st.error("تأكد من وجود ورقة باسم 'behavior' في ملفك")
+
+                st.markdown("### 📋 سجل السلوك الحالي")
+                try:
+                    ws_b_view = sh.worksheet("behavior")
+                    b_vals = ws_b_view.get_all_values()
+                    if len(b_vals) > 1:
+                        for i, row in enumerate(b_vals[1:]):
+                            ci, cd = st.columns([5, 1])
+                            with ci:
+                                # عرض البيانات المختارة يدوياً
+                                st.warning(f"👤 **{row[0]}** | {row[1]} | 🎭 {row[2]} | 🗓️ {row[3]} ({row[4]})")
+                            with cd:
+                                if st.button("🗑️", key=f"db_del_v2_{i}"):
+                                    ws_b_view.delete_rows(i + 2); st.rerun()
+                except: st.info("جاري تحديث السجل...")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
