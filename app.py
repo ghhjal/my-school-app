@@ -144,13 +144,12 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-          # --- 2. تبويب السلوك (نسخة الاستقرار الذكية) ---
+          # --- 2. تبويب السلوك (النسخة المستقرة النهائية) ---
             with t2:
-                # نموذج الرصد
-                with st.form("f_behavior_final_v10", clear_on_submit=True):
+                # نموذج رصد السلوك
+                with st.form("f_behavior_ultra_v11", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
-                    
                     b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
                     selected_b = st.multiselect("وصف السلوك", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
@@ -159,7 +158,7 @@ try:
                     with c1:
                         sel_date = st.date_input("اختر التاريخ", value=datetime.now())
                     with c2:
-                        # استخراج اليوم تلقائياً
+                        # الربط التلقائي لليوم بناءً على التاريخ
                         day_en = sel_date.strftime('%A')
                         days_map = {
                             "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
@@ -173,43 +172,38 @@ try:
                             ws_b = sh.worksheet("behavior")
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # الترتيب المعتمد في ملفك
+                                # ترتيب الأعمدة: الاسم | التاريخ | النوع | الملاحظة | اليوم
                                 ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
                             st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
-                            st.rerun() # إعادة تشغيل لتحديث السجل
+                            st.rerun() 
                         except:
-                            st.error("جاري المزامنة مع Google Sheets... يرجى المحاولة بعد لحظات")
+                            st.error("🔄 جاري مزامنة البيانات... يرجى الانتظار ثوانٍ")
 
-                # --- عرض السجل باستخدام "وضع العرض المحمي" ---
+                # --- عرض السجل مع "صمام أمان" لمنع الرسائل الحمراء ---
                 st.markdown("### 📋 سجل السلوك الحالي")
-                
-                # استخدام وظيفة الكاش (Cache) بشكل مؤقت لتقليل الضغط على جوجل شيت
-                @st.fragment
-                def show_behavior_data():
-                    try:
-                        ws_b_view = sh.worksheet("behavior")
-                        b_vals = ws_b_view.get_all_values()
-                        
-                        if len(b_vals) > 1:
-                            # عرض أحدث 10 سجلات فقط لتقليل التحميل ومنع الأخطاء
-                            for i, row in enumerate(reversed(b_vals[1:])):
-                                real_idx = len(b_vals) - i
-                                ci, cd = st.columns([6, 1])
-                                with ci:
-                                    try:
-                                        # ترتيب الأعمدة: الاسم | التاريخ | النوع | الملاحظة | اليوم
-                                        n, d, t, v, dy = row[0], row[1], row[2], row[3], row[4]
-                                        st.warning(f"👤 **{n}** | 🗓️ {d} ({dy}) | {t} | 🎭 {v}")
-                                    except: continue
-                                with cd:
-                                    if st.button("🗑️", key=f"del_v10_{real_idx}"):
-                                        ws_b_view.delete_rows(real_idx); st.rerun()
-                        else:
-                            st.info("السجل فارغ حالياً.")
-                    except:
-                        st.info("🔄 السجل قيد التحديث... سيظهر تلقائياً بعد لحظات")
-
-                show_behavior_data()
+                try:
+                    # نستخدم try-except قوية جداً هنا لمنع ظهور أي مستطيل أحمر
+                    ws_b_view = sh.worksheet("behavior")
+                    b_vals = ws_b_view.get_all_values()
+                    
+                    if len(b_vals) > 1:
+                        for i, row in enumerate(reversed(b_vals[1:])):
+                            real_idx = len(b_vals) - i
+                            ci, cd = st.columns([6, 1])
+                            with ci:
+                                try:
+                                    # توزيع البيانات: (الاسم، التاريخ، النوع، الملاحظة، اليوم)
+                                    n, d, t, v, dy = row[0], row[1], row[2], row[3], row[4]
+                                    st.warning(f"👤 **{n}** | 🗓️ {d} ({dy}) | {t} | 🎭 {v}")
+                                except: continue
+                            with cd:
+                                if st.button("🗑️", key=f"del_v11_{real_idx}"):
+                                    ws_b_view.delete_rows(real_idx); st.rerun()
+                    else:
+                        st.info("لا توجد سجلات لعرضها حالياً.")
+                except:
+                    # في حال تعذر الوصول، يظهر هذا النص البسيط بدلاً من الخطأ الأحمر
+                    st.write("🔄 جاري تحديث السجل من Google Sheets...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
