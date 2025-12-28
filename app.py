@@ -53,6 +53,63 @@ if st.sidebar.button("🚪 تسجيل الخروج"):
 
 # --- 3. واجهة المعلم (رصد السلوك) ---
 if st.session_state.user_role == "teacher":
+    st.sidebar.button("🚪 تسجيل الخروج", on_click=lambda: st.session_state.update({"user_role": None}))
+    st.title("👨‍🏫 لوحة تحكم المعلم")
+    
+    # إضافة تبويب الإدارة الذي أرسلته
+    tab1, tab2, tab3, tab4 = st.tabs(["🎭 رصد السلوك", "📊 لوحة الدرجات", "🔍 معاينة الطلاب", "👥 إدارة الطلاب"])
+    
+    # --- التبويب الرابع: إدارة الطلاب (الكود الذي أرسلته) ---
+    with tab4:
+        st.markdown("<h3>👥 إدارة شؤون الطلاب</h3>", unsafe_allow_html=True)
+        t_sub1, t_sub2 = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب"])
+        
+        with t_sub1:
+            with st.form("add_student", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                with c1:
+                    sid = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
+                    sname = st.text_input("اسم الطالب")
+                with c2:
+                    sphase = st.selectbox("المرحلة", ["الابتدائية", "المتوسطة", "الثانوية"])
+                    sclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                
+                if st.form_submit_button("حفظ"):
+                    try:
+                        # الإضافة لورقة sheet1 (الرقم، الاسم، 0، 0، 0)
+                        ws_students = sh.worksheet("sheet1")
+                        ws_students.append_row([str(sid), sname, "0", "0", "0", sphase, sclass])
+                        st.success("✅ تم حفظ الطالب الجديد في السجلات")
+                        st.rerun()
+                    except: st.error("فشل الاتصال بـ Google Sheets")
+
+        with t_sub2:
+            try:
+                ws_students = sh.worksheet("sheet1")
+                data = ws_students.get_all_records()
+                if data:
+                    import pandas as pd
+                    df = pd.DataFrame(data)
+                    for i, r in df.iterrows():
+                        student_name = r.get("الاسم", r.get("name", "؟؟"))
+                        st.markdown(f"**{student_name}** (ID: {r.get('رقم الطالب', i)})")
+                        
+                        if st.button(f"🗑️ حذف {student_name}", key=f"del_{i}"):
+                            # 1. حذف من ورقة الطلاب الرئيسية
+                            ws_students.delete_rows(i + 2)
+                            
+                            # 2. الحذف الذكي من ورقة السلوك (behavior)
+                            try:
+                                ws_b = sh.worksheet("behavior")
+                                b_data = ws_b.get_all_values()
+                                for r_idx in range(len(b_data), 1, -1):
+                                    if b_data[r_idx-1][0] == student_name:
+                                        ws_b.delete_rows(r_idx)
+                            except: pass
+                            
+                            st.warning(f"تم حذف {student_name} وكافة سجلاته")
+                            st.rerun()
+            except: st.info("لا توجد بيانات طلاب لعرضها حالياً.")
     st.title("👨‍🏫 لوحة تحكم المعلم")
     t1, t2 = st.tabs(["🎭 رصد السلوك", "📊 لوحة الدرجات"])
     
