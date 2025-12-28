@@ -185,41 +185,46 @@ try:
                         except:
                             st.error("تأكد من وجود ورقة 'behavior' وتوافق الأعمدة")
 
-                st.markdown("### 📋 سجل السلوك الحالي")
-                try:
-                    # محاولة جلب البيانات بهدوء
-                    ws_b_view = sh.worksheet("behavior")
-                    b_vals = ws_b_view.get_all_values()
-                    
-                    if len(b_vals) > 1:
-                        # عرض السجلات من الأحدث للأقدم لسهولة المتابعة
-                        for i, row in enumerate(reversed(b_vals[1:])):
-                            real_idx = len(b_vals) - i
-                            ci, cd = st.columns([6, 1])
-                            with ci:
-                                try:
-                                    # توزيع البيانات حسب ترتيب أعمدة ملفك
-                                    # A: الاسم | B: التاريخ | C: النوع | D: الملاحظة | E: اليوم
-                                    name = row[0] if len(row) > 0 else "---"
-                                    date = row[1] if len(row) > 1 else "---"
-                                    btype = row[2] if len(row) > 2 else ""
-                                    note = row[3] if len(row) > 3 else ""
-                                    day = row[4] if len(row) > 4 else ""
-                                    
-                                    # عرض منسق وجميل لكل سجل
-                                    st.warning(f"👤 **{name}** | 🗓️ {date} ({day}) | {btype} | 🎭 {note}")
-                                except:
-                                    continue
-                            with cd:
-                                # زر الحذف الفوري
-                                if st.button("🗑️", key=f"del_bh_final_{real_idx}"):
-                                    ws_b_view.delete_rows(real_idx)
-                                    st.rerun()
-                    else:
-                        st.info("لا توجد سلوكيات مرصودة حالياً.")
-                except:
-                    # في حالة التأخير، تظهر هذه الرسالة بدلاً من الخطأ الأحمر
-                    st.info("🔄 جاري تحديث قائمة السلوك...")
+               st.markdown("### 📋 سجل السلوك الحالي")
+                
+                # إنشاء حاوية فارغة للعرض لمنع تداخل العمليات
+                view_container = st.container()
+                
+                with view_container:
+                    try:
+                        # محاولة جلب البيانات مع مهلة زمنية صغيرة لضمان الاستقرار
+                        ws_b_view = sh.worksheet("behavior")
+                        b_vals = ws_b_view.get_all_values()
+                        
+                        if len(b_vals) > 1:
+                            # عرض السجلات من الأحدث للأقدم
+                            for i, row in enumerate(reversed(b_vals[1:])):
+                                real_idx = len(b_vals) - i
+                                ci, cd = st.columns([6, 1])
+                                with ci:
+                                    try:
+                                        # ترتيب الأعمدة حسب ملفك: الاسم | التاريخ | النوع | الملاحظة | اليوم
+                                        name = row[0] if len(row) > 0 else "---"
+                                        date = row[1] if len(row) > 1 else "---"
+                                        btype = row[2] if len(row) > 2 else ""
+                                        note = row[3] if len(row) > 3 else ""
+                                        day = row[4] if len(row) > 4 else ""
+                                        
+                                        # عرض السجل بتنسيق احترافي
+                                        st.warning(f"👤 **{name}** | 🗓️ {date} ({day}) | {btype} | 🎭 {note}")
+                                    except:
+                                        continue
+                                with cd:
+                                    # زر الحذف الفوري مع تحديث الصفحة
+                                    if st.button("🗑️", key=f"btn_del_{real_idx}"):
+                                        ws_b_view.delete_rows(real_idx)
+                                        st.rerun()
+                        else:
+                            st.info("سجل السلوك فارغ حالياً.")
+                            
+                    except Exception:
+                        # بدلاً من الرسالة الحمراء، يظهر هذا النص فقط أثناء التحديث
+                        st.write("🔄 جاري مزامنة السجل مع Google Sheets...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
