@@ -176,45 +176,57 @@ try:
                         except:
                             st.info("🔄 جاري التحديث...")
 
-           # --- 3. تبويب شاشة الطالب (عرض بطاقة الأداء الذكية) ---
+          # --- 3. تبويب شاشة الطالب (البطاقة الشاملة) ---
             with t3:
-                st.subheader("🔍 استعلام ملف الطالب")
-                
-                # اختيار اسم الطالب لعرض بياناته الخاصة فقط
-                s_name = st.selectbox("اختر اسم الطالب للمعاينة", names_list, key="view_student_safe")
+                st.subheader("🔍 استعلام ملف الطالب الشامل")
+                s_name = st.selectbox("اختر اسم الطالب للمعاينة", names_list, key="view_final_v14")
                 
                 if s_name:
                     try:
-                        # الاتصال بورقة السلوك وجلب البيانات
+                        # 1. قسم إحصائيات السلوك من ورقة 'behavior'
                         ws_bh = sh.worksheet("behavior")
-                        all_data = ws_bh.get_all_values()
+                        bh_data = ws_bh.get_all_values()
+                        student_bh = [r for r in bh_data if r[0] == s_name]
                         
-                        # تصفية البيانات للطالب المختار وحساب الإحصائيات
-                        student_records = [row for row in all_data if row[0] == s_name]
-                        pos_count = sum(1 for r in student_records if "إيجابي" in r[2])
-                        neg_count = sum(1 for r in student_records if "سلبي" in r[2])
+                        pos = sum(1 for r in student_bh if "إيجابي" in r[2])
+                        neg = sum(1 for r in student_bh if "سلبي" in r[2])
                         
-                        # عرض عدادات السلوك بشكل جمالي
-                        st.markdown(f"### 📊 ملخص أداء الطالب: {s_name}")
-                        m1, m2 = st.columns(2)
-                        with m1:
-                            st.metric(label="✅ السلوكيات الإيجابية", value=pos_count)
-                        with m2:
-                            st.metric(label="❌ السلوكيات السلبية", value=neg_count)
+                        st.markdown(f"### 📊 أداء الطالب: {s_name}")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.metric(label="✅ السلوك الإيجابي", value=pos)
+                        with c2:
+                            st.metric(label="❌ السلوك السلبي", value=neg)
                         
                         st.divider()
+
+                        # 2. قسم الدرجات من ورقة 'Sheet1'
+                        st.markdown("### 📝 نتائج التقييم الدراسي")
+                        ws_gr = sh.worksheet("Sheet1")
+                        gr_data = ws_gr.get_all_values()
+                        header = gr_data[0]
+                        # البحث عن صف الطالب في ورقة الدرجات
+                        student_row = next((r for r in gr_data if r[0] == s_name), None)
                         
-                        # عرض سجل السلوك التفصيلي لهذا الطالب فقط
-                        if student_records:
-                            st.write("📋 **سجل العمليات الأخير:**")
-                            for row in reversed(student_records):
-                                # ترتيب الأعمدة: الاسم | التاريخ | النوع | الملاحظة | اليوم
-                                date, b_type, note, day = row[1], row[2], row[3], row[4]
-                                color = "green" if "إيجابي" in b_type else "red"
-                                st.markdown(f"🗓️ **{date}** ({day}) - :{color}[{b_type}] : {note}")
+                        if student_row:
+                            # عرض الدرجات في شكل أعمدة (الفترة 1، الفترة 2، الأداء)
+                            g1, g2, g3 = st.columns(3)
+                            # نفترض الأعمدة: B=P1, C=P2, D=Perf حسب ملفك
+                            with g1: st.info(f"📅 الفترة 1: **{student_row[1]}**")
+                            with g2: st.info(f"📅 الفترة 2: **{student_row[2]}**")
+                            with g3: st.success(f"🏆 الأداء: **{student_row[3]}**")
                         else:
-                            st.info("لا توجد سجلات سلوك لهذا الطالب حتى الآن.")
-                            
+                            st.info("لا توجد درجات مرصودة لهذا الطالب حالياً.")
+
+                        st.divider()
+                        
+                        # 3. سجل العمليات الأخير (عرض آخر 5 مواقف فقط)
+                        if student_bh:
+                            st.write("📋 **آخر رصد سلوكي:**")
+                            for r in reversed(student_bh[-5:]):
+                                color = "green" if "إيجابي" in r[2] else "red"
+                                st.markdown(f"🗓️ {r[1]} | :{color}[{r[2]}] : {r[3]}")
+                                
                     except Exception:
-                        # منع ظهور الرسائل الحمراء واستبدالها بنص هادئ
-                        st.info("🔄 جاري تحديث بيانات الطالب من Google Sheets...")
+                        # رسالة حماية صامتة لتجنب اللون الأحمر
+                        st.info("🔄 جاري تحديث بيانات الطالب من السجلات...")
