@@ -3,38 +3,50 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
-# --- إعدادات الحماية والأمان ---
+# --- إعدادات تسجيل الدخول والحماية ---
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
 
-# شاشة تسجيل الدخول الرئيسية
 if st.session_state.user_role is None:
-    st.title("🔐 نظام بوابة الطالب والمعلم")
-    tab_login1, tab_login2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
+    st.title("🔐 بوابة المدرسة الرقمية")
+    choice = st.radio("من فضلك اختر نوع المستخدم:", ["🎓 دخول طالب", "👨‍🏫 دخول معلم"], horizontal=True)
     
-    with tab_login1:
+    if choice == "👨‍🏫 دخول معلم":
         pwd = st.text_input("كلمة مرور المعلم", type="password")
-        if st.button("دخول المعلم"):
-            if pwd == "1234": # يمكنك تغيير كلمة المرور هنا
+        if st.button("دخول الإدارة"):
+            if pwd == "1234": # غير الرقم السري هنا كما تحب
                 st.session_state.user_role = "admin"
                 st.rerun()
             else:
-                st.error("كلمة المرور غير صحيحة")
+                st.error("❌ كلمة المرور غير صحيحة")
                 
-    with tab_login2:
-        st.info("الرجاء إدخال رقم الطالب المعتمد في السجلات")
-        std_id = st.text_input("رقم الطالب")
-        if st.button("دخول الطالب"):
-            # التأكد من وجود الرقم في قائمة الطلاب (أو أي منطق تحقق تفضله)
-            st.session_state.user_role = "student"
-            st.session_state.student_id = std_id
-            st.rerun()
-    st.stop() # إيقاف بقية الكود حتى يتم تسجيل الدخول
+    else:
+        std_id = st.text_input("أدخل رقم الطالب الخاص بك")
+        if st.button("عرض نتائجي"):
+            if std_id: # التحقق من إدخال رقم
+                st.session_state.user_role = "student"
+                st.session_state.student_id = std_id
+                st.rerun()
+            else:
+                st.warning("⚠️ يرجى إدخال الرقم أولاً")
+    st.stop() # هذا السطر يمنع ظهور أي شيء آخر قبل تسجيل الدخول
+    # --- إذا كان الداخل هو المعلم ---
+if st.session_state.user_role == "admin":
+    st.sidebar.success("مرحباً بك يا أستاذ")
+    if st.sidebar.button("🚪 تسجيل الخروج"):
+        st.session_state.user_role = None; st.rerun()
 
-# زر تسجيل الخروج (يظهر في الشريط الجانبي)
-if st.sidebar.button("🚪 تسجيل الخروج"):
-    st.session_state.user_role = None
-    st.rerun()
+    t1, t2 = st.tabs(["📚 إدارة الدرجات", "🎭 رصد السلوك"])
+    # (هنا تضع كود الدرجات وكود رصد السلوك الذي نجحنا فيه سابقاً)
+
+# --- إذا كان الداخل هو الطالب ---
+elif st.session_state.user_role == "student":
+    st.sidebar.info(f"رقم الطالب: {st.session_state.student_id}")
+    if st.sidebar.button("🚪 خروج"):
+        st.session_state.user_role = None; st.rerun()
+
+    st.title("🎓 ملف الطالب الأكاديمي")
+    # هنا تضع كود "شاشة الطالب" الذي يعرض درجاته وسلوكه فقط
 # 1. إعدادات الصفحة الملكية
 st.set_page_config(page_title="نظام الأستاذ زياد التعليمي", layout="wide")
 
