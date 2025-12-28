@@ -144,12 +144,12 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-           # --- 2. تبويب السلوك (التوافق مع الأعمدة واليوم التلقائي) ---
+           # --- 2. تبويب السلوك (تصحيح الإزاحة والربط التلقائي) ---
             with t2:
-                with st.form("f_behavior_final_v7", clear_on_submit=True):
+                # إنشاء نموذج الرصد
+                with st.form("f_behavior_final_v8", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
                     
-                    # اختيار نوع السلوك
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     
                     b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
@@ -158,73 +158,55 @@ try:
                     
                     c1, c2 = st.columns(2)
                     with c1:
-                        # اختيار التاريخ
                         sel_date = st.date_input("اختر التاريخ", value=datetime.now())
                     with c2:
-                        # استخراج اليوم تلقائياً بناءً على التاريخ المختار
+                        # الربط التلقائي لليوم بناءً على التاريخ
                         day_en = sel_date.strftime('%A')
                         days_map = {
                             "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
                             "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
                         }
                         current_day_ar = days_map.get(day_en, "الأحد")
-                        # عرض اليوم كقراءة فقط للتأكيد
                         st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
                     
-                    # زر الرصد بمحاذاة صحيحة لتجنب خطأ الصورة
+                    # زر الحفظ - تأكد من محاذاته مع selectbox
                     if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # الترتيب المطابق لملفك:
-                                # A: student_id | B: date | C: type | D: note | E: (اليوم)
+                                # الترتيب المعتمد في شيت behavior الخاص بك
                                 ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
                             st.success(f"تم رصد السلوك لـ {sel_b} بنجاح!")
                             st.rerun()
                         except:
-                            st.error("تأكد من وجود ورقة 'behavior' وتوافق الأعمدة")
+                            st.error("خطأ: تأكد من وجود ورقة باسم 'behavior'")
 
-               st.markdown("### 📋 سجل السلوك الحالي")
-                
-                # إنشاء حاوية فارغة للعرض لمنع تداخل العمليات
-                view_container = st.container()
-                
-                with view_container:
-                    try:
-                        # محاولة جلب البيانات مع مهلة زمنية صغيرة لضمان الاستقرار
-                        ws_b_view = sh.worksheet("behavior")
-                        b_vals = ws_b_view.get_all_values()
-                        
-                        if len(b_vals) > 1:
-                            # عرض السجلات من الأحدث للأقدم
-                            for i, row in enumerate(reversed(b_vals[1:])):
-                                real_idx = len(b_vals) - i
-                                ci, cd = st.columns([6, 1])
-                                with ci:
-                                    try:
-                                        # ترتيب الأعمدة حسب ملفك: الاسم | التاريخ | النوع | الملاحظة | اليوم
-                                        name = row[0] if len(row) > 0 else "---"
-                                        date = row[1] if len(row) > 1 else "---"
-                                        btype = row[2] if len(row) > 2 else ""
-                                        note = row[3] if len(row) > 3 else ""
-                                        day = row[4] if len(row) > 4 else ""
-                                        
-                                        # عرض السجل بتنسيق احترافي
-                                        st.warning(f"👤 **{name}** | 🗓️ {date} ({day}) | {btype} | 🎭 {note}")
-                                    except:
-                                        continue
-                                with cd:
-                                    # زر الحذف الفوري مع تحديث الصفحة
-                                    if st.button("🗑️", key=f"btn_del_{real_idx}"):
-                                        ws_b_view.delete_rows(real_idx)
-                                        st.rerun()
-                        else:
-                            st.info("سجل السلوك فارغ حالياً.")
-                            
-                    except Exception:
-                        # بدلاً من الرسالة الحمراء، يظهر هذا النص فقط أثناء التحديث
-                        st.write("🔄 جاري مزامنة السجل مع Google Sheets...")
+                # --- عرض السجل مع الحماية من الرسائل الحمراء ---
+                st.markdown("### 📋 سجل السلوك الحالي")
+                try:
+                    ws_b_view = sh.worksheet("behavior")
+                    b_vals = ws_b_view.get_all_values()
+                    
+                    if len(b_vals) > 1:
+                        # عرض أحدث السجلات أولاً
+                        for i, row in enumerate(reversed(b_vals[1:])):
+                            real_idx = len(b_vals) - i
+                            ci, cd = st.columns([6, 1])
+                            with ci:
+                                # حماية قراءة البيانات لتجنب الخطأ
+                                try:
+                                    n, d, t, v, dy = row[0], row[1], row[2], row[3], row[4]
+                                    st.warning(f"👤 **{n}** | 🗓️ {d} ({dy}) | {t} | 🎭 {v}")
+                                except:
+                                    continue
+                            with cd:
+                                if st.button("🗑️", key=f"del_v8_{real_idx}"):
+                                    ws_b_view.delete_rows(real_idx)
+                                    st.rerun()
+                except:
+                    # هذه الرسالة تمنع ظهور المستطيل الأحمر المزعج
+                    st.info("🔄 جاري تحديث قائمة السلوك من Google Sheets...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
