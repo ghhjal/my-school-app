@@ -155,38 +155,63 @@ try:
                                     ws_g_view.delete_rows(i + 2); st.rerun()
                 except: st.info("جاري التحميل...")
 
-           # --- 2. تبويب السلوك (اختيار يدوي: نوع السلوك - التاريخ - اليوم) ---
+           # --- 2. تبويب السلوك (تحديث تلقائي لليوم بناءً على التاريخ) ---
             with t2:
-                with st.form("f_behavior_final_v2", clear_on_submit=True):
+                with st.form("f_behavior_smart_v3", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
                     
-                    # 1. إضافة اختيار نوع السلوك (إيجابي / سلبي)
+                    # اختيار نوع السلوك
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     
                     b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
                     selected_b = st.multiselect("وصف السلوك", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
                     
-                    # 2. إضافة اختيار التاريخ واليوم يدوياً
+                    # --- الربط الذكي بين التاريخ واليوم ---
                     c1, c2 = st.columns(2)
                     with c1:
+                        # حقل التاريخ
                         sel_date = st.date_input("اختر التاريخ", value=datetime.now())
+                    
                     with c2:
-                        # استخراج اليوم تلقائياً من التاريخ المختصر لتسهيل الأمر عليك
-                        day_name_en = sel_date.strftime('%A')
-                        sel_day = st.selectbox("اليوم", list(days_ar.values()), 
-                                               index=list(days_ar.keys()).index(day_name_en))
+                        # استخراج اسم اليوم بالإنجليزية ثم تحويله للعربية
+                        day_en = sel_date.strftime('%A')
+                        # قاموس الأيام للتحويل
+                        days_map = {
+                            "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
+                            "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
+                        }
+                        current_day_ar = days_map.get(day_en, "الأحد")
+                        
+                        # جعل اليوم تلقائياً بناءً على التاريخ المختار
+                        sel_day = st.selectbox("اليوم (تلقائي)", list(days_map.values()), 
+                                               index=list(days_map.values()).index(current_day_ar))
                     
                     if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # إرسال البيانات: [الاسم, النوع (إيجابي/سلبي), وصف السلوك, التاريخ المختصر, اليوم]
-                                # ملاحظة: تأكد من وجود أعمدة كافية في شيت behavior لهذه البيانات
+                                # إرسال البيانات المرتبة لـ Google Sheets
                                 ws_b.append_row([sel_b, b_type, val, str(sel_date), sel_day])
-                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح!")
-                        except: st.error("تأكد من وجود ورقة باسم 'behavior' في ملفك")
+                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
+                            st.rerun()
+                        except: st.error("خطأ: تأكد من وجود ورقة behavior")
+
+                st.markdown("### 📋 سجل السلوك الحالي")
+                try:
+                    ws_b_view = sh.worksheet("behavior")
+                    b_vals = ws_b_view.get_all_values()
+                    if len(b_vals) > 1:
+                        for i, row in enumerate(b_vals[1:]):
+                            ci, cd = st.columns([5, 1])
+                            with ci:
+                                # عرض السجل الكامل: الطالب | النوع | الوصف | التاريخ (اليوم)
+                                st.warning(f"👤 **{row[0]}** | {row[1]} | 🎭 {row[2]} | 🗓️ {row[3]} ({row[4]})")
+                            with cd:
+                                if st.button("🗑️", key=f"db_del_v3_{i}"):
+                                    ws_b_view.delete_rows(i + 2); st.rerun()
+                except: st.info("جاري المزامنة...")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
