@@ -144,75 +144,68 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-         # --- 2. تبويب السلوك (نسخة الرصد السريع) ---
+         # --- 2. تبويب السلوك (رصد سريع وإغلاق تلقائي) ---
             with t2:
-                with st.form("f_behavior_quick_v13", clear_on_submit=True):
+                with st.form("f_behavior_final", clear_on_submit=True):
                     sel_b = st.selectbox("👤 اسم الطالب", names_list)
-                    
                     b_type = st.radio("📌 نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     
-                    # القائمة الآن تختار سلوكاً واحداً لتغلق تلقائياً
-                    b_opts = [
-                        "🌟 تميز", 
-                        "📚 إحضار الكتاب", 
-                        "✅ حل الواجب", 
-                        "⚠️ إزعاج", 
-                        "🚫 عدم تركيز", 
-                        "➕ أخرى..."
-                    ]
+                    # استخدام selectbox لضمان إغلاق القائمة فوراً
+                    b_opts = ["🌟 تميز", "📚 إحضار الكتاب", "✅ حل الواجب", "⚠️ إزعاج", "🚫 عدم تركيز", "➕ أخرى..."]
                     selected_b = st.selectbox("🎭 وصف السلوك", b_opts)
-                    
-                    custom = st.text_input("✍️ اكتب السلوك المخصص:") if "أخرى..." in selected_b else ""
+                    custom = st.text_input("✍️ سلوك مخصص:") if "أخرى..." in selected_b else ""
                     
                     c1, c2 = st.columns(2)
                     with c1:
                         sel_date = st.date_input("🗓️ التاريخ", value=datetime.now())
                     with c2:
+                        # جلب اليوم تلقائياً
                         day_en = sel_date.strftime('%A')
-                        days_map = {
-                            "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
-                            "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
-                        }
+                        days_map = {"Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", 
+                                    "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"}
                         current_day_ar = days_map.get(day_en, "الأحد")
                         st.text_input("📅 اليوم", value=current_day_ar, disabled=True)
                     
-                    if st.form_submit_button("🚀 حفظ ورصد الآن"):
+                    if st.form_submit_button("🚀 حفظ ورصد"):
                         try:
                             ws_b = sh.worksheet("behavior")
                             val = custom if "أخرى..." in selected_b else selected_b
-                            # الحفظ في جوجل شيت بنفس ترتيب أعمدتك
                             ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
-                            st.success(f"✅ تم رصد {val} للطالب {sel_b}")
+                            st.success(f"تم رصد {val} لـ {sel_b}")
                             st.rerun()
                         except:
                             st.info("🔄 جاري التحديث...")
 
-                # عرض السجل المحمي لمنع الرسائل الحمراء
-                st.markdown("### 📋 سجل السلوك الأخير")
-                try:
-                    ws_view = sh.worksheet("behavior")
-                    data = ws_view.get_all_values()
-                    if len(data) > 1:
-                        for i, row in enumerate(reversed(data[1:])):
-                            # عرض البيانات مع الرموز المحفوظة
-                            st.warning(f"👤 **{row[0]}** | {row[2]} | {row[3]} | 🗓️ {row[1]}")
-                            if i > 5: break # عرض آخر 6 سجلات فقط للسرعة
-                except:
-                    st.write("⌛ جاري مزامنة السجل...")
-                                
-    with t3:
-                st.subheader("🔍 استعلام بيانات الطالب")
-                # اختيار الطالب للمعاينة
-                selected_student = st.selectbox("اختر اسم الطالب لعرض ملفه", names_list)
+            # --- 3. تبويب شاشة الطالب (تصحيح الخطأ وبناء الإحصائيات) ---
+            with t3:
+                st.subheader("🔍 استعلام ملف الطالب")
+                s_name = st.selectbox("اختر اسم الطالب للمعاينة", names_list, key="student_view")
                 
-                if selected_student:
-                    # تقسيم الشاشة لبطاقات إحصائية
-                    col_info, col_chart = st.columns([2, 1])
-                    
-                    with col_info:
-                        st.info(f"👤 ملف الطالب: **{selected_student}**")
-                        # هنا سنقوم بجلب الدرجات والسلوكيات الخاصة بهذا الطالب فقط
-                        # (سأزودك بكود الربط الذكي لها فور جاهزيتك)
+                if s_name:
+                    try:
+                        # جلب بيانات السلوك للتصفية
+                        ws_bh = sh.worksheet("behavior")
+                        all_bh = ws_bh.get_all_values()
+                        
+                        # حساب الإحصائيات للطالب المختار
+                        pos = sum(1 for row in all_bh if row[0] == s_name and "إيجابي" in row[2])
+                        neg = sum(1 for row in all_bh if row[0] == s_name and "سلبي" in row[2])
+                        
+                        m1, m2 = st.columns(2)
+                        with m1:
+                            st.metric(label="✅ السلوكيات الإيجابية", value=pos)
+                        with m2:
+                            st.metric(label="❌ السلوكيات السلبية", value=neg)
+                        
+                        st.divider()
+                        st.write(f"📋 **سجل سلوك الطالب: {s_name}**")
+                        # عرض سجل الطالب المختار فقط
+                        for row in reversed(all_bh):
+                            if row[0] == s_name:
+                                st.warning(f"🗓️ {row[1]} ({row[4]}) | {row[2]} | {row[3]}")
+                                
+                    except:
+                        st.info("⌛ جاري استخراج بيانات الطالب من السجل...")
                     
                     with col_chart:
                         st.metric(label="✅ السلوك الإيجابي", value="12") # مثال رقمي
