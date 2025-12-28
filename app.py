@@ -131,9 +131,31 @@ try:
                     if st.form_submit_button("✅ حفظ الدرجات"):
                         try:
                             ws_g = sh.worksheet("grades")
-                            ws_g.append_row([sel_st, v1, v2, vp])
-                            st.success("تم الحفظ بنجاح")
-                        except: st.error("تأكد من وجود ورقة 'grades'")
+                            all_g_data = ws_g.get_all_values()
+                            student_found = False
+                            row_to_update = -1
+
+                            # البحث عن اسم الطالب في العمود الأول (index 0)
+                            for idx, row in enumerate(all_g_data):
+                                if row[0] == sel_st:
+                                    student_found = True
+                                    row_to_update = idx + 1 # رقم الصف في قوقل شيت
+                                    break
+                            
+                            new_data = [sel_st, v1, v2, vp]
+
+                            if student_found:
+                                # إذا وجد الطالب، نقوم بتحديث الصف بدلاً من تكراره
+                                ws_g.update(f"A{row_to_update}:D{row_to_update}", [new_data])
+                                st.success(f"تم تحديث درجات الطالب {sel_st} بنجاح")
+                            else:
+                                # إذا كان طالباً جديداً، نقوم بإضافته
+                                ws_g.append_row(new_data)
+                                st.success(f"تم إضافة درجات {sel_st} بنجاح")
+                            
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"حدث خطأ أثناء المزامنة: {e}")
 
                 st.markdown("### 📋 سجل الدرجات الحالي")
                 # عرض السجل مع حماية من الأخطاء اللحظية
