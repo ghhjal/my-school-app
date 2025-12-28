@@ -3,7 +3,38 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
+# --- إعدادات الحماية والأمان ---
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = None
 
+# شاشة تسجيل الدخول الرئيسية
+if st.session_state.user_role is None:
+    st.title("🔐 نظام بوابة الطالب والمعلم")
+    tab_login1, tab_login2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
+    
+    with tab_login1:
+        pwd = st.text_input("كلمة مرور المعلم", type="password")
+        if st.button("دخول المعلم"):
+            if pwd == "1234": # يمكنك تغيير كلمة المرور هنا
+                st.session_state.user_role = "admin"
+                st.rerun()
+            else:
+                st.error("كلمة المرور غير صحيحة")
+                
+    with tab_login2:
+        st.info("الرجاء إدخال رقم الطالب المعتمد في السجلات")
+        std_id = st.text_input("رقم الطالب")
+        if st.button("دخول الطالب"):
+            # التأكد من وجود الرقم في قائمة الطلاب (أو أي منطق تحقق تفضله)
+            st.session_state.user_role = "student"
+            st.session_state.student_id = std_id
+            st.rerun()
+    st.stop() # إيقاف بقية الكود حتى يتم تسجيل الدخول
+
+# زر تسجيل الخروج (يظهر في الشريط الجانبي)
+if st.sidebar.button("🚪 تسجيل الخروج"):
+    st.session_state.user_role = None
+    st.rerun()
 # 1. إعدادات الصفحة الملكية
 st.set_page_config(page_title="نظام الأستاذ زياد التعليمي", layout="wide")
 
