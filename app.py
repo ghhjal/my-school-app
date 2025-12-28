@@ -29,7 +29,7 @@ def fetch_data_safe(sheet_name, expected_cols):
     except: pass
     return pd.DataFrame(columns=expected_cols)
 
-# --- 2. نظام الدخول والخروج ---
+# --- نظام الدخول ---
 if 'role' not in st.session_state: st.session_state.role = None
 if st.session_state.role is None:
     st.title("🔐 بوابة الدخول")
@@ -44,23 +44,24 @@ if st.session_state.role is None:
             if sid_in: st.session_state.role = "student"; st.session_state.student_id = sid_in; st.rerun()
     st.stop()
 
-# زر الخروج الجانبي (ثابت)
+# زر الخروج الجانبي
 with st.sidebar:
     st.write(f"👤 الحساب: {st.session_state.role}")
     if st.button("🚪 تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
     st.divider()
 
-# --- 3. واجهة المعلم ---
+# --- واجهة المعلم ---
 if st.session_state.role == "teacher":
     menu = st.sidebar.radio("القائمة", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك"])
 
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
         t_reg, t_view = st.tabs(["📝 تسجيل جديد", "📋 البحث والحذف الشامل"])
+        
         with t_reg:
             with st.form("reg_form", clear_on_submit=True):
-                st.subheader("إضافة طالب جديد (الحقول كاملة)")
+                st.subheader("إضافة طالب جديد")
                 c1, c2 = st.columns(2)
                 with c1:
                     sid = st.number_input("الرقم الأكاديمي", min_value=1)
@@ -74,23 +75,36 @@ if st.session_state.role == "teacher":
                     if sname:
                         sh.worksheet("students").append_row([str(sid), sname, sclass, syear, ssub, sphase])
                         st.success(f"✅ تم حفظ {sname}"); time.sleep(1); st.rerun()
+
         with t_view:
             df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
             st.dataframe(df_st, use_container_width=True, hide_index=True)
             st.divider()
-            del_target = st.selectbox("حذف طالب نهائياً", [""] + df_st["الاسم"].tolist())
-            if st.button("تأكيد الحذف الشامل"):
+            
+            # --- تحديث وظيفة الحذف الشامل ---
+            del_target = st.selectbox("اختر الطالب لحذفه من جميع الجداول", [""] + df_st["الاسم"].tolist())
+            if st.button("🗑️ تنفيذ الحذف النهائي لكافة البيانات"):
                 if del_target:
-                    for sn in ["students", "behavior", "grades"]:
-                        try:
-                            ws = sh.worksheet(sn); cell = ws.find(del_target.strip())
-                            ws.delete_rows(cell.row)
-                        except: pass
-                    st.success("🗑️ تم الحذف بنجاح"); time.sleep(1); st.rerun()
+                    target_name = del_target.strip()
+                    sheets_to_clean = ["students", "behavior", "grades"]
+                    
+                    with st.spinner(f"جاري حذف كافة سجلات {target_name}..."):
+                        for sheet_name in sheets_to_clean:
+                            ws = sh.worksheet(sheet_name)
+                            # حذف كافة السطور التي تحتوي على الاسم (تكرار الحذف لضمان النظافة)
+                            while True:
+                                try:
+                                    cell = ws.find(target_name)
+                                    ws.delete_rows(cell.row)
+                                except: # إذا لم يجد الاسم، يخرج من الحلقة وينتقل للجدول التالي
+                                    break
+                    st.success(f"✅ تم مسح كافة بيانات الطالب {target_name} من جميع السجلات.")
+                    time.sleep(1); st.rerun()
 
     elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد الدرجات والسلوك")
         df_all = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
+        
         if not df_all.empty:
             t_grad, t_beh = st.tabs(["📝 الدرجات", "🎭 السلوك"])
             with t_grad:
@@ -103,22 +117,15 @@ if st.session_state.role == "teacher":
                     
                     if st.form_submit_button("تحديث الدرجات"):
                         ws_g = sh.worksheet("grades")
-                        # حل مشكلة التكرار: تنظيف الاسم والبحث الدقيق
                         search_name = sel_st.strip()
                         try:
                             cell = ws_g.find(search_name)
-                            # تحديث الأعمدة B و C و D في نفس السطر (بدون تكرار)
                             ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, work]])
-                            st.success(f"✅ تم التحديث بنجاح للطالب: {search_name}")
+                            st.success(f"✅ تم تحديث درجات: {search_name}")
                         except:
-                            # إضافة سطر جديد فقط إذا لم يكن الطالب موجوداً مسبقاً
                             ws_g.append_row([search_name, p1, p2, work])
-                            st.success(f"✅ تم إضافة درجات جديدة للطالب: {search_name}")
+                            st.success(f"✅ تم إضافة سجل درجات جديد لـ: {search_name}")
                         time.sleep(1); st.rerun()
-                
-                # إظهار الجدول لضمان عدم وجود تكرار بصري
-                df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
-                st.dataframe(df_g, use_container_width=True, hide_index=True)
 
             with t_beh:
                 with st.form("beh_form"):
@@ -126,8 +133,6 @@ if st.session_state.role == "teacher":
                     b_date = st.date_input("التاريخ", datetime.now())
                     b_type = st.radio("النوع", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     b_note = st.text_input("الملاحظة")
-                    if st.form_submit_button("رصد"):
+                    if st.form_submit_button("رصد السلوك"):
                         sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
-                        st.success("✅ تم الرصد بالتاريخ"); time.sleep(1); st.rerun()
-                df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
-                st.dataframe(df_b, use_container_width=True, hide_index=True)
+                        st.success("✅ تم رصد السلوك"); time.sleep(1); st.rerun()
