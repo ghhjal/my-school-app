@@ -147,7 +147,7 @@ if st.session_state.role == "teacher":
 # --- 4. واجهة الطالب (التحديث المطلوب) ---
 elif st.session_state.role == "student":
     # استبدال العنوان وتخصيص الترحيب
-    st.markdown(f"<h2 style='text-align:right;'>🎓 بيانات الطالب | أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:right;'>🎓 ابتدائية عبادة بن قيس الانصاري | أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
     
     df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
     df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
