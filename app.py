@@ -15,7 +15,7 @@ def get_db():
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         client = gspread.authorize(creds)
         return client.open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
-    except Exception as e:
+    except:
         return None
 
 sh = get_db()
@@ -72,33 +72,44 @@ if st.session_state.role == "teacher":
                     st.success("✅ تم التسجيل"); time.sleep(1); st.rerun()
 
         with tab_view:
-            st.subheader("📋 كشف الطلاب (مع الحذف الشامل)")
+            st.subheader("🔍 البحث والإدارة")
+            # ميزة البحث الجديدة
+            search_query = st.text_input("ابحث عن طالب بالاسم أو الرقم الأكاديمي...", placeholder="اكتب هنا للبحث")
+            
             try:
                 ws_st = sh.worksheet("students")
                 data = ws_st.get_all_records()
                 if not data:
                     st.info("لا يوجد طلاب مسجلون.")
                 else:
-                    for idx, row in enumerate(data):
-                        st_id, st_name = str(row['id']), str(row['name'])
-                        col_info, col_del = st.columns([4, 1])
-                        col_info.write(f"👤 **{st_name}** | الرقم: `{st_id}` | المرحلة: {row.get('sem', '---')}")
-                        
-                        # منطق الحذف المطور (مسح السجلات الفرعية أولاً)
-                        if col_del.button("🗑️ حذف", key=f"del_key_{st_id}_{idx}"):
-                            with st.spinner(f"جاري تنظيف سجلات {st_name}..."):
-                                # الخطوة 1: حذف السجلات من الجداول الأخرى
-                                for sn in ["behavior", "grades", "sheet1"]:
-                                    try:
-                                        target = sh.worksheet(sn)
-                                        search = st_name if sn != "sheet1" else st_id
-                                        for cell in reversed(target.findall(search)):
-                                            target.delete_rows(cell.row)
-                                    except: continue
-                                
-                                # الخطوة 2: حذف الطالب من القائمة الرئيسية
-                                ws_st.delete_rows(idx + 2)
-                                st.success(f"✅ تم حذف {st_name} نهائياً"); time.sleep(1); st.rerun()
+                    # تصفية البيانات بناءً على البحث
+                    filtered_data = [
+                        (idx, row) for idx, row in enumerate(data) 
+                        if search_query.lower() in str(row['name']).lower() or search_query in str(row['id'])
+                    ]
+                    
+                    if not filtered_data:
+                        st.warning("لم يتم العثور على نتائج للبحث.")
+                    else:
+                        for idx, row in filtered_data:
+                            st_id, st_name = str(row['id']), str(row['name'])
+                            col_info, col_del = st.columns([4, 1])
+                            col_info.write(f"👤 **{st_name}** | الرقم: `{st_id}` | المرحلة: {row.get('sem', '---')}")
+                            
+                            if col_del.button("🗑️ حذف", key=f"del_key_{st_id}_{idx}"):
+                                with st.spinner(f"جاري تنظيف سجلات {st_name}..."):
+                                    # حذف السجلات من الجداول الأخرى أولاً
+                                    for sn in ["behavior", "grades", "sheet1"]:
+                                        try:
+                                            target = sh.worksheet(sn)
+                                            search = st_name if sn != "sheet1" else st_id
+                                            for cell in reversed(target.findall(search)):
+                                                target.delete_rows(cell.row)
+                                        except: continue
+                                    
+                                    # حذف الطالب من القائمة الرئيسية
+                                    ws_st.delete_rows(idx + 2)
+                                    st.success(f"✅ تم حذف {st_name} نهائياً"); time.sleep(1); st.rerun()
             except Exception as e:
                 st.error(f"⚠️ خطأ في تحميل البيانات: {e}")
 
