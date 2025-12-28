@@ -66,23 +66,41 @@ if st.session_state.user_role == "teacher":
                 except:
                     st.error("تعذر الوصول لورقة behavior حالياً")
 
-# --- واجهة الطالب (مستقلة تماماً بالرقم) ---
+# --- واجهة الطالب (البحث بالرقم) ---
 elif st.session_state.user_role == "student":
-    st.sidebar.button("🚪 خروج الطالب", on_click=lambda: st.session_state.update({"user_role": None}))
+    st.sidebar.button("🚪 خروج", on_click=lambda: st.session_state.update({"user_role": None}))
     st.title("🎓 بوابة الطالب للنتائج")
-    st.info(f"مرحباً بك.. رقمك المسجل: {st.session_state.student_id}")
     
+    # 1. جلب بيانات الطالب من Sheet1 بناءً على الرقم المدخل
     try:
-        # هنا نقوم بالبحث في Sheets وعرض درجات وسلوك الطالب صاحب st.session_state.student_id فقط
-        c1, c2 = st.columns(2)
-        with c1:
-            st.metric("✅ رصيد التميز", "10")
-        with c2:
-            st.metric("❌ التنبيهات", "2")
+        ws_gr = sh.worksheet("sheet1") # تأكد من الاسم في قوقل شيت
+        all_students = ws_gr.get_all_values()
         
-        st.divider()
-        st.subheader("📑 تقرير الدرجات")
-        st.write("الفترة الأولى: **19**")
-    except:
-        # بلوك except يمنع ظهور SyntaxError
-        st.info("🔄 جاري استخراج بياناتك...")
+        # البحث عن الصف الذي يحتوي على رقم الطالب (نفترض الرقم في العمود E أي index 4)
+        student_data = next((r for r in all_students if r[4] == st.session_state.student_id), None)
+        
+        if student_data:
+            st.success(f"✅ مرحباً بك يا طالب: {student_data[0]}")
+            
+            # عرض الدرجات
+            g1, g2, g3 = st.columns(3)
+            with g1: st.metric("الفترة 1", student_data[1])
+            with g2: st.metric("الفترة 2", student_data[2])
+            with g3: st.metric("الأداء", student_data[3])
+            
+            # 2. جلب إحصائيات السلوك من ورقة behavior
+            ws_bh = sh.worksheet("behavior")
+            all_bh = ws_bh.get_all_values()
+            # تصفية السلوكيات لاسم هذا الطالب المحدد
+            student_bh = [r for r in all_bh if r[0] == student_data[0]]
+            
+            st.divider()
+            st.subheader("📊 ملخص السلوك")
+            b1, b2 = st.columns(2)
+            with b1: st.info(f"✅ إيجابي: {sum(1 for r in student_bh if 'إيجابي' in r[2])}")
+            with b2: st.warning(f"❌ سلبي: {sum(1 for r in student_bh if 'سلبي' in r[2])}")
+        else:
+            st.error("❌ عذراً، رقم الطالب غير مسجل في النظام.")
+            
+    except Exception:
+        st.info("⌛ جاري استرجاع بياناتك من السجلات...")
