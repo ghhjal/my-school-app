@@ -139,30 +139,30 @@ try:
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء الحفظ: {e}")
 
-               st.markdown("### 📋 سجل الدرجات الحالي")
-                try:
-                    # التأكد من المسمى الصحيح للورقة لتجنب الخطأ الأحمر
-                    target_view = "grades" if "grades" in [w.title for w in sh.worksheets()] else "Grades"
-                    ws_g_view = sh.worksheet(target_view)
-                    g_vals = ws_g_view.get_all_values()
-                    
-                    if len(g_vals) > 1:
-                        for i, row in enumerate(g_vals[1:]):
-                            ci, cd = st.columns([5, 1])
-                            with ci:
-                                # عرض بيانات الطالب (الاسم | الدرجات)
-                                st.info(f"👤 **{row[0]}** | P1: `{row[1]}` | P2: `{row[2]}` | الأداء: `{row[3]}`")
-                            with cd:
-                                # إضافة مفتاح فريد 'dg_instant' لضمان الاستجابة السريعة
-                                if st.button("🗑️", key=f"dg_instant_{i}"):
-                                    with st.spinner("جاري حذف الدرجة..."):
-                                        ws_g_view.delete_rows(i + 2)
-                                        # إعادة تشغيل الصفحة فوراً لتحديث الجدول
-                                        st.rerun() 
-                    else:
-                        st.info("سجل الدرجات فارغ حالياً.")
-                except Exception as e:
-                    st.info("جاري تحديث سجل الدرجات...")
+              # --- سجل الدرجات الحالي (تحديث فوري) ---
+        st.markdown("### 📋 سجل الدرجات الحالي")
+        try:
+            target_view = "grades" if "grades" in [w.title for w in sh.worksheets()] else "Grades"
+            ws_g_view = sh.worksheet(target_view)
+            g_vals = ws_g_view.get_all_values()
+            
+            if len(g_vals) > 1:
+                for i, row in enumerate(g_vals[1:]):
+                    ci, cd = st.columns([5, 1])
+                    with ci:
+                        # عرض معلومات الدرجة
+                        st.info(f"👤 **{row[0]}** | P1: `{row[1]}` | P2: `{row[2]}` | الأداء: `{row[3]}`")
+                    with cd:
+                        # حذف فوري مع تحديث الشاشة
+                        if st.button("🗑️", key=f"dg_fast_{i}"):
+                            ws_g_view.delete_rows(i + 2)
+                            st.rerun()
+            else:
+                st.info("سجل الدرجات فارغ.")
+        except:
+            st.info("جاري تحميل البيانات...")
+
+        st.markdown("---")
             # --- 2. قسم السلوك (بنفس المنطق الآمن) ---
             with t2:
                 with st.form("f_behavior_safe", clear_on_submit=True):
@@ -183,29 +183,29 @@ try:
                         except:
                             st.error("تأكد من وجود ورقة behavior")
 
-               st.markdown("### 📋 سجل السلوك الحالي")
-                try:
-                    # نستخدم نفس المنطق للتأكد من اسم الورقة
-                    target_b_view = "behavior" if "behavior" in [w.title for w in sh.worksheets()] else "Behavior"
-                    ws_b_view = sh.worksheet(target_b_view)
-                    b_vals = ws_b_view.get_all_values()
-                    
-                    if len(b_vals) > 1:
-                        # عرض السجلات من الأحدث إلى الأقدم
-                        for i, row in enumerate(b_vals[1:]):
-                            ci, cd = st.columns([5, 1])
-                            with ci:
-                                # عرض السلوك بتنسيق البطاقة الصفراء الجميل
-                                n, d, t, dy = (row[0], row[1], row[2], row[3]) if len(row) >= 4 else (row[0], "", "", "")
-                                st.warning(f"🎭 **{n}** | {t} — 🗓️ {d} ({dy})")
-                            with cd:
-                                # إضافة مفتاح فريد لزر الحذف لضمان السرعة
-                                if st.button("🗑️", key=f"del_bh_{i}"):
-                                    with st.spinner("جاري التحديث..."):
-                                        ws_b_view.delete_rows(i + 2)
-                                        st.rerun() # هذا الأمر سيجعل الصفحة تتحدث فوراً وتخفي السطر المحذوف
-                except Exception as e:
-                    st.info("جاري تحميل السجل أو لا توجد بيانات...")
+               # --- سجل السلوك الحالي (تحديث فوري) ---
+        st.markdown("### 📋 سجل السلوك الحالي")
+        try:
+            target_b_view = "behavior" if "behavior" in [w.title for w in sh.worksheets()] else "Behavior"
+            ws_b_view = sh.worksheet(target_b_view)
+            b_vals = ws_b_view.get_all_values()
+            
+            if len(b_vals) > 1:
+                for i, row in enumerate(b_vals[1:]):
+                    ci, cd = st.columns([5, 1])
+                    with ci:
+                        # عرض السلوك والتاريخ واليوم
+                        n, d, t, dy = (row[0], row[1], row[2], row[3]) if len(row) >= 4 else (row[0], "", "", "")
+                        st.warning(f"🎭 **{n}** | {t} — 🗓️ {d} ({dy})")
+                    with cd:
+                        # حذف فوري مع تحديث الشاشة
+                        if st.button("🗑️", key=f"db_fast_{i}"):
+                            ws_b_view.delete_rows(i + 2)
+                            st.rerun()
+            else:
+                st.info("سجل السلوك فارغ.")
+        except:
+            st.info("جاري تحديث السجل...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
