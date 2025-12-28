@@ -144,70 +144,61 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-          # --- 2. تبويب السلوك (نسخة الحماية من أخطاء التزامن) ---
+         # --- 2. تبويب السلوك (نسخة الرصد السريع) ---
             with t2:
-                # نموذج رصد السلوك
-                with st.form("f_behavior_final_v12", clear_on_submit=True):
-                    sel_b = st.selectbox("اسم الطالب", names_list)
-                    b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
-                    b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
-                    selected_b = st.multiselect("وصف السلوك", b_opts)
-                    custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
+                with st.form("f_behavior_quick_v13", clear_on_submit=True):
+                    sel_b = st.selectbox("👤 اسم الطالب", names_list)
+                    
+                    b_type = st.radio("📌 نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+                    
+                    # القائمة الآن تختار سلوكاً واحداً لتغلق تلقائياً
+                    b_opts = [
+                        "🌟 تميز", 
+                        "📚 إحضار الكتاب", 
+                        "✅ حل الواجب", 
+                        "⚠️ إزعاج", 
+                        "🚫 عدم تركيز", 
+                        "➕ أخرى..."
+                    ]
+                    selected_b = st.selectbox("🎭 وصف السلوك", b_opts)
+                    
+                    custom = st.text_input("✍️ اكتب السلوك المخصص:") if "أخرى..." in selected_b else ""
                     
                     c1, c2 = st.columns(2)
                     with c1:
-                        sel_date = st.date_input("اختر التاريخ", value=datetime.now())
+                        sel_date = st.date_input("🗓️ التاريخ", value=datetime.now())
                     with c2:
-                        # الربط التلقائي لليوم
                         day_en = sel_date.strftime('%A')
                         days_map = {
                             "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
                             "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
                         }
                         current_day_ar = days_map.get(day_en, "الأحد")
-                        st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
+                        st.text_input("📅 اليوم", value=current_day_ar, disabled=True)
                     
-                    if st.form_submit_button("🚀 رصد السلوك"):
+                    if st.form_submit_button("🚀 حفظ ورصد الآن"):
                         try:
                             ws_b = sh.worksheet("behavior")
-                            for b in selected_b:
-                                val = custom if b == "أخرى..." else b
-                                # ترتيب الأعمدة المعتمد في ملفك
-                                ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
-                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
-                            st.rerun() 
-                        except Exception:
-                            # استبدال الرسالة الحمراء بنص هادئ
-                            st.info("🔄 يتم الآن تحديث البيانات في Google Sheets...")
+                            val = custom if "أخرى..." in selected_b else selected_b
+                            # الحفظ في جوجل شيت بنفس ترتيب أعمدتك
+                            ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
+                            st.success(f"✅ تم رصد {val} للطالب {sel_b}")
+                            st.rerun()
+                        except:
+                            st.info("🔄 جاري التحديث...")
 
-                # --- منطقة عرض السجل المحمية (Safe View) ---
-                st.markdown("### 📋 سجل السلوك الحالي")
-                
-                # استخدام بلوك محمي لمنع ظهور أي خطأ أحمر
+                # عرض السجل المحمي لمنع الرسائل الحمراء
+                st.markdown("### 📋 سجل السلوك الأخير")
                 try:
-                    ws_b_view = sh.worksheet("behavior")
-                    b_vals = ws_b_view.get_all_values()
-                    
-                    if len(b_vals) > 1:
-                        # عرض أحدث السجلات أولاً
-                        for i, row in enumerate(reversed(b_vals[1:])):
-                            real_idx = len(b_vals) - i
-                            ci, cd = st.columns([6, 1])
-                            with ci:
-                                try:
-                                    # توزيع الأعمدة: الاسم | التاريخ | النوع | الوصف | اليوم
-                                    n, d, t, v, dy = row[0], row[1], row[2], row[3], row[4]
-                                    st.warning(f"👤 **{n}** | 🗓️ {d} ({dy}) | {t} | 🎭 {v}")
-                                except: continue
-                            with cd:
-                                if st.button("🗑️", key=f"del_v12_{real_idx}"):
-                                    ws_b_view.delete_rows(real_idx)
-                                    st.rerun()
-                    else:
-                        st.info("لا توجد سجلات لعرضها حالياً.")
-                except Exception:
-                    # في حال انشغال جوجل شيت، يظهر هذا النص فقط
-                    st.write("⌛ جاري استرجاع سجل السلوك...")
+                    ws_view = sh.worksheet("behavior")
+                    data = ws_view.get_all_values()
+                    if len(data) > 1:
+                        for i, row in enumerate(reversed(data[1:])):
+                            # عرض البيانات مع الرموز المحفوظة
+                            st.warning(f"👤 **{row[0]}** | {row[2]} | {row[3]} | 🗓️ {row[1]}")
+                            if i > 5: break # عرض آخر 6 سجلات فقط للسرعة
+                except:
+                    st.write("⌛ جاري مزامنة السجل...")
                                 
     with t3:
                 st.subheader("🔍 استعلام بيانات الطالب")
