@@ -110,37 +110,47 @@ if st.session_state.role == "teacher":
 
     elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد الدرجات والسلوك")
+        
+        # جلب البيانات مرة واحدة في بداية القسم لتجنب الاختفاء
+        if 'grades_df' not in st.session_state:
+            st.session_state.grades_df = pd.DataFrame(sh.worksheet("grades").get_all_records())
+
         try:
             names = [r[1] for r in sh.worksheet("students").get_all_values()[1:]]
             t_g, t_b = st.tabs(["📝 الدرجات", "🎭 السلوك"])
             
             with t_g:
                 with st.form("grade_update"):
-                    sel_st = st.selectbox("الطالب", names)
+                    sel_st = st.selectbox("اختر الطالب", names)
                     g1, g2, gp = st.columns(3)
                     v1 = g1.number_input("P1", 0.0)
                     v2 = g2.number_input("P2", 0.0)
                     vp = gp.number_input("Perf", 0.0)
+                    
                     if st.form_submit_button("حفظ وتحديث"):
-                        msg = update_or_append_grades(sel_st, v1, v2, vp)
-                        st.success(msg)
-                        st.rerun()
+                        with st.spinner("جاري التحديث..."):
+                            msg = update_or_append_grades(sel_st, v1, v2, vp)
+                            # تحديث البيانات في الجلسة مباشرة لمنع الاختفاء
+                            st.session_state.grades_df = pd.DataFrame(sh.worksheet("grades").get_all_records())
+                            st.success(msg)
+                            st.rerun()
                 
-                # عرض الجدول في الأسفل
-                st.subheader("📋 سجل الدرجات")
-                df_g = pd.DataFrame(sh.worksheet("grades").get_all_records())
-                st.table(df_g)
+                # عرض الجدول من الجلسة (Session State) لضمان السرعة والثبات
+                st.subheader("📋 سجل الدرجات المرصودة")
+                st.dataframe(st.session_state.grades_df, use_container_width=True)
 
             with t_b:
+                # قسم السلوك يبقى كما هو
                 with st.form("beh_form"):
                     b_st = st.selectbox("الطالب", names, key="b_select")
                     b_t = st.radio("النوع", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     b_n = st.text_input("الملاحظة")
                     if st.form_submit_button("رصد السلوك"):
                         sh.worksheet("behavior").append_row([b_st, str(datetime.now().date()), b_t, b_n])
-                        st.success("تم الرصد")
+                        st.success("تم الرصد بنجاح")
                         st.rerun()
-        except: st.warning("لا يوجد طلاب")
+        except Exception as e:
+            st.warning("تأكد من وجود طلاب مسجلين أولاً.")
 
 # --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
