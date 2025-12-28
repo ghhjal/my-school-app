@@ -6,16 +6,17 @@ import time
 from datetime import datetime
 
 # --- 1. إعدادات الصفحة والاتصال ---
-st.set_page_config(page_title="نظام المدرسة الرقمي", layout="wide", initial_sidebar_state="expanded")
+# تحديث عنوان المتصفح
+st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide", initial_sidebar_state="expanded")
 
-# تصميم CSS مخصص لتحسين المظهر وإبراز اسم المشرف
+# تصميم CSS مخصص لإبراز الهوية
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
-    .stButton>button { width: 100%; border-radius: 8px; background-color: #007bff; color: white; }
-    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .info-box { padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 5px solid; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; }
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 4px solid #1e3a8a; }
     footer {visibility: hidden;}
+    .title-text { color: #1e3a8a; font-family: 'Arial'; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,7 +45,8 @@ def fetch_data_safe(sheet_name, expected_cols):
 if 'role' not in st.session_state: st.session_state.role = None
 
 if st.session_state.role is None:
-    st.title("🏛️ نظام المدرسة الرقمي")
+    # العنوان الجديد لحفظ الحقوق في واجهة الدخول
+    st.markdown("<h1 class='title-text'>🏛️ منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
     st.subheader("بوابة الدخول الموحدة")
     t1, t2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
     with t1:
@@ -65,15 +67,15 @@ if st.session_state.role is None:
                 else: st.error("عذراً، الرقم الأكاديمي غير مسجل.")
     st.stop()
 
-# --- القائمة الجانبية (Sidebar) مع إشراف الأستاذ زياد ---
+# --- القائمة الجانبية مع حقوق الإشراف ---
 with st.sidebar:
-    st.title("🛡️ لوحة التحكم")
+    st.markdown("## 🏛️ منصة أ. زياد المعمري")
     st.write(f"👤 مرحباً: **{st.session_state.role}**")
     if st.button("🚪 تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
     st.divider()
-    # إشراف الأستاذ زياد المعمري
-    st.markdown("### ✍️ إشراف:")
+    # تأكيد الإشراف والحقوق
+    st.markdown("### ✍️ إشراف وإدارة:")
     st.info("**الأستاذ زياد المعمري**")
 
 # --- 3. واجهة المعلم ---
@@ -94,18 +96,18 @@ if st.session_state.role == "teacher":
                     sclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                     syear = st.selectbox("العام الدراسي", ["1446هـ", "1447هـ", "1448هـ", "1449هـ", "1450هـ"])
                     ssub = st.text_input("المادة", value="اللغة الإنجليزية")
-                if st.form_submit_button("💾 حفظ بيانات الطالب"):
+                if st.form_submit_button("💾 حفظ البيانات"):
                     if sname:
                         sh.worksheet("students").append_row([str(sid), sname, sclass, syear, ssub, sphase])
-                        st.success(f"✅ تم حفظ {sname} بنجاح"); time.sleep(1); st.rerun()
+                        st.success(f"✅ تم الحفظ بنجاح"); time.sleep(1); st.rerun()
         with t_view:
             df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
             st.dataframe(df_st, use_container_width=True, hide_index=True)
             st.divider()
             del_target = st.selectbox("🗑️ حذف طالب نهائياً", [""] + df_st["الاسم"].tolist())
-            if st.button("تأكيد الحذف الشامل"):
+            if st.button("تأكيد الحذف النهائي"):
                 if del_target:
-                    with st.spinner("جاري تنظيف السجلات..."):
+                    with st.spinner("جاري حذف كافة السجلات..."):
                         for sn in ["students", "behavior", "grades"]:
                             ws = sh.worksheet(sn)
                             while True:
@@ -145,9 +147,9 @@ if st.session_state.role == "teacher":
                 df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
                 st.dataframe(df_b, use_container_width=True, hide_index=True)
 
-# --- 4. واجهة الطالب (تلوين السلوك حسب النوع) ---
+# --- 4. واجهة الطالب (تلوين السلوك وحقوق المنصة) ---
 elif st.session_state.role == "student":
-    st.title(f"🎓 لوحة الطالب: {st.session_state.student_name}")
+    st.markdown(f"<h2 style='text-align:right;'>🎓 منصة الأستاذ زياد | الطالب: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
     df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
     df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
     df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
@@ -159,19 +161,18 @@ elif st.session_state.role == "student":
     c3.metric("المادة المسجلة", my_info["المادة"])
     
     st.divider()
-    st.subheader("📊 تقرير الدرجات والمشاركة")
+    st.subheader("📊 تقرير الدرجات")
     my_grades = df_g[df_g["الطالب"] == st.session_state.student_name]
     if not my_grades.empty: st.table(my_grades)
     else: st.info("لم ترصد درجات حتى الآن.")
         
     st.divider()
-    st.subheader("🎭 السجل السلوكي الملون")
+    st.subheader("🎭 سجل السلوك والملاحظات")
     my_beh = df_b[df_b["الاسم"] == st.session_state.student_name]
     if not my_beh.empty:
         for i, row in my_beh.iterrows():
-            # تلوين السلوك بناءً على النوع [المطلوب]
             if "إيجابي" in row["النوع"]:
                 st.success(f"📅 {row['التاريخ']} | ✅ {row['النوع']} : {row['الملاحظة']}")
             else:
                 st.error(f"📅 {row['التاريخ']} | ❌ {row['النوع']} : {row['الملاحظة']}")
-    else: st.success("سجلك السلوكي متميز!")
+    else: st.success("سجلك السلوكي متميز وخالٍ من الملاحظات!")
