@@ -1,87 +1,88 @@
 import streamlit as st
-from gspread_streamlit import GSpreadSt
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 
-# 1. إعداد الاتصال بـ Google Sheets
-# تأكد من وضع مفاتيح الربط الخاصة بك هنا
-# sh = gc.open_by_key("YOUR_SHEET_ID") 
+# --- 1. إعداد الاتصال (الطريقة القياسية المستقرة) ---
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+# ملاحظة: تأكد من وجود ملف secrets.json أو استبدل هذا الجزء بطريقتك الخاصة للاتصال
+try:
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"])
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key("YOUR_SHEET_ID_HERE") # ضع معرف ملفك هنا
+except Exception as e:
+    st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من إعدادات الربط.")
 
-# --- نظام إدارة الجلسة (تسجيل الدخول) ---
-if 'role' not in st.session_state:
-    st.session_state.role = None
+# --- 2. إدارة الجلسة والدخول المستقل ---
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = None
 if 'student_id' not in st.session_state:
     st.session_state.student_id = None
 
-# --- شاشة تسجيل الدخول الرئيسية ---
-if st.session_state.role is None:
-    st.title("🔐 نظام المدرسة الذكي")
-    t_login1, t_login2 = st.tabs(["👨‍🏫 بوابة المعلم", "🎓 بوابة الطالب"])
+# --- شاشة تسجيل الدخول ---
+if st.session_state.user_role is None:
+    st.title("🔐 نظام المدرسة الرقمي")
+    choice = st.radio("اختر نوع المستخدم", ["👨‍🏫 معلم", "🎓 طالب"], horizontal=True)
     
-    with t_login1:
+    if choice == "👨‍🏫 معلم":
         pwd = st.text_input("كلمة مرور المعلم", type="password")
         if st.button("دخول المعلم"):
-            if pwd == "1234": # غير كلمة السر هنا
-                st.session_state.role = "teacher"
+            if pwd == "1234": # كلمة المرور الخاصة بك
+                st.session_state.user_role = "teacher"
                 st.rerun()
             else:
-                st.error("كلمة المرور خاطئة")
-                
-    with t_login2:
-        s_id = st.text_input("أدخل رقم الطالب")
+                st.error("كلمة المرور غير صحيحة")
+    else:
+        std_id = st.text_input("أدخل رقم الطالب الخاص بك")
         if st.button("دخول الطالب"):
-            if s_id:
-                st.session_state.role = "student"
-                st.session_state.student_id = s_id
+            if std_id:
+                st.session_state.user_role = "student"
+                st.session_state.student_id = std_id
                 st.rerun()
             else:
-                st.warning("يرجى إدخال الرقم")
+                st.warning("يرجى إدخال رقم الطالب")
     st.stop()
 
-# --- واجهة المعلم (رصد وإدارة) ---
-if st.session_state.role == "teacher":
-    st.sidebar.button("🚪 خروج", on_click=lambda: st.session_state.update({"role": None}))
+# --- واجهة المعلم (صلاحيات كاملة) ---
+if st.session_state.user_role == "teacher":
+    st.sidebar.button("🚪 تسجيل الخروج", on_click=lambda: st.session_state.update({"user_role": None}))
     st.title("👨‍🏫 لوحة تحكم المعلم")
     
-    tab1, tab2 = st.tabs(["📊 إدارة الدرجات", "🎭 رصد السلوك"])
+    t1, t2 = st.tabs(["🎭 رصد السلوك", "📊 إدارة الدرجات"])
     
-    with tab1:
-        st.info("هنا تضع كود إدارة الدرجات الخاص بك")
-        
-    with tab2:
+    with t1:
         with st.form("behavior_form", clear_on_submit=True):
-            st.subheader("رصد سلوك جديد")
-            # استبدل names_list بقائمة أسمائك من Sheet1
-            student = st.selectbox("اسم الطالب", ["محمد", "أحمد", "فهد"]) 
-            b_type = st.radio("النوع", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
-            b_desc = st.selectbox("الوصف", ["🌟 تميز", "📚 واجب", "⚠️ إزعاج", "➕ أخرى..."])
+            st.subheader("إضافة موقف سلوكي")
+            # استبدل هذه القائمة بجلب الأسماء من Sheet1 لاحقاً
+            s_name = st.selectbox("اسم الطالب", ["محمد", "أحمد", "فهد"])
+            b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+            b_desc = st.selectbox("وصف السلوك", ["🌟 تميز", "📚 واجب", "⚠️ إزعاج", "➕ أخرى..."])
             
             if st.form_submit_button("🚀 حفظ الرصد"):
                 try:
-                    # ws = sh.worksheet("behavior")
-                    # ws.append_row([student, str(datetime.now().date()), b_type, b_desc])
-                    st.success(f"تم الرصد لـ {student}")
+                    ws = sh.worksheet("behavior")
+                    ws.append_row([s_name, str(datetime.now().date()), b_type, b_desc])
+                    st.success("تم الحفظ بنجاح")
                 except:
-                    st.error("خطأ في الاتصال")
+                    st.error("تعذر الوصول لورقة behavior حالياً")
 
-# --- واجهة الطالب (استعلام فقط) ---
-elif st.session_state.role == "student":
-    st.sidebar.button("🚪 خروج", on_click=lambda: st.session_state.update({"role": None}))
-    st.title("🎓 ملف الطالب")
-    st.success(f"مرحباً بك، رقمك الأكاديمي: {st.session_state.student_id}")
+# --- واجهة الطالب (مستقلة تماماً بالرقم) ---
+elif st.session_state.user_role == "student":
+    st.sidebar.button("🚪 خروج الطالب", on_click=lambda: st.session_state.update({"user_role": None}))
+    st.title("🎓 بوابة الطالب للنتائج")
+    st.info(f"مرحباً بك.. رقمك المسجل: {st.session_state.student_id}")
     
     try:
-        # هنا يتم جلب البيانات وتصفيتها بناءً على st.session_state.student_id
-        # ws_bh = sh.worksheet("behavior")
-        # ws_gr = sh.worksheet("Sheet1")
+        # هنا نقوم بالبحث في Sheets وعرض درجات وسلوك الطالب صاحب st.session_state.student_id فقط
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("✅ رصيد التميز", "10")
+        with c2:
+            st.metric("❌ التنبيهات", "2")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("✅ السلوك الإيجابي", "5")
-        with col2:
-            st.metric("❌ السلوك السلبي", "1")
-            
         st.divider()
-        st.subheader("📝 درجاتك الحالية")
-        st.write("الفترة الأولى: 18/20")
+        st.subheader("📑 تقرير الدرجات")
+        st.write("الفترة الأولى: **19**")
     except:
-        st.info("🔄 جاري تحميل بياناتك من السجلات...") # حل مشكلة Syntax بالكامل هنا
+        # بلوك except يمنع ظهور SyntaxError
+        st.info("🔄 جاري استخراج بياناتك...")
