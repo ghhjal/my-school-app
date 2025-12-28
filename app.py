@@ -6,7 +6,7 @@ import pandas as pd
 import time
 
 # --- 1. إعدادات الاتصال والتحكم في الحصص (Quota) ---
-st.set_page_config(page_title="نظام المدرسة الرقمي المتكامل", layout="wide")
+st.set_page_config(page_title="نظام المدرسة الرقمي", layout="wide")
 
 @st.cache_resource(ttl=600)
 def get_db():
@@ -34,6 +34,13 @@ def safe_update_grades(student_name, p1, p2, pf):
 # --- 2. إدارة الجلسة والدخول ---
 if 'role' not in st.session_state: st.session_state.role = None
 
+# إضافة زر الخروج في الشريط الجانبي إذا كان المستخدم مسجلاً [إصلاح طلبك]
+if st.session_state.role:
+    if st.sidebar.button("🚪 تسجيل الخروج"):
+        st.session_state.role = None
+        st.session_state.student_id = None
+        st.rerun()
+
 if st.session_state.role is None:
     st.title("🔐 بوابة الدخول")
     t1, t2 = st.tabs(["👨‍🏫 المعلم", "🎓 الطالب"])
@@ -53,7 +60,7 @@ if st.session_state.role == "teacher":
 
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
-        tab_reg, tab_view = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب"])
+        tab_reg, tab_view = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب والبحث"])
         
         with tab_reg:
             with st.form("main_reg_form", clear_on_submit=True):
@@ -72,9 +79,8 @@ if st.session_state.role == "teacher":
                     st.success("✅ تم التسجيل"); time.sleep(1); st.rerun()
 
         with tab_view:
-            st.subheader("🔍 البحث والإدارة")
-            # ميزة البحث الجديدة
-            search_query = st.text_input("ابحث عن طالب بالاسم أو الرقم الأكاديمي...", placeholder="اكتب هنا للبحث")
+            st.subheader("🔍 البحث السريع")
+            search_query = st.text_input("ابحث بالاسم أو الرقم الأكاديمي...", placeholder="اكتب للفلترة...")
             
             try:
                 ws_st = sh.worksheet("students")
@@ -82,34 +88,30 @@ if st.session_state.role == "teacher":
                 if not data:
                     st.info("لا يوجد طلاب مسجلون.")
                 else:
-                    # تصفية البيانات بناءً على البحث
-                    filtered_data = [
-                        (idx, row) for idx, row in enumerate(data) 
-                        if search_query.lower() in str(row['name']).lower() or search_query in str(row['id'])
-                    ]
+                    df = pd.DataFrame(data)
+                    # تصفية الجدول بناءً على البحث
+                    filtered_df = df[df.apply(lambda row: search_query.lower() in str(row['name']).lower() or search_query in str(row['id']), axis=1)]
                     
-                    if not filtered_data:
-                        st.warning("لم يتم العثور على نتائج للبحث.")
-                    else:
-                        for idx, row in filtered_data:
-                            st_id, st_name = str(row['id']), str(row['name'])
-                            col_info, col_del = st.columns([4, 1])
-                            col_info.write(f"👤 **{st_name}** | الرقم: `{st_id}` | المرحلة: {row.get('sem', '---')}")
-                            
-                            if col_del.button("🗑️ حذف", key=f"del_key_{st_id}_{idx}"):
-                                with st.spinner(f"جاري تنظيف سجلات {st_name}..."):
-                                    # حذف السجلات من الجداول الأخرى أولاً
-                                    for sn in ["behavior", "grades", "sheet1"]:
-                                        try:
-                                            target = sh.worksheet(sn)
-                                            search = st_name if sn != "sheet1" else st_id
-                                            for cell in reversed(target.findall(search)):
-                                                target.delete_rows(cell.row)
-                                        except: continue
-                                    
-                                    # حذف الطالب من القائمة الرئيسية
-                                    ws_st.delete_rows(idx + 2)
-                                    st.success(f"✅ تم حذف {st_name} نهائياً"); time.sleep(1); st.rerun()
+                    # عرض النتائج في جدول منظم [إصلاح طلبك]
+                    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+                    
+                    st.divider()
+                    st.subheader("🗑️ إجراءات الحذف")
+                    # عرض أزرار الحذف بشكل منفصل للحفاظ على ترتيب الجدول
+                    for idx, row in filtered_df.iterrows():
+                        c_name, c_btn = st.columns([4, 1])
+                        c_name.write(f" الطالب: **{row['name']}** (ID: {row['id']})")
+                        if c_btn.button("حذف السجلات", key=f"del_{row['id']}"):
+                            with st.spinner(f"جاري الحذف الشامل لـ {row['name']}..."):
+                                for sn in ["behavior", "grades", "sheet1"]:
+                                    try:
+                                        target = sh.worksheet(sn)
+                                        search = str(row['name']) if sn != "sheet1" else str(row['id'])
+                                        for cell in reversed(target.findall(search)): target.delete_rows(cell.row)
+                                    except: continue
+                                # حذف من القائمة الرئيسية
+                                ws_st.delete_rows(idx + 2)
+                                st.success("تم الحذف بنجاح"); time.sleep(1); st.rerun()
             except Exception as e:
                 st.error(f"⚠️ خطأ في تحميل البيانات: {e}")
 
