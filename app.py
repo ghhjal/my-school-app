@@ -66,41 +66,45 @@ if st.session_state.user_role == "teacher":
                 except:
                     st.error("تعذر الوصول لورقة behavior حالياً")
 
-# --- واجهة الطالب (البحث بالرقم) ---
-elif st.session_state.user_role == "student":
-    st.sidebar.button("🚪 خروج", on_click=lambda: st.session_state.update({"user_role": None}))
-    st.title("🎓 بوابة الطالب للنتائج")
-    
-    # 1. جلب بيانات الطالب من Sheet1 بناءً على الرقم المدخل
-    try:
-        ws_gr = sh.worksheet("sheet1") # تأكد من الاسم في قوقل شيت
-        all_students = ws_gr.get_all_values()
+try:
+        ws_gr = sh.worksheet("sheet1")
+        all_data = ws_gr.get_all_values()
         
-        # البحث عن الصف الذي يحتوي على رقم الطالب (نفترض الرقم في العمود E أي index 4)
-        student_data = next((r for r in all_students if r[4] == st.session_state.student_id), None)
+        # البحث عن رقم الطالب في العمود A (index 0)
+        student_row = next((r for r in all_data if r[0] == st.session_state.student_id), None)
         
-        if student_data:
-            st.success(f"✅ مرحباً بك يا طالب: {student_data[0]}")
+        if student_row:
+            # عرض اسم الطالب من العمود B
+            st.success(f"👋 مرحباً بك يا: {student_row[1]}")
             
-            # عرض الدرجات
-            g1, g2, g3 = st.columns(3)
-            with g1: st.metric("الفترة 1", student_data[1])
-            with g2: st.metric("الفترة 2", student_data[2])
-            with g3: st.metric("الأداء", student_data[3])
-            
-            # 2. جلب إحصائيات السلوك من ورقة behavior
-            ws_bh = sh.worksheet("behavior")
-            all_bh = ws_bh.get_all_values()
-            # تصفية السلوكيات لاسم هذا الطالب المحدد
-            student_bh = [r for r in all_bh if r[0] == student_data[0]]
+            # توزيع الدرجات في بطاقات جذابة
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric(label="📊 الفترة 1", value=student_row[2]) # العمود C
+            with c2:
+                st.metric(label="📊 الفترة 2", value=student_row[3]) # العمود D
+            with c3:
+                st.metric(label="🏆 الأداء", value=student_row[4])   # العمود E
             
             st.divider()
-            st.subheader("📊 ملخص السلوك")
-            b1, b2 = st.columns(2)
-            with b1: st.info(f"✅ إيجابي: {sum(1 for r in student_bh if 'إيجابي' in r[2])}")
-            with b2: st.warning(f"❌ سلبي: {sum(1 for r in student_bh if 'سلبي' in r[2])}")
-        else:
-            st.error("❌ عذراً، رقم الطالب غير مسجل في النظام.")
             
-    except Exception:
-        st.info("⌛ جاري استرجاع بياناتك من السجلات...")
+            # جلب السلوك من ورقة 'behavior' باستخدام الاسم (العمود B) للربط
+            ws_bh = sh.worksheet("behavior")
+            all_bh = ws_bh.get_all_values()
+            student_bh = [r for r in all_bh if r[0] == student_row[1]]
+            
+            st.subheader("🎭 سجل السلوك والمواظبة")
+            # حساب الإحصائيات
+            pos = sum(1 for r in student_bh if "إيجابي" in r[2])
+            neg = sum(1 for r in student_bh if "سلبي" in r[2])
+            
+            b1, b2 = st.columns(2)
+            b1.info(f"✅ إيجابي: {pos}")
+            b2.warning(f"❌ سلبي: {neg}")
+            
+        else:
+            st.error("❌ الرقم غير صحيح أو غير مسجل. يرجى التأكد من كتابة الرقم في العمود A.")
+            
+    except Exception as e:
+        # منع ظهور الرسائل الحمراء المزعجة
+        st.info("🔄 جاري تحديث بياناتك من السجلات...")
