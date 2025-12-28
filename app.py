@@ -144,65 +144,63 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-            # --- 2. تبويب السلوك (اليوم التلقائي + منع الأخطاء) ---
+           # --- 2. تبويب السلوك (التوافق مع الأعمدة واليوم التلقائي) ---
             with t2:
-                # تصميم واجهة الرصد
-                with st.form("f_behavior_smart", clear_on_submit=True):
+                with st.form("f_behavior_final_v7", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
+                    
+                    # اختيار نوع السلوك
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+                    
                     b_opts = ["تميز", "إحضار الكتاب", "حل الواجب", "إزعاج", "عدم تركيز", "أخرى..."]
                     selected_b = st.multiselect("وصف السلوك", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
                     
                     c1, c2 = st.columns(2)
                     with c1:
+                        # اختيار التاريخ
                         sel_date = st.date_input("اختر التاريخ", value=datetime.now())
                     with c2:
-                        # استخراج اليوم تلقائياً من التاريخ المختصر
+                        # استخراج اليوم تلقائياً بناءً على التاريخ المختار
                         day_en = sel_date.strftime('%A')
+                        days_map = {
+                            "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
+                            "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
+                        }
                         current_day_ar = days_map.get(day_en, "الأحد")
+                        # عرض اليوم كقراءة فقط للتأكيد
                         st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
                     
-                   if st.form_submit_button("🚀 رصد السلوك"):
+                    # زر الرصد بمحاذاة صحيحة لتجنب خطأ الصورة
+                    if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
-                            # التأكد من التاريخ بصيغة نصية واضحة لقوقل شيت
-                            formatted_date = sel_date.strftime('%Y-%m-%d')
-                            
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                
-                                # الترتيب الصحيح حسب أعمدة ملفك:
-                                # A: الاسم | B: النوع | C: الوصف | D: التاريخ | E: اليوم
-                                row_to_add = [sel_b, b_type, val, formatted_date, current_day_ar]
-                                
-                                ws_b.append_row(row_to_add)
-                            
-                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
+                                # الترتيب المطابق لملفك:
+                                # A: student_id | B: date | C: type | D: note | E: (اليوم)
+                                ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
+                            st.success(f"تم رصد السلوك لـ {sel_b} بنجاح!")
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"خطأ في المزامنة: {e}")
+                        except:
+                            st.error("تأكد من وجود ورقة 'behavior' وتوافق الأعمدة")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
-                    # عرض آمن يمنع الرسالة الحمراء
                     ws_b_view = sh.worksheet("behavior")
                     b_vals = ws_b_view.get_all_values()
                     if len(b_vals) > 1:
                         for i, row in enumerate(b_vals[1:]):
                             ci, cd = st.columns([5, 1])
                             with ci:
-                                # معالجة مرنة للأعمدة
-                                n = row[0] if len(row)>0 else "?"
-                                t = row[1] if len(row)>1 else ""
-                                v = row[2] if len(row)>2 else ""
-                                d = row[3] if len(row)>3 else ""
-                                dy = row[4] if len(row)>4 else ""
-                                st.warning(f"👤 **{n}** | {t} | 🎭 {v} | 🗓️ {d} ({dy})")
+                                # عرض السجل بالتنسيق الصحيح
+                                # ترتيب الصف: الاسم(0) | التاريخ(1) | النوع(2) | الملاحظة(3) | اليوم(4)
+                                st.warning(f"👤 **{row[0]}** | 🗓️ {row[1]} ({row[4]}) | {row[2]} | 🎭 {row[3]}")
                             with cd:
-                                if st.button("🗑️", key=f"db_del_{i}"):
+                                if st.button("🗑️", key=f"del_bh_v7_{i}"):
                                     ws_b_view.delete_rows(i + 2); st.rerun()
-                except: st.info("جاري تحديث السجل...")
+                except:
+                    st.info("جاري مزامنة السجل...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
