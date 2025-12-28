@@ -50,7 +50,7 @@ if st.session_state.role is None:
     with t1:
         pwd = st.text_input("كلمة المرور", type="password", key="login_pwd")
         if st.button("تسجيل الدخول كمعلم"):
-            if pwd == "1234": st.session_state.role = "teacher"; st.rerun()
+            if pwd == "ziyad1234al": st.session_state.role = "teacher"; st.rerun()
     with t2:
         sid_in = st.text_input("الرقم الأكاديمي للطالب", key="login_sid")
         if st.button("تسجيل الدخول كطالب"):
