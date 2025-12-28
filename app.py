@@ -9,7 +9,6 @@ st.set_page_config(page_title="نظام المدرسة الرقمي", layout="wi
 
 def get_db():
     try:
-        # تصحيح الـ Scopes لحل مشكلة فشل الاتصال
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
@@ -19,7 +18,7 @@ def get_db():
             scopes=scopes
         )
         client = gspread.authorize(creds)
-        # معرف ملفك الخاص الذي استخرجناه سابقاً
+        # معرف ملفك الخاص
         return client.open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
     except Exception as e:
         st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
@@ -52,7 +51,7 @@ if st.session_state.role is None:
                 st.rerun()
     st.stop()
 
-# زر خروج موحد في الشريط الجانبي
+# زر خروج موحد لتجنب خطأ DuplicateElementId
 if st.sidebar.button("🚪 تسجيل الخروج", key="logout_global"):
     st.session_state.role = None
     st.rerun()
@@ -61,7 +60,6 @@ if st.sidebar.button("🚪 تسجيل الخروج", key="logout_global"):
 if st.session_state.role == "teacher":
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك"])
 
-    # شاشة إدارة الطلاب (تطابق مع صورتك 91405f)
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
         t1, t2 = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب"])
@@ -85,18 +83,41 @@ if st.session_state.role == "teacher":
                         # تحديث ورقة النتائج sheet1 للدخول
                         sh.worksheet("sheet1").append_row([str(sid), sname, "0", "0", "0"])
                         st.success(f"✅ تم حفظ {sname} بنجاح")
+                        st.rerun()
 
         with t2:
-            try:
-                df = pd.DataFrame(sh.worksheet("students").get_all_records())
-                st.dataframe(df, use_container_width=True)
-            except: st.info("القائمة فارغة")
+            st.subheader("📋 كشف الطلاب المسجلين")
+            if sh:
+                try:
+                    ws_students = sh.worksheet("students")
+                    data = ws_students.get_all_records()
+                    if data:
+                        df_display = pd.DataFrame(data)
+                        for index, row in df_display.iterrows():
+                            col_info, col_del = st.columns([4, 1])
+                            with col_info:
+                                st.markdown(f"👤 **{row.get('name', 'بدون اسم')}** | الرقم: `{row.get('id', '؟')}` | الصف: {row.get('class', '؟')}")
+                            with col_del:
+                                # مفتاح فريد لكل زر حذف لتجنب الأخطاء
+                                if st.button("🗑️ حذف", key=f"del_{row.get('id')}_{index}"):
+                                    ws_students.delete_rows(index + 2)
+                                    # حذف التزامن من sheet1
+                                    try:
+                                        ws_sheet1 = sh.worksheet("sheet1")
+                                        cell = ws_sheet1.find(str(row.get('id')))
+                                        ws_sheet1.delete_rows(cell.row)
+                                    except: pass
+                                    st.success(f"تم حذف الطالب بنجاح")
+                                    st.rerun()
+                    else: st.info("القائمة فارغة")
+                except: st.error("خطأ في تحميل البيانات")
 
-    # شاشة الدرجات والسلوك (تطابق مع مخططك 91b0c3)
     elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد الدرجات والسلوك")
         try:
-            std_list = [r[1] for r in sh.worksheet("students").get_all_values()[1:]]
+            # جلب أسماء الطلاب للرصد
+            ws_st = sh.worksheet("students")
+            std_list = [r[1] for r in ws_st.get_all_values()[1:]]
             tab_g, tab_b = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
             
             with tab_g:
@@ -106,31 +127,31 @@ if st.session_state.role == "teacher":
                     p1 = col1.number_input("P1", 0.0)
                     p2 = col2.number_input("P2", 0.0)
                     pf = col3.number_input("Perf", 0.0)
-                    if st.form_submit_button("تحديث"):
+                    if st.form_submit_button("تحديث الدرجات"):
                         sh.worksheet("grades").append_row([sel_st, p1, p2, pf])
-                        st.success("تم الحفظ")
+                        st.success("✅ تم حفظ الدرجات")
 
             with tab_b:
                 with st.form("b_form"):
-                    sel_b = st.selectbox("اختر الطالب", std_list, key="bs")
+                    sel_b = st.selectbox("اسم الطالب", std_list, key="bs_select")
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
-                    note = st.text_input("وصف السلوك")
-                    if st.form_submit_button("رصد السلوك"):
+                    note = st.selectbox("وصف السلوك", ["🌟 تميز", "📚 واجب", "⚠️ إزعاج", "➕ أخرى..."])
+                    if st.form_submit_button("حفظ الرصد"):
                         sh.worksheet("behavior").append_row([sel_b, str(datetime.now().date()), b_type, note])
-                        st.success("تم الرصد")
-        except: st.warning("يرجى إضافة طلاب أولاً")
+                        st.success("✅ تم رصد السلوك")
+        except: st.warning("يرجى إضافة طلاب أولاً من تبويب الإدارة")
 
 # --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
-    st.title(f"🎓 نتائج الطالب: {st.session_state.student_id}")
+    st.title(f"🎓 ملف الطالب الأكاديمي")
     try:
         data = sh.worksheet("sheet1").get_all_values()
         res = next((r for r in data if r[0] == st.session_state.student_id), None)
         if res:
-            st.success(f"مرحباً {res[1]}")
+            st.success(f"مرحباً بك: {res[1]}")
             c1, c2, c3 = st.columns(3)
             c1.metric("الفترة 1", res[2])
             c2.metric("الفترة 2", res[3])
             c3.metric("الأداء", res[4])
-        else: st.error("رقم أكاديمي غير مسجل")
+        else: st.error("عذراً، الرقم الأكاديمي غير مسجل")
     except: st.info("🔄 جاري تحميل النتائج...")
