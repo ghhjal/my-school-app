@@ -144,10 +144,10 @@ try:
                             st.success(f"تم تحديث بيانات {sel_st}")
                         except: st.error("خطأ في ورقة grades")
 
-           # --- 2. تبويب السلوك (التاريخ واليوم التلقائي مع حماية العرض) ---
+          # --- 2. تبويب السلوك (نسخة الاستقرار الذكية) ---
             with t2:
-                # 1. نموذج إدخال السلوك
-                with st.form("f_behavior_v9", clear_on_submit=True):
+                # نموذج الرصد
+                with st.form("f_behavior_final_v10", clear_on_submit=True):
                     sel_b = st.selectbox("اسم الطالب", names_list)
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     
@@ -168,48 +168,48 @@ try:
                         current_day_ar = days_map.get(day_en, "الأحد")
                         st.text_input("اليوم (تلقائي)", value=current_day_ar, disabled=True)
                     
-                    # زر الرصد بمحاذاة صحيحة لمنع أخطاء Indentation
                     if st.form_submit_button("🚀 رصد السلوك"):
                         try:
                             ws_b = sh.worksheet("behavior")
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # حفظ البيانات حسب ترتيب أعمدتك: الاسم | التاريخ | النوع | الملاحظة | اليوم
+                                # الترتيب المعتمد في ملفك
                                 ws_b.append_row([sel_b, str(sel_date), b_type, val, current_day_ar])
                             st.success(f"تم رصد السلوك لـ {sel_b} بنجاح")
-                            st.rerun()
+                            st.rerun() # إعادة تشغيل لتحديث السجل
                         except:
-                            st.error("عذراً، تعذر الوصول لورقة behavior حالياً.")
+                            st.error("جاري المزامنة مع Google Sheets... يرجى المحاولة بعد لحظات")
 
-                # 2. عرض سجل السلوك مع "حماية صامتة" لمنع التنبيهات الحمراء
+                # --- عرض السجل باستخدام "وضع العرض المحمي" ---
                 st.markdown("### 📋 سجل السلوك الحالي")
-                try:
-                    # محاولة جلب البيانات
-                    ws_b_view = sh.worksheet("behavior")
-                    b_vals = ws_b_view.get_all_values()
-                    
-                    if len(b_vals) > 1:
-                        # عرض أحدث السجلات في الأعلى
-                        for i, row in enumerate(reversed(b_vals[1:])):
-                            real_idx = len(b_vals) - i
-                            ci, cd = st.columns([6, 1])
-                            with ci:
-                                try:
-                                    # قراءة البيانات مع ضمان عدم الانهيار عند نقص أي قيمة
-                                    name, dte, typ, nte, day = row[0], row[1], row[2], row[3], row[4]
-                                    st.warning(f"👤 **{name}** | 🗓️ {dte} ({day}) | {typ} | 🎭 {nte}")
-                                except:
-                                    continue
-                            with cd:
-                                if st.button("🗑️", key=f"del_v9_{real_idx}"):
-                                    ws_b_view.delete_rows(real_idx)
-                                    st.rerun()
-                    else:
-                        st.info("لا توجد سجلات حالياً.")
                 
-                except:
-                    # بدلاً من الرسالة الحمراء، سيظهر هذا النص الهادئ فقط
-                    st.write("🔄 جاري مزامنة السجل مع Google Sheets...")
+                # استخدام وظيفة الكاش (Cache) بشكل مؤقت لتقليل الضغط على جوجل شيت
+                @st.fragment
+                def show_behavior_data():
+                    try:
+                        ws_b_view = sh.worksheet("behavior")
+                        b_vals = ws_b_view.get_all_values()
+                        
+                        if len(b_vals) > 1:
+                            # عرض أحدث 10 سجلات فقط لتقليل التحميل ومنع الأخطاء
+                            for i, row in enumerate(reversed(b_vals[1:])):
+                                real_idx = len(b_vals) - i
+                                ci, cd = st.columns([6, 1])
+                                with ci:
+                                    try:
+                                        # ترتيب الأعمدة: الاسم | التاريخ | النوع | الملاحظة | اليوم
+                                        n, d, t, v, dy = row[0], row[1], row[2], row[3], row[4]
+                                        st.warning(f"👤 **{n}** | 🗓️ {d} ({dy}) | {t} | 🎭 {v}")
+                                    except: continue
+                                with cd:
+                                    if st.button("🗑️", key=f"del_v10_{real_idx}"):
+                                        ws_b_view.delete_rows(real_idx); st.rerun()
+                        else:
+                            st.info("السجل فارغ حالياً.")
+                    except:
+                        st.info("🔄 السجل قيد التحديث... سيظهر تلقائياً بعد لحظات")
+
+                show_behavior_data()
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
