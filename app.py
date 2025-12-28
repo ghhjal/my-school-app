@@ -105,13 +105,13 @@ try:
                         except Exception as e:
                             st.error(f"خطأ: {e}")
 
- # --- 📊 شاشة الدرجات والسلوك (حل مشكلة رسالة الخطأ بعد الرصد) ---
+ # --- 📊 شاشة الدرجات والسلوك (النسخة الاحترافية v5.0) ---
     elif page == "📊 الدرجات والسلوك":
         st.markdown("<h1>📊 سجل الدرجات والسلوك</h1>", unsafe_allow_html=True)
         
         all_students = ws_students.get_all_records()
         if not all_students:
-            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
+            st.warning("⚠️ يرجى إضافة طلاب أولاً من شاشة إدارة الطلاب.")
         else:
             names_list = [r.get('Name', r.get('name', 'بدون اسم')) for r in all_students]
             t1, t2 = st.tabs(["📝 إدارة الدرجات", "🎭 إدارة السلوك والمواظبة"])
@@ -119,46 +119,30 @@ try:
             days_ar = {"Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", 
                        "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"}
 
-            # --- 1. تبويب الدرجات (Safe View) ---
+            # --- 1. تبويب الدرجات (تحديث السجل الحالي بدون تكرار) ---
             with t1:
-                with st.form("f_grades_safe", clear_on_submit=True):
+                with st.form("f_grades_final", clear_on_submit=True):
                     sel_st = st.selectbox("اختر الطالب", names_list)
                     c1, c2, c3 = st.columns(3)
                     with c1: v1 = st.number_input("درجة P1", min_value=0.0)
                     with c2: v2 = st.number_input("درجة P2", min_value=0.0)
                     with c3: vp = st.number_input("الأداء (perf)", min_value=0.0)
                     
-                    if st.form_submit_button("✅ حفظ الدرجات"):
+                    if st.form_submit_button("✅ حفظ وتحديث الدرجات"):
                         try:
                             ws_g = sh.worksheet("grades")
-                            all_g_data = ws_g.get_all_values()
-                            student_found = False
-                            row_to_update = -1
-
-                            # البحث عن اسم الطالب في العمود الأول (index 0)
-                            for idx, row in enumerate(all_g_data):
-                                if row[0] == sel_st:
-                                    student_found = True
-                                    row_to_update = idx + 1 # رقم الصف في قوقل شيت
-                                    break
-                            
-                            new_data = [sel_st, v1, v2, vp]
-
-                            if student_found:
-                                # إذا وجد الطالب، نقوم بتحديث الصف بدلاً من تكراره
-                                ws_g.update(f"A{row_to_update}:D{row_to_update}", [new_data])
-                                st.success(f"تم تحديث درجات الطالب {sel_st} بنجاح")
-                            else:
-                                # إذا كان طالباً جديداً، نقوم بإضافته
-                                ws_g.append_row(new_data)
-                                st.success(f"تم إضافة درجات {sel_st} بنجاح")
-                            
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"حدث خطأ أثناء المزامنة: {e}")
+                            all_g = ws_g.get_all_values()
+                            found = False
+                            for idx, row in enumerate(all_g):
+                                if row[0] == sel_st: # إذا وجد اسم الطالب
+                                    ws_g.update(f"A{idx+1}:D{idx+1}", [[sel_st, v1, v2, vp]])
+                                    found = True; break
+                            if not found:
+                                ws_g.append_row([sel_st, v1, v2, vp])
+                            st.success(f"تمت العملية لـ {sel_st}")
+                        except: st.error("تأكد من ورقة 'grades'")
 
                 st.markdown("### 📋 سجل الدرجات الحالي")
-                # عرض السجل مع حماية من الأخطاء اللحظية
                 try:
                     ws_g_view = sh.worksheet("grades")
                     g_vals = ws_g_view.get_all_values()
@@ -167,16 +151,16 @@ try:
                             ci, cd = st.columns([5, 1])
                             with ci: st.info(f"👤 **{row[0]}** | P1: `{row[1]}` | P2: `{row[2]}` | الأداء: `{row[3]}`")
                             with cd:
-                                if st.button("🗑️", key=f"dg_del_safe_{i}"):
+                                if st.button("🗑️", key=f"dg_del_{i}"):
                                     ws_g_view.delete_rows(i + 2); st.rerun()
-                except: st.info("جاري تحديث سجل الدرجات...")
+                except: st.info("جاري التحميل...")
 
-            # --- 2. تبويب السلوك (حل مشكلة الصورة الأخيرة) ---
+            # --- 2. تبويب السلوك (التوافق مع: الطالب - النوع - التاريخ - اليوم) ---
             with t2:
-                with st.form("f_behavior_safe", clear_on_submit=True):
-                    sel_b = st.selectbox("اسم الطالب", names_list, key="b_sel_final")
+                with st.form("f_behavior_final", clear_on_submit=True):
+                    sel_b = st.selectbox("اسم الطالب", names_list)
                     b_opts = ["🌟 تميز", "📚 إحضار الكتاب", "✅ حل الواجب", "⚠️ إزعاج", "أخرى..."]
-                    selected_b = st.multiselect("السلوكيات", b_opts)
+                    selected_b = st.multiselect("السلوكيات المرصودة", b_opts)
                     custom = st.text_input("سلوك مخصص:") if "أخرى..." in selected_b else ""
                     
                     if st.form_submit_button("🚀 رصد السلوك"):
@@ -185,31 +169,25 @@ try:
                             now = datetime.now()
                             for b in selected_b:
                                 val = custom if b == "أخرى..." else b
-                                # الترتيب حسب مخططك: Student_id | Date | Type | note
-                                ws_b.append_row([sel_b, str(now.date()), val, days_ar.get(now.strftime('%A'))])
+                                # الترتيب المطلوب: [اسم الطالب, نوع السلوك, التاريخ, اليوم]
+                                ws_b.append_row([sel_b, val, str(now.date()), days_ar.get(now.strftime('%A'))])
                             st.success("تم الرصد بنجاح!")
-                        except: st.error("خطأ: تعذر الوصول لجدول behavior")
+                        except: st.error("تأكد من ورقة 'behavior'")
 
                 st.markdown("### 📋 سجل السلوك الحالي")
                 try:
-                    # منطق عرض آمن يمنع الرسالة الحمراء في الصورة
                     ws_b_view = sh.worksheet("behavior")
                     b_vals = ws_b_view.get_all_values()
                     if len(b_vals) > 1:
                         for i, row in enumerate(b_vals[1:]):
                             ci, cd = st.columns([5, 1])
                             with ci:
-                                n = row[0] if len(row)>0 else "??"
-                                d = row[1] if len(row)>1 else ""
-                                t = row[2] if len(row)>2 else ""
-                                dy = row[3] if len(row)>3 else ""
-                                st.warning(f"🎭 **{n}** | {t} — 🗓️ {d} ({dy})")
+                                # عرض الحقول الأربعة: الطالب - النوع - التاريخ - اليوم
+                                st.warning(f"👤 **{row[0]}** | 🎭 {row[1]} | 🗓️ {row[2]} ({row[3]})")
                             with cd:
-                                if st.button("🗑️", key=f"db_del_safe_{i}"):
+                                if st.button("🗑️", key=f"db_del_{i}"):
                                     ws_b_view.delete_rows(i + 2); st.rerun()
-                except:
-                    # بدلاً من الخطأ الأحمر، ستظهر هذه الرسالة الهادئة أثناء التحديث
-                    st.info("جاري مزامنة السجل مع قوقل شيت...")
+                except: st.info("جاري تحديث السجل...")
                                 
     # --- 🎓 شاشة الطلاب ---
     elif page == "🎓 شاشة الطلاب":
