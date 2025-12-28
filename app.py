@@ -5,7 +5,7 @@ import pandas as pd
 import time
 from datetime import datetime
 
-# --- 1. إعدادات الاتصال والذاكرة ---
+# --- 1. إعدادات الاتصال ---
 st.set_page_config(page_title="نظام المدرسة الرقمي", layout="wide")
 
 @st.cache_resource(ttl=300)
@@ -34,11 +34,11 @@ if st.session_state.role is None:
     st.title("🔐 بوابة الدخول")
     t1, t2 = st.tabs(["👨‍🏫 المعلم", "🎓 الطالب"])
     with t1:
-        pwd = st.text_input("كلمة المرور", type="password")
+        pwd = st.text_input("كلمة المرور", type="password", key="p_main")
         if st.button("دخول"):
             if pwd == "1234": st.session_state.role = "teacher"; st.rerun()
     with t2:
-        sid_log = st.text_input("الرقم الأكاديمي")
+        sid_log = st.text_input("الرقم الأكاديمي", key="s_main")
         if st.button("دخول الطالب"):
             if sid_log: st.session_state.role = "student"; st.session_state.student_id = sid_log; st.rerun()
     st.stop()
@@ -49,12 +49,10 @@ if st.session_state.role == "teacher":
 
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
-        # استعادة تبويبات التسجيل والبحث
         tab_reg, tab_view = st.tabs(["📝 تسجيل جديد", "📋 البحث والحذف الشامل"])
         
         with tab_reg:
-            with st.form("add_student_form", clear_on_submit=True):
-                st.subheader("إضافة طالب جديد")
+            with st.form("add_st", clear_on_submit=True):
                 c1, c2 = st.columns(2)
                 with c1:
                     sid = st.number_input("الرقم الأكاديمي", min_value=1, step=1)
@@ -64,11 +62,11 @@ if st.session_state.role == "teacher":
                     sclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                     syear = st.selectbox("السنة", ["1446هـ", "1447هـ"])
                     ssub = st.text_input("المادة", value="اللغة الإنجليزية")
-                if st.form_submit_button("حفظ البيانات"):
+                if st.form_submit_button("حفظ"):
                     if sh and sname:
                         sh.worksheet("students").append_row([str(sid), sname, sclass, syear, ssub, sphase])
                         sh.worksheet("sheet1").append_row([str(sid), sname, "0", "0", "0"])
-                        st.success("✅ تم الحفظ بنجاح"); time.sleep(1); st.rerun()
+                        st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
 
         with tab_view:
             search_q = st.text_input("🔍 ابحث بالاسم أو الرقم")
@@ -77,35 +75,36 @@ if st.session_state.role == "teacher":
                 filt = df_st[df_st.apply(lambda r: search_q in str(r["الاسم"]) or search_q in str(r["الرقم"]), axis=1)]
                 st.dataframe(filt, use_container_width=True, hide_index=True)
                 
-                # --- الحذف الشامل الحقيقي (حل مشكلة السلوك) ---
                 st.divider()
-                st.subheader("🗑️ حذف طالب (شامل لجميع الجداول)")
-                del_name = st.selectbox("اختر الطالب للحذف النهائي", [""] + filt["الاسم"].tolist())
-                if st.button("تأكيد الحذف الشامل"):
+                st.subheader("🗑️ حذف طالب (شامل نهائي)")
+                del_name = st.selectbox("اختر الطالب للمسح الشامل", [""] + filt["الاسم"].tolist())
+                if st.button("تأكيد الحذف النهائي"):
                     if del_name:
                         with st.spinner("جاري تنظيف كافة السجلات..."):
-                            # 1. حذف السلوك بالاسم (الطريقة الأضمن لعدم بقاء بيانات)
+                            # 1. حذف السلوك (إعادة بناء الجدول لضمان المسح الشامل)
                             try:
                                 ws_bh = sh.worksheet("behavior")
-                                all_bh = ws_bh.get_all_records()
-                                # إعادة بناء الجدول بدون الطالب المختار
-                                clean_bh = [r for r in all_bh if str(list(r.values())[0]).strip() != del_name.strip()]
+                                data_bh = ws_bh.get_all_records()
+                                clean_bh = [r for r in data_bh if str(list(r.values())[0]).strip() != del_name.strip()]
                                 ws_bh.clear()
-                                if all_bh: ws_bh.append_row(list(all_bh[0].keys()))
+                                if data_bh: ws_bh.append_row(list(data_bh[0].keys()))
                                 if clean_bh: ws_bh.append_rows([list(r.values()) for r in clean_bh])
                             except: pass
                             
-                            # 2. حذف الدرجات (grades)
+                            # 2. حذف الدرجات
+                            for s_name in ["grades", "sheet1"]:
+                                try:
+                                    ws = sh.worksheet(s_name); cell = ws.find(del_name.strip())
+                                    ws.delete_rows(cell.row)
+                                except: pass
+                            
+                            # 3. حذف من القائمة الرئيسية
                             try:
-                                ws_gr = sh.worksheet("grades"); c_gr = ws_gr.find(del_name.strip())
-                                ws_gr.delete_rows(c_gr.row)
+                                ws_st = sh.worksheet("students"); cell_st = ws_st.find(del_name.strip())
+                                ws_st.delete_rows(cell_st.row)
                             except: pass
                             
-                            # 3. حذف الطالب من القائمة الرئيسية
-                            ws_st = sh.worksheet("students"); c_st = ws_st.find(del_name.strip())
-                            ws_st.delete_rows(c_st.row)
-                            
-                            st.success(f"🗑️ تم حذف {del_name} وكافة بياناته بنجاح"); time.sleep(1); st.rerun()
+                            st.success(f"🗑️ تم حذف {del_name} وكل بياناته"); time.sleep(1); st.rerun()
 
     elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد الدرجات والسلوك")
@@ -115,11 +114,11 @@ if st.session_state.role == "teacher":
             t_grad, t_beh = st.tabs(["📝 الدرجات", "🎭 السلوك"])
 
             with t_grad:
-                with st.form("grade_up_form"):
+                with st.form("g_up"):
                     sel_st = st.selectbox("اختر الطالب", names)
                     c1, c2, c3 = st.columns(3)
                     p1, p2, pf = c1.number_input("الفترة 1"), c2.number_input("الفترة 2"), c3.number_input("الأداء")
-                    if st.form_submit_button("تحديث الدرجات"):
+                    if st.form_submit_button("تحديث"):
                         ws_g = sh.worksheet("grades")
                         try:
                             cell = ws_g.find(sel_st); ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, pf]])
@@ -130,23 +129,15 @@ if st.session_state.role == "teacher":
                 st.dataframe(df_g, use_container_width=True, hide_index=True)
 
             with t_beh:
-                with st.form("behavior_add_form"):
+                with st.form("b_add"):
                     b_st = st.selectbox("اسم الطالب", names)
                     b_date = st.date_input("📅 التاريخ", datetime.now())
                     b_type = st.radio("النوع", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     b_note = st.text_input("الملاحظة")
-                    if st.form_submit_button("رصد السلوك"):
+                    if st.form_submit_button("رصد"):
                         sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
                         st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
                 
-                # حذف ملاحظة سلوكية مفردة
-                st.subheader("🗑️ حذف سجل سلوك")
+                st.subheader("📋 سجل السلوك الحالي")
                 df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
-                if not df_b.empty:
-                    st.dataframe(df_b, use_container_width=True, hide_index=True)
-                    del_b_note = st.selectbox("اختر الملاحظة لحذفها", [""] + df_b["الملاحظة"].tolist())
-                    if st.button("حذف الملاحظة المحددة"):
-                        if del_b_note:
-                            ws_bh = sh.worksheet("behavior"); cell = ws_bh.find(del_b_note)
-                            ws_bh.delete_rows(cell.row)
-                            st.success("✅ تم الحذف"); time.sleep(1); st.rerun()
+                st.dataframe(df_b, use_container_width=True, hide_index=True)
