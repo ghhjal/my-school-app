@@ -6,9 +6,10 @@ import time
 from datetime import datetime
 
 # --- 1. إعدادات الصفحة والاتصال ---
+# تحديث عنوان المتصفح
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide", initial_sidebar_state="expanded")
 
-# تصميم CSS مخصص للهوية
+# تصميم CSS مخصص لإبراز الهوية
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -44,6 +45,7 @@ def fetch_data_safe(sheet_name, expected_cols):
 if 'role' not in st.session_state: st.session_state.role = None
 
 if st.session_state.role is None:
+    # العنوان الجديد لحفظ الحقوق في واجهة الدخول
     st.markdown("<h1 class='title-text'>🏛️ منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
     st.subheader("بوابة الدخول الموحدة")
     t1, t2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
@@ -65,19 +67,20 @@ if st.session_state.role is None:
                 else: st.error("عذراً، الرقم الأكاديمي غير مسجل.")
     st.stop()
 
-# --- القائمة الجانبية ---
+# --- القائمة الجانبية مع حقوق الإشراف ---
 with st.sidebar:
     st.markdown("## 🏛️ منصة أ. زياد المعمري")
-    st.write(f"👤 الحساب الحالي: **{st.session_state.role}**")
+    st.write(f"👤 مرحباً: **{st.session_state.role}**")
     if st.button("🚪 تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
     st.divider()
+    # تأكيد الإشراف والحقوق
     st.markdown("### ✍️ إشراف وإدارة:")
     st.info("**الأستاذ زياد المعمري**")
 
 # --- 3. واجهة المعلم ---
 if st.session_state.role == "teacher":
-    menu = st.sidebar.radio("القائمة الرئيسية:", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك"])
+    menu = st.sidebar.radio("انتقل إلى:", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك"])
 
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
@@ -102,7 +105,7 @@ if st.session_state.role == "teacher":
             st.dataframe(df_st, use_container_width=True, hide_index=True)
             st.divider()
             del_target = st.selectbox("🗑️ حذف طالب نهائياً", [""] + df_st["الاسم"].tolist())
-            if st.button("تأكيد الحذف"):
+            if st.button("تأكيد الحذف النهائي"):
                 if del_target:
                     with st.spinner("جاري حذف كافة السجلات..."):
                         for sn in ["students", "behavior", "grades"]:
@@ -129,7 +132,7 @@ if st.session_state.role == "teacher":
                             cell = ws_g.find(sel_st.strip())
                             ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, work]])
                         except: ws_g.append_row([sel_st.strip(), p1, p2, work])
-                        st.success("✅ تم تحديث الدرجات بنجاح"); time.sleep(1); st.rerun()
+                        st.success("✅ تم تحديث الدرجات"); time.sleep(1); st.rerun()
                 df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
                 st.dataframe(df_g, use_container_width=True, hide_index=True)
             with t_beh:
@@ -138,17 +141,15 @@ if st.session_state.role == "teacher":
                     b_date = st.date_input("التاريخ", datetime.now())
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
                     b_note = st.text_input("الملاحظة")
-                    if st.form_submit_button("📌 رصد"):
+                    if st.form_submit_button("📌 رصد السلوك"):
                         sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
                         st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
                 df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
                 st.dataframe(df_b, use_container_width=True, hide_index=True)
 
-# --- 4. واجهة الطالب (التحديث المطلوب) ---
+# --- 4. واجهة الطالب (تلوين السلوك وحقوق المنصة) ---
 elif st.session_state.role == "student":
-    # استبدال العنوان وتخصيص الترحيب
-    st.markdown(f"<h2 style='text-align:right;'>🎓 بيانات الطالب | أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
-    
+    st.markdown(f"<h2 style='text-align:right;'>🎓 منصة الأستاذ زياد | الطالب: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
     df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
     df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
     df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
@@ -160,13 +161,13 @@ elif st.session_state.role == "student":
     c3.metric("المادة المسجلة", my_info["المادة"])
     
     st.divider()
-    st.subheader("📊 تقرير الدرجات والمشاركة")
+    st.subheader("📊 تقرير الدرجات")
     my_grades = df_g[df_g["الطالب"] == st.session_state.student_name]
     if not my_grades.empty: st.table(my_grades)
     else: st.info("لم ترصد درجات حتى الآن.")
         
     st.divider()
-    st.subheader("🎭 سجل الملاحظات السلوكية")
+    st.subheader("🎭 سجل السلوك والملاحظات")
     my_beh = df_b[df_b["الاسم"] == st.session_state.student_name]
     if not my_beh.empty:
         for i, row in my_beh.iterrows():
@@ -174,4 +175,4 @@ elif st.session_state.role == "student":
                 st.success(f"📅 {row['التاريخ']} | ✅ {row['النوع']} : {row['الملاحظة']}")
             else:
                 st.error(f"📅 {row['التاريخ']} | ❌ {row['النوع']} : {row['الملاحظة']}")
-    else: st.success("سجلك السلوكي متميز!")
+    else: st.success("سجلك السلوكي متميز وخالٍ من الملاحظات!")
