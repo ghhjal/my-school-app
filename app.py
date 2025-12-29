@@ -239,57 +239,44 @@ elif st.session_state.role == "student":
             my_bh = df_bh[df_bh['student_id'] == s_data['name']]
             
             if not my_bh.empty:
-                for _, row in my_bh.iterrows():
-                    # قراءة النص بالكامل وتحويله لنص بسيط للبحث
+                for index, row in my_bh.iterrows():
+                    # قراءة النص بالكامل بدقة
                     bh_type_raw = str(row.get('النوع', ''))
                     note_content = str(row.get('ملاحظة', 'لا توجد تفاصيل'))
                     
-                    # --- المحرك الذكي الجديد (يعتمد على الرموز والكلمات معاً) ---
-                    if "⭐" in bh_type_raw or "متميز" in bh_type_raw:
-                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9"
-                        label = "إنجاز استثنائي"
-                    elif "✅" in bh_type_raw or "إيجابي" in bh_type_raw:
-                        icon, color, bg = "🌟", "#43A047", "#F1F8E9"
-                        label = "سلوك رائع"
-                    elif "⚠️" in bh_type_raw or "تنبيه" in bh_type_raw:
-                        icon, color, bg = "📢", "#F4511E", "#FFF3E0"
-                        label = "تنبيه تربوي"
-                    elif "❌" in bh_type_raw or "سلبي" in bh_type_raw:
-                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE"
-                        label = "ملاحظة هامة"
+                    # --- المحرك الذكي للألوان والأيقونات ---
+                    if any(x in bh_type_raw for x in ["⭐", "متميز", "10+"]):
+                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9" # تميز (أخضر)
+                    elif any(x in bh_type_raw for x in ["✅", "إيجابي", "5+"]):
+                        icon, color, bg = "🌟", "#43A047", "#F1F8E9" # إيجابي (أخضر فاتح)
+                    elif any(x in bh_type_raw for x in ["⚠️", "تنبيه", "5-"]):
+                        icon, color, bg = "📢", "#F4511E", "#FFF3E0" # تنبيه (برتقالي)
+                    elif any(x in bh_type_raw for x in ["❌", "سلبي", "10-"]):
+                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE" # سلبي (أحمر)
                     else:
-                        # في حال لم يجد أي مما سبق يضع أيقونة محايدة زرقاء
-                        icon, color, bg = "📝", "#1976D2", "#E3F2FD"
-                        label = "ملاحظة عامة"
+                        icon, color, bg = "📝", "#1976D2", "#E3F2FD" # عام (أزرق)
 
                     # --- تصميم البطاقة المتفاعلة ---
                     st.markdown(f"""
-                        <div style="
-                            background-color: {bg}; 
-                            padding: 15px; 
-                            border-radius: 15px; 
-                            border-right: 10px solid {color}; 
-                            margin-bottom: 12px; 
-                            box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
-                        ">
+                        <div style="background-color: {bg}; padding: 15px; border-radius: 15px; 
+                                    border-right: 10px solid {color}; margin-bottom: 5px; 
+                                    box-shadow: 2px 2px 8px rgba(0,0,0,0.05);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 1.3em; font-weight: bold; color: {color};">
-                                    {icon} {bh_type_raw}
-                                </span>
-                                <span style="background: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; border: 1px solid #ddd;">
-                                    📅 {row.get('التاريخ', '')}
-                                </span>
+                                <span style="font-size: 1.2em; font-weight: bold; color: {color};">{icon} {bh_type_raw}</span>
+                                <span style="font-size: 0.8em; color: #666;">📅 {row.get('التاريخ', '')}</span>
                             </div>
-                            <div style="margin-top: 10px; color: #333; font-size: 1.05em;">
-                                <b>الملاحظة:</b> {note_content}
-                            </div>
-                            <div style="margin-top: 5px; font-size: 0.85em; font-weight: bold; color: {color};">
-                                📌 التصنيف: {label}
-                            </div>
+                            <div style="margin-top: 8px; color: #333;"><b>التفاصيل:</b> {note_content}</div>
                         </div>
                     """, unsafe_allow_html=True)
+                    
+                    # --- خاصية "تأكيد القراءة" (شكراً يا أستاذ) ---
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        if st.button(f"🙏 شكراً أستاذي", key=f"thank_{index}"):
+                            st.toast(f"تم إرسال شكرك للأستاذ زياد! 🌟")
+                    st.markdown("<br>", unsafe_allow_html=True)
             else:
-                st.info("سجلك السلوكي فارغ حالياً.. حافظ على تميزك! ✨")
+                st.info("سجلك السلوكي نظيف.. استمر في تميزك! ✨")
     with t3:
         st.subheader("⚙️ تحديث البريد والجوال")
         with st.form("update_info"):
