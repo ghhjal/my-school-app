@@ -5,44 +5,22 @@ import pandas as pd
 import time
 from datetime import datetime
 
-# --- 1. إعدادات الصفحة وتحسين الرؤية للجوال والحاسوب ---
+# --- 1. إعدادات الصفحة والاتصال ---
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide", initial_sidebar_state="expanded")
 
-# تحسين تصميم CSS ليكون متوافقاً مع الشاشات الصغيرة وتوضيح الألوان
 st.markdown("""
     <style>
-    /* تحسين البطاقات لتكون واضحة جداً على الجوال */
-    .stMetric {
-        background-color: #ffffff !important; 
-        padding: 15px !important; 
-        border-radius: 12px !important; 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
-        border-top: 5px solid #1e3a8a !important;
-        margin-bottom: 10px !important;
-    }
-    /* توضيح نصوص التسميات (Labels) والقيم (Values) داخل البطاقات */
-    [data-testid="stMetricLabel"] {
-        color: #1e3a8a !important; 
-        font-weight: bold !important;
-        font-size: 1.2rem !important;
-        opacity: 1 !important;
-    }
-    [data-testid="stMetricValue"] {
-        color: #000000 !important;
-        font-size: 1.6rem !important;
-        font-weight: 800 !important;
-    }
-    /* ضبط اتجاه النص العام */
-    .main { text-align: right; direction: rtl; }
+    .main { background-color: #f8f9fa; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; }
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 4px solid #1e3a8a; }
     footer {visibility: hidden;}
-    .title-text { color: #1e3a8a; font-family: 'Arial'; text-align: center; font-weight: bold; }
+    .title-text { color: #1e3a8a; font-family: 'Arial'; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_resource(ttl=600)
 def get_db():
     try:
-        # الربط مع Google Sheets باستخدام Secrets
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(creds).open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
@@ -61,11 +39,12 @@ def fetch_data_safe(sheet_name, expected_cols):
     except: pass
     return pd.DataFrame(columns=expected_cols)
 
-# --- 2. نظام الدخول الموحد ---
+# --- 2. نظام الدخول والخروج ---
 if 'role' not in st.session_state: st.session_state.role = None
 
 if st.session_state.role is None:
     st.markdown("<h1 class='title-text'>🏛️ منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
+    st.subheader("بوابة الدخول الموحدة")
     t1, t2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
     with t1:
         pwd = st.text_input("كلمة المرور", type="password", key="login_pwd")
@@ -91,7 +70,7 @@ if st.session_state.role is None:
 # --- القائمة الجانبية ---
 with st.sidebar:
     st.markdown("## 🏛️ لوحة التحكم")
-    st.write(f"👤 مستخدم: **{st.session_state.role}**")
+    st.write(f"👤 مرحباً بك: **{st.session_state.role}**")
     if st.button("🚪 تسجيل الخروج"):
         st.session_state.role = None
         st.rerun()
@@ -105,7 +84,7 @@ if st.session_state.role == "teacher":
 
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة شؤون الطلاب")
-        t_reg, t_view = st.tabs(["📝 تسجيل جديد", "📋 قائمة الطلاب والحذف"])
+        t_reg, t_view = st.tabs(["📝 تسجيل طالب جديد", "📋 قائمة الطلاب والحذف"])
         with t_reg:
             with st.form("reg_form", clear_on_submit=True):
                 c1, c2 = st.columns(2)
@@ -120,64 +99,93 @@ if st.session_state.role == "teacher":
                 if st.form_submit_button("💾 حفظ البيانات"):
                     if sname:
                         sh.worksheet("students").append_row([str(sid), sname, sclass, syear, ssub, sphase])
-                        st.success(f"✅ تم الحفظ")
-                        time.sleep(1); st.rerun()
+                        st.success(f"✅ تم الحفظ بنجاح")
+                        time.sleep(1)
+                        st.rerun()
         with t_view:
             df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
             st.dataframe(df_st, use_container_width=True, hide_index=True)
+            st.divider()
+            del_target = st.selectbox("🗑️ حذف طالب نهائياً", [""] + df_st["الاسم"].tolist())
+            if st.button("تأكيد الحذف النهائي"):
+                if del_target:
+                    with st.spinner("جاري تنظيف كافة السجلات..."):
+                        for sn in ["students", "behavior", "grades"]:
+                            ws = sh.worksheet(sn)
+                            while True:
+                                try:
+                                    cell = ws.find(del_target.strip())
+                                    ws.delete_rows(cell.row)
+                                except: break
+                    st.success("🗑️ تم الحذف بنجاح")
+                    time.sleep(1)
+                    st.rerun()
 
     elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد الدرجات والسلوك")
         df_all = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
-        t_grad, t_beh = st.tabs(["📝 الدرجات", "🎭 السلوك"])
-        with t_grad:
-            with st.form("grade_form"):
-                sel_st = st.selectbox("اختر الطالب", df_all["الاسم"].tolist())
-                c1, c2, c3 = st.columns(3)
-                p1, p2, work = c1.number_input("ف1"), c2.number_input("ف2"), c3.number_input("مشاركة")
-                if st.form_submit_button("🔄 تحديث"):
-                    ws_g = sh.worksheet("grades")
-                    try:
-                        cell = ws_g.find(sel_st.strip())
-                        ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, work]])
-                    except: ws_g.append_row([sel_st.strip(), p1, p2, work])
-                    st.success("✅ تم التحديث"); time.sleep(1); st.rerun()
-        with t_beh:
-            with st.form("beh_form"):
-                b_st = st.selectbox("اسم الطالب", df_all["الاسم"].tolist())
-                b_date = st.date_input("التاريخ", datetime.now())
-                b_type = st.radio("نوع السلوك", ["✅ إيجابي", "⭐ متميز", "⚠️ تنبيه", "❌ سلبي"], horizontal=True)
-                b_note = st.text_input("الملاحظة")
-                if st.form_submit_button("📌 رصد"):
-                    sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
-                    st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
+        if not df_all.empty:
+            t_grad, t_beh = st.tabs(["📝 الدرجات", "🎭 السلوك"])
+            with t_grad:
+                with st.form("grade_form"):
+                    sel_st = st.selectbox("اختر الطالب", df_all["الاسم"].tolist())
+                    c1, c2, c3 = st.columns(3)
+                    p1, p2, work = c1.number_input("الفترة 1"), c2.number_input("الفترة 2"), c3.number_input("المشاركة والمهام")
+                    if st.form_submit_button("🔄 تحديث الدرجات"):
+                        ws_g = sh.worksheet("grades")
+                        try:
+                            cell = ws_g.find(sel_st.strip())
+                            ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, work]])
+                        except: 
+                            ws_g.append_row([sel_st.strip(), p1, p2, work])
+                        st.success("✅ تم التحديث")
+                        time.sleep(1)
+                        st.rerun()
+                df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
+                st.dataframe(df_g, use_container_width=True, hide_index=True)
+            with t_beh:
+                with st.form("beh_form"):
+                    b_st = st.selectbox("اسم الطالب", df_all["الاسم"].tolist())
+                    b_date = st.date_input("التاريخ", datetime.now())
+                    # تم التحديث: الخيارات الأربعة المطلوبة
+                    b_type = st.radio("نوع السلوك", ["✅ إيجابي", "⭐ متميز", "⚠️ تنبيه", "❌ سلبي"], horizontal=True)
+                    b_note = st.text_input("الملاحظة")
+                    if st.form_submit_button("📌 رصد"):
+                        sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
+                        st.success("✅ تم الرصد")
+                        time.sleep(1)
+                        st.rerun()
+                df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
+                st.dataframe(df_b, use_container_width=True, hide_index=True)
 
-# --- 4. واجهة الطالب (محسنة وواضحة للجوال) ---
+# --- 4. واجهة الطالب (بيانات الطالب + تلوين السلوك المطور) ---
 elif st.session_state.role == "student":
-    st.markdown(f"<h3 style='text-align:center; background-color:#1e3a8a; color:white; padding:15px; border-radius:10px;'>🎓 الطالب: {st.session_state.student_name}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:right;'>🎓 بيانات الطالب | أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
     
     df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
     df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
     df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
     
     my_info = df_st[df_st["الرقم"].astype(str) == st.session_state.student_id].iloc[0]
-    
-    # بطاقات البيانات الأساسية - تظهر بشكل عمودي في الجوال لسهولة الرؤية
-    st.metric("الصف الدراسي", my_info["الصف"])
-    st.metric("المرحلة", my_info["المرحلة"])
-    st.metric("المادة المسجلة", my_info["المادة"])
+    c1, c2, c3 = st.columns(3)
+    c1.metric("الصف الدراسي", my_info["الصف"])
+    c2.metric("المرحلة", my_info["المرحلة"])
+    c3.metric("المادة المسجلة", my_info["المادة"])
     
     st.divider()
     st.subheader("📊 تقرير الدرجات")
     my_grades = df_g[df_g["الطالب"] == st.session_state.student_name]
-    if not my_grades.empty:
-        st.table(my_grades) # استخدام الجدول الثابت للوضوح التام
-    
+    if not my_grades.empty: 
+        st.table(my_grades)
+    else: 
+        st.info("لم ترصد درجاتك حتى الآن.")
+        
     st.divider()
     st.subheader("🎭 سجل الملاحظات السلوكية")
     my_beh = df_b[df_b["الاسم"] == st.session_state.student_name]
     if not my_beh.empty:
         for i, row in my_beh.iterrows():
+            # نظام التلوين المطور حسب النوع
             if "إيجابي" in row["النوع"]:
                 st.success(f"📅 {row['التاريخ']} | {row['النوع']} : {row['الملاحظة']}")
             elif "متميز" in row["النوع"]:
@@ -186,5 +194,7 @@ elif st.session_state.role == "student":
                 st.warning(f"📅 {row['التاريخ']} | {row['النوع']} : {row['الملاحظة']}")
             elif "سلبي" in row["النوع"]:
                 st.error(f"📅 {row['التاريخ']} | {row['النوع']} : {row['الملاحظة']}")
-    else:
-        st.success("سجلك السلوكي متميز ومشرّف!")
+            else:
+                st.write(f"📅 {row['التاريخ']} | {row['النوع']} : {row['الملاحظة']}")
+    else: 
+        st.success("سجلك السلوكي متميز وخالٍ من الملاحظات!")
