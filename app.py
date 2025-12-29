@@ -9,6 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 
+# إعداد الصفحة وتنسيقها
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
 
 @st.cache_resource(ttl=60)
@@ -26,7 +27,8 @@ sh = get_db()
 def fetch_data(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
-        return pd.DataFrame(ws.get_all_records())
+        data = ws.get_all_records()
+        return pd.DataFrame(data) if data else pd.DataFrame()
     except:
         return pd.DataFrame()
 
@@ -121,25 +123,6 @@ if st.session_state.role == "teacher":
 
     elif menu == "📊 الدرجات والسلوك":
         tab1, tab2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
-        with tab1:
-            st.subheader("📝 رصد وتعديل الدرجات")
-            name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
-            target = st.selectbox("اختر الطالب", [""] + df_st[name_col].tolist()) if name_col else None
-            if target:
-                with st.form("g_form"):
-                    c1, c2, c3 = st.columns(3)
-                    v1 = c1.number_input("درجة ف1 (p1)", min_value=0, max_value=100)
-                    v2 = c2.number_input("درجة ف2 (p2)", min_value=0, max_value=100)
-                    v3 = c3.number_input("المشاركة (perf)", min_value=0, max_value=100)
-                    if st.form_submit_button("حفظ الدرجات"):
-                        ws_g = sh.worksheet("grades")
-                        try:
-                            fnd = ws_g.find(target); ws_g.update(f'B{fnd.row}:D{fnd.row}', [[v1, v2, v3]])
-                        except:
-                            ws_g.append_row([target, v1, v2, v3])
-                        st.success(f"تم تحديث درجات {target} ✅")
-            st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
-
         with tab2:
             st.subheader("🎭 رصد السلوك والتحفيز")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
@@ -155,81 +138,26 @@ if st.session_state.role == "teacher":
                     n_v = st.text_input("ملاحظة السلوك")
                     if st.form_submit_button("حفظ وإرسال إيميل"):
                         pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
-                        # إضافة صف جديد مع حالة "لم تقرأ" في العمود الخامس
                         sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v, "🕒 لم تُقرأ بعد"])
                         ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                         old_pts = int(ws_st.cell(c.row, 9).value or 0)
                         ws_st.update_cell(c.row, 9, old_pts + pts)
                         if target_email and "@" in str(target_email):
                             send_email_alert(sel_st, target_email, t_v, n_v)
-                        st.success("تم الحفظ وتحديث النقاط ✅"); time.sleep(1); st.rerun()
-
-                st.divider()
-                st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
-                df_bh_teacher = fetch_data("behavior")
-                if not df_bh_teacher.empty:
-                    # فلترة الطالب وعرض حالة القراءة
-                    my_bh_teacher = df_bh_teacher[df_bh_teacher.iloc[:, 0] == sel_st].iloc[::-1]
-                    for index, row in my_bh_teacher.iterrows():
-                        status = str(row.iloc[4]) if len(row) > 4 else "🕒 لم تُقرأ بعد"
-                        is_read = "تمت القراءة" in status
-                        bg_c = "#E8F5E9" if is_read else "#FFEBEE"
-                        txt_c = "#1B5E20" if is_read else "#B71C1C"
-                        st.markdown(f"""
-                            <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; border: 2px solid {txt_c}; margin-bottom: 8px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <b style="color: {txt_c};">{status}</b>
-                                    <small>📅 {row.iloc[1]}</small>
-                                </div>
-                                <div style="margin-top: 5px; color: #1a1a1a;">
-                                    <b>النوع:</b> {row.iloc[2]} | <b>💬 الملاحظة:</b> {row.iloc[3]}
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
-
-    elif menu == "📢 إعلانات الاختبارات":
-        st.header("📢 إدارة إعلانات المواعيد")
-        df_ex = fetch_data("exams")
-        col_add, col_del = st.columns([2, 1])
-        with col_add:
-            with st.form("ex_form", clear_on_submit=True):
-                e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                e_ttl = st.text_input("موضوع الاختبار")
-                e_dt = st.date_input("الموعد")
-                if st.form_submit_button("نشر"):
-                    sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                    st.success("تم النشر ✅"); time.sleep(1); st.rerun()
+                        st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
 
 # --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
-    st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
+    st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
     id_col = df_st.columns[0]
     s_data = df_st[df_st[id_col].astype(str) == st.session_state.sid].iloc[0]
     s_name = s_data.iloc[1]
     
-    st.markdown(f"<h2 style='text-align:center; color:#42A5F5;'>🌟 أهلاً بك يا بطل: {s_name}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:center;'>🌟 أهلاً بك يا بطل: {s_name}</h2>", unsafe_allow_html=True)
     
-    pts = int(s_data.iloc[8] or 0)
-    medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
-    c1, c2 = st.columns(2)
-    c1.metric("رصيد نقاطك ⭐", pts)
-    c2.metric("لقبك الحالي 🏆", medal)
-
-    st.divider()
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سجل السلوك", "⚙️ بياناتي"])
     
-    with t1:
-        df_g = fetch_data("grades")
-        my_g = df_g[df_g.iloc[:, 0] == s_name]
-        if not my_g.empty:
-            g = my_g.iloc[0]
-            ca, cb, cc = st.columns(3)
-            ca.metric("فترة 1", g.iloc[1])
-            cb.metric("فترة 2", g.iloc[2])
-            cc.metric("المشاركة", g.iloc[3])
-        else: st.info("لا توجد درجات مرصودة")
-
     with t2:
         df_bh = fetch_data("behavior")
         if not df_bh.empty:
@@ -246,7 +174,7 @@ elif st.session_state.role == "student":
                 
                 st.markdown(f"""
                     <div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {border}; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; justify-content: space-between;">
                             <b style="color: {border};">{bh_type}</b>
                             <small>📅 {dt}</small>
                         </div>
@@ -255,31 +183,19 @@ elif st.session_state.role == "student":
                 """, unsafe_allow_html=True)
                 
                 if not is_read:
+                    # زر الشكر مع حماية من الضغط المتكرر
                     if st.button(f"🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_{idx}"):
                         try:
-                            # البحث الدقيق عن الصف في Google Sheets باستخدام الاسم والتاريخ والملاحظة
-                            all_rows = sh_bh.get_all_values()
-                            found = False
-                            for i, r in enumerate(all_rows):
-                                if r[0] == s_name and r[1] == dt and r[3] == note:
-                                    sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                    found = True
-                                    break
-                            if found:
-                                st.balloons()
-                                st.toast("تم إرسال شكرك للأستاذ زياد! 🌸")
-                                time.sleep(1); st.rerun()
-                            else:
-                                st.error("لم يتم العثور على الملاحظة في السجل")
-                        except Exception as e:
-                            st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
-        else: st.info("سجلك السلوكي نظيف يا بطل! ✨")
-
-    with t3:
-        with st.form("up"):
-            mail = st.text_input("إيميل ولي الأمر", value=str(s_data.iloc[6]))
-            phone = st.text_input("رقم الجوال", value=str(s_data.iloc[7]))
-            if st.form_submit_button("حفظ"):
-                ws = sh.worksheet("students"); c = ws.find(st.session_state.sid)
-                ws.update_cell(c.row, 7, mail); ws.update_cell(c.row, 8, phone)
-                st.success("تم التحديث ✅"); time.sleep(1); st.rerun()
+                            with st.spinner("جاري التحديث..."):
+                                all_rows = sh_bh.get_all_values()
+                                for i, r in enumerate(all_rows):
+                                    if r[0] == s_name and r[1] == dt and r[3] == note:
+                                        sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
+                                        st.balloons()
+                                        st.success("شكراً لك! تم إرسال القراءة للأستاذ.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                        break
+                        except:
+                            st.warning("تم تحديث الحالة بالفعل، يرجى تحديث الصفحة.")
+        else: st.info("سجلك نظيف!")
