@@ -85,23 +85,50 @@ if st.session_state.role == "teacher":
             st.dataframe(df_b_view, use_container_width=True, hide_index=True)
 
         with tab_g:
-            # نموذج رصد الدرجات
-            with st.form("grade_form"):
+            with tab_g:
+            # نموذج رصد الدرجات المطور لمنع التكرار
+            st.subheader("📝 تحديث درجات الطالب")
+            with st.form("grade_form", clear_on_submit=False):
                 g_st = st.selectbox("اختر الطالب للدرجات", df_all["الاسم"].tolist())
+                
+                # محاولة جلب الدرجات الحالية لعرضها قبل التعديل
+                df_g_now = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
+                current_val = df_g_now[df_g_now["الطالب"] == g_st]
+                
                 c1, c2, c3 = st.columns(3)
-                f1 = c1.number_input("ف1", value=0.0); f2 = c2.number_input("ف2", value=0.0); wrk = c3.number_input("مشاركة", value=0.0)
-                if st.form_submit_button("🔄 تحديث الدرجات"):
+                # إذا كان الطالب له درجات سابقة تظهر تلقائياً في الخانات
+                val_f1 = float(current_val.iloc[0]["ف1"]) if not current_val.empty else 0.0
+                val_f2 = float(current_val.iloc[0]["ف2"]) if not current_val.empty else 0.0
+                val_wrk = float(current_val.iloc[0]["مشاركة"]) if not current_val.empty else 0.0
+
+                f1 = c1.number_input("ف1", value=val_f1)
+                f2 = c2.number_input("ف2", value=val_f2)
+                wrk = c3.number_input("مشاركة", value=val_wrk)
+                
+                if st.form_submit_button("🔄 تحديث الدرجات (بدون تكرار)"):
                     ws_g = sh.worksheet("grades")
                     try:
+                        # البحث عن الخلية التي تحتوي على اسم الطالب بدقة
                         cell = ws_g.find(g_st.strip())
+                        # إذا وجد الطالب، يتم تحديث الصف الخاص به فقط (الأعمدة B, C, D)
                         ws_g.update(f'B{cell.row}:D{cell.row}', [[f1, f2, wrk]])
-                    except: ws_g.append_row([g_st.strip(), f1, f2, wrk])
-                    st.success("✅ تم التحديث"); time.sleep(1); st.rerun()
+                        st.success(f"✅ تم تحديث درجات {g_st} بنجاح")
+                    except:
+                        # إذا لم يجد الاسم (طالب جديد)، يضيفه في سطر جديد
+                        ws_g.append_row([g_st.strip(), f1, f2, wrk])
+                        st.success(f"✅ تم إضافة درجات جديدة للطالب {g_st}")
+                    
+                    time.sleep(1)
+                    st.rerun()
             
-            # استعادة جدول الدرجات أسفل النموذج
-            st.subheader("📋 كشف الدرجات العام")
-            df_g_view = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
-            st.dataframe(df_g_view, use_container_width=True, hide_index=True)
+            # عرض جدول الدرجات المحدث
+            st.divider()
+            st.subheader("📋 كشف الدرجات النهائي")
+            df_g_display = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
+            # إزالة أي فراغات قد تسبب تكراراً بصرياً
+            df_g_display["الطالب"] = df_g_display["الطالب"].str.strip()
+            # عرض الجدول مرتباً حسب الاسم لسهولة المتابعة
+            st.dataframe(df_g_display.sort_values("الطالب"), use_container_width=True, hide_index=True)
 
     # (بقية القوائم تبقى كما هي في الكود السابق لضمان استقرار النظام)
     elif menu == "👥 إدارة الطلاب":
