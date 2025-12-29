@@ -6,19 +6,22 @@ import time
 from datetime import datetime
 import urllib.parse
 
-# --- 1. إعدادات الصفحة والاتصال ---
+# --- 1. إعدادات الصفحة والتنسيق ---
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide", initial_sidebar_state="expanded")
 
-# تنسيق CSS احترافي للوضوح العالي في الجوال
 st.markdown("""
     <style>
-    [data-testid="stMetricLabel"] { color: #1e3a8a !important; font-weight: bold !important; font-size: 1.1rem !important; opacity: 1 !important; }
+    [data-testid="stMetricLabel"] { color: #1e3a8a !important; font-weight: bold !important; font-size: 1.1rem !important; }
     [data-testid="stMetricValue"] { color: #000000 !important; font-size: 1.8rem !important; font-weight: 800 !important; }
     .stMetric { background-color: #ffffff !important; padding: 15px !important; border-radius: 12px !important; border-top: 5px solid #1e3a8a !important; box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important; }
     .main { background-color: #f8f9fa; direction: rtl; text-align: right; }
     .header-text { color: white; background: linear-gradient(90deg, #1e3a8a, #3b82f6); padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; }
-    .exam-alert { background-color: #fee2e2; border-right: 10px solid #dc2626; padding: 15px; border-radius: 10px; color: #991b1b; font-weight: bold; margin-bottom: 20px; }
-    .instruction-box { background-color: #e0f2fe; border: 1px dashed #0369a1; padding: 10px; border-radius: 8px; color: #0369a1; font-size: 0.9rem; margin-bottom: 10px; }
+    
+    /* تنسيق الأوسمة */
+    .badge-gold { background: linear-gradient(45deg, #ffd700, #ff8c00); color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; box-shadow: 0 4px 10px rgba(255,215,0,0.4); }
+    .badge-silver { background: linear-gradient(45deg, #c0c0c0, #708090); color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; }
+    .badge-bronze { background: linear-gradient(45deg, #cd7f32, #8b4513); color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; }
+    
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -57,7 +60,7 @@ if st.session_state.role is None:
     with t2:
         sid_in = st.text_input("الرقم الأكاديمي")
         if st.button("دخول الطالب"):
-            df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال"])
+            df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال", "النقاط"])
             match = df_st[df_st["الرقم"].astype(str) == str(sid_in)]
             if not match.empty:
                 st.session_state.role = "student"
@@ -67,85 +70,64 @@ if st.session_state.role is None:
             else: st.error("الرقم غير مسجل")
     st.stop()
 
-# --- القائمة الجانبية ---
-with st.sidebar:
-    st.markdown(f"👤 مرحباً بك: **{st.session_state.role}**")
-    if st.button("🚪 تسجيل الخروج"):
-        st.session_state.role = None
-        st.rerun()
-
-# --- 3. واجهة المعلم (بزر الواتساب) ---
+# --- 3. واجهة المعلم (إضافة النقاط تلقائياً) ---
 if st.session_state.role == "teacher":
-    menu = st.sidebar.radio("انتقل إلى:", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
+    menu = st.sidebar.radio("انتقل إلى:", ["📊 الدرجات والسلوك", "👥 إدارة الطلاب", "📢 الاختبارات"])
 
     if menu == "📊 الدرجات والسلوك":
-        st.header("📊 رصد السلوك والدرجات")
-        df_all = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال"])
-        t1, t2 = st.tabs(["🎭 رصد السلوك", "📝 رصد الدرجات"])
+        st.header("📊 رصد السلوك والتحفيز")
+        df_all = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال", "النقاط"])
         
-        with t1:
-            with st.form("beh_f"):
-                b_st = st.selectbox("اختر الطالب", df_all["الاسم"].tolist())
-                b_type = st.radio("نوع السلوك", ["✅ إيجابي", "⭐ متميز", "⚠️ تنبيه", "❌ سلبي"], horizontal=True)
-                b_note = st.text_input("الملاحظة")
-                if st.form_submit_button("📌 حفظ في السجل"):
-                    sh.worksheet("behavior").append_row([b_st, str(datetime.now().date()), b_type, b_note])
-                    st.success("تم الرصد بنجاح")
-            
-            # ميزة الواتساب للمعلم
-            st.markdown("### 📱 إرسال إشعار لولي الأمر")
-            current_st = df_all[df_all["الاسم"] == b_st].iloc[0]
-            phone = str(current_st["الجوال"])
-            if phone and len(phone) > 5:
-                msg = f"تحية طيبة، إشعار من منصة الأستاذ زياد المعمري.\nالطالب: {b_st}\nنوع السلوك: {b_type}\nالملاحظة: {b_note}"
-                encoded_msg = urllib.parse.quote(msg)
-                st.markdown(f'<a href="https://wa.me/{phone}?text={encoded_msg}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;">💬 إرسال عبر واتساب الآن</button></a>', unsafe_allow_html=True)
-            else: st.warning("رقم الجوال غير صحيح أو لم يقم الطالب بتحديثه بعد.")
-
-    # (بقية كود المعلم لإدارة الطلاب والإعلانات تظل كما هي)
-    elif menu == "👥 إدارة الطلاب":
-        st.info("واجهة إدارة الطلاب")
-    elif menu == "📢 إعلانات الاختبارات":
-        st.info("واجهة الاختبارات")
-
-# --- 4. واجهة الطالب (مع التنبيهات وصيغة الجوال) ---
-elif st.session_state.role == "student":
-    st.markdown(f"<div class='header-text'><h3>🎓 أهلاً بك: {st.session_state.student_name}</h3></div>", unsafe_allow_html=True)
-    
-    ws_st = sh.worksheet("students")
-    df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال"])
-    my_row_idx = df_st[df_st["الرقم"].astype(str) == st.session_state.student_id].index[0]
-    my_info = df_st.iloc[my_row_idx]
-
-    # تحديث البيانات ذاتياً مع التعليمات
-    with st.expander("📝 تحديث بيانات التواصل (هام جداً لاستلام الإشعارات)"):
-        st.markdown("""
-            <div class='instruction-box'>
-            ⚠️ <b>طريقة كتابة رقم الجوال الصحيحة:</b><br>
-            يجب كتابة الرقم بالصيغة الدولية بدون الصفر الأول وبدءاً بـ <b>966</b>.<br>
-            ✅ مثال صحيح: <b>966501234567</b><br>
-            ❌ مثال خاطئ: 0501234567
-            </div>
-        """, unsafe_allow_html=True)
-        
-        new_mail = st.text_input("البريد الإلكتروني", value=str(my_info["الإيميل"]))
-        new_phone = st.text_input("رقم جوال ولي الأمر (بصيغة 966...)", value=str(my_info["الجوال"]))
-        
-        if st.button("حفظ وتحديث البيانات"):
-            if new_phone.startswith("0"):
-                st.error("خطأ: يرجى حذف الصفر الأول وكتابة الرقم بدءاً بـ 966")
-            else:
-                ws_st.update_cell(my_row_idx + 2, 7, new_mail) # عمود G
-                ws_st.update_cell(my_row_idx + 2, 8, new_phone) # عمود H
-                st.success("✅ تم تحديث بياناتك بنجاح")
+        with st.form("beh_f"):
+            b_st = st.selectbox("اختر الطالب", df_all["الاسم"].tolist())
+            b_type = st.radio("نوع السلوك (سيؤثر على النقاط)", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
+            b_note = st.text_input("الملاحظة")
+            if st.form_submit_button("📌 رصد وحساب النقاط"):
+                # حساب النقاط بناءً على الاختيار
+                pts_change = 10 if "⭐" in b_type else 5 if "✅" in b_type else -5 if "⚠️" in b_type else -10
+                
+                # 1. تحديث جدول السلوك
+                sh.worksheet("behavior").append_row([b_st, str(datetime.now().date()), b_type, b_note])
+                
+                # 2. تحديث نقاط الطالب في جدول students
+                ws_st = sh.worksheet("students")
+                cell = ws_st.find(b_st)
+                current_pts = int(ws_st.cell(cell.row, 9).value or 0)
+                ws_st.update_cell(cell.row, 9, current_pts + pts_change)
+                
+                st.success(f"تم رصد السلوك وإضافة {pts_change} نقطة للطالب {b_st}")
                 time.sleep(1); st.rerun()
 
-    # عرض البيانات والبطاقات
-    c1, c2, c3 = st.columns(3)
-    c1.metric("الصف", my_info["الصف"])
-    c2.metric("المرحلة", my_info["المرحلة"])
-    c3.metric("المادة", my_info["المادة"])
+    elif menu == "👥 إدارة الطلاب":
+        st.header("🏆 لوحة التميز (أعلى النقاط)")
+        df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال", "النقاط"])
+        st.dataframe(df_st.sort_values(by="النقاط", ascending=False), use_container_width=True, hide_index=True)
+
+# --- 4. واجهة الطالب (الأوسمة والتحفيز) ---
+elif st.session_state.role == "student":
+    st.markdown(f"<div class='header-text'><h3>🎓 الطالب: {st.session_state.student_name}</h3></div>", unsafe_allow_html=True)
+    
+    df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال", "النقاط"])
+    my_info = df_st[df_st["الرقم"].astype(str) == st.session_state.student_id].iloc[0]
+    pts = int(my_info["النقاط"])
+
+    # نظام الأوسمة الذكي
+    st.subheader("🏅 وسام التميز الحالي")
+    if pts >= 50:
+        st.markdown("<div class='badge-gold'>🏆 أنت الآن في المستوى الذهبي (قائد متميز)</div>", unsafe_allow_html=True)
+    elif pts >= 20:
+        st.markdown("<div class='badge-silver'>🥈 أنت الآن في المستوى الفضي (طالب مجتهد)</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='badge-bronze'>🥉 أنت في المستوى البرونزي (بداية موفقة)</div>", unsafe_allow_html=True)
 
     st.divider()
-    st.subheader("📊 سجل الدرجات والملاحظات")
-    # (تكملة عرض جداول الدرجات والسلوك...)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("رصيد نقاطك", f"{pts} نقطة")
+    c2.metric("الصف", my_info["الصف"])
+    c3.metric("المادة", my_info["المادة"])
+    
+    st.divider()
+    st.subheader("📝 تفاصيل نقاطك وسلوكك")
+    df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
+    my_beh = df_b[df_b["الاسم"] == st.session_state.student_name]
+    st.dataframe(my_beh, use_container_width=True, hide_index=True)
