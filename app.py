@@ -236,37 +236,34 @@ elif st.session_state.role == "student":
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
-            my_bh = df_bh[df_bh['student_id'] == s_data['name']]
+            # فلترة البيانات للطالب الحالي
+            my_bh = df_bh[df_bh['student_id'] == s_data['name']].copy()
             
             if not my_bh.empty:
+                # --- السطر السحري للترتيب من الأحدث إلى الأقدم ---
+                # نقوم بتحويل عمود التاريخ لنوع "datetime" لضمان دقة الترتيب
+                my_bh['التاريخ'] = pd.to_datetime(my_bh['التاريخ'], errors='coerce')
+                my_bh = my_bh.sort_values(by='التاريخ', ascending=False)
+                
                 for index, row in my_bh.iterrows():
-                    # --- إصلاح جلب البيانات (البحث في كل الاحتمالات) ---
-                    # هذا السطر يضمن جلب الملاحظة حتى لو اختلف اسم العمود
-                    bh_type_raw = str(row.get('النوع', row.get('type', 'ملاحظة عامة')))
+                    # جلب البيانات (معالجة مسميات الأعمدة المختلفة)
+                    bh_type_raw = str(row.get('النوع', 'ملاحظة عامة'))
+                    note_content = row.get('ملاحظة', row.get('الملاحظة', 'تم رصد ملاحظة سلوكية جديدة.'))
+                    date_str = row['التاريخ'].strftime('%Y-%m-%d') if pd.notnull(row['التاريخ']) else "تاريخ غير محدد"
                     
-                    # محاولة جلب نص الملاحظة من أعمدة مختلفة لضمان عدم ظهور "لا توجد تفاصيل"
-                    note_content = row.get('ملاحظة', row.get('note', row.get('الملاحظة', '')))
-                    if not note_content or str(note_content).strip() == "":
-                         note_content = "تم رصد ملاحظة سلوكية جديدة من قبل المعلم."
-
-                    # --- المحرك الذكي للألوان والأيقونات ---
+                    # --- منطق الألوان والأيقونات الذكي ---
                     if any(x in bh_type_raw for x in ["⭐", "متميز", "10+"]):
-                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9" 
-                        status_label = "إنجاز متميز"
+                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9"
                     elif any(x in bh_type_raw for x in ["✅", "إيجابي", "5+"]):
                         icon, color, bg = "🌟", "#43A047", "#F1F8E9"
-                        status_label = "سلوك إيجابي"
                     elif any(x in bh_type_raw for x in ["⚠️", "تنبيه", "5-"]):
                         icon, color, bg = "📢", "#F4511E", "#FFF3E0"
-                        status_label = "تنبيه تربوي"
                     elif any(x in bh_type_raw for x in ["❌", "سلبي", "10-"]):
                         icon, color, bg = "🚫", "#D32F2F", "#FFEBEE"
-                        status_label = "ملاحظة سلبية"
                     else:
                         icon, color, bg = "📝", "#1976D2", "#E3F2FD"
-                        status_label = "ملاحظة عامة"
 
-                    # --- تصميم البطاقة المتفاعلة النهائي ---
+                    # عرض البطاقة بتنسيقها الجذاب
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 18px; border-radius: 15px; 
                                     border-right: 12px solid {color}; margin-bottom: 8px; 
@@ -274,24 +271,19 @@ elif st.session_state.role == "student":
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <span style="font-size: 1.25em; font-weight: bold; color: {color};">{icon} {bh_type_raw}</span>
                                 <span style="font-size: 0.85em; color: #777; background: #fff; padding: 2px 10px; border-radius: 10px; border: 1px solid #eee;">
-                                    📅 {row.get('التاريخ', row.get('date', ''))}
+                                    📅 {date_str}
                                 </span>
                             </div>
-                            <div style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; color: #333; border: 1px dashed {color}44;">
+                            <div style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; color: #333;">
                                 <b>💬 نص الملاحظة:</b> {note_content}
-                            </div>
-                            <div style="margin-top: 8px; font-size: 0.8em; font-weight: bold; color: {color};">
-                                🏷️ التصنيف: {status_label}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
                     # زر الشكر التفاعلي
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        if st.button(f"🙏 شكراً أستاذي", key=f"thanks_btn_{index}"):
-                            st.balloons()
-                            st.toast("تم إرسال تقديرك للمعلم زياد! 🌸")
+                    if st.button(f"🙏 شكراً أستاذي", key=f"thank_btn_{index}"):
+                        st.balloons()
+                        st.toast("وصل شكرك للأستاذ زياد! 🌸")
                     st.markdown("---")
             else:
                 st.info("سجلك السلوكي نظيف يا بطل! ✨")
