@@ -4,6 +4,9 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 import time
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
 
 # --- 1. الإعدادات والربط ---
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
@@ -23,6 +26,39 @@ def fetch_data(sheet_name):
         ws = sh.worksheet(sheet_name)
         return pd.DataFrame(ws.get_all_records())
     except: return pd.DataFrame()
+
+# --- 🆕 دالة إرسال البريد الإلكتروني ---
+def send_email_alert(student_name, parent_email, behavior_type, note):
+    try:
+        # بيانات السيرفر (يتم جلبها من Secrets لضمان الأمان)
+        sender_email = st.secrets["email_settings"]["sender_email"]
+        sender_password = st.secrets["email_settings"]["sender_password"]
+        
+        subject = f"🔔 إشعار سلوكي جديد: {student_name}"
+        body = f"""
+        تحية طيبة،
+        نود إحاطتكم بأنه تم رصد ملاحظة سلوكية جديدة لابننا الطالب: {student_name}
+        
+        التفاصيل:
+        - نوع السلوك: {behavior_type}
+        - الملاحظة: {note}
+        - التاريخ: {datetime.now().strftime('%Y-%m-%d')}
+        
+        مع تحيات الأستاذ زياد المعمري.
+        """
+        
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = sender_email
+        msg['To'] = parent_email
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, parent_email, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # --- 2. نظام الدخول ---
 if 'role' not in st.session_state: st.session_state.role = None
@@ -99,46 +135,50 @@ if st.session_state.role == "teacher":
                         ws_g.update(f'B{fnd.row}:D{fnd.row}', [[v1, v2, v3]])
                     except: ws_g.append_row([target, v1, v2, v3])
                     st.success("تم التحديث ✅")
-            st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
 
-        with tab2: # شاشة السلوك مع عرض السجل بالأسفل
+        with tab2:
             st.subheader("🎭 رصد السلوك والتحفيز")
             sel_st = st.selectbox("اسم الطالب", df_st['name'].tolist(), key="bh_sel")
+            # جلب إيميل الطالب من جدول الطلاب
+            st_info = df_st[df_st['name'] == sel_st].iloc[0]
+            target_email = st_info.get('الإيميل', '')
+
             with st.form("b_form", clear_on_submit=True):
                 d_v = st.date_input("التاريخ", datetime.now())
                 t_v = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
                 n_v = st.text_input("ملاحظة السلوك")
-                if st.form_submit_button("حفظ الرصد"):
+                if st.form_submit_button("حفظ الرصد وإرسال إيميل"):
                     pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
                     sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v])
+                    
+                    # تحديث النقاط
                     ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                     old = int(ws_st.cell(c.row, 9).value or 0)
                     ws_st.update_cell(c.row, 9, old + pts)
-                    st.success(f"تم رصد السلوك للطالب: {sel_st} ✅"); time.sleep(1); st.rerun()
+                    
+                    # 📧 إرسال الإيميل تلقائياً
+                    if target_email and "@" in target_email:
+                        if send_email_alert(sel_st, target_email, t_v, n_v):
+                            st.info(f"📧 تم إرسال إشعار للبريد: {target_email}")
+                        else:
+                            st.warning("⚠️ فشل إرسال الإيميل، يرجى التحقق من الإعدادات.")
+                    else:
+                        st.warning("⚠️ لا يوجد بريد إلكتروني مسجل لهذا الطالب.")
+                    
+                    st.success(f"تم حفظ الرصد بنجاح ✅"); time.sleep(1); st.rerun()
 
-            st.divider() # إضافة السجل أسفل شاشة الرصد
+            st.divider()
             st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
             df_bh = fetch_data("behavior")
             if not df_bh.empty:
                 st.dataframe(df_bh[df_bh['student_id'] == sel_st], use_container_width=True, hide_index=True)
 
-    elif menu == "📢 إعلانات الاختبارات":
-        st.header("📢 إعلان اختبار جديد")
-        with st.form("ex_form"):
-            e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            e_ttl = st.text_input("العنوان")
-            e_dt = st.date_input("الموعد")
-            if st.form_submit_button("نشر التنبيه"):
-                sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                st.success("تم النشر 🚀")
-
-# --- 4. واجهة الطالب (إصلاح تكرار الدرجات والمرحلة) ---
+# --- 4. واجهة الطالب (مستقرة) ---
 elif st.session_state.role == "student":
     st.sidebar.button("خروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # تنبيهات الاختبارات في الأعلى
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data['class']]
@@ -146,14 +186,12 @@ elif st.session_state.role == "student":
             st.warning(f"🔔 **تنبيه اختبار:** {r['العنوان']} في تاريخ {r['التاريخ']}")
 
     st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
-    
-    # إصلاح مسمى المرحلة لضمان القراءة الصحيحة
     s_lev = s_data.get('المرحلة', 'غير محدد')
     st.info(f"📍 الصف: {s_data['class']} | المرحلة: {s_lev} | المادة: {s_data['sem']}")
 
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "📧 بياناتي"])
     
-    with t1: # إصلاح تكرار الدرجات
+    with t1:
         st.subheader("📝 درجات الاختبارات والمشاركة")
         df_g = fetch_data("grades")
         my_g = df_g[df_g['student_id'] == s_data['name']].drop_duplicates()
