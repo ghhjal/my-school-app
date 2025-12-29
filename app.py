@@ -18,7 +18,6 @@ st.markdown("""
     .main { background-color: #f8f9fa; direction: rtl; text-align: right; }
     .header-text { color: white; background: linear-gradient(90deg, #1e3a8a, #3b82f6); padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; }
     .exam-alert { background-color: #fee2e2; border-right: 10px solid #dc2626; padding: 15px; border-radius: 10px; color: #991b1b; font-weight: bold; margin-bottom: 20px; }
-    .instruction-box { background-color: #e0f2fe; border: 1px dashed #0369a1; padding: 10px; border-radius: 8px; color: #0369a1; font-size: 0.9rem; margin-bottom: 10px; }
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -67,48 +66,59 @@ if st.session_state.role is None:
             else: st.error("الرقم غير مسجل")
     st.stop()
 
-# --- القائمة الجانبية ---
-with st.sidebar:
-    st.markdown(f"👤 مرحباً بك: **{st.session_state.role}**")
-    if st.button("🚪 تسجيل الخروج"):
-        st.session_state.role = None
-        st.rerun()
-
-# --- 3. واجهة المعلم (بزر الواتساب) ---
+# --- 3. واجهة المعلم ---
 if st.session_state.role == "teacher":
     menu = st.sidebar.radio("انتقل إلى:", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
 
-    if menu == "📊 الدرجات والسلوك":
+    if menu == "👥 إدارة الطلاب":
+        st.header("👥 قائمة الطلاب")
+        df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال"])
+        st.dataframe(df_st, use_container_width=True, hide_index=True)
+        target = st.selectbox("حذف طالب نهائياً", [""] + df_st["الاسم"].tolist())
+        if st.button("تأكيد الحذف"):
+            if target:
+                for sn in ["students", "behavior", "grades"]:
+                    try:
+                        ws = sh.worksheet(sn); cell = ws.find(target); ws.delete_rows(cell.row)
+                    except: continue
+                st.success("تم الحذف بنجاح"); st.rerun()
+
+    elif menu == "📊 الدرجات والسلوك":
         st.header("📊 رصد السلوك والدرجات")
         df_all = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة", "الإيميل", "الجوال"])
         t1, t2 = st.tabs(["🎭 رصد السلوك", "📝 رصد الدرجات"])
         
         with t1:
             with st.form("beh_f"):
-                b_st = st.selectbox("اختر الطالب", df_all["الاسم"].tolist())
+                b_st = st.selectbox("الطالب", df_all["الاسم"].tolist())
                 b_type = st.radio("نوع السلوك", ["✅ إيجابي", "⭐ متميز", "⚠️ تنبيه", "❌ سلبي"], horizontal=True)
                 b_note = st.text_input("الملاحظة")
-                if st.form_submit_button("📌 حفظ في السجل"):
+                submit_b = st.form_submit_button("📌 رصد في الجدول")
+                if submit_b:
                     sh.worksheet("behavior").append_row([b_st, str(datetime.now().date()), b_type, b_note])
-                    st.success("تم الرصد بنجاح")
+                    st.success("تم الرصد في النظام")
             
-            # ميزة الواتساب للمعلم
-            st.markdown("### 📱 إرسال إشعار لولي الأمر")
-            current_st = df_all[df_all["الاسم"] == b_st].iloc[0]
-            phone = str(current_st["الجوال"])
-            if phone and len(phone) > 5:
-                msg = f"تحية طيبة، إشعار من منصة الأستاذ زياد المعمري.\nالطالب: {b_st}\nنوع السلوك: {b_type}\nالملاحظة: {b_note}"
+            # ميزة زر الواتساب اليدوية
+            st.markdown("### 📱 إرسال تنبيه فوري لولي الأمر")
+            student_data = df_all[df_all["الاسم"] == b_st].iloc[0]
+            phone = student_data["الجوال"]
+            if phone:
+                msg = f"تحية طيبة، إشعار من منصة الأستاذ زياد المعمري.\nالطالب: {b_st}\nنوع الإشعار: {b_type}\nالملاحظة: {b_note}"
                 encoded_msg = urllib.parse.quote(msg)
-                st.markdown(f'<a href="https://wa.me/{phone}?text={encoded_msg}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;">💬 إرسال عبر واتساب الآن</button></a>', unsafe_allow_html=True)
-            else: st.warning("رقم الجوال غير صحيح أو لم يقم الطالب بتحديثه بعد.")
+                st.markdown(f'<a href="https://wa.me/{phone}?text={encoded_msg}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%;">💬 إرسال عبر واتساب الآن</button></a>', unsafe_allow_html=True)
+            else: st.warning("رقم الجوال غير مسجل لهذا الطالب")
 
-    # (بقية كود المعلم لإدارة الطلاب والإعلانات تظل كما هي)
-    elif menu == "👥 إدارة الطلاب":
-        st.info("واجهة إدارة الطلاب")
     elif menu == "📢 إعلانات الاختبارات":
-        st.info("واجهة الاختبارات")
+        st.header("📢 نشر تنبيه اختبار")
+        with st.form("exam_form"):
+            e_class = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            e_title = st.text_input("موضوع الاختبار")
+            e_date = st.date_input("التاريخ")
+            if st.form_submit_button("نشر الإعلان"):
+                sh.worksheet("exams").append_row([e_class, e_title, str(e_date)])
+                st.success("تم النشر")
 
-# --- 4. واجهة الطالب (مع التنبيهات وصيغة الجوال) ---
+# --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
     st.markdown(f"<div class='header-text'><h3>🎓 أهلاً بك: {st.session_state.student_name}</h3></div>", unsafe_allow_html=True)
     
@@ -117,35 +127,29 @@ elif st.session_state.role == "student":
     my_row_idx = df_st[df_st["الرقم"].astype(str) == st.session_state.student_id].index[0]
     my_info = df_st.iloc[my_row_idx]
 
-    # تحديث البيانات ذاتياً مع التعليمات
-    with st.expander("📝 تحديث بيانات التواصل (هام جداً لاستلام الإشعارات)"):
-        st.markdown("""
-            <div class='instruction-box'>
-            ⚠️ <b>طريقة كتابة رقم الجوال الصحيحة:</b><br>
-            يجب كتابة الرقم بالصيغة الدولية بدون الصفر الأول وبدءاً بـ <b>966</b>.<br>
-            ✅ مثال صحيح: <b>966501234567</b><br>
-            ❌ مثال خاطئ: 0501234567
-            </div>
-        """, unsafe_allow_html=True)
-        
-        new_mail = st.text_input("البريد الإلكتروني", value=str(my_info["الإيميل"]))
-        new_phone = st.text_input("رقم جوال ولي الأمر (بصيغة 966...)", value=str(my_info["الجوال"]))
-        
-        if st.button("حفظ وتحديث البيانات"):
-            if new_phone.startswith("0"):
-                st.error("خطأ: يرجى حذف الصفر الأول وكتابة الرقم بدءاً بـ 966")
-            else:
-                ws_st.update_cell(my_row_idx + 2, 7, new_mail) # عمود G
-                ws_st.update_cell(my_row_idx + 2, 8, new_phone) # عمود H
-                st.success("✅ تم تحديث بياناتك بنجاح")
-                time.sleep(1); st.rerun()
+    # عرض تنبيهات الاختبارات
+    df_ex = fetch_data_safe("exams", ["الصف", "العنوان", "التاريخ"])
+    my_exams = df_ex[df_ex["الصف"] == my_info["الصف"]]
+    for i, row in my_exams.iterrows():
+        st.markdown(f"<div class='exam-alert'>⚠️ اختبار جديد: {row['العنوان']} | 📅 التاريخ: {row['التاريخ']}</div>", unsafe_allow_html=True)
 
-    # عرض البيانات والبطاقات
+    # تحديث البيانات ذاتياً
+    with st.expander("📝 تحديث بيانات التواصل (الإيميل والجوال)"):
+        new_mail = st.text_input("البريد الإلكتروني", value=str(my_info["الإيميل"]))
+        new_phone = st.text_input("رقم الجوال (مثال: 966500000000)", value=str(my_info["الجوال"]))
+        if st.button("حفظ البيانات المحدثة"):
+            ws_st.update_cell(my_row_idx + 2, 7, new_mail) # تحديث الإيميل
+            ws_st.update_cell(my_row_idx + 2, 8, new_phone) # تحديث الجوال
+            st.success("تم التحديث بنجاح!"); time.sleep(1); st.rerun()
+
+    # عرض البطاقات
     c1, c2, c3 = st.columns(3)
     c1.metric("الصف", my_info["الصف"])
     c2.metric("المرحلة", my_info["المرحلة"])
     c3.metric("المادة", my_info["المادة"])
 
     st.divider()
-    st.subheader("📊 سجل الدرجات والملاحظات")
-    # (تكملة عرض جداول الدرجات والسلوك...)
+    st.subheader("📊 درجاتك")
+    df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
+    my_grades = df_g[df_g["الطالب"] == st.session_state.student_name]
+    st.dataframe(my_grades, use_container_width=True, hide_index=True)
