@@ -232,31 +232,65 @@ elif st.session_state.role == "student":
             st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
-        # 🎭 إصلاح عرض السلوك بالأسفل
-        st.markdown("### 📜 سجل ملاحظات المعلم")
+        # 🎭 إصلاح عرض السلوك وتحويله إلى تجربة بصرية ممتعة
+        st.markdown("### 📜 سجل رحلتي السلوكية")
         df_bh = fetch_data("behavior")
+        
         if not df_bh.empty:
             my_bh = df_bh[df_bh['student_id'] == s_data['name']]
             if not my_bh.empty:
-                # عرض السلوك في حاوية (Container) منظمة بدلاً من قائمة عشوائية
                 for _, row in my_bh.iterrows():
-                    is_positive = "+" in str(row.get('النوع', ''))
-                    icon = "✅" if is_positive else "⚠️"
-                    border_color = "#4CAF50" if is_positive else "#FF5252"
-                    bg_color = "#f9fff9" if is_positive else "#fff9f9"
+                    # تحديد الأيقونة واللون بناءً على نوع السلوك
+                    bh_type = str(row.get('النوع', ''))
                     
+                    if "+" in bh_type or "⭐" in bh_type:
+                        icon = "✨ 🏆" # أيقونة التميز
+                        color = "#4CAF50" # أخضر نجاح
+                        bg = "#f1f8e9"
+                        label = "نقاط تحفيزية إيجابية"
+                    elif "-" in bh_type or "⚠️" in bh_type:
+                        icon = "⚠️ 📝" # أيقونة تنبيه
+                        color = "#F44336" # أحمر تنبيه
+                        bg = "#fff5f5"
+                        label = "ملاحظة تربوية"
+                    else:
+                        icon = "ℹ️"
+                        color = "#2196F3"
+                        bg = "#e3f2fd"
+                        label = "ملاحظة عامة"
+
+                    # تصميم البطاقة الذكية
                     st.markdown(f"""
-                        <div style="background-color: {bg_color}; padding: 12px; border-left: 6px solid {border_color}; 
-                                    border-radius: 8px; margin-bottom: 10px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
-                            <div style="display: flex; justify-content: space-between;">
-                                <strong>{icon} {row.get('النوع', 'ملاحظة')}</strong>
-                                <span style="color: #888; font-size: 0.8em;">📅 {row.get('التاريخ', '')}</span>
+                        <div style="
+                            background-color: {bg}; 
+                            padding: 15px; 
+                            border-radius: 12px; 
+                            border-right: 8px solid {color}; 
+                            margin-bottom: 12px; 
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+                            transition: transform 0.2s;
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 1.2em; font-weight: bold; color: {color};">
+                                    {icon} {bh_type}
+                                </span>
+                                <span style="background: white; padding: 2px 8px; border-radius: 20px; font-size: 0.8em; color: #666; border: 1px solid #ddd;">
+                                    📅 {row.get('التاريخ', '')}
+                                </span>
                             </div>
-                            <div style="margin-top: 5px; color: #444;">💬 {row.get('ملاحظة', 'لا توجد تفاصيل إضافية')}</div>
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">
+                                <p style="margin: 0; color: #333; font-size: 1.05em;">
+                                    <b>الملاحظة:</b> {row.get('ملاحظة', 'استمر في تألقك يا بطل!')}
+                                </p>
+                                <small style="color: {color}; font-weight: bold;">📍 {label}</small>
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.success("سجلك نظيف جداً.. استمر في التميز! ✨")
+                st.balloons() # احتفال بسيط للطالب المثالي
+                st.success("ما شاء الله! سجلك خالي من الملاحظات السلبية. أنت طالب مثالي! 🌟")
+        else:
+            st.info("لا توجد سجلات سلوكية مرصودة في النظام حالياً.")
 
     with t3:
         st.subheader("⚙️ تحديث البريد والجوال")
