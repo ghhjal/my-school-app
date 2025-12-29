@@ -156,20 +156,34 @@ if st.session_state.role == "teacher":
                 df_bh_teacher = fetch_data("behavior")
                 
                 if not df_bh_teacher.empty:
-                    # 1. فلترة البيانات وعكس الترتيب ليكون الأحدث في الأعلى
+                    # تنظيف أسماء الأعمدة وفلترة الطالب
                     my_bh_teacher = df_bh_teacher[df_bh_teacher['student_id'] == sel_st].copy()
-                    my_bh_teacher = my_bh_teacher.iloc[::-1] # الترتيب العكسي الذكي
+                    my_bh_teacher = my_bh_teacher.iloc[::-1] # الأحدث أولاً
                     
                     for index, row in my_bh_teacher.iterrows():
-                        # 2. جلب حالة القراءة (نفترض أنها في عمود اسمه 'الحالة')
                         status = str(row.get('الحالة', 'لم تُقرأ بعد'))
                         
-                        # 3. تصميم بطاقة الإشعار الذكية
-                        if "تمت القراءة" in status:
-                            status_icon = "✅"
-                            status_bg = "#E8F5E9" # أخضر فاتح للقراءة
-                            status_text = "#1B5E20" # نص أخضر داكن للوضوح
-                            status_label = "قرأها الطالب وشكرك"
+                        # تحديد ألوان واضحة جداً للجوال
+                        is_read = "تمت القراءة" in status
+                        bg_c = "#E8F5E9" if is_read else "#FFEBEE"
+                        txt_c = "#1B5E20" if is_read else "#B71C1C"
+                        lbl = "✅ قرأها الطالب" if is_read else "🕒 لم تُقرأ بعد"
+
+                        st.markdown(f"""
+                            <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; 
+                                        border: 2px solid {txt_c}; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <b style="color: {txt_c}; font-size: 1em;">{lbl}</b>
+                                    <small style="color: #212121; font-weight: bold;">📅 {row.get('التاريخ', '---')}</small>
+                                </div>
+                                <div style="margin-top: 8px; color: #1a1a1a; font-weight: 500;">
+                                    <p style="margin:0;"><b>نوع السلوك:</b> {row.get('النوع', 'عام')}</p>
+                                    <p style="margin:5px 0 0 0;"><b>💬 الملاحظة:</b> {row.get('ملاحظة', 'لا يوجد نص')}</p>
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
                         else:
                             status_icon = "🕒"
                             status_bg = "#FFEBEE" # أحمر فاتح لعدم القراءة
