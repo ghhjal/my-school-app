@@ -181,111 +181,91 @@ if st.session_state.role == "teacher":
                         if cell: ws_ex.delete_rows(cell.row); st.error(f"تم حذف إعلان: {to_delete}"); time.sleep(1); st.rerun()
             else: st.info("لا توجد إعلانات حالياً")
 
-# --- 4. واجهة الطالب المطورة (تجربة بصرية ممتعة) ---
+# --- 4. واجهة الطالب المطورة (نسخة المتعة البصرية الفائقة) ---
 elif st.session_state.role == "student":
-    # زر تسجيل الخروج في الجانب
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # 🔔 قسم التنبيهات الذكي (تصميم بطاقات عائمة)
+    # 🔔 شريط التنبيهات بتصميم عصري
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data.get('class', '')]
-        if not my_ex.empty:
-            for _, r in my_ex.iterrows():
-                st.markdown(f"""
-                    <div style="background: linear-gradient(90deg, #fff3cd 0%, #fff9e6 100%); 
-                                padding: 12px; border-right: 5px solid #ffc107; border-radius: 8px; 
-                                margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
-                        <span style="font-size: 18px;">🔔</span> 
-                        <strong>اختبار جديد:</strong> {r.get('العنوان', 'اختبار')} 📅 
-                        <span style="color: #856404;">{r.get('التاريخ', '')}</span>
-                    </div>
-                """, unsafe_allow_html=True)
+        for _, r in my_ex.iterrows():
+            st.markdown(f"""<div style="background:#fff9e6; padding:10px; border-right:5px solid #ffc107; border-radius:5px; margin-bottom:5px;">
+                <small>🔔 موعد اختبار جديد: <b>{r.get('العنوان', '')}</b> بتاريخ {r.get('التاريخ', '')}</small></div>""", unsafe_allow_html=True)
 
-    # 👤 ترويسة بروفايل الطالب
-    st.markdown(f"""
-        <div style="text-align: center; padding: 20px;">
-            <h1 style="color: #1E88E5; margin-bottom: 5px;">👋 أهلاً بك يا بطل: {s_data['name']}</h1>
-            <p style="font-size: 1.2rem; color: #555;">
-                📍 {s_data.get('class', 'غير محدد')} | 📚 {s_data.get('المادة', 'اللغة الإنجليزية')}
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+    # 👤 الترويسة العلوية
+    st.markdown(f"<h2 style='text-align:center; color:#1E88E5;'>🌟 أهلاً بك يا بطل: {s_data['name']}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center; color:#666;'>📍 الصف: {s_data.get('class', '')} | المادة: {s_data.get('المادة', 'اللغة الإنجليزية')}</p>", unsafe_allow_html=True)
 
-    # 🏆 لوحة الشرف السريعة (النقاط والأوسمة)
+    # 🏆 لوحة المؤشرات العلوية بتصميم البطاقات
     pts = int(s_data.get('النقاط', 0))
     medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     
-    col_pts1, col_pts2 = st.columns(2)
-    with col_pts1:
-        st.markdown(f"""<div style="background: #e3f2fd; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #bbdefb;">
-            <p style="margin:0; color: #0d47a1;">رصيد نقاطك</p>
-            <h2 style="margin:0; color: #1e88e5;">⭐ {pts}</h2>
-        </div>""", unsafe_allow_html=True)
-    with col_pts2:
-        st.markdown(f"""<div style="background: #f1f8e9; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #dcedc8;">
-            <p style="margin:0; color: #33691e;">لقبك الحالي</p>
-            <h2 style="margin:0; color: #558b2f;">{medal}</h2>
-        </div>""", unsafe_allow_html=True)
+    c_pts1, c_pts2 = st.columns(2)
+    with c_pts1:
+        st.markdown(f"""<div style="background:#e3f2fd; padding:15px; border-radius:15px; text-align:center; border:1px solid #bbdefb;">
+            <p style="margin:0; color:#0d47a1;">رصيد نقاطك</p><h2 style="margin:0;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
+    with c_pts2:
+        st.markdown(f"""<div style="background:#f1f8e9; padding:15px; border-radius:15px; text-align:center; border:1px solid #dcedc8;">
+            <p style="margin:0; color:#33691e;">لقبك الحالي</p><h2 style="margin:0;">{medal}</h2></div>""", unsafe_allow_html=True)
 
-    st.write("") # مسافة جمالية
+    st.divider()
 
-    # --- التبويبات بنظام الأيقونات ---
-    t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "⚙️ بياناتي"])
+    # --- التبويبات الجديدة ---
+    t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سجل السلوك", "⚙️ بياناتي"])
     
     with t1:
-        # 1- حل مشكلة تكرار الدرجات: عرض البطاقات فقط بتصميم جذاب
-        st.markdown("### 📝 درجات الاختبارات والمشاركة")
+        st.markdown("### 📝 درجاتي")
         df_g = fetch_data("grades")
         my_g = df_g[df_g['student_id'] == s_data['name']]
-        
         if not my_g.empty:
             g = my_g.iloc[0]
-            c1, c2, c3 = st.columns(3)
-            # بطاقات ملونة بدلاً من الجداول الجامدة
-            c1.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #42a5f5; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <p style="color: #666;">الفترة 1</p><h1 style="color:#1e88e5;">{g.get('p1', 0)}</h1></div>""", unsafe_allow_html=True)
-            c2.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #66bb6a; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <p style="color: #666;">الفترة 2</p><h1 style="color:#2e7d32;">{g.get('p2', 0)}</h1></div>""", unsafe_allow_html=True)
-            c3.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #ffa726; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <p style="color: #666;">المشاركة</p><h1 style="color:#ef6c00;">{g.get('perf', 0)}</h1></div>""", unsafe_allow_html=True)
+            # عرض الدرجات كبطاقات ملونة لمنع تكرار الجدول
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("فترة 1", g.get('p1', 0))
+            col_b.metric("فترة 2", g.get('p2', 0))
+            col_c.metric("المشاركة", g.get('perf', 0))
         else:
             st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
-        st.markdown("### 📜 سجل السلوك والتحفيز")
+        # 🎭 إصلاح عرض السلوك بالأسفل
+        st.markdown("### 📜 سجل ملاحظات المعلم")
         df_bh = fetch_data("behavior")
         if not df_bh.empty:
-            # فلترة آمنة لتجنب KeyError
             my_bh = df_bh[df_bh['student_id'] == s_data['name']]
             if not my_bh.empty:
-                # عرض السلوك بتصميم قائمة أنيقة (Timeline) بدلاً من جدول جاف
+                # عرض السلوك في حاوية (Container) منظمة بدلاً من قائمة عشوائية
                 for _, row in my_bh.iterrows():
-                    icon = "✅" if "+" in str(row.get('النوع', '')) else "⚠️"
-                    bg_color = "#f1f8e9" if icon == "✅" else "#fffde7"
+                    is_positive = "+" in str(row.get('النوع', ''))
+                    icon = "✅" if is_positive else "⚠️"
+                    border_color = "#4CAF50" if is_positive else "#FF5252"
+                    bg_color = "#f9fff9" if is_positive else "#fff9f9"
+                    
                     st.markdown(f"""
-                        <div style="background-color: {bg_color}; padding: 10px; border-radius: 10px; margin-bottom: 8px;">
-                            <strong>{icon} {row.get('النوع', 'ملاحظة')}</strong> | {row.get('التاريخ', '')}<br>
-                            <small>{row.get('ملاحظة', 'لا توجد تفاصيل')}</small>
+                        <div style="background-color: {bg_color}; padding: 12px; border-left: 6px solid {border_color}; 
+                                    border-radius: 8px; margin-bottom: 10px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <strong>{icon} {row.get('النوع', 'ملاحظة')}</strong>
+                                <span style="color: #888; font-size: 0.8em;">📅 {row.get('التاريخ', '')}</span>
+                            </div>
+                            <div style="margin-top: 5px; color: #444;">💬 {row.get('ملاحظة', 'لا توجد تفاصيل إضافية')}</div>
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.success("سجلك نظيف يا بطل، استمر في التميز! ✨")
+                st.success("سجلك نظيف جداً.. استمر في التميز! ✨")
 
     with t3:
-        # تصميم هادئ لتحديث البيانات
-        with st.expander("📬 تحديث بيانات التواصل"):
-            with st.form("up_st_pro"):
-                c_mail = st.text_input("بريد ولي الأمر", value=str(s_data.get('الإيميل', '')))
-                c_phone = st.text_input("رقم الجوال", value=str(s_data.get('الجوال', '')))
-                if st.form_submit_button("حفظ التغييرات الجديدة"):
-                    ws = sh.worksheet("students")
-                    cell = ws.find(st.session_state.sid)
-                    ws.update_cell(cell.row, 7, c_mail)
-                    ws.update_cell(cell.row, 8, c_phone)
-                    st.success("تم تحديث بياناتك بنجاح ✅")
-                    time.sleep(1)
-                    st.rerun()
+        st.subheader("⚙️ تحديث البريد والجوال")
+        with st.form("update_info"):
+            new_mail = st.text_input("إيميل ولي الأمر", value=str(s_data.get('الإيميل', '')))
+            new_phone = st.text_input("رقم الجوال", value=str(s_data.get('الجوال', '')))
+            if st.form_submit_button("حفظ البيانات"):
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                ws.update_cell(cell.row, 7, new_mail)
+                ws.update_cell(cell.row, 8, new_phone)
+                st.success("تم التحديث ✅"); time.sleep(1); st.rerun()
