@@ -1,4 +1,4 @@
-# --- (القسم الأول: المكتبات والربط والوظائف) ---
+# --- (القسم الأول: المكتبات والربط) ---
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -56,7 +56,7 @@ if st.session_state.role is None:
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("🔐 دخول المعلم")
-        pwd = st.text_input("كلمة المرور", type="password")
+        pwd = st.text_input("كلمة المرور", type="password", key="main_teacher_pwd")
         if st.button("دخول المعلم"):
             if pwd == "1234":
                 st.session_state.role = "teacher"
@@ -64,7 +64,7 @@ if st.session_state.role is None:
             else: st.error("كلمة المرور خاطئة")
     with c2:
         st.subheader("👨‍🎓 دخول الطالب")
-        sid_input = st.text_input("الرقم الأكاديمي")
+        sid_input = st.text_input("الرقم الأكاديمي", key="main_student_id")
         if st.button("دخول الطالب"):
             df_st = fetch_data("students")
             if not df_st.empty:
@@ -76,7 +76,7 @@ if st.session_state.role is None:
                 else: st.error("الرقم الأكاديمي غير مسجل")
     st.stop()
 
-# --- 3. واجهة المعلم (بكامل المميزات) ---
+# --- 3. واجهة المعلم ---
 if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
@@ -120,7 +120,7 @@ if st.session_state.role == "teacher":
         with tab1:
             st.subheader("📝 رصد وتعديل الدرجات")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
-            target = st.selectbox("اختر الطالب", [""] + df_st[name_col].tolist())
+            target = st.selectbox("اختر الطالب للدرجات", [""] + df_st[name_col].tolist())
             if target:
                 with st.form("g_form"):
                     c1, c2, c3 = st.columns(3)
@@ -134,7 +134,7 @@ if st.session_state.role == "teacher":
                         except: ws_g.append_row([target, v1, v2, v3])
                         st.success(f"تم تحديث درجات {target} ✅")
             st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
-        
+
         with tab2:
             st.subheader("🎭 رصد السلوك والتحفيز")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
@@ -156,7 +156,8 @@ if st.session_state.role == "teacher":
                         if target_email and "@" in str(target_email):
                             send_email_alert(sel_st, target_email, t_v, n_v)
                         st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
-
+                
+                # --- إضافة جدول السلوك في واجهة المعلم ---
                 st.divider()
                 st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
                 df_bh_teacher = fetch_data("behavior")
@@ -177,11 +178,11 @@ if st.session_state.role == "teacher":
             e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
             e_ttl = st.text_input("موضوع الاختبار")
             e_dt = st.date_input("الموعد")
-            if st.form_submit_button("نشر موعد"):
+            if st.form_submit_button("نشر الموعد"):
                 sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
                 st.success("تم النشر بنجاح ✅"); time.sleep(1); st.rerun()
 
-# --- 4. واجهة الطالب (مع إصلاح زر الشكر) ---
+# --- 4. واجهة الطالب (بحل زر الشكر الفعال) ---
 elif st.session_state.role == "student":
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
@@ -189,10 +190,11 @@ elif st.session_state.role == "student":
     s_data = df_st[df_st[id_col].astype(str) == st.session_state.sid].iloc[0]
     s_name = s_data.iloc[1]
     
-    st.markdown(f"<h2 style='text-align:center;'>🌟 أهلاً بك يا بطل: {s_name}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:center; color:#42A5F5;'>🌟 أهلاً بك يا بطل: {s_name}</h2>", unsafe_allow_html=True)
     
+    # بطاقة النقاط
     pts = int(s_data.iloc[8] or 0)
-    medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
+    medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي"
     c1, c2 = st.columns(2)
     c1.metric("رصيد نقاطك ⭐", pts)
     c2.metric("لقبك الحالي 🏆", medal)
@@ -201,7 +203,7 @@ elif st.session_state.role == "student":
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سجل السلوك", "⚙️ بياناتي"])
     
     with t1:
-        st.subheader("📊 درجاتي")
+        st.subheader("📊 درجاتي الأكاديمية")
         df_g = fetch_data("grades")
         if not df_g.empty:
             my_g = df_g[df_g.iloc[:, 0] == s_name]
@@ -209,8 +211,8 @@ elif st.session_state.role == "student":
                 g = my_g.iloc[0]
                 ca, cb, cc = st.columns(3)
                 ca.metric("فترة 1", g.iloc[1]); cb.metric("فترة 2", g.iloc[2]); cc.metric("المشاركة", g.iloc[3])
-            else: st.info("الدرجات لم ترفع بعد")
-        else: st.info("لا توجد بيانات")
+            else: st.info("الدرجات لم ترفع بعد.")
+        else: st.info("لا توجد بيانات حالياً.")
 
     with t2:
         st.subheader("🎭 سجل ملاحظات السلوك")
@@ -224,45 +226,41 @@ elif st.session_state.role == "student":
                 status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
                 is_read = "تمت القراءة" in status
                 
-                # إنشاء مفتاح فريد جداً للزر لضمان عدم حدوث تداخل
-                btn_key = f"thx_{s_name}_{dt}_{idx}"
+                # مفتاح فريد جداً للزر لضمان عدم حدوث تعليق
+                btn_key = f"confirm_{s_name}_{idx}_{dt.replace('-', '')}"
                 
                 bg = "#E8F5E9" if is_read else "#FFF3E0"
-                border = "#1B5E20" if is_read else "#E65100"
-                
                 st.markdown(f"""
-                    <div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {border}; margin-bottom: 10px;">
-                        <b>{bh_type}</b> | <small>📅 {dt}</small><br>
-                        <b>💬 الملاحظة:</b> {note}<br>
-                        <small>الحالة: {status}</small>
+                    <div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {'#1B5E20' if is_read else '#E65100'}; margin-bottom: 10px;">
+                        <b>{bh_type}</b> | <small>📅 {dt}</small><br>💬 {note}<br><small>الحالة: {status}</small>
                     </div>
                 """, unsafe_allow_html=True)
                 
                 if not is_read:
-                    # التحقق إذا كان الزر قد ضغط في هذه الجلسة
+                    # ميزة الإخفاء بمجرد النقر (التحقق من حالة الضغط في السيشن)
                     if btn_key not in st.session_state:
                         if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=btn_key):
                             try:
-                                with st.spinner("جاري إبلاغ الأستاذ..."):
-                                    # التحديث في جوجل شيت أولاً
+                                with st.spinner("جاري تأكيد القراءة..."):
+                                    # الخطوة 1: البحث عن الصف الصحيح في جوجل شيت وتحديثه
                                     all_rows = sh_bh.get_all_values()
                                     for i, r in enumerate(all_rows):
                                         if r[0] == s_name and r[1] == dt and r[3] == note:
                                             sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                            # تسجيل الضغط في الذاكرة لإخفاء الزر بعد التحديث
+                                            # الخطوة 2: تسجيل الضغط لإخفاء الزر فوراً في العرض التالي
                                             st.session_state[btn_key] = True
                                             st.balloons()
-                                            st.success("تم إرسال شكرك! 🌸")
+                                            st.success("تم تأكيد قراءتك للملاحظة! 🌸")
                                             time.sleep(1)
-                                            st.rerun()
+                                            st.rerun() # تحديث الصفحة لإخفاء الزر
                                             break
-                            except Exception as e:
-                                st.error(f"عذراً، حدث خطأ أثناء التحديث. حاول مرة أخرى.")
-        else: st.info("سجلك نظيف ومتميز! ✨")
+                            except:
+                                st.error("عذراً، الإنترنت ضعيف. حاول مجدداً.")
+        else: st.info("سجلك نظيف!")
 
     with t3:
         st.subheader("⚙️ تحديث البيانات")
-        with st.form("up"):
+        with st.form("up_data"):
             mail = st.text_input("إيميل ولي الأمر", value=str(s_data.iloc[6]))
             phone = st.text_input("رقم الجوال", value=str(s_data.iloc[7]))
             if st.form_submit_button("حفظ"):
