@@ -13,6 +13,7 @@ def get_db():
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+        # الربط بملف English_Grades
         return gspread.authorize(creds).open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
     except: return None
 
@@ -21,7 +22,8 @@ sh = get_db()
 def fetch_data(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
-        return pd.DataFrame(ws.get_all_records())
+        data = ws.get_all_records()
+        return pd.DataFrame(data)
     except: return pd.DataFrame()
 
 # --- 2. نظام الدخول ---
@@ -123,13 +125,13 @@ if st.session_state.role == "teacher":
                 sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
                 st.success("تم النشر 🚀")
 
-# --- 4. واجهة الطالب (نسخة الإصلاح النهائي) ---
+# --- 4. واجهة الطالب (إصلاح تكرار الدرجات والمرحلة) ---
 elif st.session_state.role == "student":
     st.sidebar.button("خروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # 📢 3. التنبيهات في الأعلى (إصلاح الظهور)
+    # تنبيهات الاختبارات في الأعلى
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data['class']]
@@ -138,34 +140,40 @@ elif st.session_state.role == "student":
 
     st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
     
-    # 📍 2. إصلاح المرحلة (مباعدة الأحرف)
+    # إصلاح "المرحلة": التأكد من جلب العمود الصحيح
     s_lev = s_data.get('المرحلة', 'غير محدد')
     st.info(f"📍 الصف: {s_data['class']} | المرحلة: {s_lev} | المادة: {s_data['sem']}")
 
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "📧 بياناتي"])
     
-    with t1: # 📊 1. إصلاح تكرار الدرجات
+    with t1:
+        st.subheader("📝 درجات الاختبارات والمشاركة")
         df_g = fetch_data("grades")
-        my_g = df_g[df_g['student_id'] == s_data['name']]
+        # فلترة الدرجات للطالب الحالي فقط وإزالة التكرار
+        my_g = df_g[df_g['student_id'] == s_data['name']].drop_duplicates()
+        
         if not my_g.empty:
+            # عرض أول سجل فقط لمنع التكرار في Metrics
+            top_g = my_g.iloc[0]
             c1, c2, c3 = st.columns(3)
-            c1.metric("ف1 (p1)", my_g.iloc[0]['p1'])
-            c2.metric("ف2 (p2)", my_g.iloc[0]['p2'])
-            c3.metric("مشاركة (perf)", my_g.iloc[0]['perf'])
-            st.dataframe(my_g.drop_duplicates(), use_container_width=True, hide_index=True)
-        else: st.info("لا توجد درجات حالياً")
+            c1.metric("ف1 (p1)", top_g['p1'])
+            c2.metric("ف2 (p2)", top_g['p2'])
+            c3.metric("مشاركة (perf)", top_g['perf'])
+            st.dataframe(my_g, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد درجات مرصودة حالياً.")
 
-    with t2: # 🎭 السلوك والنقاط
-        st.subheader(f"⭐ رصيد النقاط: {s_data['النقاط']}")
+    with t2:
+        st.subheader(f"⭐ رصيد النقاط الحالي: {s_data.get('النقاط', 0)}")
         df_b = fetch_data("behavior")
         my_b = df_b[df_b['student_id'] == s_data['name']]
         st.dataframe(my_b, use_container_width=True, hide_index=True)
 
-    with t3: # 📧 تحديث البيانات
+    with t3:
         with st.form("up"):
-            m = st.text_input("الإيميل", value=str(s_data['الإيميل']))
-            p = st.text_input("الجوال", value=str(s_data['الجوال']))
-            if st.form_submit_button("حفظ"):
+            m = st.text_input("الإيميل", value=str(s_data.get('الإيميل', '')))
+            p = st.text_input("الجوال", value=str(s_data.get('الجوال', '')))
+            if st.form_submit_button("حفظ التحديث"):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
                 st.success("تم التحديث ✅"); st.rerun()
