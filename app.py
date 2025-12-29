@@ -181,79 +181,111 @@ if st.session_state.role == "teacher":
                         if cell: ws_ex.delete_rows(cell.row); st.error(f"تم حذف إعلان: {to_delete}"); time.sleep(1); st.rerun()
             else: st.info("لا توجد إعلانات حالياً")
 
-# --- 4. واجهة الطالب (النسخة المصححة والمطورة) ---
+# --- 4. واجهة الطالب المطورة (تجربة بصرية ممتعة) ---
 elif st.session_state.role == "student":
-    st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
+    # زر تسجيل الخروج في الجانب
+    st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
+    
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # 🔔 إعلانات الاختبارات
+    # 🔔 قسم التنبيهات الذكي (تصميم بطاقات عائمة)
     df_ex = fetch_data("exams")
     if not df_ex.empty:
-        my_ex = df_ex[df_ex['الصف'] == s_data['class']]
-        for _, r in my_ex.iterrows():
-            st.warning(f"🔔 **موعد اختبار:** {r['العنوان']} بتاريخ {r['التاريخ']}")
+        my_ex = df_ex[df_ex['الصف'] == s_data.get('class', '')]
+        if not my_ex.empty:
+            for _, r in my_ex.iterrows():
+                st.markdown(f"""
+                    <div style="background: linear-gradient(90deg, #fff3cd 0%, #fff9e6 100%); 
+                                padding: 12px; border-right: 5px solid #ffc107; border-radius: 8px; 
+                                margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
+                        <span style="font-size: 18px;">🔔</span> 
+                        <strong>اختبار جديد:</strong> {r.get('العنوان', 'اختبار')} 📅 
+                        <span style="color: #856404;">{r.get('التاريخ', '')}</span>
+                    </div>
+                """, unsafe_allow_html=True)
 
-    # 👤 رأس الصفحة مع معالجة حقول البيانات المفقودة
-    st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
+    # 👤 ترويسة بروفايل الطالب
+    st.markdown(f"""
+        <div style="text-align: center; padding: 20px;">
+            <h1 style="color: #1E88E5; margin-bottom: 5px;">👋 أهلاً بك يا بطل: {s_data['name']}</h1>
+            <p style="font-size: 1.2rem; color: #555;">
+                📍 {s_data.get('class', 'غير محدد')} | 📚 {s_data.get('المادة', 'اللغة الإنجليزية')}
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 🏆 لوحة الشرف السريعة (النقاط والأوسمة)
+    pts = int(s_data.get('النقاط', 0))
+    medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     
-    # استخدام .get لتجنب KeyError في حال نقص البيانات
-    s_class = s_data.get('class', 'غير محدد')
-    s_lev = s_data.get('المرحلة', 'غير محدد')
-    s_sub = s_data.get('المادة', s_data.get('sem', 'اللغة الإنجليزية'))
-    st.info(f"📍 الصف: {s_class} | المرحلة: {s_lev} | المادة: {s_sub}")
+    col_pts1, col_pts2 = st.columns(2)
+    with col_pts1:
+        st.markdown(f"""<div style="background: #e3f2fd; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #bbdefb;">
+            <p style="margin:0; color: #0d47a1;">رصيد نقاطك</p>
+            <h2 style="margin:0; color: #1e88e5;">⭐ {pts}</h2>
+        </div>""", unsafe_allow_html=True)
+    with col_pts2:
+        st.markdown(f"""<div style="background: #f1f8e9; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #dcedc8;">
+            <p style="margin:0; color: #33691e;">لقبك الحالي</p>
+            <h2 style="margin:0; color: #558b2f;">{medal}</h2>
+        </div>""", unsafe_allow_html=True)
 
-    t1, t2, t3 = st.tabs(["📊 نتيجتي التفصيلية", "🎭 سجل سلوكي وتفوقي", "⚙️ تحديث بياناتي"])
+    st.write("") # مسافة جمالية
+
+    # --- التبويبات بنظام الأيقونات ---
+    t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "⚙️ بياناتي"])
     
     with t1:
-        st.subheader("📝 درجات الاختبارات والمشاركة")
+        # 1- حل مشكلة تكرار الدرجات: عرض البطاقات فقط بتصميم جذاب
+        st.markdown("### 📝 درجات الاختبارات والمشاركة")
         df_g = fetch_data("grades")
-        # التحقق من وجود درجات للطالب
         my_g = df_g[df_g['student_id'] == s_data['name']]
+        
         if not my_g.empty:
-            top_g = my_g.iloc[0]
-            col1, col2, col3 = st.columns(3)
-            # عرض الدرجات كبطاقات
-            col1.metric("فترة 1 (p1)", top_g['p1'])
-            col2.metric("فترة 2 (p2)", top_g['p2'])
-            col3.metric("المشاركة (perf)", top_g['perf'])
-            st.write("---")
-            st.dataframe(my_g, use_container_width=True, hide_index=True)
+            g = my_g.iloc[0]
+            c1, c2, c3 = st.columns(3)
+            # بطاقات ملونة بدلاً من الجداول الجامدة
+            c1.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #42a5f5; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="color: #666;">الفترة 1</p><h1 style="color:#1e88e5;">{g.get('p1', 0)}</h1></div>""", unsafe_allow_html=True)
+            c2.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #66bb6a; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="color: #666;">الفترة 2</p><h1 style="color:#2e7d32;">{g.get('p2', 0)}</h1></div>""", unsafe_allow_html=True)
+            c3.markdown(f"""<div style="background:#ffffff; padding:20px; border-radius:15px; border-bottom:5px solid #ffa726; text-align:center; shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <p style="color: #666;">المشاركة</p><h1 style="color:#ef6c00;">{g.get('perf', 0)}</h1></div>""", unsafe_allow_html=True)
         else:
-            st.info("لا توجد درجات مرصودة لك حالياً.")
+            st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
-        # معالجة حقل النقاط الافتراضي
-        pts_val = s_data.get('النقاط', 0)
-        st.subheader(f"⭐ رصيد نقاطي الحالي: {pts_val}")
-        
-        df_bh_data = fetch_data("behavior")
-        if not df_bh_data.empty:
-            my_bh = df_bh_data[df_bh_data['student_id'] == s_data['name']]
+        st.markdown("### 📜 سجل السلوك والتحفيز")
+        df_bh = fetch_data("behavior")
+        if not df_bh.empty:
+            # فلترة آمنة لتجنب KeyError
+            my_bh = df_bh[df_bh['student_id'] == s_data['name']]
             if not my_bh.empty:
-                # معالجة تلوين الجدول بأمان لتجنب NameError أو KeyError
-                def style_row(row):
-                    color = 'background-color: #c8e6c9' if '+' in str(row.get('النوع', '')) else \
-                            'background-color: #ffcdd2' if '-' in str(row.get('النوع', '')) else ''
-                    return [color] * len(row)
-                
-                st.dataframe(my_bh.style.apply(style_row, axis=1), use_container_width=True, hide_index=True)
+                # عرض السلوك بتصميم قائمة أنيقة (Timeline) بدلاً من جدول جاف
+                for _, row in my_bh.iterrows():
+                    icon = "✅" if "+" in str(row.get('النوع', '')) else "⚠️"
+                    bg_color = "#f1f8e9" if icon == "✅" else "#fffde7"
+                    st.markdown(f"""
+                        <div style="background-color: {bg_color}; padding: 10px; border-radius: 10px; margin-bottom: 8px;">
+                            <strong>{icon} {row.get('النوع', 'ملاحظة')}</strong> | {row.get('التاريخ', '')}<br>
+                            <small>{row.get('ملاحظة', 'لا توجد تفاصيل')}</small>
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
-                st.info("سجلك السلوكي نظيف ومتميز 🌟")
-        else:
-            st.info("لا توجد ملاحظات سلوكية حالياً.")
+                st.success("سجلك نظيف يا بطل، استمر في التميز! ✨")
 
     with t3:
-        st.subheader("📧 تحديث بيانات التواصل")
-        with st.form("up_st_safe"):
-            curr_mail = str(s_data.get('الإيميل', ''))
-            curr_phone = str(s_data.get('الجوال', ''))
-            new_mail = st.text_input("بريد ولي الأمر", value=curr_mail)
-            new_phone = st.text_input("رقم الجوال", value=curr_phone)
-            if st.form_submit_button("تحديث"):
-                ws = sh.worksheet("students")
-                cell = ws.find(st.session_state.sid)
-                if cell:
-                    ws.update_cell(cell.row, 7, new_mail) # تحديث عمود الإيميل
-                    ws.update_cell(cell.row, 8, new_phone) # تحديث عمود الجوال
-                    st.success("تم التحديث بنجاح ✅"); time.sleep(1); st.rerun()
+        # تصميم هادئ لتحديث البيانات
+        with st.expander("📬 تحديث بيانات التواصل"):
+            with st.form("up_st_pro"):
+                c_mail = st.text_input("بريد ولي الأمر", value=str(s_data.get('الإيميل', '')))
+                c_phone = st.text_input("رقم الجوال", value=str(s_data.get('الجوال', '')))
+                if st.form_submit_button("حفظ التغييرات الجديدة"):
+                    ws = sh.worksheet("students")
+                    cell = ws.find(st.session_state.sid)
+                    ws.update_cell(cell.row, 7, c_mail)
+                    ws.update_cell(cell.row, 8, c_phone)
+                    st.success("تم تحديث بياناتك بنجاح ✅")
+                    time.sleep(1)
+                    st.rerun()
