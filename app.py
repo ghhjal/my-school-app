@@ -13,7 +13,6 @@ def get_db():
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-        # الربط بملف English_Grades
         return gspread.authorize(creds).open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
     except: return None
 
@@ -22,8 +21,7 @@ sh = get_db()
 def fetch_data(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
-        data = ws.get_all_records()
-        return pd.DataFrame(data)
+        return pd.DataFrame(ws.get_all_records())
     except: return pd.DataFrame()
 
 # --- 2. نظام الدخول ---
@@ -101,19 +99,28 @@ if st.session_state.role == "teacher":
                         ws_g.update(f'B{fnd.row}:D{fnd.row}', [[v1, v2, v3]])
                     except: ws_g.append_row([target, v1, v2, v3])
                     st.success("تم التحديث ✅")
-        with tab2:
+            st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
+
+        with tab2: # شاشة السلوك مع عرض السجل بالأسفل
+            st.subheader("🎭 رصد السلوك والتحفيز")
             sel_st = st.selectbox("اسم الطالب", df_st['name'].tolist(), key="bh_sel")
-            with st.form("b_form"):
+            with st.form("b_form", clear_on_submit=True):
                 d_v = st.date_input("التاريخ", datetime.now())
                 t_v = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
-                n_v = st.text_input("ملاحظة")
-                if st.form_submit_button("حفظ"):
+                n_v = st.text_input("ملاحظة السلوك")
+                if st.form_submit_button("حفظ الرصد"):
                     pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
                     sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v])
                     ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                     old = int(ws_st.cell(c.row, 9).value or 0)
                     ws_st.update_cell(c.row, 9, old + pts)
-                    st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
+                    st.success(f"تم رصد السلوك للطالب: {sel_st} ✅"); time.sleep(1); st.rerun()
+
+            st.divider() # إضافة السجل أسفل شاشة الرصد
+            st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
+            df_bh = fetch_data("behavior")
+            if not df_bh.empty:
+                st.dataframe(df_bh[df_bh['student_id'] == sel_st], use_container_width=True, hide_index=True)
 
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إعلان اختبار جديد")
@@ -140,28 +147,24 @@ elif st.session_state.role == "student":
 
     st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
     
-    # إصلاح "المرحلة": التأكد من جلب العمود الصحيح
+    # إصلاح مسمى المرحلة لضمان القراءة الصحيحة
     s_lev = s_data.get('المرحلة', 'غير محدد')
     st.info(f"📍 الصف: {s_data['class']} | المرحلة: {s_lev} | المادة: {s_data['sem']}")
 
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "📧 بياناتي"])
     
-    with t1:
+    with t1: # إصلاح تكرار الدرجات
         st.subheader("📝 درجات الاختبارات والمشاركة")
         df_g = fetch_data("grades")
-        # فلترة الدرجات للطالب الحالي فقط وإزالة التكرار
         my_g = df_g[df_g['student_id'] == s_data['name']].drop_duplicates()
-        
         if not my_g.empty:
-            # عرض أول سجل فقط لمنع التكرار في Metrics
             top_g = my_g.iloc[0]
             c1, c2, c3 = st.columns(3)
             c1.metric("ف1 (p1)", top_g['p1'])
             c2.metric("ف2 (p2)", top_g['p2'])
             c3.metric("مشاركة (perf)", top_g['perf'])
             st.dataframe(my_g, use_container_width=True, hide_index=True)
-        else:
-            st.info("لا توجد درجات مرصودة حالياً.")
+        else: st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
         st.subheader(f"⭐ رصيد النقاط الحالي: {s_data.get('النقاط', 0)}")
