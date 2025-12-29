@@ -156,19 +156,22 @@ if st.session_state.role == "teacher":
                 df_bh_teacher = fetch_data("behavior")
                 
                 if not df_bh_teacher.empty:
-                    # تنظيف أسماء الأعمدة وفلترة الطالب
+                    # 1. تنظيف البيانات وفلترة الطالب المختار
                     my_bh_teacher = df_bh_teacher[df_bh_teacher['student_id'] == sel_st].copy()
-                    my_bh_teacher = my_bh_teacher.iloc[::-1] # الأحدث أولاً
+                    # 2. الترتيب من الأحدث إلى الأقدم
+                    my_bh_teacher = my_bh_teacher.iloc[::-1] 
                     
                     for index, row in my_bh_teacher.iterrows():
+                        # جلب حالة القراءة من العمود المخصص
                         status = str(row.get('الحالة', 'لم تُقرأ بعد'))
                         
-                        # تحديد ألوان واضحة جداً للجوال
+                        # 3. تحديد الألوان لضمان الوضوح على الجوال
                         is_read = "تمت القراءة" in status
                         bg_c = "#E8F5E9" if is_read else "#FFEBEE"
                         txt_c = "#1B5E20" if is_read else "#B71C1C"
                         lbl = "✅ قرأها الطالب" if is_read else "🕒 لم تُقرأ بعد"
 
+                        # 4. عرض البطاقة بتنسيق HTML متوافق مع الجوال
                         st.markdown(f"""
                             <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; 
                                         border: 2px solid {txt_c}; margin-bottom: 8px;">
