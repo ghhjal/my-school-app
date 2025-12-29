@@ -207,14 +207,16 @@ elif st.session_state.role == "student":
     medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     
     c_pts1, c_pts2 = st.columns(2)
+    # 🏆 لوحة المؤشرات العلوية - تعديل التنسيق فقط للوضوح على الجوال
     with c_pts1:
         st.markdown(f"""<div style="background:#e3f2fd; padding:15px; border-radius:15px; text-align:center; border:2px solid #2196F3;">
             <p style="margin:0; color:#0d47a1; font-weight:bold; font-size:1.1em;">رصيد نقاطك</p>
-            <h2 style="margin:0; color:#1565C0;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
+            <h2 style="margin:0; color:#0d47a1; text-shadow: none;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
+            
     with c_pts2:
         st.markdown(f"""<div style="background:#f1f8e9; padding:15px; border-radius:15px; text-align:center; border:2px solid #4CAF50;">
             <p style="margin:0; color:#1b5e20; font-weight:bold; font-size:1.1em;">لقبك الحالي</p>
-            <h2 style="margin:0; color:#2E7D32;">{medal}</h2></div>""", unsafe_allow_html=True)
+            <h2 style="margin:0; color:#1b5e20; text-shadow: none;">{medal}</h2></div>""", unsafe_allow_html=True)
 
     st.divider()
 
