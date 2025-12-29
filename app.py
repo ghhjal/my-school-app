@@ -30,7 +30,6 @@ def fetch_data(sheet_name):
     except:
         return pd.DataFrame()
 
-# وظيفة الإرسال البريدي (الميزة المفقودة)
 def send_email_alert(student_name, parent_email, behavior_type, note):
     try:
         sender_email = st.secrets["email_settings"]["sender_email"]
@@ -77,7 +76,7 @@ if st.session_state.role is None:
                 else: st.error("الرقم الأكاديمي غير مسجل")
     st.stop()
 
-# --- 3. واجهة المعلم (كاملة المميزات) ---
+# --- 3. واجهة المعلم ---
 if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
@@ -121,7 +120,7 @@ if st.session_state.role == "teacher":
         with tab1:
             st.subheader("📝 رصد وتعديل الدرجات")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
-            target = st.selectbox("اختر الطالب", [""] + df_st[name_col].tolist())
+            target = st.selectbox("اختر الطالب للدرجات", [""] + df_st[name_col].tolist())
             if target:
                 with st.form("g_form"):
                     c1, c2, c3 = st.columns(3)
@@ -137,22 +136,32 @@ if st.session_state.role == "teacher":
             st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
 
         with tab2:
-            st.subheader("🎭 رصد السلوك")
+            st.subheader("🎭 رصد وفلترة السلوك")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
-            sel_st = st.selectbox("اسم الطالب", [""] + df_st[name_col].tolist())
+            sel_st = st.selectbox("اختر الطالب لمشاهدة سجله أو إضافة ملاحظة", [""] + df_st[name_col].tolist())
+            
             if sel_st:
                 with st.form("b_form", clear_on_submit=True):
                     d_v = st.date_input("التاريخ", datetime.now())
                     t_v = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
                     n_v = st.text_input("الملاحظة")
-                    if st.form_submit_button("حفظ وإرسال إيميل"):
+                    if st.form_submit_button("حفظ وإرسال"):
                         pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
                         sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v, "🕒 لم تُقرأ بعد"])
                         ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                         old_pts = int(ws_st.cell(c.row, 9).value or 0)
                         ws_st.update_cell(c.row, 9, old_pts + pts)
                         st.success("تم الحفظ ✅"); st.rerun()
-            st.dataframe(fetch_data("behavior").iloc[::-1], use_container_width=True, hide_index=True)
+                
+                # --- (إصلاح الفلتر: عرض ملاحظات الطالب المختار فقط) ---
+                st.divider()
+                st.write(f"🔍 سجل الطالب: {sel_st}")
+                df_all_bh = fetch_data("behavior")
+                if not df_all_bh.empty:
+                    filtered_bh = df_all_bh[df_all_bh.iloc[:, 0] == sel_st].iloc[::-1]
+                    st.dataframe(filtered_bh, use_container_width=True, hide_index=True)
+            else:
+                st.info("الرجاء اختيار اسم طالب لعرض ملاحظاته")
 
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
@@ -166,7 +175,7 @@ if st.session_state.role == "teacher":
                 sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
                 st.success("تم النشر بنجاح ✅"); time.sleep(1); st.rerun()
 
-# --- 4. واجهة الطالب (كاملة مع حل الزر) ---
+# --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
@@ -211,22 +220,22 @@ elif st.session_state.role == "student":
                 bg = "#E8F5E9" if is_read else "#FFF3E0"
                 st.markdown(f"<div style='background-color:{bg}; padding:15px; border-radius:10px; border-right:8px solid {'#1B5E20' if is_read else '#E65100'}; margin-bottom:10px;'><b>{bh_type}</b> | 📅 {dt}<br>{note}<br><small>الحالة: {status}</small></div>", unsafe_allow_html=True)
                 
-                # حل مشكلة الزر: استخدام معرف فريد جداً وحالة السيشن
-                btn_key = f"thx_btn_{s_name}_{idx}_{dt}"
+                # --- (إصلاح زر شكراً: البحث عن الصف الحقيقي بدقة) ---
+                btn_key = f"thx_btn_{s_name}_{idx}"
                 if not is_read:
-                    if btn_key not in st.session_state:
-                        if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=btn_key):
-                            try:
-                                with st.spinner("جاري التحديث..."):
-                                    all_rows = sh_bh.get_all_values()
-                                    for i, r in enumerate(all_rows):
-                                        if r[0] == s_name and r[1] == dt and r[3] == note:
-                                            sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                            st.session_state[btn_key] = True
-                                            st.balloons()
-                                            time.sleep(1); st.rerun()
-                                            break
-                            except: st.error("عذراً، حاول مرة أخرى")
+                    if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=btn_key):
+                        try:
+                            with st.spinner("جاري إبلاغ الأستاذ..."):
+                                all_vals = sh_bh.get_all_values()
+                                for i, r in enumerate(all_vals):
+                                    # التحقق من الاسم + التاريخ + الملاحظة لضمان الصف الصحيح
+                                    if r[0] == s_name and r[1] == dt and r[3] == note:
+                                        sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
+                                        st.balloons()
+                                        time.sleep(1); st.rerun()
+                                        break
+                        except:
+                            st.error("فشل الاتصال بقاعدة البيانات")
         else: st.info("سجلك نظيف!")
 
     with t3:
