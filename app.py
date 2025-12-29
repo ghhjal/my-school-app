@@ -204,35 +204,70 @@ elif st.session_state.role == "student":
                 ca, cb, cc = st.columns(3)
                 ca.metric("فترة 1", g.iloc[1]); cb.metric("فترة 2", g.iloc[2]); cc.metric("المشاركة", g.iloc[3])
     
+    # --- (الجزء المعدل فقط في واجهة الطالب لضمان عمل الزر) ---
+
     with t2:
         st.subheader("🎭 سجل السلوك")
         df_bh = fetch_data("behavior")
         if not df_bh.empty:
+            # إضافة عمود مؤقت لرقم الصف الحقيقي في جوجل شيت
+            df_bh['real_row'] = range(2, len(df_bh) + 2) 
+            
+            # فلترة ملاحظات الطالب الحالي
             my_bh = df_bh[df_bh.iloc[:, 0] == s_name].copy().iloc[::-1]
             sh_bh = sh.worksheet("behavior")
             
-            for idx, row in my_bh.iterrows():
+            for _, row in my_bh.iterrows():
                 dt, bh_type, note = str(row.iloc[1]), str(row.iloc[2]), str(row.iloc[3])
                 status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
+                real_row_num = int(row['real_row'])
                 is_read = "تمت القراءة" in status
                 
                 bg = "#E8F5E9" if is_read else "#FFF3E0"
                 st.markdown(f"<div style='background-color:{bg}; padding:15px; border-radius:10px; border-right:8px solid {'#1B5E20' if is_read else '#E65100'}; margin-bottom:10px;'><b>{bh_type}</b> | 📅 {dt}<br>{note}<br><small>الحالة: {status}</small></div>", unsafe_allow_html=True)
                 
-                # إصلاح زر شكراً: تم تعديل الـ key وعملية البحث لتجنب الـ Quota error والـ IndexError
                 if not is_read:
-                    if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_btn_{idx}_{s_name[:3]}"):
+                    # الزر الآن يحدث الخلية مباشرة عبر رقم الصف دون الحاجة للبحث
+                    if st.button(f"🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_{real_row_num}"):
                         try:
-                            # البحث باستخدام طريقة سريعة ومباشرة
-                            all_rows = sh_bh.get_all_values()
-                            for i, r in enumerate(all_rows):
-                                if r[0] == s_name and r[1] == dt and r[3] == note:
-                                    sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                    st.balloons()
-                                    time.sleep(0.5); st.rerun()
-                                    break
-                        except Exception as e:
-                            st.error("انتظر قليلاً ثم حاول مرة أخرى (ضغط على الخادم)")
+                            with st.spinner("جاري التحديث..."):
+                                sh_bh.update_cell(real_row_num, 5, "✅ تمت القراءة")
+                                st.balloons()
+                                time.sleep(0.5)
+                                st.rerun()
+                        except:
+                            st.error("الخادم مشغول، حاول مجدداً")
+        else:
+            st.info("سجلك نظيف!")
+
+# --- (الجزء المعدل في واجهة المعلم لإصلاح الفلتر) ---
+
+    elif menu == "📊 الدرجات والسلوك":
+        tab1, tab2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
+        # ... كود الدرجات كما هو ...
+        with tab2:
+            st.subheader("🎭 رصد وفلترة السلوك")
+            name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
+            sel_st = st.selectbox("اختر الطالب لمشاهدة سجله", [""] + df_st[name_col].tolist())
+            
+            if sel_st:
+                # نموذج الإضافة (Form)
+                with st.form("b_form", clear_on_submit=True):
+                    # ... مدخلات النموذج كما هي ...
+                    if st.form_submit_button("حفظ وإرسال"):
+                        # ... كود الحفظ كما هو ...
+                        st.success("تم الحفظ ✅")
+                        time.sleep(1)
+                        st.rerun()
+                
+                # إصلاح الفلتر: عرض ملاحظات الطالب المختار فقط
+                st.divider()
+                df_all_bh = fetch_data("behavior")
+                if not df_all_bh.empty:
+                    # فلترة بالاسم المختار حصراً
+                    filtered_bh = df_all_bh[df_all_bh.iloc[:, 0] == sel_st].iloc[::-1]
+                    st.write(f"🔍 سجل ملاحظات: {sel_st}")
+                    st.dataframe(filtered_bh, use_container_width=True, hide_index=True)
 
     with t3:
         with st.form("up"):
