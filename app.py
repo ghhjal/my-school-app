@@ -136,7 +136,7 @@ if st.session_state.role == "teacher":
                 with st.form("beh_form"):
                     b_st = st.selectbox("اسم الطالب", df_all["الاسم"].tolist())
                     b_date = st.date_input("التاريخ", datetime.now())
-                    b_type = st.radio("نوع السلوك", ["✅ إيجابي", "❌ سلبي"], horizontal=True)
+                    b_type = st.radio("نوع السلوك", ["اخرى", "✅ إيجابي", "❌ سلبي"], horizontal=True)
                     b_note = st.text_input("الملاحظة")
                     if st.form_submit_button("📌 رصد"):
                         sh.worksheet("behavior").append_row([b_st, str(b_date), b_type, b_note])
