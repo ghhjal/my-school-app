@@ -184,24 +184,6 @@ if st.session_state.role == "teacher":
                         """, unsafe_allow_html=True)
                 else:
                     st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
-                        # 4. عرض الملاحظة بتصميم البطاقة
-                        st.markdown(f"""
-                            <div style="background-color: {status_bg}; padding: 12px; border-radius: 12px; 
-                                        border: 1px solid {status_text}44; margin-bottom: 8px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="color: {status_text}; font-weight: bold; font-size: 0.9em;">
-                                        {status_icon} {status_label}
-                                    </span>
-                                    <small style="color: #666;">📅 {row.get('التاريخ', '---')}</small>
-                                </div>
-                                <div style="margin-top: 5px; color: #333; font-size: 0.95em;">
-                                    <b>نوع السلوك:</b> {row.get('النوع', 'عام')}<br>
-                                    <b>نص الملاحظة:</b> {row.get('ملاحظة', 'لا يوجد نص')}
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
         df_ex = fetch_data("exams")
