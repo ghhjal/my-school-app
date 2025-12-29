@@ -1,4 +1,4 @@
-# --- (الجزء الأول: المكتبات والربط يظل كما هو دون تغيير) ---
+# --- (القسم الأول: المكتبات والربط والوظائف تظل كما هي تماماً لضمان الاستقرار) ---
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -9,7 +9,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 
-# --- 1. الإعدادات والربط ---
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
 
 @st.cache_resource(ttl=60)
@@ -31,7 +30,6 @@ def fetch_data(sheet_name):
     except:
         return pd.DataFrame()
 
-# --- 📧 دالة إرسال الإشعارات التلقائية ---
 def send_email_alert(student_name, parent_email, behavior_type, note):
     try:
         sender_email = st.secrets["email_settings"]["sender_email"]
@@ -78,7 +76,7 @@ if st.session_state.role is None:
                 st.error("الرقم الأكاديمي غير مسجل")
     st.stop()
 
-# --- 3. واجهة المعلم (تظل كما هي تماماً بناءً على طلبك) ---
+# --- 3. واجهة المعلم (تظل ثابتة ومستقرة تماماً) ---
 if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
@@ -183,76 +181,79 @@ if st.session_state.role == "teacher":
                         if cell: ws_ex.delete_rows(cell.row); st.error(f"تم حذف إعلان: {to_delete}"); time.sleep(1); st.rerun()
             else: st.info("لا توجد إعلانات حالياً")
 
-# --- 4. واجهة الطالب (النسخة المطورة ببروفايل الطالب) ---
+# --- 4. واجهة الطالب (النسخة المصححة والمطورة) ---
 elif st.session_state.role == "student":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # 🔔 إعلانات الاختبارات (بشكل أكثر جاذبية)
+    # 🔔 إعلانات الاختبارات
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data['class']]
         for _, r in my_ex.iterrows():
-            st.markdown(f"""<div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; border-right: 5px solid #ffc107; margin-bottom: 10px;">
-                <strong>📢 تنبيه هامي:</strong> {r['العنوان']} في تاريخ <span style="color: #856404;">{r['التاريخ']}</span>
-                </div>""", unsafe_allow_html=True)
+            st.warning(f"🔔 **موعد اختبار:** {r['العنوان']} بتاريخ {r['التاريخ']}")
 
-    # 👤 رأس الصفحة (بروفايل الطالب)
-    st.markdown(f"## 👋 مرحباً بك يا بطل: <span style='color: #1e88e5;'>{s_data['name']}</span>", unsafe_allow_html=True)
+    # 👤 رأس الصفحة مع معالجة حقول البيانات المفقودة
+    st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
     
-    # 🏅 نظام أوسمة النقاط
-    pts = int(s_data.get('النقاط', 0))
-    medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 الوسام الذهبي" if pts >= 50 else "🥈 الوسام الفضي" if pts >= 20 else "🥉 الوسام البرونزي"
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("🏅 لقبك الحالي", medal)
-    c2.metric("⭐ رصيد النقاط", f"{pts} نقطة")
-    c3.metric("📅 الصف", s_data['class'])
-    c4.metric("📚 المادة", s_data.get('sem', 'اللغة الإنجليزية'))
+    # استخدام .get لتجنب KeyError في حال نقص البيانات
+    s_class = s_data.get('class', 'غير محدد')
+    s_lev = s_data.get('المرحلة', 'غير محدد')
+    s_sub = s_data.get('المادة', s_data.get('sem', 'اللغة الإنجليزية'))
+    st.info(f"📍 الصف: {s_class} | المرحلة: {s_lev} | المادة: {s_sub}")
 
-    st.divider()
-
-    t1, t2, t3 = st.tabs(["📊 تقرير درجاتي", "🎭 سجل سلوكي", "⚙️ بياناتي"])
+    t1, t2, t3 = st.tabs(["📊 نتيجتي التفصيلية", "🎭 سجل سلوكي وتفوقي", "⚙️ تحديث بياناتي"])
     
     with t1:
-        st.subheader("📝 نتائج الاختبارات والمشاركة")
+        st.subheader("📝 درجات الاختبارات والمشاركة")
         df_g = fetch_data("grades")
-        my_g = df_g[df_g['student_id'] == s_data['name']].drop_duplicates()
+        # التحقق من وجود درجات للطالب
+        my_g = df_g[df_g['student_id'] == s_data['name']]
         if not my_g.empty:
             top_g = my_g.iloc[0]
             col1, col2, col3 = st.columns(3)
-            # عرض الدرجات كبطاقات ملونة
-            col1.markdown(f"<div style='text-align: center; background: #e3f2fd; padding: 20px; border-radius: 15px;'><h3>فترة 1</h3><h2 style='color: #1976d2;'>{top_g['p1']}</h2></div>", unsafe_allow_html=True)
-            col2.markdown(f"<div style='text-align: center; background: #f1f8e9; padding: 20px; border-radius: 15px;'><h3>فترة 2</h3><h2 style='color: #388e3c;'>{top_g['p2']}</h2></div>", unsafe_allow_html=True)
-            col3.markdown(f"<div style='text-align: center; background: #fffde7; padding: 20px; border-radius: 15px;'><h3>المشاركة</h3><h2 style='color: #fbc02d;'>{top_g['perf']}</h2></div>", unsafe_allow_html=True)
+            # عرض الدرجات كبطاقات
+            col1.metric("فترة 1 (p1)", top_g['p1'])
+            col2.metric("فترة 2 (p2)", top_g['p2'])
+            col3.metric("المشاركة (perf)", top_g['perf'])
             st.write("---")
             st.dataframe(my_g, use_container_width=True, hide_index=True)
         else:
-            st.info("لا توجد درجات مرصودة حالياً.")
+            st.info("لا توجد درجات مرصودة لك حالياً.")
 
     with t2:
-        st.subheader("📜 سجل السلوك والتحفيز")
-        df_behavior_data = fetch_data("behavior")
-        if not df_behavior_data.empty:
-            my_behavior = df_behavior_data[df_behavior_data['student_id'] == s_data['name']]
-            if not my_behavior.empty:
-                # تلوين الصفوف حسب نوع السلوك
-                def color_behavior(val):
-                    color = '#c8e6c9' if '+' in val else '#ffcdd2' if '-' in val else 'white'
-                    return f'background-color: {color}'
-                st.dataframe(my_behavior.style.applymap(color_behavior, subset=['النوع']), use_container_width=True, hide_index=True)
+        # معالجة حقل النقاط الافتراضي
+        pts_val = s_data.get('النقاط', 0)
+        st.subheader(f"⭐ رصيد نقاطي الحالي: {pts_val}")
+        
+        df_bh_data = fetch_data("behavior")
+        if not df_bh_data.empty:
+            my_bh = df_bh_data[df_bh_data['student_id'] == s_data['name']]
+            if not my_bh.empty:
+                # معالجة تلوين الجدول بأمان لتجنب NameError أو KeyError
+                def style_row(row):
+                    color = 'background-color: #c8e6c9' if '+' in str(row.get('النوع', '')) else \
+                            'background-color: #ffcdd2' if '-' in str(row.get('النوع', '')) else ''
+                    return [color] * len(row)
+                
+                st.dataframe(my_bh.style.apply(style_row, axis=1), use_container_width=True, hide_index=True)
             else:
-                st.info("سجلك نظيف وممتاز! لا توجد ملاحظات حالياً.")
+                st.info("سجلك السلوكي نظيف ومتميز 🌟")
         else:
-            st.info("لا يوجد سجل ملاحظات.")
+            st.info("لا توجد ملاحظات سلوكية حالياً.")
 
     with t3:
         st.subheader("📧 تحديث بيانات التواصل")
-        with st.form("up_st"):
-            new_mail = st.text_input("بريد ولي الأمر الجديد", value=str(s_data.get('الإيميل', '')))
-            new_phone = st.text_input("رقم الجوال", value=str(s_data.get('الجوال', '')))
-            if st.form_submit_button("حفظ التغييرات"):
-                ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
-                ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم تحديث بياناتك بنجاح ✅"); time.sleep(1); st.rerun()
+        with st.form("up_st_safe"):
+            curr_mail = str(s_data.get('الإيميل', ''))
+            curr_phone = str(s_data.get('الجوال', ''))
+            new_mail = st.text_input("بريد ولي الأمر", value=curr_mail)
+            new_phone = st.text_input("رقم الجوال", value=curr_phone)
+            if st.form_submit_button("تحديث"):
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                if cell:
+                    ws.update_cell(cell.row, 7, new_mail) # تحديث عمود الإيميل
+                    ws.update_cell(cell.row, 8, new_phone) # تحديث عمود الجوال
+                    st.success("تم التحديث بنجاح ✅"); time.sleep(1); st.rerun()
