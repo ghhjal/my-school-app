@@ -240,30 +240,33 @@ elif st.session_state.role == "student":
             my_bh = df_bh[df_bh['student_id'] == s_data['name']].copy()
             
             if not my_bh.empty:
-                # --- السطر السحري للترتيب من الأحدث إلى الأقدم ---
-                # نقوم بتحويل عمود التاريخ لنوع "datetime" لضمان دقة الترتيب
-                my_bh['التاريخ'] = pd.to_datetime(my_bh['التاريخ'], errors='coerce')
-                my_bh = my_bh.sort_values(by='التاريخ', ascending=False)
+                # --- حل مشكلة الترتيب (البحث عن عمود التاريخ برمجياً) ---
+                # نبحث عن العمود الذي يحتوي على كلمة تاريخ أو date لترتيبه
+                date_col = next((c for c in my_bh.columns if 'تاريخ' in c or 'date' in c.lower()), None)
+                
+                if date_col:
+                    my_bh[date_col] = pd.to_datetime(my_bh[date_col], errors='coerce')
+                    my_bh = my_bh.sort_values(by=date_col, ascending=False) # الترتيب من الأحدث للأقدم
                 
                 for index, row in my_bh.iterrows():
-                    # جلب البيانات (معالجة مسميات الأعمدة المختلفة)
+                    # جلب البيانات بذكاء لضمان الظهور
                     bh_type_raw = str(row.get('النوع', 'ملاحظة عامة'))
                     note_content = row.get('ملاحظة', row.get('الملاحظة', 'تم رصد ملاحظة سلوكية جديدة.'))
-                    date_str = row['التاريخ'].strftime('%Y-%m-%d') if pd.notnull(row['التاريخ']) else "تاريخ غير محدد"
-                    
-                    # --- منطق الألوان والأيقونات الذكي ---
-                    if any(x in bh_type_raw for x in ["⭐", "متميز", "10+"]):
-                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9"
-                    elif any(x in bh_type_raw for x in ["✅", "إيجابي", "5+"]):
-                        icon, color, bg = "🌟", "#43A047", "#F1F8E9"
-                    elif any(x in bh_type_raw for x in ["⚠️", "تنبيه", "5-"]):
-                        icon, color, bg = "📢", "#F4511E", "#FFF3E0"
-                    elif any(x in bh_type_raw for x in ["❌", "سلبي", "10-"]):
-                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE"
-                    else:
-                        icon, color, bg = "📝", "#1976D2", "#E3F2FD"
+                    current_date = str(row.get(date_col, ''))[:10] if date_col else "---"
 
-                    # عرض البطاقة بتنسيقها الجذاب
+                    # --- منطق الأيقونات والألوان الذكي (يقرأ الرموز والكلمات) ---
+                    if any(x in bh_type_raw for x in ["⭐", "متميز", "10+"]):
+                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9" # أخضر متميز
+                    elif any(x in bh_type_raw for x in ["✅", "إيجابي", "5+"]):
+                        icon, color, bg = "🌟", "#43A047", "#F1F8E9" # أخضر إيجابي
+                    elif any(x in bh_type_raw for x in ["⚠️", "تنبيه", "5-"]):
+                        icon, color, bg = "📢", "#F4511E", "#FFF3E0" # برتقالي تنبيه
+                    elif any(x in bh_type_raw for x in ["❌", "سلبي", "10-"]):
+                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE" # أحمر سلبي
+                    else:
+                        icon, color, bg = "📝", "#1976D2", "#E3F2FD" # أزرق عام
+
+                    # --- تصميم البطاقة المتفاعلة الجذاب ---
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 18px; border-radius: 15px; 
                                     border-right: 12px solid {color}; margin-bottom: 8px; 
@@ -271,7 +274,7 @@ elif st.session_state.role == "student":
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <span style="font-size: 1.25em; font-weight: bold; color: {color};">{icon} {bh_type_raw}</span>
                                 <span style="font-size: 0.85em; color: #777; background: #fff; padding: 2px 10px; border-radius: 10px; border: 1px solid #eee;">
-                                    📅 {date_str}
+                                    📅 {current_date}
                                 </span>
                             </div>
                             <div style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; color: #333;">
@@ -281,7 +284,7 @@ elif st.session_state.role == "student":
                     """, unsafe_allow_html=True)
                     
                     # زر الشكر التفاعلي
-                    if st.button(f"🙏 شكراً أستاذي", key=f"thank_btn_{index}"):
+                    if st.button(f"🙏 شكراً أستاذي", key=f"thx_{index}"):
                         st.balloons()
                         st.toast("وصل شكرك للأستاذ زياد! 🌸")
                     st.markdown("---")
