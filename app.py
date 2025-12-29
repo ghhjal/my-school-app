@@ -170,16 +170,36 @@ if st.session_state.role == "teacher":
                     st.dataframe(df_bh_teacher[df_bh_teacher['student_id'] == sel_st], use_container_width=True, hide_index=True)
 
     elif menu == "📢 إعلانات الاختبارات":
-        st.header("📢 إعلانات المواعيد")
-        with st.form("ex_form"):
-            e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            e_ttl = st.text_input("موضوع الاختبار")
-            e_dt = st.date_input("الموعد")
-            if st.form_submit_button("نشر الإعلان"):
-                sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                st.success("تم النشر بنجاح ✅")
-        st.dataframe(fetch_data("exams"), use_container_width=True, hide_index=True)
-
+        st.header("📢 إدارة إعلانات المواعيد")
+        df_ex = fetch_data("exams")
+        
+        col_add, col_del = st.columns([2, 1])
+        
+        with col_add:
+            st.subheader("📝 نشر إعلان جديد")
+            with st.form("ex_form", clear_on_submit=True):
+                e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                e_ttl = st.text_input("موضوع الاختبار")
+                e_dt = st.date_input("الموعد")
+                if st.form_submit_button("نشر الإعلان"):
+                    sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
+                    st.success("تم النشر بنجاح ✅"); time.sleep(1); st.rerun()
+        
+        with col_del:
+            st.subheader("🗑️ حذف إعلان")
+            if not df_ex.empty:
+                # إنشاء قائمة بالعناوين المتاحة للحذف
+                titles = df_ex['العنوان'].tolist()
+                to_delete = st.selectbox("اختر الإعلان لحذفه", [""] + titles)
+                if st.button("تأكيد الحذف"):
+                    if to_delete:
+                        ws_ex = sh.worksheet("exams")
+                        cell = ws_ex.find(to_delete)
+                        if cell:
+                            ws_ex.delete_rows(cell.row)
+                            st.error(f"تم حذف إعلان: {to_delete}"); time.sleep(1); st.rerun()
+            else:
+                st.info("لا توجد إعلانات حالياً")
 # --- 4. واجهة الطالب (النسخة المعدلة والمصلحة) ---
 elif st.session_state.role == "student":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
