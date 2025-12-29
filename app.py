@@ -236,54 +236,51 @@ elif st.session_state.role == "student":
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
-            # 1. تنظيف البيانات وفلترتها للطالب الحالي
-            df_bh.columns = [str(c).strip() for c in df_bh.columns]
-            my_bh = df_bh[df_bh['student_id'] == s_data['name']].copy()
+            # 1. تنظيف شامل للبيانات وفلترة الطالب
+            my_bh = df_bh[df_bh.iloc[:, 0].astype(str) == s_data['name']].copy()
             
             if not my_bh.empty:
-                # 2. الترتيب من الأحدث إلى الأقدم (قلب مصفوفة البيانات)
-                # بما أن الإضافات الجديدة تكون في الأسفل في الشيت، سنقوم بعكس الترتيب
+                # 2. الترتيب من الأحدث للأقدم عبر عكس المصفوفة (تجنباً لخطأ التاريخ)
                 my_bh = my_bh.iloc[::-1] 
                 
                 for index, row in my_bh.iterrows():
-                    # 3. جلب البيانات بدقة (النوع والملاحظة والتاريخ)
-                    bh_type = str(row.get('النوع', 'ملاحظة عامة'))
-                    # التأكد من جلب نص الملاحظة الفعلي وليس النص الافتراضي
-                    note = row.get('ملاحظة', row.get('الملاحظة', 'استمر في تألقك يا بطل!'))
-                    # جلب التاريخ من أي عمود متاح
-                    date_val = row.get('التاريخ', row.get('تاريخ', '---'))
+                    # 3. جلب البيانات حسب موقع العمود وليس اسمه (لضمان النجاح)
+                    # نفترض: العمود 1=النوع، العمود 2=الملاحظة، العمود 3=التاريخ
+                    bh_type = str(row.iloc[1]) if len(row) > 1 else "ملاحظة"
+                    note_text = str(row.iloc[2]) if len(row) > 2 else "استمر في تألقك!"
+                    date_val = str(row.iloc[3]) if len(row) > 3 else "---"
 
-                    # 4. محرك الألوان الذكي بناءً على الرموز
-                    if "⭐" in bh_type:
-                        icon, color, bg = "🏆", "#1B5E20", "#E8F5E9" # تميز
-                    elif "✅" in bh_type:
-                        icon, color, bg = "🌟", "#2E7D32", "#F1F8E9" # إيجابي
-                    elif "⚠️" in bh_type:
-                        icon, color, bg = "📢", "#E65100", "#FFF3E0" # تنبيه
-                    elif "❌" in bh_type:
-                        icon, color, bg = "🚫", "#B71C1C", "#FFEBEE" # سلبي
+                    # 4. نظام تلوين ذكي (يفحص محتوى النص)
+                    if any(word in bh_type for word in ["⭐", "متميز"]):
+                        color, bg, icon = "#1B5E20", "#E8F5E9", "🏆"
+                    elif any(word in bh_type for word in ["✅", "إيجابي"]):
+                        color, bg, icon = "#2E7D32", "#F1F8E9", "🌟"
+                    elif any(word in bh_type for word in ["⚠️", "تنبيه"]):
+                        color, bg, icon = "#E65100", "#FFF3E0", "📢"
+                    elif any(word in bh_type for word in ["❌", "سلبي"]):
+                        color, bg, icon = "#B71C1C", "#FFEBEE", "🚫"
                     else:
-                        icon, color, bg = "📝", "#0D47A1", "#E3F2FD" # عام
+                        color, bg, icon = "#0D47A1", "#E3F2FD", "📝"
 
-                    # 5. تصميم البطاقة البصري المطور
+                    # 5. عرض البطاقة بتصميم جذاب ومنظم
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 15px; border-radius: 12px; 
                                     border-right: 10px solid {color}; margin-bottom: 10px; 
-                                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between;">
                                 <b style="color: {color}; font-size: 1.1em;">{icon} {bh_type}</b>
                                 <small style="color: #666;">📅 {date_val}</small>
                             </div>
-                            <div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.4); border-radius: 5px;">
-                                <p style="margin: 0; color: #333;">💬 <b>الملاحظة:</b> {note}</p>
+                            <div style="margin-top: 8px; color: #333; background: rgba(255,255,255,0.5); padding: 8px; border-radius: 8px;">
+                                <b>💬 الملاحظة:</b> {note_text}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
                     # زر الشكر التفاعلي
-                    if st.button(f"🙏 شكراً أستاذي", key=f"thx_btn_{index}"):
+                    if st.button(f"🙏 شكراً أستاذي ({index})", key=f"thx_{index}"):
                         st.balloons()
-                        st.toast("تم إرسال شكرك للأستاذ زياد! 🌸")
+                        st.toast("تم إرسال تقديرك للمعلم! 🌸")
             else:
                 st.info("سجلك السلوكي نظيف يا بطل! ✨")
     with t3:
