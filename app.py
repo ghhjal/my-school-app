@@ -79,7 +79,7 @@ if st.session_state.role is None:
             else: st.error("خطأ في جلب بيانات الطلاب")
     st.stop()
 
-# --- 3. واجهة المعلم (كاملة كما طلبت) ---
+# --- 3. واجهة المعلم ---
 if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
@@ -195,7 +195,7 @@ if st.session_state.role == "teacher":
                     sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
                     st.success("تم النشر ✅"); time.sleep(1); st.rerun()
 
-# --- 4. واجهة الطالب (كاملة ومحسنة لمنع الأخطاء) ---
+# --- 4. واجهة الطالب (كاملة مع حل مشكلة الزر) ---
 elif st.session_state.role == "student":
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
@@ -248,20 +248,21 @@ elif st.session_state.role == "student":
                 """, unsafe_allow_html=True)
                 
                 if not is_read:
-                    # حل مشكلة الضغط المتكرر والرسالة الحمراء
+                    # زر الشكر مع حماية try-except لمنع الرسالة الحمراء
                     if st.button(f"🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_{idx}"):
                         try:
-                            with st.spinner("جاري إرسال شكرك..."):
+                            with st.spinner("جاري التحديث..."):
                                 all_rows = sh_bh.get_all_values()
                                 for i, r in enumerate(all_rows):
                                     if r[0] == s_name and r[1] == dt and r[3] == note:
                                         sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
                                         st.balloons()
                                         st.toast("تم إرسال تقديرك للمعلم! 🌸")
-                                        time.sleep(1); st.rerun()
+                                        time.sleep(1)
+                                        st.rerun()
                                         break
                         except:
-                            # تجاهل الخطأ في حال كانت الملاحظة قد حُدثت بالفعل
+                            # في حال حدوث خطأ بسبب الضغط المتكرر، يتم تحديث الصفحة صامتاً
                             st.rerun()
         else: st.info("سجلك نظيف!")
 
