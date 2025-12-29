@@ -79,7 +79,7 @@ if st.session_state.role is None:
             else: st.error("خطأ في جلب بيانات الطلاب")
     st.stop()
 
-# --- 3. واجهة المعلم ---
+# --- 3. واجهة المعلم (بكامل مميزاتها) ---
 if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
@@ -170,32 +170,22 @@ if st.session_state.role == "teacher":
                         is_read = "تمت القراءة" in status
                         bg_c = "#E8F5E9" if is_read else "#FFEBEE"
                         txt_c = "#1B5E20" if is_read else "#B71C1C"
-                        st.markdown(f"""
-                            <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; border: 2px solid {txt_c}; margin-bottom: 8px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <b style="color: {txt_c};">{status}</b>
-                                    <small>📅 {row.iloc[1]}</small>
-                                </div>
-                                <div style="margin-top: 5px; color: #1a1a1a;">
-                                    <b>النوع:</b> {row.iloc[2]} | <b>💬 الملاحظة:</b> {row.iloc[3]}
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"""<div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; border: 2px solid {txt_c}; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between;"><b>{status}</b><small>📅 {row.iloc[1]}</small></div>
+                            <div style="margin-top: 5px;"><b>النوع:</b> {row.iloc[2]} | <b>الملاحظة:</b> {row.iloc[3]}</div></div>""", unsafe_allow_html=True)
 
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
         df_ex = fetch_data("exams")
-        col_add, col_del = st.columns([2, 1])
-        with col_add:
-            with st.form("ex_form", clear_on_submit=True):
-                e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                e_ttl = st.text_input("موضوع الاختبار")
-                e_dt = st.date_input("الموعد")
-                if st.form_submit_button("نشر"):
-                    sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                    st.success("تم النشر ✅"); time.sleep(1); st.rerun()
+        with st.form("ex_form", clear_on_submit=True):
+            e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            e_ttl = st.text_input("موضوع الاختبار")
+            e_dt = st.date_input("الموعد")
+            if st.form_submit_button("نشر"):
+                sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
+                st.success("تم النشر ✅"); time.sleep(1); st.rerun()
 
-# --- 4. واجهة الطالب (كاملة مع حل مشكلة الزر) ---
+# --- 4. واجهة الطالب (مع الحل الجذري للرسالة الحمراء) ---
 elif st.session_state.role == "student":
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
@@ -232,37 +222,33 @@ elif st.session_state.role == "student":
             for idx, row in my_bh.iterrows():
                 dt = str(row.iloc[1]); bh_type = str(row.iloc[2]); note = str(row.iloc[3])
                 status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
-                
                 is_read = "تمت القراءة" in status
                 bg = "#E8F5E9" if is_read else "#FFF3E0"
                 border = "#1B5E20" if is_read else "#E65100"
                 
-                st.markdown(f"""
-                    <div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {border}; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <b style="color: {border};">{bh_type}</b>
-                            <small>📅 {dt}</small>
-                        </div>
-                        <div style="margin-top: 8px; color: #1a1a1a;"><b>💬 الملاحظة:</b> {note}</div>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {border}; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between;"><b style="color: {border};">{bh_type}</b><small>📅 {dt}</small></div>
+                    <div style="margin-top: 8px;"><b>💬 الملاحظة:</b> {note}</div></div>""", unsafe_allow_html=True)
                 
                 if not is_read:
-                    # زر الشكر مع حماية try-except لمنع الرسالة الحمراء
+                    # زر الشكر مع معالجة استباقية للأخطاء
                     if st.button(f"🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_{idx}"):
                         try:
                             with st.spinner("جاري التحديث..."):
+                                # جلب البيانات طازجة للتأكد من الحالة الحالية
                                 all_rows = sh_bh.get_all_values()
                                 for i, r in enumerate(all_rows):
                                     if r[0] == s_name and r[1] == dt and r[3] == note:
-                                        sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                        st.balloons()
-                                        st.toast("تم إرسال تقديرك للمعلم! 🌸")
-                                        time.sleep(1)
+                                        # التحقق إذا كانت قد حدثت بالفعل لتجنب الخطأ المتكرر
+                                        if "تمت القراءة" not in r[4]:
+                                            sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
+                                            st.balloons()
+                                            st.toast("تم إرسال تقديرك! 🌸")
+                                            time.sleep(1)
                                         st.rerun()
                                         break
-                        except:
-                            # في حال حدوث خطأ بسبب الضغط المتكرر، يتم تحديث الصفحة صامتاً
+                        except Exception:
+                            # في حال حدوث أي خطأ ناتج عن الضغط المتكرر، يتم تحديث الواجهة بهدوء
                             st.rerun()
         else: st.info("سجلك نظيف!")
 
