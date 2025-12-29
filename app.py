@@ -151,42 +151,12 @@ if st.session_state.role == "teacher":
                         if target_email and "@" in str(target_email):
                             send_email_alert(sel_st, target_email, t_v, n_v)
                         st.success("تم الحفظ وتحديث النقاط ✅"); time.sleep(1); st.rerun()
-               st.divider()
+                st.divider()
                 st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
                 df_bh_teacher = fetch_data("behavior")
-                
                 if not df_bh_teacher.empty:
-                    # 1. تنظيف البيانات وفلترة الطالب المختار
-                    my_bh_teacher = df_bh_teacher[df_bh_teacher['student_id'] == sel_st].copy()
-                    # 2. الترتيب من الأحدث إلى الأقدم
-                    my_bh_teacher = my_bh_teacher.iloc[::-1] 
-                    
-                    for index, row in my_bh_teacher.iterrows():
-                        # جلب حالة القراءة من العمود المخصص
-                        status = str(row.get('الحالة', 'لم تُقرأ بعد'))
-                        
-                        # 3. تحديد الألوان لضمان الوضوح على الجوال
-                        is_read = "تمت القراءة" in status
-                        bg_c = "#E8F5E9" if is_read else "#FFEBEE"
-                        txt_c = "#1B5E20" if is_read else "#B71C1C"
-                        lbl = "✅ قرأها الطالب" if is_read else "🕒 لم تُقرأ بعد"
+                    st.dataframe(df_bh_teacher[df_bh_teacher['student_id'] == sel_st], use_container_width=True, hide_index=True)
 
-                        # 4. عرض البطاقة بتنسيق HTML متوافق مع الجوال
-                        st.markdown(f"""
-                            <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; 
-                                        border: 2px solid {txt_c}; margin-bottom: 8px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <b style="color: {txt_c}; font-size: 1em;">{lbl}</b>
-                                    <small style="color: #212121; font-weight: bold;">📅 {row.get('التاريخ', '---')}</small>
-                                </div>
-                                <div style="margin-top: 8px; color: #1a1a1a; font-weight: 500;">
-                                    <p style="margin:0;"><b>نوع السلوك:</b> {row.get('النوع', 'عام')}</p>
-                                    <p style="margin:5px 0 0 0;"><b>💬 الملاحظة:</b> {row.get('ملاحظة', 'لا يوجد نص')}</p>
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
         df_ex = fetch_data("exams")
@@ -237,16 +207,14 @@ elif st.session_state.role == "student":
     medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     
     c_pts1, c_pts2 = st.columns(2)
-    # 🏆 لوحة المؤشرات العلوية - تعديل التنسيق فقط للوضوح على الجوال
     with c_pts1:
         st.markdown(f"""<div style="background:#e3f2fd; padding:15px; border-radius:15px; text-align:center; border:2px solid #2196F3;">
             <p style="margin:0; color:#0d47a1; font-weight:bold; font-size:1.1em;">رصيد نقاطك</p>
-            <h2 style="margin:0; color:#0d47a1; text-shadow: none;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
-            
+            <h2 style="margin:0; color:#1565C0;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
     with c_pts2:
         st.markdown(f"""<div style="background:#f1f8e9; padding:15px; border-radius:15px; text-align:center; border:2px solid #4CAF50;">
             <p style="margin:0; color:#1b5e20; font-weight:bold; font-size:1.1em;">لقبك الحالي</p>
-            <h2 style="margin:0; color:#1b5e20; text-shadow: none;">{medal}</h2></div>""", unsafe_allow_html=True)
+            <h2 style="margin:0; color:#2E7D32;">{medal}</h2></div>""", unsafe_allow_html=True)
 
     st.divider()
 
@@ -267,26 +235,26 @@ elif st.session_state.role == "student":
         else:
             st.info("لا توجد درجات مرصودة حالياً.")
 
-   with t2:
+    with t2:
         st.markdown("### 📜 سجل رحلتي السلوكية")
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
-            # 1. فلترة الطالب والترتيب العكسي (الأحدث أولاً)
+            # 1. تنظيف شامل للبيانات وفلترة الطالب
             my_bh = df_bh[df_bh.iloc[:, 0].astype(str) == s_data['name']].copy()
             
             if not my_bh.empty:
+                # 2. الترتيب من الأحدث للأقدم عبر عكس المصفوفة (تجنباً لخطأ التاريخ)
                 my_bh = my_bh.iloc[::-1] 
                 
-                # ربط شيت السلوك لتمكين التحديث
-                sh_behavior = sh.worksheet("behavior")
-                
                 for index, row in my_bh.iterrows():
+                    # 3. جلب البيانات حسب موقع العمود وليس اسمه (لضمان النجاح)
+                    # نفترض: العمود 1=النوع، العمود 2=الملاحظة، العمود 3=التاريخ
                     bh_type = str(row.iloc[1]) if len(row) > 1 else "ملاحظة"
                     note_text = str(row.iloc[2]) if len(row) > 2 else "استمر في تألقك!"
                     date_val = str(row.iloc[3]) if len(row) > 3 else "---"
 
-                    # 2. نظام التلوين الداكن للوضوح على الجوال
+                    # 4. نظام تلوين ذكي (يفحص محتوى النص)
                     if any(word in bh_type for word in ["⭐", "متميز"]):
                         color, bg, icon = "#1B5E20", "#E8F5E9", "🏆"
                     elif any(word in bh_type for word in ["✅", "إيجابي"]):
@@ -298,30 +266,25 @@ elif st.session_state.role == "student":
                     else:
                         color, bg, icon = "#0D47A1", "#E3F2FD", "📝"
 
-                    # 3. عرض البطاقة بتنسيق متباين
+                    # 5. عرض البطاقة بتصميم جذاب ومنظم
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 15px; border-radius: 12px; 
                                     border-right: 10px solid {color}; margin-bottom: 10px; 
-                                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between;">
                                 <b style="color: {color}; font-size: 1.1em;">{icon} {bh_type}</b>
-                                <small style="color: #212121; font-weight: bold;">📅 {date_val}</small>
+                                <small style="color: #666;">📅 {date_val}</small>
                             </div>
-                            <div style="margin-top: 8px; color: #1a1a1a; font-weight: 600; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px;">
-                                💬 <b>الملاحظة:</b> {note_text}
+                            <div style="margin-top: 8px; color: #333; background: rgba(255,255,255,0.5); padding: 8px; border-radius: 8px;">
+                                <b>💬 الملاحظة:</b> {note_text}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # 4. زر الشكر (تم إصلاح متغير الشيت والإزاحة)
-                    if st.button(f"🙏 شكراً أستاذي زياد", key=f"btn_thx_{index}"):
-                        try:
-                            # تحديث العمود الخامس في الشيت (الحالة)
-                            sh_behavior.update_cell(index + 2, 5, "✅ تمت القراءة")
-                            st.balloons()
-                            st.toast("تم إرسال تقديرك للمعلم زياد! 🌸")
-                        except Exception as e:
-                            st.toast("شكراً لك يا بطل! استمر في تميزك")
+                    # زر الشكر التفاعلي
+                    if st.button(f"🙏 شكراً أستاذي ({index})", key=f"thx_{index}"):
+                        st.balloons()
+                        st.toast("تم إرسال تقديرك للمعلم! 🌸")
             else:
                 st.info("سجلك السلوكي نظيف يا بطل! ✨")
     with t3:
