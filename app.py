@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 # --- 1. الإعدادات والاتصال ---
-st.set_page_config(page_title="منصة الأستاذ زياد", layout="wide")
+st.set_page_config(page_title="منصة الأستاذ زياد المتكاملة", layout="wide")
 
 @st.cache_resource(ttl=300)
 def get_db():
@@ -47,66 +47,114 @@ if st.session_state.role is None:
             else: st.error("الرقم غير مسجل")
     st.stop()
 
-# --- 3. واجهة الطالب (إعلانات مخصصة + تحديث بيانات) ---
+# --- 3. واجهة الطالب (إعلانات مخصصة + تحديث بيانات + نتائج) ---
 if st.session_state.role == "student":
     st.sidebar.button("تسجيل خروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_safe("students")
     student_data = df_st[df_st.iloc[:,0].astype(str) == st.session_state.sid].iloc[0]
+    
     st.title(f"مرحباً بك: {student_data['name']}")
     
-    # 1. عرض الإعلانات المخصصة لصف الطالب فقط
-    st.markdown(f"### 📢 تعاميم الصف: {student_data['class']}")
-    try:
-        ann_df = fetch_safe("announcements")
-        # فلترة الإعلانات بناءً على صف الطالب
-        my_ann = ann_df[ann_df['target_class'] == student_data['class']]
-        if not my_ann.empty:
-            for msg in my_ann['message']: st.info(msg)
-        else: st.write("لا توجد إعلانات مخصصة لصفك حالياً.")
-    except: st.info("لا توجد إعلانات.")
+    # 📢 الإعلانات المخصصة للصف الدراسي
+    st.markdown(f"#### 📢 إعلانات الصف: {student_data['class']}")
+    df_ann = fetch_safe("announcements")
+    if not df_ann.empty:
+        my_ann = df_ann[df_ann['target_class'] == student_data['class']]
+        for m in my_ann['message']: st.info(m)
 
     st.divider()
-    t1, t2, t3 = st.tabs(["📊 نتيجتي", "📝 تحديث بياناتي", "✍️ الاختبارات"])
+    t1, t2, t3 = st.tabs(["📊 نتيجتي وتقييمي", "📧 تحديث بياناتي", "📝 الاختبارات"])
     
     with t1:
         df_g = fetch_safe("grades")
-        st.dataframe(df_g[df_g.iloc[:,0] == student_data['name']], use_container_width=True)
+        st.dataframe(df_g[df_g.iloc[:,0] == student_data['name']], use_container_width=True, hide_index=True)
+        st.metric("رصيد نقاط التميز ⭐", student_data['النقاط'] if 'النقاط' in student_data else 0)
     
-    with t2: # 2. إدخال الإيميل والجوال من شاشة الطالب
-        st.subheader("📧 تحديث معلومات التواصل")
+    with t2:
+        st.subheader("تحديث البريد الإلكتروني والجوال")
         with st.form("update_contact"):
-            new_mail = st.text_input("البريد الإلكتروني الجديد", value=student_data.get('الإيميل', ''))
-            new_phone = st.text_input("رقم الجوال الجديد", value=student_data.get('الجوال', ''))
-            if st.form_submit_button("حفظ التغييرات"):
-                ws_st = sh.worksheet("students")
-                cell = ws_st.find(st.session_state.sid)
-                ws_st.update_cell(cell.row, 7, new_mail) # تحديث عمود الإيميل
-                ws_st.update_cell(cell.row, 8, new_phone) # تحديث عمود الجوال
-                st.success("✅ تم تحديث بياناتك بنجاح"); time.sleep(1); st.rerun()
+            new_mail = st.text_input("البريد الإلكتروني", value=student_data.get('الإيميل', ''))
+            new_phone = st.text_input("رقم الجوال", value=student_data.get('الجوال', ''))
+            if st.form_submit_button("تحديث"):
+                ws_st = sh.worksheet("students"); cell = ws_st.find(st.session_state.sid)
+                ws_st.update_cell(cell.row, 7, new_mail) # عمود الإيميل
+                ws_st.update_cell(cell.row, 8, new_phone) # عمود الجوال
+                st.success("تم التحديث ✅"); time.sleep(1); st.rerun()
 
-# --- 4. واجهة المعلم (نشر إعلانات مخصصة) ---
+# --- 4. واجهة المعلم (الإدارة + السلوك + الدرجات + الإعلانات) ---
 elif st.session_state.role == "teacher":
     st.sidebar.button("تسجيل خروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.selectbox("القائمة", ["📊 الدرجات والسلوك", "👥 إدارة الطلاب", "📢 نشر إعلان مخصص"])
-    
-    if menu == "📢 نشر إعلان مخصص":
-        st.header("📢 نشر إعلان لصف محدد")
-        with st.form("ann_form"):
-            target_cls = st.selectbox("اختر الصف المستهدف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            msg_text = st.text_area("نص الإعلان")
-            if st.form_submit_button("نشر الإعلان"):
-                try:
-                    sh.worksheet("announcements").append_row([target_cls, msg_text, str(datetime.now())])
-                    st.success(f"✅ تم إرسال الإعلان لطلاب الصف {target_cls}")
-                except: st.error("تأكد من وجود ورقة باسم announcements")
 
-    elif menu == "📊 الدرجات والسلوك":
-        # (نفس كود رصد الدرجات والسلوك السابق)
-        st.subheader("📝 رصد الدرجات والتحفيز")
+    if menu == "📊 الدرجات والسلوك":
         df_st = fetch_safe("students")
-        sel_st = st.selectbox("الطالب", df_st['name'].tolist())
-        # ... بقية الكود ...
+        tab_b, tab_g = st.tabs(["🎭 السلوك (مع فلترة تلقائية)", "📝 رصد الدرجات"])
+        
+        with tab_b:
+            st.subheader("رصد السلوك")
+            with st.form("b_form"):
+                sel_st = st.selectbox("اختر الطالب", df_st['name'].tolist())
+                b_type = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
+                if st.form_submit_button("حفظ"):
+                    pts = 10 if "⭐" in b_type else 5 if "✅" in b_type else -5 if "⚠️" in b_type else -10
+                    sh.worksheet("behavior").append_row([sel_st, str(datetime.now().date()), b_type, ""])
+                    ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
+                    old = int(ws_st.cell(c.row, 9).value or 0); ws_st.update_cell(c.row, 9, old + pts)
+                    st.success("تم الحفظ"); st.rerun()
+            st.divider()
+            st.subheader(f"📋 سجل الطالب: {sel_st}")
+            df_b = fetch_safe("behavior")
+            st.dataframe(df_b[df_b.iloc[:,0] == sel_st], use_container_width=True)
+
+        with tab_g:
+            st.subheader("رصد ف1، ف2، والمشاركة")
+            df_g = fetch_safe("grades")
+            target = st.selectbox("الطالب", df_st['name'].tolist())
+            with st.form("g_form"):
+                c1, c2, c3 = st.columns(3)
+                f1 = c1.number_input("ف1"); f2 = c2.number_input("ف2"); part = c3.number_input("المشاركة والمهام")
+                if st.form_submit_button("تحديث الدرجات"):
+                    ws_g = sh.worksheet("grades")
+                    try: fnd = ws_g.find(target); ws_g.update(f'B{fnd.row}:D{fnd.row}', [[f1, f2, part]])
+                    except: ws_g.append_row([target, f1, f2, part])
+                    st.success("✅ تم التحديث"); st.rerun()
+            st.divider()
+            st.subheader("📋 كشف الدرجات العام")
+            st.dataframe(df_g, use_container_width=True)
 
     elif menu == "👥 إدارة الطلاب":
-        st.header("👥 قائمة الطلاب والبيانات")
-        st.dataframe(fetch_safe("students"), use_container_width=True)
+        st.header("إدارة الطلاب والحذف النهائي")
+        df_st = fetch_safe("students")
+        st.dataframe(df_st, use_container_width=True)
+        st.divider()
+        c_del, c_add = st.columns([1, 2])
+        with c_del:
+            st.subheader("🗑️ حذف طالب")
+            to_del = st.selectbox("اختر للحذف", [""] + df_st['name'].tolist())
+            if st.button("تأكيد الحذف الشامل"):
+                for s in ["students", "grades", "behavior"]:
+                    try: ws = sh.worksheet(s); ws.delete_rows(ws.find(to_del).row)
+                    except: pass
+                st.error("تم الحذف"); st.rerun()
+        with c_add:
+            st.subheader("📝 إضافة طالب جديد")
+            with st.form("add_st"):
+                id_v = st.text_input("الرقم")
+                name_v = st.text_input("الاسم")
+                col1, col2, col3 = st.columns(3)
+                cls_v = col1.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                yr_v = col2.text_input("العام", value="1446هـ")
+                lev_v = col3.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                sub_v = st.text_input("المادة الدراسية")
+                if st.form_submit_button("إضافة"):
+                    sh.worksheet("students").append_row([id_v, name_v, cls_v, yr_v, sub_v, lev_v, "", "", 0])
+                    st.success("تمت الإضافة"); st.rerun()
+
+    elif menu == "📢 نشر إعلان مخصص":
+        st.header("📢 إعلانات الصفوف")
+        with st.form("ann"):
+            t_cls = st.selectbox("الصف المستهدف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            msg = st.text_area("نص الإعلان")
+            if st.form_submit_button("نشر"):
+                sh.worksheet("announcements").append_row([t_cls, msg])
+                st.success("تم النشر ✅")
