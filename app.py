@@ -232,66 +232,64 @@ elif st.session_state.role == "student":
             st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
-        # 🎭 إصلاح عرض السلوك وتحويله إلى تجربة بصرية ممتعة
         st.markdown("### 📜 سجل رحلتي السلوكية")
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
+            # فلترة البيانات الخاصة بالطالب الحالي
             my_bh = df_bh[df_bh['student_id'] == s_data['name']]
+            
             if not my_bh.empty:
                 for _, row in my_bh.iterrows():
-                    # تحديد الأيقونة واللون بناءً على نوع السلوك
-                    bh_type = str(row.get('النوع', ''))
+                    # تحويل النص إلى نص صغير للبحث الدقيق عن النوع
+                    bh_text = str(row.get('النوع', '')).lower()
+                    note_content = str(row.get('ملاحظة', 'لا توجد تفاصيل'))
                     
-                    if "+" in bh_type or "⭐" in bh_type:
-                        icon = "✨ 🏆" # أيقونة التميز
-                        color = "#4CAF50" # أخضر نجاح
-                        bg = "#f1f8e9"
-                        label = "نقاط تحفيزية إيجابية"
-                    elif "-" in bh_type or "⚠️" in bh_type:
-                        icon = "⚠️ 📝" # أيقونة تنبيه
-                        color = "#F44336" # أحمر تنبيه
-                        bg = "#fff5f5"
-                        label = "ملاحظة تربوية"
+                    # --- المنطق الذكي لتحديد الهوية البصرية ---
+                    if any(word in bh_text for word in ["متميز", "⭐", "10+"]):
+                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9" # أخضر غامق للتميز
+                        label = "إنجاز استثنائي"
+                    elif any(word in bh_text for word in ["إيجابي", "✅", "5+"]):
+                        icon, color, bg = "🌟", "#43A047", "#F1F8E9" # أخضر فاتح للإيجابي
+                        label = "سلوك رائع"
+                    elif any(word in bh_text for word in ["تنبيه", "⚠️", "5-"]):
+                        icon, color, bg = "📢", "#F4511E", "#FFF3E0" # برتقالي للتنبيه
+                        label = "تنبيه تربوي"
+                    elif any(word in bh_text for word in ["سلبي", "❌", "10-"]):
+                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE" # أحمر للسلبي
+                        label = "ملاحظة هامة"
                     else:
-                        icon = "ℹ️"
-                        color = "#2196F3"
-                        bg = "#e3f2fd"
+                        icon, color, bg = "📝", "#1976D2", "#E3F2FD" # أزرق للملاحظات العامة
                         label = "ملاحظة عامة"
 
-                    # تصميم البطاقة الذكية
+                    # --- تصميم البطاقة الذكية المتفاعلة ---
                     st.markdown(f"""
                         <div style="
                             background-color: {bg}; 
                             padding: 15px; 
-                            border-radius: 12px; 
-                            border-right: 8px solid {color}; 
-                            margin-bottom: 12px; 
-                            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-                            transition: transform 0.2s;
+                            border-radius: 15px; 
+                            border-right: 10px solid {color}; 
+                            margin-bottom: 15px; 
+                            box-shadow: 2px 4px 10px rgba(0,0,0,0.05);
                         ">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 1.2em; font-weight: bold; color: {color};">
-                                    {icon} {bh_type}
+                                <span style="font-size: 1.3em; font-weight: bold; color: {color};">
+                                    {icon} {row.get('النوع', '')}
                                 </span>
-                                <span style="background: white; padding: 2px 8px; border-radius: 20px; font-size: 0.8em; color: #666; border: 1px solid #ddd;">
+                                <span style="background: rgba(255,255,255,0.6); padding: 3px 10px; border-radius: 12px; font-size: 0.85em; border: 1px solid {color}44;">
                                     📅 {row.get('التاريخ', '')}
                                 </span>
                             </div>
-                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">
-                                <p style="margin: 0; color: #333; font-size: 1.05em;">
-                                    <b>الملاحظة:</b> {row.get('ملاحظة', 'استمر في تألقك يا بطل!')}
-                                </p>
-                                <small style="color: {color}; font-weight: bold;">📍 {label}</small>
+                            <div style="margin-top: 10px; color: #333; line-height: 1.6;">
+                                <b style="color: {color};">📝 التفاصيل:</b> {note_content}
+                            </div>
+                            <div style="text-align: left; margin-top: 5px;">
+                                <small style="background: {color}; color: white; padding: 2px 8px; border-radius: 5px;">{label}</small>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
             else:
-                st.balloons() # احتفال بسيط للطالب المثالي
-                st.success("ما شاء الله! سجلك خالي من الملاحظات السلبية. أنت طالب مثالي! 🌟")
-        else:
-            st.info("لا توجد سجلات سلوكية مرصودة في النظام حالياً.")
-
+                st.info("سجلك السلوكي فارغ حالياً.. حافظ على تميزك! ✨")
     with t3:
         st.subheader("⚙️ تحديث البريد والجوال")
         with st.form("update_info"):
