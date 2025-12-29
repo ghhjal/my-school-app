@@ -236,58 +236,66 @@ elif st.session_state.role == "student":
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
+            # 1. تنظيف أسماء الأعمدة من المسافات المخفية لضمان عدم حدوث KeyError
+            df_bh.columns = df_bh.columns.str.strip()
+            
             # فلترة البيانات للطالب الحالي
             my_bh = df_bh[df_bh['student_id'] == s_data['name']].copy()
             
             if not my_bh.empty:
-                # --- حل مشكلة الترتيب (البحث عن عمود التاريخ برمجياً) ---
-                # نبحث عن العمود الذي يحتوي على كلمة تاريخ أو date لترتيبه
+                # 2. البحث عن عمود التاريخ برمجياً وترتيبه من الأحدث للأقدم
                 date_col = next((c for c in my_bh.columns if 'تاريخ' in c or 'date' in c.lower()), None)
                 
                 if date_col:
                     my_bh[date_col] = pd.to_datetime(my_bh[date_col], errors='coerce')
-                    my_bh = my_bh.sort_values(by=date_col, ascending=False) # الترتيب من الأحدث للأقدم
+                    my_bh = my_bh.sort_values(by=date_col, ascending=False)
                 
                 for index, row in my_bh.iterrows():
-                    # جلب البيانات بذكاء لضمان الظهور
+                    # 3. جلب البيانات بذكاء (النوع والملاحظة)
                     bh_type_raw = str(row.get('النوع', 'ملاحظة عامة'))
-                    note_content = row.get('ملاحظة', row.get('الملاحظة', 'تم رصد ملاحظة سلوكية جديدة.'))
-                    current_date = str(row.get(date_col, ''))[:10] if date_col else "---"
+                    # البحث عن نص الملاحظة في أكثر من عمود محتمل
+                    note_content = row.get('ملاحظة', row.get('الملاحظة', row.get('note', 'استمر في تألقك يا بطل!')))
+                    date_display = str(row.get(date_col, ''))[:10] if date_col else "---"
 
-                    # --- منطق الأيقونات والألوان الذكي (يقرأ الرموز والكلمات) ---
+                    # 4. محرك الأيقونات الذكي (يفحص الرموز والكلمات بدقة)
                     if any(x in bh_type_raw for x in ["⭐", "متميز", "10+"]):
-                        icon, color, bg = "🏆", "#2E7D32", "#E8F5E9" # أخضر متميز
+                        icon, color, bg, label = "🏆", "#1B5E20", "#E8F5E9", "تميز استثنائي"
                     elif any(x in bh_type_raw for x in ["✅", "إيجابي", "5+"]):
-                        icon, color, bg = "🌟", "#43A047", "#F1F8E9" # أخضر إيجابي
+                        icon, color, bg, label = "🌟", "#2E7D32", "#F1F8E9", "سلوك إيجابي"
                     elif any(x in bh_type_raw for x in ["⚠️", "تنبيه", "5-"]):
-                        icon, color, bg = "📢", "#F4511E", "#FFF3E0" # برتقالي تنبيه
+                        icon, color, bg, label = "📢", "#E65100", "#FFF3E0", "تنبيه تربوي"
                     elif any(x in bh_type_raw for x in ["❌", "سلبي", "10-"]):
-                        icon, color, bg = "🚫", "#D32F2F", "#FFEBEE" # أحمر سلبي
+                        icon, color, bg, label = "🚫", "#B71C1C", "#FFEBEE", "ملاحظة سلبية"
                     else:
-                        icon, color, bg = "📝", "#1976D2", "#E3F2FD" # أزرق عام
+                        icon, color, bg, label = "📝", "#0D47A1", "#E3F2FD", "ملاحظة عامة"
 
-                    # --- تصميم البطاقة المتفاعلة الجذاب ---
+                    # 5. تصميم البطاقة المتفاعلة
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 18px; border-radius: 15px; 
-                                    border-right: 12px solid {color}; margin-bottom: 8px; 
-                                    box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+                                    border-right: 12px solid {color}; margin-bottom: 10px; 
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-size: 1.25em; font-weight: bold; color: {color};">{icon} {bh_type_raw}</span>
-                                <span style="font-size: 0.85em; color: #777; background: #fff; padding: 2px 10px; border-radius: 10px; border: 1px solid #eee;">
-                                    📅 {current_date}
+                                <span style="font-size: 1.2em; font-weight: bold; color: {color};">
+                                    {icon} {bh_type_raw}
+                                </span>
+                                <span style="font-size: 0.8em; color: #666; background: #fff; padding: 2px 10px; border-radius: 10px; border: 1px solid #ddd;">
+                                    📅 {date_display}
                                 </span>
                             </div>
-                            <div style="background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; color: #333;">
-                                <b>💬 نص الملاحظة:</b> {note_content}
+                            <div style="background: rgba(255,255,255,0.6); padding: 12px; border-radius: 10px; color: #333; border: 1px dashed {color}33;">
+                                <p style="margin:0;"><b>💬 الملاحظة:</b> {note_content}</p>
+                            </div>
+                            <div style="margin-top: 8px; text-align: left;">
+                                <small style="background:{color}; color:white; padding:2px 8px; border-radius:5px; font-size:0.75em;">{label}</small>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # زر الشكر التفاعلي
-                    if st.button(f"🙏 شكراً أستاذي", key=f"thx_{index}"):
+                    # 6. زر "شكراً أستاذي" التفاعلي
+                    if st.button(f"🙏 شكراً أستاذي ({index})", key=f"btn_thx_{index}"):
                         st.balloons()
-                        st.toast("وصل شكرك للأستاذ زياد! 🌸")
-                    st.markdown("---")
+                        st.toast(f"تم إرسال تقديرك للأستاذ زياد! 🌸")
+                    st.write("") # فاصل بسيط
             else:
                 st.info("سجلك السلوكي نظيف يا بطل! ✨")
     with t3:
