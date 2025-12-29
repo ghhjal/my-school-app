@@ -18,7 +18,7 @@ def get_db():
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(creds).open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
     except Exception as e:
-        st.error(f"خطأ في الاتصال: {e}")
+        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
         return None
 
 sh = get_db()
@@ -65,6 +65,8 @@ if st.session_state.role is None:
             if pwd == "1234":
                 st.session_state.role = "teacher"
                 st.rerun()
+            else:
+                st.error("كلمة المرور خاطئة")
     with c2:
         st.subheader("👨‍🎓 دخول الطالب")
         sid = st.text_input("الرقم الأكاديمي (id)")
@@ -74,6 +76,8 @@ if st.session_state.role is None:
                 st.session_state.role = "student"
                 st.session_state.sid = str(sid)
                 st.rerun()
+            else:
+                st.error("الرقم الأكاديمي غير مسجل")
     st.stop()
 
 # --- 3. واجهة المعلم ---
@@ -81,35 +85,63 @@ if st.session_state.role == "teacher":
     st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.radio("القائمة الرئيسية", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك", "📢 إعلانات الاختبارات"])
 
+    df_st = fetch_data("students")
+
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة بيانات الطلاب")
-        df_st = fetch_data("students")
         st.dataframe(df_st, use_container_width=True, hide_index=True)
-        # كود الإضافة والحذف يظل كما هو لضمان الاستقرار
+        st.divider()
+        col_del, col_add = st.columns([1, 2])
+        with col_del:
+            st.subheader("🗑️ حذف طالب")
+            to_del = st.selectbox("اسم الطالب للحذف", [""] + df_st['name'].tolist())
+            if st.button("تأكيد الحذف الشامل"):
+                if to_del:
+                    for s in ["students", "grades", "behavior"]:
+                        try:
+                            ws = sh.worksheet(s)
+                            cell = ws.find(to_del)
+                            if cell: ws.delete_rows(cell.row)
+                        except: pass
+                    st.error(f"تم حذف {to_del} من جميع السجلات"); time.sleep(1); st.rerun()
+        with col_add:
+            st.subheader("📝 إضافة طالب جديد")
+            with st.form("add_form", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                id_v = c1.text_input("الرقم الأكاديمي")
+                name_v = c2.text_input("اسم الطالب")
+                c3, c4, c5 = st.columns(3)
+                cls_v = c3.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                yr_v = c4.text_input("العام", value="1447هـ")
+                sub_v = c5.text_input("المادة", value="اللغة الإنجليزية")
+                lev_v = st.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                if st.form_submit_button("إضافة الطالب"):
+                    sh.worksheet("students").append_row([id_v, name_v, cls_v, yr_v, sub_v, lev_v, "", "", 0])
+                    st.success("تمت الإضافة بنجاح ✅"); st.rerun()
 
     elif menu == "📊 الدرجات والسلوك":
         tab1, tab2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
-        df_st = fetch_data("students")
         
         with tab1:
-            st.subheader("📝 رصد الدرجات")
-            target = st.selectbox("اختر الطالب للدرجات", [""] + df_st['name'].tolist())
+            st.subheader("📝 رصد وتعديل الدرجات")
+            target = st.selectbox("اختر الطالب", [""] + df_st['name'].tolist())
             if target:
                 with st.form("g_form"):
                     c1, c2, c3 = st.columns(3)
-                    v1 = c1.number_input("ف1")
-                    v2 = c2.number_input("ف2")
-                    v3 = c3.number_input("مشاركة")
-                    if st.form_submit_button("حفظ"):
+                    v1 = c1.number_input("درجة ف1 (p1)", min_value=0, max_value=100)
+                    v2 = c2.number_input("درجة ف2 (p2)", min_value=0, max_value=100)
+                    v3 = c3.number_input("المشاركة (perf)", min_value=0, max_value=100)
+                    if st.form_submit_button("حفظ الدرجات"):
                         ws_g = sh.worksheet("grades")
                         try:
                             fnd = ws_g.find(target)
                             ws_g.update(f'B{fnd.row}:D{fnd.row}', [[v1, v2, v3]])
                         except:
                             ws_g.append_row([target, v1, v2, v3])
-                        st.success("تم التحديث ✅")
+                        st.success(f"تم تحديث درجات {target} ✅")
+            st.dataframe(fetch_data("grades"), use_container_width=True, hide_index=True)
 
-        with tab2: # شاشة رصد السلوك
+        with tab2:
             st.subheader("🎭 رصد السلوك والتحفيز")
             sel_st = st.selectbox("اسم الطالب للسلوك", [""] + df_st['name'].tolist())
             if sel_st:
@@ -120,46 +152,52 @@ if st.session_state.role == "teacher":
                     d_v = st.date_input("التاريخ", datetime.now())
                     t_v = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
                     n_v = st.text_input("ملاحظة السلوك")
-                    if st.form_submit_button("حفظ وإرسال إشعار"):
+                    if st.form_submit_button("حفظ وإرسال إيميل"):
                         pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
                         sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v])
-                        
                         ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                         old_pts = int(ws_st.cell(c.row, 9).value or 0)
                         ws_st.update_cell(c.row, 9, old_pts + pts)
                         
                         if target_email and "@" in str(target_email):
                             send_email_alert(sel_st, target_email, t_v, n_v)
-                            st.info(f"📧 تم إرسال إشعار لولي الأمر: {target_email}")
-                        st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
+                        st.success("تم الحفظ وتحديث النقاط ✅"); time.sleep(1); st.rerun()
+
+                st.divider()
+                st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
+                df_bh_teacher = fetch_data("behavior")
+                if not df_bh_teacher.empty:
+                    st.dataframe(df_bh_teacher[df_bh_teacher['student_id'] == sel_st], use_container_width=True, hide_index=True)
 
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إعلانات المواعيد")
         with st.form("ex_form"):
             e_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            e_ttl = st.text_input("الموضوع")
-            e_dt = st.date_input("التاريخ")
-            if st.form_submit_button("نشر"):
+            e_ttl = st.text_input("موضوع الاختبار")
+            e_dt = st.date_input("الموعد")
+            if st.form_submit_button("نشر الإعلان"):
                 sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                st.success("تم النشر ✅")
+                st.success("تم النشر بنجاح ✅")
+        st.dataframe(fetch_data("exams"), use_container_width=True, hide_index=True)
 
-# --- 4. واجهة الطالب (مصححة الأخطاء) ---
+# --- 4. واجهة الطالب (النسخة المعدلة والمصلحة) ---
 elif st.session_state.role == "student":
-    st.sidebar.button("خروج", on_click=lambda: st.session_state.update({"role": None}))
+    st.sidebar.button("تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # الإعلانات
+    # تنبيهات الاختبارات
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data['class']]
         for _, r in my_ex.iterrows():
-            st.warning(f"🔔 **تنبيه:** {r['العنوان']} بتاريخ {r['التاريخ']}")
+            st.warning(f"🔔 **موعد اختبار جديد:** {r['العنوان']} بتاريخ {r['التاريخ']}")
 
     st.markdown(f"### 👋 مرحباً بك يا بطل: {s_data['name']}")
-    # جلب المرحلة والمادة بشكل صحيح
+    
+    # إصلاح المرحلة والمادة
     s_lev = s_data.get('المرحلة', 'غير محدد')
-    s_sub = s_data.get('sem', 'غير محدد')
+    s_sub = s_data.get('sem', 'اللغة الإنجليزية')
     st.info(f"📍 الصف: {s_data['class']} | المرحلة: {s_lev} | المادة: {s_sub}")
 
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سلوكي", "📧 بياناتي"])
@@ -171,24 +209,31 @@ elif st.session_state.role == "student":
         if not my_g.empty:
             top_g = my_g.iloc[0]
             c1, c2, c3 = st.columns(3)
-            c1.metric("فترة 1", top_g['p1']); c2.metric("فترة 2", top_g['p2']); c3.metric("مشاركة", top_g['perf'])
+            c1.metric("فترة 1", top_g['p1'])
+            c2.metric("فترة 2", top_g['p2'])
+            c3.metric("المشاركة", top_g['perf'])
             st.dataframe(my_g, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
-        st.subheader(f"⭐ رصيد النقاط: {s_data.get('النقاط', 0)}")
-        # إصلاح الخطأ: جلب بيانات السلوك أولاً ثم عرضها
+        st.subheader(f"⭐ رصيد نقاطي: {s_data.get('النقاط', 0)}")
+        # إصلاح خطأ الـ NameError في جدول السلوك
         df_behavior_data = fetch_data("behavior")
         if not df_behavior_data.empty:
             my_behavior = df_behavior_data[df_behavior_data['student_id'] == s_data['name']]
             st.dataframe(my_behavior, use_container_width=True, hide_index=True)
         else:
-            st.info("لا يوجد سجل سلوك حالياً.")
+            st.info("لا يوجد سجل ملاحظات حالياً.")
 
     with t3:
+        st.subheader("📧 تحديث بيانات التواصل")
         with st.form("up_st"):
-            m = st.text_input("إيميل ولي الأمر", value=str(s_data.get('الإيميل', '')))
-            p = st.text_input("الجوال", value=str(s_data.get('الجوال', '')))
-            if st.form_submit_button("تحديث البيانات"):
-                ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
-                ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
-                st.success("تم التحديث ✅"); st.rerun()
+            new_mail = st.text_input("بريد ولي الأمر", value=str(s_data.get('الإيميل', '')))
+            new_phone = st.text_input("رقم الجوال", value=str(s_data.get('الجوال', '')))
+            if st.form_submit_button("حفظ التغييرات"):
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                ws.update_cell(cell.row, 7, new_mail)
+                ws.update_cell(cell.row, 8, new_phone)
+                st.success("تم تحديث بياناتك بنجاح ✅"); st.rerun()
