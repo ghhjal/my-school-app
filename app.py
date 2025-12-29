@@ -69,8 +69,7 @@ if st.session_state.role is None:
         if st.button("دخول الطالب"):
             df_st = fetch_data("students")
             if not df_st.empty:
-                # محاولة البحث عن الطالب بغض النظر عن اسم عمود الـ ID
-                id_col = df_st.columns[0] # افترض أن العمود الأول هو المعرف
+                id_col = df_st.columns[0]
                 if str(sid_input) in df_st[id_col].astype(str).values:
                     st.session_state.role = "student"
                     st.session_state.sid = str(sid_input)
@@ -94,7 +93,6 @@ if st.session_state.role == "teacher":
         col_del, col_add = st.columns([1, 2])
         with col_del:
             st.subheader("🗑️ حذف طالب")
-            # استخدام العمود الثاني (الاسم) للاختيار
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
             if name_col:
                 to_del = st.selectbox("اسم الطالب للحذف", [""] + df_st[name_col].tolist())
@@ -148,7 +146,6 @@ if st.session_state.role == "teacher":
             sel_st = st.selectbox("اسم الطالب للسلوك", [""] + df_st[name_col].tolist()) if name_col else None
             if sel_st:
                 st_info = df_st[df_st[name_col] == sel_st].iloc[0]
-                # البحث عن عمود الإيميل بمرونة
                 email_col = next((c for c in df_st.columns if 'إيميل' in str(c) or 'Email' in str(c)), "")
                 target_email = st_info.get(email_col, '') if email_col else ""
                 
@@ -158,9 +155,9 @@ if st.session_state.role == "teacher":
                     n_v = st.text_input("ملاحظة السلوك")
                     if st.form_submit_button("حفظ وإرسال إيميل"):
                         pts = 10 if "⭐" in t_v else 5 if "✅" in t_v else -5 if "⚠️" in t_v else -10
+                        # إضافة صف جديد مع حالة "لم تقرأ" في العمود الخامس
                         sh.worksheet("behavior").append_row([sel_st, str(d_v), t_v, n_v, "🕒 لم تُقرأ بعد"])
                         ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
-                        # العمود 9 هو عمود النقاط
                         old_pts = int(ws_st.cell(c.row, 9).value or 0)
                         ws_st.update_cell(c.row, 9, old_pts + pts)
                         if target_email and "@" in str(target_email):
@@ -171,6 +168,7 @@ if st.session_state.role == "teacher":
                 st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
                 df_bh_teacher = fetch_data("behavior")
                 if not df_bh_teacher.empty:
+                    # فلترة الطالب وعرض حالة القراءة
                     my_bh_teacher = df_bh_teacher[df_bh_teacher.iloc[:, 0] == sel_st].iloc[::-1]
                     for index, row in my_bh_teacher.iterrows():
                         status = str(row.iloc[4]) if len(row) > 4 else "🕒 لم تُقرأ بعد"
@@ -178,13 +176,13 @@ if st.session_state.role == "teacher":
                         bg_c = "#E8F5E9" if is_read else "#FFEBEE"
                         txt_c = "#1B5E20" if is_read else "#B71C1C"
                         st.markdown(f"""
-                            <div style="background-color: {bg_c}; padding: 10px; border-radius: 10px; border: 2px solid {txt_c}; margin-bottom: 5px;">
+                            <div style="background-color: {bg_c}; padding: 12px; border-radius: 12px; border: 2px solid {txt_c}; margin-bottom: 8px;">
                                 <div style="display: flex; justify-content: space-between;">
                                     <b style="color: {txt_c};">{status}</b>
                                     <small>📅 {row.iloc[1]}</small>
                                 </div>
-                                <div style="margin-top: 5px;">
-                                    <b>النوع:</b> {row.iloc[2]} | <b>الملاحظة:</b> {row.iloc[3]}
+                                <div style="margin-top: 5px; color: #1a1a1a;">
+                                    <b>النوع:</b> {row.iloc[2]} | <b>💬 الملاحظة:</b> {row.iloc[3]}
                                 </div>
                             </div>
                         """, unsafe_allow_html=True)
@@ -208,10 +206,10 @@ elif st.session_state.role == "student":
     df_st = fetch_data("students")
     id_col = df_st.columns[0]
     s_data = df_st[df_st[id_col].astype(str) == st.session_state.sid].iloc[0]
+    s_name = s_data.iloc[1]
     
-    st.markdown(f"<h2 style='text-align:center; color:#42A5F5;'>🌟 أهلاً بك: {s_data.iloc[1]}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:center; color:#42A5F5;'>🌟 أهلاً بك يا بطل: {s_name}</h2>", unsafe_allow_html=True)
     
-    # الأوسمة
     pts = int(s_data.iloc[8] or 0)
     medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     c1, c2 = st.columns(2)
@@ -223,7 +221,7 @@ elif st.session_state.role == "student":
     
     with t1:
         df_g = fetch_data("grades")
-        my_g = df_g[df_g.iloc[:, 0] == s_data.iloc[1]]
+        my_g = df_g[df_g.iloc[:, 0] == s_name]
         if not my_g.empty:
             g = my_g.iloc[0]
             ca, cb, cc = st.columns(3)
@@ -235,15 +233,16 @@ elif st.session_state.role == "student":
     with t2:
         df_bh = fetch_data("behavior")
         if not df_bh.empty:
-            my_bh = df_bh[df_bh.iloc[:, 0] == s_data.iloc[1]].copy().iloc[::-1]
+            my_bh = df_bh[df_bh.iloc[:, 0] == s_name].copy().iloc[::-1]
             sh_bh = sh.worksheet("behavior")
             
             for idx, row in my_bh.iterrows():
-                bh_type = row.iloc[2]; note = row.iloc[3]; dt = row.iloc[1]
+                dt = str(row.iloc[1]); bh_type = str(row.iloc[2]); note = str(row.iloc[3])
                 status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
                 
-                bg = "#E8F5E9" if "⭐" in bh_type or "✅" in bh_type else "#FFEBEE"
-                border = "#1B5E20" if "⭐" in bh_type or "✅" in bh_type else "#B71C1C"
+                is_read = "تمت القراءة" in status
+                bg = "#E8F5E9" if is_read else "#FFF3E0"
+                border = "#1B5E20" if is_read else "#E65100"
                 
                 st.markdown(f"""
                     <div style="background-color: {bg}; padding: 15px; border-radius: 12px; border-right: 8px solid {border}; margin-bottom: 10px;">
@@ -255,23 +254,26 @@ elif st.session_state.role == "student":
                     </div>
                 """, unsafe_allow_html=True)
                 
-                if "لم تُقرأ" in status:
-                    # تعديل السطر للحصول على رقم الصف الحقيقي في الشيت
-                    actual_row = my_bh.index.get_loc(idx) + 2 if hasattr(my_bh.index, 'get_loc') else idx + 2
+                if not is_read:
                     if st.button(f"🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_{idx}"):
                         try:
-                            # البحث عن الطالب والملاحظة لضمان تحديث الصف الصحيح
+                            # البحث الدقيق عن الصف في Google Sheets باستخدام الاسم والتاريخ والملاحظة
                             all_rows = sh_bh.get_all_values()
+                            found = False
                             for i, r in enumerate(all_rows):
-                                if r[0] == s_data.iloc[1] and r[1] == dt and r[3] == note:
+                                if r[0] == s_name and r[1] == dt and r[3] == note:
                                     sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
+                                    found = True
                                     break
-                            st.balloons()
-                            st.toast("تم إرسال تقديرك للمعلم! 🌸")
-                            time.sleep(1); st.rerun()
-                        except:
-                            st.error("خطأ في تحديث الحالة")
-        else: st.info("سجلك نظيف يا بطل!")
+                            if found:
+                                st.balloons()
+                                st.toast("تم إرسال شكرك للأستاذ زياد! 🌸")
+                                time.sleep(1); st.rerun()
+                            else:
+                                st.error("لم يتم العثور على الملاحظة في السجل")
+                        except Exception as e:
+                            st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
+        else: st.info("سجلك السلوكي نظيف يا بطل! ✨")
 
     with t3:
         with st.form("up"):
