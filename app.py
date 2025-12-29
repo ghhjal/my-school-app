@@ -188,29 +188,33 @@ elif st.session_state.role == "student":
     df_st = fetch_data("students")
     s_data = df_st[df_st['id'].astype(str) == st.session_state.sid].iloc[0]
     
-    # 🔔 شريط التنبيهات بتصميم عصري
+    # 🔔 شريط التنبيهات بتصميم محسن للجوال
     df_ex = fetch_data("exams")
     if not df_ex.empty:
         my_ex = df_ex[df_ex['الصف'] == s_data.get('class', '')]
         for _, r in my_ex.iterrows():
-            st.markdown(f"""<div style="background:#fff9e6; padding:10px; border-right:5px solid #ffc107; border-radius:5px; margin-bottom:5px;">
-                <small>🔔 موعد اختبار جديد: <b>{r.get('العنوان', '')}</b> بتاريخ {r.get('التاريخ', '')}</small></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div style="background:#fff3cd; padding:12px; border-right:6px solid #ffc107; 
+                border-radius:10px; margin-bottom:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <strong style="color: #856404; font-size: 0.9em; display: block;">🔔 موعد اختبار: {r.get('العنوان', '')}</strong>
+                <span style="color: #533f03; font-size: 0.85em;">📅 التاريخ: {r.get('التاريخ', '')}</span>
+                </div>""", unsafe_allow_html=True)
 
-    # 👤 الترويسة العلوية
-    st.markdown(f"<h2 style='text-align:center; color:#1E88E5;'>🌟 أهلاً بك يا بطل: {s_data['name']}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center; color:#666;'>📍 الصف: {s_data.get('class', '')} | المادة: {s_data.get('المادة', 'اللغة الإنجليزية')}</p>", unsafe_allow_html=True)
+    # 👤 الترويسة العلوية المحسنة
+    st.markdown(f"<h2 style='text-align:center; color:#42A5F5; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);'>🌟 أهلاً بك يا بطل: {s_data['name']}</h2>", unsafe_allow_html=True)
 
-    # 🏆 لوحة المؤشرات العلوية بتصميم البطاقات
+    # 🏆 لوحة المؤشرات (إصلاح مشكلة بهتان الخط)
     pts = int(s_data.get('النقاط', 0))
     medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي" if pts >= 20 else "🥉 وسام برونزي"
     
     c_pts1, c_pts2 = st.columns(2)
     with c_pts1:
-        st.markdown(f"""<div style="background:#e3f2fd; padding:15px; border-radius:15px; text-align:center; border:1px solid #bbdefb;">
-            <p style="margin:0; color:#0d47a1;">رصيد نقاطك</p><h2 style="margin:0;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="background:#e3f2fd; padding:15px; border-radius:15px; text-align:center; border:2px solid #2196F3;">
+            <p style="margin:0; color:#0d47a1; font-weight:bold; font-size:1.1em;">رصيد نقاطك</p>
+            <h2 style="margin:0; color:#1565C0;">⭐ {pts}</h2></div>""", unsafe_allow_html=True)
     with c_pts2:
-        st.markdown(f"""<div style="background:#f1f8e9; padding:15px; border-radius:15px; text-align:center; border:1px solid #dcedc8;">
-            <p style="margin:0; color:#33691e;">لقبك الحالي</p><h2 style="margin:0;">{medal}</h2></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="background:#f1f8e9; padding:15px; border-radius:15px; text-align:center; border:2px solid #4CAF50;">
+            <p style="margin:0; color:#1b5e20; font-weight:bold; font-size:1.1em;">لقبك الحالي</p>
+            <h2 style="margin:0; color:#2E7D32;">{medal}</h2></div>""", unsafe_allow_html=True)
 
     st.divider()
 
