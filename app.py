@@ -151,7 +151,7 @@ if st.session_state.role == "teacher":
                         if target_email and "@" in str(target_email):
                             send_email_alert(sel_st, target_email, t_v, n_v)
                         st.success("تم الحفظ وتحديث النقاط ✅"); time.sleep(1); st.rerun()
-                st.divider()
+               st.divider()
                 st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
                 df_bh_teacher = fetch_data("behavior")
                 
@@ -184,12 +184,6 @@ if st.session_state.role == "teacher":
                         """, unsafe_allow_html=True)
                 else:
                     st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
-                        else:
-                            status_icon = "🕒"
-                            status_bg = "#FFEBEE" # أحمر فاتح لعدم القراءة
-                            status_text = "#B71C1C" # نص أحمر داكن للوضوح
-                            status_label = "لم يفتحها الطالب بعد"
-
                         # 4. عرض الملاحظة بتصميم البطاقة
                         st.markdown(f"""
                             <div style="background-color: {status_bg}; padding: 12px; border-radius: 12px; 
