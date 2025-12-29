@@ -72,7 +72,7 @@ if st.session_state.role == "teacher":
                         except: pass
                     st.error(f"تم حذف {to_del} من كافة السجلات"); time.sleep(1); st.rerun()
 
-        with col_add: # شاشة إضافة طالب
+        with col_add:
             st.subheader("📝 إضافة طالب جديد")
             with st.form("add_st_form", clear_on_submit=True):
                 c1, c2 = st.columns(2)
@@ -89,10 +89,10 @@ if st.session_state.role == "teacher":
 
     elif menu == "📊 الدرجات والسلوك":
         tab1, tab2 = st.tabs(["📝 رصد الدرجات", "🎭 رصد السلوك"])
-        
+        df_st = fetch_data("students")
+
         with tab1: # شاشة الدرجات
             st.subheader("تحديث درجات الطالب (p1, p2, perf)")
-            df_st = fetch_data("students")
             target = st.selectbox("اختر الطالب لتعديل درجته", df_st['name'].tolist())
             with st.form("g_form"):
                 col_g1, col_g2, col_g3 = st.columns(3)
@@ -108,21 +108,36 @@ if st.session_state.role == "teacher":
                     st.success("تم التحديث ✅")
             st.dataframe(fetch_data("grades"), use_container_width=True)
 
-        with tab2: # شاشة السلوك والتحفيز
+        with tab2: # شاشة السلوك المحدثة
             st.subheader("🎭 رصد السلوك والتحفيز")
+            sel_st = st.selectbox("اسم الطالب", df_st['name'].tolist(), key="behavior_select")
+            
             with st.form("b_form", clear_on_submit=True):
-                sel_st = st.selectbox("اسم الطالب", df_st['name'].tolist())
-                b_type = st.radio("نوع السلوك", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
+                c_date, c_type = st.columns([1, 2])
+                b_date = c_date.date_input("تاريخ الرصد", datetime.now()) # حقل التاريخ اليدوي
+                b_type = c_type.radio("نوع السلوك", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
                 note = st.text_input("ملاحظة السلوك")
                 if st.form_submit_button("حفظ الرصد"):
                     pts = 10 if "⭐" in b_type else 5 if "✅" in b_type else -5 if "⚠️" in b_type else -10
                     # حفظ في جدول السلوك
-                    sh.worksheet("behavior").append_row([sel_st, str(datetime.now().date()), b_type, note])
+                    sh.worksheet("behavior").append_row([sel_st, str(b_date), b_type, note])
                     # تحديث نقاط الطالب في جدول الطلاب
                     ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
-                    old_pts = int(ws_st.cell(c.row, 9).value or 0) # العمود التاسع "النقاط"
+                    old_pts = int(ws_st.cell(c.row, 9).value or 0)
                     ws_st.update_cell(c.row, 9, old_pts + pts)
-                    st.success(f"تم رصد السلوك وتحديث النقاط الطالب: {sel_st} ✅")
+                    st.success(f"تم رصد السلوك وتحديث النقاط ✅")
+                    time.sleep(1); st.rerun()
+
+            # إظهار سلوك الطالب بالأسفل بفلتر
+            st.divider()
+            st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
+            df_bh = fetch_data("behavior")
+            if not df_bh.empty:
+                student_history = df_bh[df_bh['student_id'] == sel_st]
+                if not student_history.empty:
+                    st.dataframe(student_history, use_container_width=True, hide_index=True)
+                else:
+                    st.info("لا توجد ملاحظات سابقة لهذا الطالب")
 
     elif menu == "📢 إعلانات الاختبارات": # شاشة الاختبارات
         st.header("📢 إضافة تنبيه اختبار جديد")
