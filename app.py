@@ -267,26 +267,26 @@ elif st.session_state.role == "student":
         else:
             st.info("لا توجد درجات مرصودة حالياً.")
 
-    with t2:
+   with t2:
         st.markdown("### 📜 سجل رحلتي السلوكية")
         df_bh = fetch_data("behavior")
         
         if not df_bh.empty:
-            # 1. تنظيف شامل للبيانات وفلترة الطالب
+            # 1. فلترة الطالب والترتيب العكسي (الأحدث أولاً)
             my_bh = df_bh[df_bh.iloc[:, 0].astype(str) == s_data['name']].copy()
             
             if not my_bh.empty:
-                # 2. الترتيب من الأحدث للأقدم عبر عكس المصفوفة (تجنباً لخطأ التاريخ)
                 my_bh = my_bh.iloc[::-1] 
                 
+                # ربط شيت السلوك لتمكين التحديث
+                sh_behavior = sh.worksheet("behavior")
+                
                 for index, row in my_bh.iterrows():
-                    # 3. جلب البيانات حسب موقع العمود وليس اسمه (لضمان النجاح)
-                    # نفترض: العمود 1=النوع، العمود 2=الملاحظة، العمود 3=التاريخ
                     bh_type = str(row.iloc[1]) if len(row) > 1 else "ملاحظة"
                     note_text = str(row.iloc[2]) if len(row) > 2 else "استمر في تألقك!"
                     date_val = str(row.iloc[3]) if len(row) > 3 else "---"
 
-                    # 4. نظام تلوين ذكي (يفحص محتوى النص)
+                    # 2. نظام التلوين الداكن للوضوح على الجوال
                     if any(word in bh_type for word in ["⭐", "متميز"]):
                         color, bg, icon = "#1B5E20", "#E8F5E9", "🏆"
                     elif any(word in bh_type for word in ["✅", "إيجابي"]):
@@ -298,37 +298,30 @@ elif st.session_state.role == "student":
                     else:
                         color, bg, icon = "#0D47A1", "#E3F2FD", "📝"
 
-                    # 5. عرض البطاقة بتصميم جذاب ومنظم
+                    # 3. عرض البطاقة بتنسيق متباين
                     st.markdown(f"""
                         <div style="background-color: {bg}; padding: 15px; border-radius: 12px; 
                                     border-right: 10px solid {color}; margin-bottom: 10px; 
-                                    box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                            <div style="display: flex; justify-content: space-between;">
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <b style="color: {color}; font-size: 1.1em;">{icon} {bh_type}</b>
-                                <small style="color: #666;">📅 {date_val}</small>
+                                <small style="color: #212121; font-weight: bold;">📅 {date_val}</small>
                             </div>
-                            <div style="margin-top: 8px; color: #333; background: rgba(255,255,255,0.5); padding: 8px; border-radius: 8px;">
-                                <b>💬 الملاحظة:</b> {note_text}
+                            <div style="margin-top: 8px; color: #1a1a1a; font-weight: 600; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px;">
+                                💬 <b>الملاحظة:</b> {note_text}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # زر الشكر التفاعلي مع إشعار للمعلم
-                    if st.button(f"🙏 شكراً أستاذي", key=f"btn_thanks_{index}"):
+                    # 4. زر الشكر (تم إصلاح متغير الشيت والإزاحة)
+                    if st.button(f"🙏 شكراً أستاذي زياد", key=f"btn_thx_{index}"):
                         try:
-                            # تحديث حالة القراءة في جوجل شيت
-                            # index + 2 للوصول للصف الصحيح في الشيت
+                            # تحديث العمود الخامس في الشيت (الحالة)
                             sh_behavior.update_cell(index + 2, 5, "✅ تمت القراءة")
-                            
-                            st.balloons() # احتفال للطالب
-                            st.toast("وصل شكرك للأستاذ زياد! 🌸")
-                        except:
+                            st.balloons()
+                            st.toast("تم إرسال تقديرك للمعلم زياد! 🌸")
+                        except Exception as e:
                             st.toast("شكراً لك يا بطل! استمر في تميزك")
-                            
-                            st.balloons() # احتفال للطالب
-                            st.toast("تم إرسال تقديرك للمعلم زياد! 🌸") # تأكيد فوري
-                        except:
-                            st.toast("شكراً لك يا بطل!")
             else:
                 st.info("سجلك السلوكي نظيف يا بطل! ✨")
     with t3:
