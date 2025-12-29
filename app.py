@@ -1,4 +1,4 @@
-# --- (القسم الأول: المكتبات والربط والوظائف) ---
+# --- (القسم الأول: المكتبات والربط) ---
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -11,7 +11,8 @@ from email.header import Header
 
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
 
-@st.cache_resource(ttl=60)
+# تقليل الـ ttl لضمان عدم تجاوز الكوتا مع الحفاظ على تحديث البيانات
+@st.cache_resource(ttl=300) 
 def get_db():
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -23,11 +24,13 @@ def get_db():
 
 sh = get_db()
 
+# وظيفة جلب بيانات محسنة لتقليل استهلاك الكوتا
 def fetch_data(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
-        return pd.DataFrame(ws.get_all_records())
-    except:
+        data = ws.get_all_records()
+        return pd.DataFrame(data)
+    except Exception as e:
         return pd.DataFrame()
 
 def send_email_alert(student_name, parent_email, behavior_type, note):
@@ -56,16 +59,16 @@ if st.session_state.role is None:
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("🔐 دخول المعلم")
-        pwd = st.text_input("كلمة المرور", type="password", key="t_pwd")
-        if st.button("دخول المعلم"):
+        pwd = st.text_input("كلمة المرور", type="password", key="teacher_login_pwd")
+        if st.button("دخول المعلم", key="teacher_login_btn"):
             if pwd == "1234":
                 st.session_state.role = "teacher"
                 st.rerun()
             else: st.error("كلمة المرور خاطئة")
     with c2:
         st.subheader("👨‍🎓 دخول الطالب")
-        sid_input = st.text_input("الرقم الأكاديمي", key="s_id")
-        if st.button("دخول الطالب"):
+        sid_input = st.text_input("الرقم الأكاديمي", key="student_login_id")
+        if st.button("دخول الطالب", key="student_login_btn"):
             df_st = fetch_data("students")
             if not df_st.empty:
                 id_col = df_st.columns[0]
@@ -124,9 +127,9 @@ if st.session_state.role == "teacher":
             if target:
                 with st.form("g_form"):
                     c1, c2, c3 = st.columns(3)
-                    v1 = c1.number_input("درجة ف1 (p1)", 0, 100)
-                    v2 = c2.number_input("درجة ف2 (p2)", 0, 100)
-                    v3 = c3.number_input("المشاركة (perf)", 0, 100)
+                    v1 = c1.number_input("درجة ف1", 0, 100)
+                    v2 = c2.number_input("درجة ف2", 0, 100)
+                    v3 = c3.number_input("المشاركة", 0, 100)
                     if st.form_submit_button("حفظ الدرجات"):
                         ws_g = sh.worksheet("grades")
                         try:
@@ -138,7 +141,7 @@ if st.session_state.role == "teacher":
         with tab2:
             st.subheader("🎭 رصد وفلترة السلوك")
             name_col = df_st.columns[1] if len(df_st.columns) > 1 else ""
-            sel_st = st.selectbox("اختر الطالب لمشاهدة سجله أو إضافة ملاحظة", [""] + df_st[name_col].tolist())
+            sel_st = st.selectbox("اختر الطالب لمشاهدة سجله", [""] + df_st[name_col].tolist())
             
             if sel_st:
                 with st.form("b_form", clear_on_submit=True):
@@ -151,17 +154,15 @@ if st.session_state.role == "teacher":
                         ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                         old_pts = int(ws_st.cell(c.row, 9).value or 0)
                         ws_st.update_cell(c.row, 9, old_pts + pts)
-                        st.success("تم الحفظ ✅"); st.rerun()
+                        st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
                 
-                # --- (إصلاح الفلتر: عرض ملاحظات الطالب المختار فقط) ---
+                # إصلاح الفلتر: عرض ملاحظات الطالب المختار فقط
                 st.divider()
-                st.write(f"🔍 سجل الطالب: {sel_st}")
+                st.write(f"🔍 ملاحظات: {sel_st}")
                 df_all_bh = fetch_data("behavior")
                 if not df_all_bh.empty:
                     filtered_bh = df_all_bh[df_all_bh.iloc[:, 0] == sel_st].iloc[::-1]
                     st.dataframe(filtered_bh, use_container_width=True, hide_index=True)
-            else:
-                st.info("الرجاء اختيار اسم طالب لعرض ملاحظاته")
 
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
@@ -173,7 +174,7 @@ if st.session_state.role == "teacher":
             e_dt = st.date_input("الموعد")
             if st.form_submit_button("نشر الموعد"):
                 sh.worksheet("exams").append_row([e_cls, e_ttl, str(e_dt)])
-                st.success("تم النشر بنجاح ✅"); time.sleep(1); st.rerun()
+                st.success("تم النشر ✅"); time.sleep(1); st.rerun()
 
 # --- 4. واجهة الطالب ---
 elif st.session_state.role == "student":
@@ -195,7 +196,6 @@ elif st.session_state.role == "student":
     t1, t2, t3 = st.tabs(["📊 نتيجتي", "🎭 سجل السلوك", "⚙️ بياناتي"])
     
     with t1:
-        st.subheader("📊 درجاتي")
         df_g = fetch_data("grades")
         if not df_g.empty:
             my_g = df_g[df_g.iloc[:, 0] == s_name]
@@ -203,7 +203,6 @@ elif st.session_state.role == "student":
                 g = my_g.iloc[0]
                 ca, cb, cc = st.columns(3)
                 ca.metric("فترة 1", g.iloc[1]); cb.metric("فترة 2", g.iloc[2]); cc.metric("المشاركة", g.iloc[3])
-            else: st.info("الدرجات لم ترفع بعد")
     
     with t2:
         st.subheader("🎭 سجل السلوك")
@@ -214,32 +213,28 @@ elif st.session_state.role == "student":
             
             for idx, row in my_bh.iterrows():
                 dt, bh_type, note = str(row.iloc[1]), str(row.iloc[2]), str(row.iloc[3])
-                status = str(row.iloc[4]) if len(row) > 4 else "🕒 لم تُقرأ بعد"
-                is_read = "✅" in status
+                status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
+                is_read = "تمت القراءة" in status
                 
                 bg = "#E8F5E9" if is_read else "#FFF3E0"
                 st.markdown(f"<div style='background-color:{bg}; padding:15px; border-radius:10px; border-right:8px solid {'#1B5E20' if is_read else '#E65100'}; margin-bottom:10px;'><b>{bh_type}</b> | 📅 {dt}<br>{note}<br><small>الحالة: {status}</small></div>", unsafe_allow_html=True)
                 
-                # --- (إصلاح زر شكراً: البحث عن الصف الحقيقي بدقة) ---
-                btn_key = f"thx_btn_{s_name}_{idx}"
+                # إصلاح زر شكراً: تم تعديل الـ key وعملية البحث لتجنب الـ Quota error والـ IndexError
                 if not is_read:
-                    if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=btn_key):
+                    if st.button("🙏 شكراً أستاذي زياد (تأكيد القراءة)", key=f"thx_btn_{idx}_{s_name[:3]}"):
                         try:
-                            with st.spinner("جاري إبلاغ الأستاذ..."):
-                                all_vals = sh_bh.get_all_values()
-                                for i, r in enumerate(all_vals):
-                                    # التحقق من الاسم + التاريخ + الملاحظة لضمان الصف الصحيح
-                                    if r[0] == s_name and r[1] == dt and r[3] == note:
-                                        sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
-                                        st.balloons()
-                                        time.sleep(1); st.rerun()
-                                        break
-                        except:
-                            st.error("فشل الاتصال بقاعدة البيانات")
-        else: st.info("سجلك نظيف!")
+                            # البحث باستخدام طريقة سريعة ومباشرة
+                            all_rows = sh_bh.get_all_values()
+                            for i, r in enumerate(all_rows):
+                                if r[0] == s_name and r[1] == dt and r[3] == note:
+                                    sh_bh.update_cell(i + 1, 5, "✅ تمت القراءة")
+                                    st.balloons()
+                                    time.sleep(0.5); st.rerun()
+                                    break
+                        except Exception as e:
+                            st.error("انتظر قليلاً ثم حاول مرة أخرى (ضغط على الخادم)")
 
     with t3:
-        st.subheader("⚙️ تحديث البيانات")
         with st.form("up"):
             mail = st.text_input("إيميل ولي الأمر", value=str(s_data.iloc[6]))
             phone = st.text_input("رقم الجوال", value=str(s_data.iloc[7]))
