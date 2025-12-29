@@ -154,9 +154,46 @@ if st.session_state.role == "teacher":
                 st.divider()
                 st.subheader(f"📜 سجل ملاحظات الطالب: {sel_st}")
                 df_bh_teacher = fetch_data("behavior")
+                
                 if not df_bh_teacher.empty:
-                    st.dataframe(df_bh_teacher[df_bh_teacher['student_id'] == sel_st], use_container_width=True, hide_index=True)
+                    # 1. فلترة البيانات وعكس الترتيب ليكون الأحدث في الأعلى
+                    my_bh_teacher = df_bh_teacher[df_bh_teacher['student_id'] == sel_st].copy()
+                    my_bh_teacher = my_bh_teacher.iloc[::-1] # الترتيب العكسي الذكي
+                    
+                    for index, row in my_bh_teacher.iterrows():
+                        # 2. جلب حالة القراءة (نفترض أنها في عمود اسمه 'الحالة')
+                        status = str(row.get('الحالة', 'لم تُقرأ بعد'))
+                        
+                        # 3. تصميم بطاقة الإشعار الذكية
+                        if "تمت القراءة" in status:
+                            status_icon = "✅"
+                            status_bg = "#E8F5E9" # أخضر فاتح للقراءة
+                            status_text = "#1B5E20" # نص أخضر داكن للوضوح
+                            status_label = "قرأها الطالب وشكرك"
+                        else:
+                            status_icon = "🕒"
+                            status_bg = "#FFEBEE" # أحمر فاتح لعدم القراءة
+                            status_text = "#B71C1C" # نص أحمر داكن للوضوح
+                            status_label = "لم يفتحها الطالب بعد"
 
+                        # 4. عرض الملاحظة بتصميم البطاقة
+                        st.markdown(f"""
+                            <div style="background-color: {status_bg}; padding: 12px; border-radius: 12px; 
+                                        border: 1px solid {status_text}44; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: {status_text}; font-weight: bold; font-size: 0.9em;">
+                                        {status_icon} {status_label}
+                                    </span>
+                                    <small style="color: #666;">📅 {row.get('التاريخ', '---')}</small>
+                                </div>
+                                <div style="margin-top: 5px; color: #333; font-size: 0.95em;">
+                                    <b>نوع السلوك:</b> {row.get('النوع', 'عام')}<br>
+                                    <b>نص الملاحظة:</b> {row.get('ملاحظة', 'لا يوجد نص')}
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
     elif menu == "📢 إعلانات الاختبارات":
         st.header("📢 إدارة إعلانات المواعيد")
         df_ex = fetch_data("exams")
