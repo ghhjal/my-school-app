@@ -8,13 +8,40 @@ from datetime import datetime
 # --- 1. إعدادات الصفحة والاتصال ---
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide", initial_sidebar_state="expanded")
 
+# --- تعديل التنسيق للوضوح العالي من الجوال ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { width: 100%; border-radius: 8px; background-color: #1e3a8a; color: white; font-weight: bold; }
-    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 4px solid #1e3a8a; }
+    /* تحسين لون وشكل البطاقات (Metrics) لتكون واضحة جداً */
+    [data-testid="stMetricLabel"] {
+        color: #1e3a8a !important; 
+        font-weight: bold !important;
+        font-size: 1.1rem !important;
+        opacity: 1 !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: #000000 !important; /* لون أسود داكن للقيم */
+        font-size: 1.6rem !important;
+        font-weight: 800 !important;
+    }
+    .stMetric {
+        background-color: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        border-top: 5px solid #1e3a8a !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+    /* تحسين النصوص العامة */
+    .main { background-color: #f8f9fa; direction: rtl; }
+    h2, h3, h1 { color: #1e3a8a !important; font-weight: bold !important; }
+    
+    /* تحسين وضوح الجداول على الجوال */
+    .stTable {
+        background-color: white !important;
+        border-radius: 10px !important;
+    }
+    
     footer {visibility: hidden;}
-    .title-text { color: #1e3a8a; font-family: 'Arial'; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -43,7 +70,7 @@ def fetch_data_safe(sheet_name, expected_cols):
 if 'role' not in st.session_state: st.session_state.role = None
 
 if st.session_state.role is None:
-    st.markdown("<h1 class='title-text'>🏛️ منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>🏛️ منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
     st.subheader("بوابة الدخول الموحدة")
     t1, t2 = st.tabs(["👨‍🏫 دخول المعلم", "🎓 دخول الطالب"])
     with t1:
@@ -75,10 +102,9 @@ with st.sidebar:
         st.session_state.role = None
         st.rerun()
     st.divider()
-    st.markdown("### ✍️ إشراف وإدارة:")
     st.info("**الأستاذ زياد المعمري**")
 
-# --- 3. واجهة المعلم ---
+# --- 3. واجهة المعلم (بقيت كما هي تماماً) ---
 if st.session_state.role == "teacher":
     menu = st.sidebar.radio("انتقل إلى:", ["👥 إدارة الطلاب", "📊 الدرجات والسلوك"])
 
@@ -147,7 +173,6 @@ if st.session_state.role == "teacher":
                 with st.form("beh_form"):
                     b_st = st.selectbox("اسم الطالب", df_all["الاسم"].tolist())
                     b_date = st.date_input("التاريخ", datetime.now())
-                    # تم التحديث: الخيارات الأربعة المطلوبة
                     b_type = st.radio("نوع السلوك", ["✅ إيجابي", "⭐ متميز", "⚠️ تنبيه", "❌ سلبي"], horizontal=True)
                     b_note = st.text_input("الملاحظة")
                     if st.form_submit_button("📌 رصد"):
@@ -158,15 +183,17 @@ if st.session_state.role == "teacher":
                 df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
                 st.dataframe(df_b, use_container_width=True, hide_index=True)
 
-# --- 4. واجهة الطالب (بيانات الطالب + تلوين السلوك المطور) ---
+# --- 4. واجهة الطالب (تم تحسين الوضوح فقط دون تغيير الحقول) ---
 elif st.session_state.role == "student":
-    st.markdown(f"<h2 style='text-align:right;'>🎓 بيانات الطالب | أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:right;'>🎓 أهلاً بك: {st.session_state.student_name}</h2>", unsafe_allow_html=True)
     
     df_st = fetch_data_safe("students", ["الرقم", "الاسم", "الصف", "السنة", "المادة", "المرحلة"])
     df_g = fetch_data_safe("grades", ["الطالب", "ف1", "ف2", "مشاركة"])
     df_b = fetch_data_safe("behavior", ["الاسم", "التاريخ", "النوع", "الملاحظة"])
     
     my_info = df_st[df_st["الرقم"].astype(str) == st.session_state.student_id].iloc[0]
+    
+    # بطاقات البيانات (أصبحت سوداء داكنة وواضحة جداً)
     c1, c2, c3 = st.columns(3)
     c1.metric("الصف الدراسي", my_info["الصف"])
     c2.metric("المرحلة", my_info["المرحلة"])
@@ -176,7 +203,7 @@ elif st.session_state.role == "student":
     st.subheader("📊 تقرير الدرجات")
     my_grades = df_g[df_g["الطالب"] == st.session_state.student_name]
     if not my_grades.empty: 
-        st.table(my_grades)
+        st.table(my_grades) # استخدام الجدول الثابت لوضوح أعلى على الجوال
     else: 
         st.info("لم ترصد درجاتك حتى الآن.")
         
@@ -185,7 +212,6 @@ elif st.session_state.role == "student":
     my_beh = df_b[df_b["الاسم"] == st.session_state.student_name]
     if not my_beh.empty:
         for i, row in my_beh.iterrows():
-            # نظام التلوين المطور حسب النوع
             if "إيجابي" in row["النوع"]:
                 st.success(f"📅 {row['التاريخ']} | {row['النوع']} : {row['الملاحظة']}")
             elif "متميز" in row["النوع"]:
