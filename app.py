@@ -86,32 +86,84 @@ if st.session_state.role == "teacher":
     
     df_st = fetch("students")
 
+    # --- 1. شاشة إدارة الطلاب (الإضافة والحذف الشامل) ---
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة بيانات الطلاب")
-        st.dataframe(df_st, use_container_width=True, hide_index=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("➕ إضافة طالب")
-            with st.form("add_form"):
-                n_id = st.text_input("الرقم الأكاديمي")
-                n_name = st.text_input("الاسم الثلاثي")
-                n_stg = st.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                n_cls = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                n_yr = st.text_input("العام الدراسي", value="1447هـ")
-                if st.form_submit_button("حفظ"):
-                    sh.worksheet("students").append_row([n_id, n_name, n_cls, n_yr, "الفصل الأول", "إنجليزي", n_stg, "", "", 0])
-                    st.success("تمت الإضافة"); st.rerun()
-        with col2:
-            st.subheader("🗑️ حذف طالب")
-            target = st.selectbox("اختر الطالب", [""] + df_st['name'].tolist() if not df_st.empty else [])
-            if st.button("حذف نهائي"):
-                if target:
-                    for s in ["students", "grades", "behavior"]:
-                        try:
-                            ws = sh.worksheet(s); c = ws.find(target)
-                            if c: ws.delete_rows(c.row)
-                        except: pass
-                    st.warning("تم الحذف"); st.rerun()
+        
+        # عرض الجدول الرئيسي (المصدر الوحيد للحقيقة)
+        st.subheader("📋 قائمة الطلاب المسجلين حالياً")
+        df_st = fetch("students") # جلب أحدث بيانات
+        if not df_st.empty:
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا يوجد طلاب مسجلون حالياً.")
+
+        # تقسيم الشاشة لجزئين: إضافة وحذف
+        col_add, col_del = st.columns(2)
+        
+        # --- قسم إضافة طالب جديد ---
+        with col_add:
+            st.markdown("### ➕ إضافة طالب جديد")
+            with st.form("new_student_form", clear_on_submit=True):
+                n_id = st.text_input("الرقم الأكاديمي (ID)")
+                n_name = st.text_input("اسم الطالب الثلاثي")
+                n_stage = st.selectbox("المرحلة الدراسية", ["ابتدائي", "متوسط", "ثانوي"])
+                n_class = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                n_year = st.text_input("العام الدراسي", value="1447هـ")
+                
+                st.info("💡 ملاحظة: الإيميل والجوال يضيفهما الطالب من حسابه")
+                
+                if st.form_submit_button("✅ حفظ البيانات"):
+                    if n_id and n_name:
+                        ws_s = sh.worksheet("students")
+                        # إضافة الصف بالترتيب: [ID, الاسم, الصف, العام, الفصل, المادة, المرحلة, الايميل, الجوال, النقاط]
+                        ws_s.append_row([n_id, n_name, n_class, n_year, "الفصل الأول", "اللغة الإنجليزية", n_stage, "", "", 0])
+                        st.success(f"تم تسجيل الطالب {n_name} بنجاح!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("⚠️ يرجى إدخال الاسم والرقم الأكاديمي")
+
+        # --- قسم الحذف النهائي من كل الجداول ---
+        with col_del:
+            st.markdown("### 🗑️ حذف بيانات طالب نهائياً")
+            if not df_st.empty:
+                target_student = st.selectbox("اختر الطالب الذي تريد حذفه", [""] + df_st['name'].tolist())
+                
+                st.warning("⚠️ سيؤدي هذا الإجراء إلى حذف الطالب من جداول (الطلاب، الدرجات، والسلوك) فوراً.")
+                if st.button("❌ تأكيد الحذف الشامل"):
+                    if target_student:
+                        with st.spinner(f"جاري حذف {target_student}..."):
+                            # 1. الحذف من جدول الطلاب
+                            ws_st = sh.worksheet("students")
+                            try:
+                                cell = ws_st.find(target_student)
+                                ws_st.delete_rows(cell.row)
+                                
+                                # 2. الحذف من جدول الدرجات
+                                try:
+                                    ws_gr = sh.worksheet("grades")
+                                    # نحذف جميع الصفوف المرتبطة بهذا الطالب (في حال وجود أكثر من صف)
+                                    cells_gr = ws_gr.findall(target_student)
+                                    for c in sorted(cells_gr, key=lambda x: x.row, reverse=True):
+                                        ws_gr.delete_rows(c.row)
+                                except: pass
+                                
+                                # 3. الحذف من جدول السلوك
+                                try:
+                                    ws_bh = sh.worksheet("behavior")
+                                    cells_bh = ws_bh.findall(target_student)
+                                    for c in sorted(cells_bh, key=lambda x: x.row, reverse=True):
+                                        ws_bh.delete_rows(c.row)
+                                except: pass
+                                
+                                st.success(f"تم مسح بيانات {target_student} من كافة السجلات.")
+                                time.sleep(1)
+                                st.rerun()
+                            except:
+                                st.error("حدث خطأ أثناء محاولة الحذف.")
+                    else:
+                        st.error("يرجى اختيار اسم طالب.")
 
     elif menu == "📝 رصد الدرجات":
         st.header("📝 رصد الدرجات")
