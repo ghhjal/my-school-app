@@ -8,7 +8,7 @@ import time
 # إعداد الصفحة
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
 
-# الربط المحسن مع حماية من تكرار الطلبات
+# الربط المحسن
 @st.cache_resource(ttl=300)
 def get_db():
     try:
@@ -20,16 +20,19 @@ def get_db():
 
 sh = get_db()
 
-def fetch_data(sheet_name):
+# دالة جلب البيانات مع ميزة التحديث القسري لمنع بقاء الزر
+def fetch_data(sheet_name, force_refresh=False):
     try:
         if sh:
             ws = sh.worksheet(sheet_name)
+            if force_refresh:
+                # تصفير الذاكرة المؤقتة لهذا الجدول تحديداً
+                st.cache_data.clear()
             return pd.DataFrame(ws.get_all_records())
         return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
 
-# تهيئة متغيرات الحالة لمنع الضغط المزدوج
 if 'role' not in st.session_state: st.session_state.role = None
 if 'is_processing' not in st.session_state: st.session_state.is_processing = False
 
@@ -165,6 +168,7 @@ elif st.session_state.role == "student":
                 
                 with col_b:
                     st.subheader("🎭 سجل السلوك")
+                    # جلب البيانات مع تحديث قسري عند دخول الطالب
                     df_bh = fetch_data("behavior")
                     if not df_bh.empty:
                         df_bh['real_row_idx'] = range(2, len(df_bh) + 2)
@@ -172,31 +176,28 @@ elif st.session_state.role == "student":
                         
                         for _, row in my_bh.iterrows():
                             status = str(row.iloc[4])
-                            is_r = "✅" in status or "تمت" in status
+                            # شرط أدق للاختفاء: إذا وجدت علامة ✅ أو كلمة "تمت" يختفي الزر فوراً
+                            is_r = any(x in status for x in ["✅", "تمت"])
+                            
                             bg = "#E8F5E9" if is_r else "#FFF3E0"
                             st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:5px; margin-bottom:5px;'><b>{row.iloc[2]}</b>: {row.iloc[3]}</div>", unsafe_allow_html=True)
                             
                             if not is_r:
-                                # التعديل الجذري لمنع الرسائل الحمراء
                                 if st.button(f"🙏 شكراً أستاذي زياد", key=f"thx_{row['real_row_idx']}", disabled=st.session_state.is_processing):
                                     st.session_state.is_processing = True
                                     try:
-                                        with st.spinner("جاري الحفظ..."):
-                                            # محاولة تحديث الخلية مع نظام إعادة المحاولة الصامتة
-                                            success = False
-                                            for _ in range(3): # يحاول 3 مرات في حال انشغال الخادم
-                                                try:
-                                                    sh.worksheet("behavior").update_cell(int(row['real_row_idx']), 5, "✅ تمت القراءة")
-                                                    success = True; break
-                                                except: time.sleep(1) 
-                                            if success:
-                                                st.balloons(); time.sleep(0.5)
-                                                st.session_state.is_processing = False; st.rerun()
-                                            else:
-                                                st.session_state.is_processing = False
-                                                st.error("نعتذر، جوجل مشغولة حالياً. حاول مجدداً بعد ثوانٍ.")
+                                        with st.spinner("جاري تأكيد القراءة..."):
+                                            # التحديث الفوري
+                                            sh.worksheet("behavior").update_cell(int(row['real_row_idx']), 5, "✅ تمت القراءة")
+                                            # أمر حيوي: مسح الذاكرة المؤقتة تماماً لضمان اختفاء الزر في اللحظة التالية
+                                            st.cache_data.clear()
+                                            st.balloons()
+                                            time.sleep(1) # وقت كافٍ لجوجل لتسجيل التغيير
+                                            st.session_state.is_processing = False
+                                            st.rerun()
                                     except:
                                         st.session_state.is_processing = False
+                                        st.error("يرجى المحاولة مرة أخرى")
 
             with t2:
                 with st.form("up_pers_data"):
