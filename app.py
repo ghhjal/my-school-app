@@ -61,11 +61,89 @@ if st.session_state.role == "teacher":
     
     df_st = fetch("students")
 
-    # 1. شاشة إدارة الطلاب
+    # 1. شاشة إدارة الطلاب (تحديث: المرحلة، العام الدراسي، والبيانات التلقائية)
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة بيانات الطلاب")
+        
+        # عرض الجدول الحالي للطلاب
+        st.subheader("📋 قائمة الطلاب الحالية")
         st.dataframe(df_st, use_container_width=True, hide_index=True)
-        # (كود الإضافة والحذف يوضع هنا كما في النسخ السابقة)
+        
+        col_add, col_del = st.columns(2)
+        
+        with col_add:
+            st.subheader("➕ إضافة طالب جديد")
+            with st.form("add_student_form", clear_on_submit=True):
+                new_id = st.text_input("الرقم الأكاديمي (ID)")
+                new_name = st.text_input("اسم الطالب الثلاثي")
+                
+                # إضافة الحقول المطلوبة
+                new_stage = st.selectbox("المرحلة الدراسية", ["ابتدائي", "متوسط", "ثانوي"])
+                new_class = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                new_year = st.selectbox("العام الدراسي", ["1446هـ", "1447هـ", "1448هـ"], index=1)
+                
+                # إيميل وجوال ولي الأمر (يتم سحبهم برمجياً عند الإرسال بناءً على المدخلات)
+                new_email = st.text_input("إيميل ولي الأمر (للتواصل)")
+                new_phone = st.text_input("رقم الجوال")
+                
+                if st.form_submit_button("حفظ الطالب"):
+                    if new_id and new_name and new_email:
+                        ws_s = sh.worksheet("students")
+                        # الترتيب في الشيت: [ID, Name, Class, Year, Sem, Subject, Stage, Email, Phone, Points]
+                        # ملاحظة: تأكد من ترتيب الأعمدة في ملف Google Sheets الخاص بك
+                        ws_s.append_row([
+                            new_id, new_name, new_class, new_year, 
+                            "الفصل الأول", "اللغة الإنجليزية", new_stage, 
+                            new_email, new_phone, 0
+                        ])
+                        st.success(f"✅ تم إضافة الطالب {new_name} بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("⚠️ يرجى تعبئة البيانات الأساسية")
+
+        with col_del:
+            st.subheader("🗑️ حذف بيانات طالب")
+            st.warning("سيتم مسح سجل الطالب من جميع الجداول نهائياً")
+            
+            # اختيار الطالب للحذف
+            student_to_delete = st.selectbox(
+                "اختر الطالب المراد حذفه", 
+                [""] + df_st['name'].tolist() if not df_st.empty else [],
+                key="del_select"
+            )
+            
+            if st.button("❌ تنفيذ الحذف الشامل"):
+                if student_to_delete:
+                    with st.spinner(f"جاري تنظيف كافة السجلات لـ {student_to_delete}..."):
+                        # 1. الحذف من جدول الطلاب (Students)
+                        try:
+                            ws_st = sh.worksheet("students")
+                            cell = ws_st.find(student_to_delete)
+                            ws_st.delete_rows(cell.row)
+                        except: st.error("لم يتم العثور على الطالب في جدول الطلاب")
+                        
+                        # 2. الحذف من جدول الدرجات (Grades)
+                        try:
+                            ws_gr = sh.worksheet("grades")
+                            cells_gr = ws_gr.findall(student_to_delete)
+                            for c in sorted(cells_gr, key=lambda x: x.row, reverse=True):
+                                ws_gr.delete_rows(c.row)
+                        except: pass
+                        
+                        # 3. الحذف من جدول السلوك (Behavior)
+                        try:
+                            ws_bh = sh.worksheet("behavior")
+                            cells_bh = ws_bh.findall(student_to_delete)
+                            for c in sorted(cells_bh, key=lambda x: x.row, reverse=True):
+                                ws_bh.delete_rows(c.row)
+                        except: pass
+                        
+                        st.success(f"✅ تم حذف الطالب {student_to_delete} وكل متعلقاته")
+                        time.sleep(1)
+                        st.rerun()
+                else:
+                    st.error("❌ يرجى تحديد اسم الطالب")
 
     # 2. شاشة رصد الدرجات (مستقلة)
     elif menu == "📝 رصد الدرجات":
