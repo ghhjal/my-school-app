@@ -192,31 +192,50 @@ elif st.session_state.role == "student":
             c2.metric("فترة 2", my_g.iloc[0, 2])
             c3.metric("مشاركة", my_g.iloc[0, 3])
 
-    with t2:
-        st.subheader("سجل ملاحظات الأستاذ زياد")
-        df_bh = fetch_data("behavior")
-        if not df_bh.empty:
-            df_bh['real_idx'] = range(2, len(df_bh) + 2)
-            my_bh = df_bh[df_bh.iloc[:, 0] == s_name].iloc[::-1]
-            for _, row in my_bh.iterrows():
-                r_id = int(row['real_idx'])
-                is_read = "✅" in str(row.iloc[4]) or r_id in st.session_state.confirmed_actions
-                bg = "#C8E6C9" if is_read else "#FFF9C4" # ألوان واضحة للجوال
+    # --- داخل واجهة الطالب (تبويب سلوكي) ---
+with t2:
+    st.subheader("سجل ملاحظات الأستاذ زياد")
+    df_bh = fetch_data("behavior")
+    if not df_bh.empty:
+        # إضافة فهرس حقيقي للصفوف في جوجل شيت (يبدأ من 2)
+        df_bh['real_idx'] = range(2, len(df_bh) + 2)
+        my_bh = df_bh[df_bh.iloc[:, 0] == s_name].iloc[::-1] # عرض الأحدث أولاً
+        
+        for _, row in my_bh.iterrows():
+            r_id = int(row['real_idx'])
+            
+            # التحقق: هل تمت القراءة في الشيت أو تم الضغط في الجلسة الحالية؟
+            is_read = "✅" in str(row.iloc[4]) or r_id in st.session_state.confirmed_actions
+            
+            # تنسيق الملاحظة (ألوان واضحة للجوال)
+            bg = "#D4EDDA" if is_read else "#FFF3CD"
+            st.markdown(f"""
+            <div style='background:{bg}; padding:15px; border-radius:10px; margin-bottom:10px; color:black; border: 1px solid #ddd;'>
+                <b>{row.iloc[2]}</b> - التاريخ: {row.iloc[1]}<br>
+                الملاحظة: {row.iloc[3]}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # إذا لم يتم القراءة، أظهر الزر
+            if not is_read:
+                # مفتاح فريد لكل زر بناءً على رقم الصف
+                btn_key = f"confirm_{r_id}"
                 
-                st.markdown(f"""
-                <div style='background:{bg}; padding:15px; border-radius:10px; margin-bottom:10px; color:black; border: 1px solid #ddd;'>
-                    <b>{row.iloc[2]}</b> - التاريخ: {row.iloc[1]}<br>
-                    الملاحظة: {row.iloc[3]}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if not is_read:
-                    if st.button(f"🙏 شكراً أستاذ زياد (تأكيد القراءة)", key=f"confirm_{r_id}"):
-                        st.session_state.confirmed_actions.add(r_id)
-                        try:
-                            sh.worksheet("behavior").update_cell(r_id, 5, "✅ تمت القراءة")
-                            st.rerun()
-                        except: pass
+                # المعالجة: عند الضغط، يختفي الزر فوراً
+                if st.button(f"🙏 شكراً أستاذ زياد (تأكيد القراءة)", key=btn_key):
+                    # 1. إضافة رقم الصف للقائمة المحلية فوراً لإخفاء الزر في الحال
+                    st.session_state.confirmed_actions.add(r_id)
+                    
+                    # 2. محاولة تحديث جوجل شيت في الخلفية بدون إزعاج الطالب
+                    try:
+                        # تحديث العمود الخامس (الحالة) بكلمة "تمت القراءة"
+                        sh.worksheet("behavior").update_cell(r_id, 5, "✅ تمت القراءة")
+                    except:
+                        # حتى لو فشل الاتصال، لا نظهر رسالة خطأ، لأن الزر اختفى محلياً ولن يراه الطالب ثانية
+                        pass
+                    
+                    # 3. إعادة تحميل الصفحة لتطبيق التغيير البصري (إخفاء الزر)
+                    st.rerun()
 
     with t3:
         df_ex = fetch_data("exams")
