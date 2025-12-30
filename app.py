@@ -257,6 +257,7 @@ else:
 st.divider()
 st.subheader("📊 معاينة جدول الدرجات")
 st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
+
     # --- 1. شاشة إدارة الطلاب (التصميم الاحترافي المصحح) ---
     elif menu == "👥 إدارة الطلاب":
         st.markdown("<h2 style='text-align: right;'>👥 إدارة سجلات الطلاب</h2>", unsafe_allow_html=True)
