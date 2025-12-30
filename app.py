@@ -176,18 +176,93 @@ if st.session_state.role == "teacher":
                 else:
                     st.info("لا يوجد طلاب مسجلون حالياً.")
 
-    elif menu == "📝 رصد الدرجات":
-        st.header("📝 رصد الدرجات")
-        sel = st.selectbox("اختر الطالب", [""] + df_st['name'].tolist() if not df_st.empty else [])
-        if sel:
-            with st.form("g_form"):
-                f1 = st.number_input("فترة 1", 0, 100); f2 = st.number_input("فترة 2", 0, 100); pt = st.number_input("مشاركة", 0, 100)
-                if st.form_submit_button("تحديث"):
-                    ws = sh.worksheet("grades")
-                    try: c = ws.find(sel); ws.update(f'B{c.row}:D{c.row}', [[f1, f2, pt]])
-                    except: ws.append_row([sel, f1, f2, pt])
-                    st.success("تم التحديث")
-        st.dataframe(fetch("grades"), use_container_width=True)
+    # --- 2. شاشة رصد الدرجات (المطورة) ---
+    if menu == "📝 رصد الدرجات":
+        st.markdown("<h2 style='text-align: right;'>📝 رصد وتحديث درجات الطلاب</h2>", unsafe_allow_html=True)
+        
+        # جلب البيانات لضمان وجود الطلاب
+        df_st = fetch("students")
+        
+        if df_st.empty:
+            st.warning("⚠️ لا توجد بيانات طلاب. يرجى إضافتهم من شاشة إدارة الطلاب أولاً.")
+        else:
+            # حل مشكلة الاختيار: نحدد عمود الأسماء بدقة (العمود الثاني عادة)
+            student_list = df_st.iloc[:, 1].tolist() 
+            
+            # تصميم منطقة الاختيار والرصد
+            with st.container(border=True):
+                sel_student = st.selectbox("🎯 اختر الطالب المراد رصد درجاته", [""] + student_list)
+                
+                if sel_student:
+                    # محاولة جلب الدرجات الحالية للطالب إذا وجدت
+                    df_grades = fetch("grades")
+                    current_val = [0, 0, 0]
+                    if not df_grades.empty and sel_student in df_grades.iloc[:, 0].values:
+                        row = df_grades[df_grades.iloc[:, 0] == sel_student].iloc[0]
+                        current_val = [int(row.iloc[1]), int(row.iloc[2]), int(row.iloc[3])]
+
+                    with st.form("grade_update_form"):
+                        c1, c2, c3 = st.columns(3)
+                        with c1: f1 = st.number_input("فترة 1", 0, 100, value=current_val[0])
+                        with c2: f2 = st.number_input("فترة 2", 0, 100, value=current_val[1])
+                        with c3: pt = st.number_input("مشاركة", 0, 100, value=current_val[2])
+                        
+                        if st.form_submit_button("💾 حفظ الدرجات"):
+                            ws_g = sh.worksheet("grades")
+                            try:
+                                # البحث عن الطالب لتحديثه أو إضافته كجديد
+                                cell = ws_g.find(sel_student)
+                                ws_g.update(f'B{cell.row}:D{cell.row}', [[f1, f2, pt]])
+                            except:
+                                ws_g.append_row([sel_student, f1, f2, pt])
+                            
+                            st.success(f"✅ تم تحديث درجات الطالب: {sel_student}")
+                            time.sleep(1)
+                            st.rerun()
+
+            st.divider()
+            st.subheader("📊 جدول الدرجات العام")
+            st.dataframe(fetch("grades"), use_container_width=True, hide_index=True)
+
+    # --- 1. شاشة إدارة الطلاب (التصميم الاحترافي المصحح) ---
+    elif menu == "👥 إدارة الطلاب":
+        st.markdown("<h2 style='text-align: right;'>👥 إدارة سجلات الطلاب</h2>", unsafe_allow_html=True)
+        
+        # جلب أحدث البيانات
+        ws_s = sh.worksheet("students")
+        data = ws_s.get_all_values()
+        df_st = pd.DataFrame(data[1:], columns=data[0]) if len(data) > 1 else pd.DataFrame()
+
+        if not df_st.empty:
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        else:
+            st.info("الجدول فارغ، أضف طلاباً جدد.")
+
+        col_add, col_del = st.columns([1.2, 0.8], gap="medium")
+        
+        with col_add:
+            with st.form("pro_add_student"):
+                st.markdown("#### ➕ إضافة طالب")
+                nid = st.text_input("الرقم الأكاديمي")
+                nname = st.text_input("الاسم الثلاثي")
+                nclass = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                nstage = st.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                nyear = st.text_input("العام الدراسي", value="1447هـ")
+                
+                if st.form_submit_button("حفظ الطالب"):
+                    if nid and nname:
+                        ws_s.append_row([nid, nname, nclass, nyear, "الأول", "إنجليزي", nstage, "", "", 0])
+                        st.success("تم الحفظ!"); time.sleep(1); st.rerun()
+
+        with col_del:
+            if not df_st.empty:
+                st.markdown("#### 🗑️ حذف طالب")
+                target = st.selectbox("اختر للحذف", [""] + df_st.iloc[:, 1].tolist())
+                if st.button("❌ حذف نهائي"):
+                    if target:
+                        cell = ws_s.find(target)
+                        ws_s.delete_rows(cell.row)
+                        st.warning("تم الحذف"); time.sleep(1); st.rerun()
 
     elif menu == "🎭 رصد السلوك":
         st.header("🎭 رصد السلوك")
