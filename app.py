@@ -19,16 +19,16 @@ def get_db():
 
 sh = get_db()
 
-# دالة جلب البيانات الآمنة (تتخطى أخطاء الأعمدة المكررة والفارغة)
+# دالة جلب البيانات الآمنة لتجنب خطأ Duplicate column names
 def fetch_safe(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
         data = ws.get_all_values()
         if len(data) > 1:
-            # نأخذ العناوين من الصف الأول وننظفها
-            headers = [h if h else f"col_{i}" for i, h in enumerate(data[0])]
+            # تنظيف العناوين المكررة أو الفارغة
+            headers = [h if h.strip() else f"col_{i}" for i, h in enumerate(data[0])]
             df = pd.DataFrame(data[1:], columns=headers)
-            # حذف الصفوف التي يكون فيها أول عمود فارغاً
+            # حذف الصفوف الفارغة تماماً
             df = df[df.iloc[:, 0].astype(str).str.strip() != ""]
             return df
         return pd.DataFrame()
@@ -43,18 +43,18 @@ if 'sid' not in st.session_state: st.session_state.sid = None
 # 🚪 شاشة الدخول
 # ==========================================
 if st.session_state.role is None:
-    st.markdown("<h1 style='text-align: center;'>🎓 منصة الأستاذ زياد المعمري</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🎓 منصة الأستاذ زياد المعمري التعليمية</h1>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("🔐 دخول المعلم")
+        st.subheader("🔐 منطقة المعلم")
         t_pwd = st.text_input("كلمة المرور", type="password")
         if st.button("دخول المعلم"):
             if t_pwd == "1234":
                 st.session_state.role = "teacher"
                 st.rerun()
-            else: st.error("خطأ في كلمة المرور")
+            else: st.error("كلمة المرور خاطئة")
     with c2:
-        st.subheader("👨‍🎓 دخول الطالب")
+        st.subheader("👨‍🎓 منطقة الطالب")
         s_id_in = st.text_input("الرقم الأكاديمي")
         if st.button("دخول الطالب"):
             df_st = fetch_safe("students")
@@ -66,56 +66,86 @@ if st.session_state.role is None:
     st.stop()
 
 # ==========================================
-# 🛠️ واجهة المعلم (تشمل الاختبارات)
+# 🛠️ واجهة المعلم (إدارة شاملة)
 # ==========================================
 if st.session_state.role == "teacher":
-    st.sidebar.button("🚗 خروج", on_click=lambda: st.session_state.update({"role": None}))
-    menu = st.sidebar.selectbox("القائمة", ["👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 الاختبارات"])
+    st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
+    menu = st.sidebar.selectbox("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 رصد الدرجات", "🎭 رصد السلوك", "📢 الاختبارات"])
     
-    # 1. إدارة الطلاب
-    if menu == "👥 الطلاب":
-        st.header("إدارة سجلات الطلاب")
+    # --- 1. إدارة الطلاب (إضافة وحذف) ---
+    if menu == "👥 إدارة الطلاب":
+        st.header("👥 إدارة سجلات الطلاب")
         df_st = fetch_safe("students")
         st.dataframe(df_st, use_container_width=True, hide_index=True)
-        with st.form("add_st"):
-            st.subheader("➕ إضافة طالب جديد")
-            id_n = st.text_input("الرقم الأكاديمي")
-            name_n = st.text_input("الاسم الثلاثي")
-            if st.form_submit_button("حفظ"):
-                sh.worksheet("students").append_row([id_n, name_n, "الأول", "1447هـ", "1", "إنجليزي", "ابتدائي", "", "", 0])
-                st.success("تم الحفظ بنجاح"); time.sleep(1); st.rerun()
+        
+        col_add, col_del = st.columns(2)
+        with col_add:
+            with st.form("add_student_form"):
+                st.subheader("➕ إضافة طالب جديد")
+                id_n = st.text_input("الرقم الأكاديمي")
+                name_n = st.text_input("الاسم الثلاثي")
+                class_n = st.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                if st.form_submit_button("حفظ في النظام"):
+                    if id_n and name_n:
+                        sh.worksheet("students").append_row([id_n, name_n, class_n, "1447هـ", "1", "إنجليزي", "ابتدائي", "", "", 0])
+                        st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
+        with col_del:
+            st.subheader("🗑️ حذف طالب")
+            if not df_st.empty:
+                target = st.selectbox("اختر الاسم للحذف", [""] + df_st.iloc[:, 1].tolist())
+                if st.button("❌ تأكيد الحذف النهائي") and target:
+                    ws = sh.worksheet("students")
+                    cell = ws.find(target)
+                    ws.delete_rows(cell.row)
+                    st.warning("تم الحذف بنجاح"); time.sleep(1); st.rerun()
 
-    # 2. رصد الدرجات
-    elif menu == "📝 الدرجات":
-        st.header("رصد درجات الطلاب")
+    # --- 2. رصد السلوك (شاشة السلوك) ---
+    elif menu == "🎭 رصد السلوك":
+        st.header("🎭 سجل الملاحظات السلوكية")
         df_st = fetch_safe("students")
         if not df_st.empty:
-            sel_name = st.selectbox("اختر الطالب", [""] + df_st.iloc[:, 1].tolist())
-            if sel_name:
+            sel_b = st.selectbox("اختر الطالب", [""] + df_st.iloc[:, 1].tolist())
+            if sel_b:
+                with st.form("behavior_form"):
+                    b_date = st.date_input("التاريخ", datetime.now())
+                    b_type = st.selectbox("التقييم", ["متميز", "مشاركة إيجابية", "تنبيه", "غياب"])
+                    b_note = st.text_area("الملاحظة")
+                    if st.form_submit_button("💾 رصد الملاحظة"):
+                        sh.worksheet("behavior").append_row([sel_b, str(b_date), b_type, b_note])
+                        st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
+        st.subheader("الملاحظات المرصودة مؤخراً")
+        st.dataframe(fetch_safe("behavior"), use_container_width=True)
+
+    # --- 3. رصد الدرجات ---
+    elif menu == "📝 رصد الدرجات":
+        st.header("📝 رصد الدرجات")
+        df_st = fetch_safe("students")
+        if not df_st.empty:
+            sel_g = st.selectbox("اختر الطالب", [""] + df_st.iloc[:, 1].tolist())
+            if sel_g:
                 with st.form("g_form"):
-                    p1 = st.number_input("فترة 1", 0, 100)
-                    p2 = st.number_input("فترة 2", 0, 100)
-                    if st.form_submit_button("حفظ الدرجات"):
+                    p1 = st.number_input("الفترة 1", 0, 100)
+                    p2 = st.number_input("الفترة 2", 0, 100)
+                    if st.form_submit_button("حفظ الدرجة"):
                         ws_g = sh.worksheet("grades")
                         try:
-                            cell = ws_g.find(sel_name)
+                            cell = ws_g.find(sel_g)
                             ws_g.update(f'B{cell.row}:C{cell.row}', [[p1, p2]])
                         except:
-                            ws_g.append_row([sel_name, p1, p2, 0])
-                        st.success("تم الرصد"); time.sleep(0.5); st.rerun()
+                            ws_g.append_row([sel_g, p1, p2])
+                        st.success("✅ تم الحفظ"); st.rerun()
         st.dataframe(fetch_safe("grades"), use_container_width=True)
 
-    # 3. إعلان الاختبارات (المطلوبة)
+    # --- 4. إعلان الاختبارات ---
     elif menu == "📢 الاختبارات":
         st.header("📢 إعلان جدول الاختبارات")
         with st.form("exam_form"):
             ex_sub = st.text_input("المادة")
             ex_day = st.selectbox("اليوم", ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"])
             ex_date = st.date_input("التاريخ")
-            if st.form_submit_button("نشر الإعلان"):
+            if st.form_submit_button("نشر"):
                 sh.worksheet("exams").append_row([str(ex_date), ex_day, ex_sub])
-                st.success("تم النشر بنجاح"); time.sleep(1); st.rerun()
-        st.subheader("الجدول الحالي")
+                st.success("✅ تم النشر"); st.rerun()
         st.table(fetch_safe("exams"))
 
 # ==========================================
@@ -127,16 +157,15 @@ elif st.session_state.role == "student":
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name = s_row.iloc[1]
 
-    st.title(f"👋 أهلاً بك يا بطل: {s_name}")
+    st.title(f"👋 أهلاً بك: {s_name}")
     t1, t2, t3 = st.tabs(["📊 درجاتي", "📢 الاختبارات", "🎭 سلوكي"])
     
     with t1:
         df_g = fetch_safe("grades")
         my_g = df_g[df_g.iloc[:, 0] == s_name]
-        st.table(my_g) if not my_g.empty else st.info("لا توجد درجات مرصودة")
+        st.table(my_g) if not my_g.empty else st.info("لا توجد درجات")
     with t2:
-        df_ex = fetch_safe("exams")
-        st.table(df_ex) if not df_ex.empty else st.info("لا توجد اختبارات معلنة")
+        st.table(fetch_safe("exams"))
     with t3:
         df_b = fetch_safe("behavior")
         my_b = df_b[df_b.iloc[:, 0] == s_name]
