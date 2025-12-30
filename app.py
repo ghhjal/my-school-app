@@ -5,10 +5,10 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# إعداد الصفحة لمنع أخطاء العرض
+# إعداد الصفحة
 st.set_page_config(page_title="منصة الأستاذ زياد المعمري", layout="wide")
 
-# دالة الربط مع حماية متطورة وتخزين مؤقت لتجنب رسائل فشل الاتصال
+# الربط المحسن مع حماية من تكرار الطلبات
 @st.cache_resource(ttl=300)
 def get_db():
     try:
@@ -24,17 +24,14 @@ def fetch_data(sheet_name):
     try:
         if sh:
             ws = sh.worksheet(sheet_name)
-            data = ws.get_all_records()
-            return pd.DataFrame(data)
+            return pd.DataFrame(ws.get_all_records())
         return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
 
-# تهيئة المتغيرات الأساسية لمنع أخطاء IndexError
-if 'role' not in st.session_state:
-    st.session_state.role = None
-if 'updating' not in st.session_state:
-    st.session_state.updating = False
+# تهيئة متغيرات الحالة لمنع الضغط المزدوج
+if 'role' not in st.session_state: st.session_state.role = None
+if 'is_processing' not in st.session_state: st.session_state.is_processing = False
 
 # --- نظام الدخول ---
 if st.session_state.role is None:
@@ -44,19 +41,14 @@ if st.session_state.role is None:
         st.subheader("🔐 دخول المعلم")
         pwd = st.text_input("كلمة المرور", type="password", key="login_tpwd")
         if st.button("دخول المعلم"):
-            if pwd == "1234":
-                st.session_state.role = "teacher"
-                st.rerun()
+            if pwd == "1234": st.session_state.role = "teacher"; st.rerun()
     with c2:
         st.subheader("👨‍🎓 دخول الطالب")
         sid_input = st.text_input("الرقم الأكاديمي", key="login_sid")
         if st.button("دخول الطالب"):
             df_st = fetch_data("students")
             if not df_st.empty and str(sid_input) in df_st.iloc[:, 0].astype(str).values:
-                st.session_state.role = "student"
-                st.session_state.sid = str(sid_input)
-                st.rerun()
-            else: st.error("الرقم الأكاديمي غير صحيح")
+                st.session_state.role = "student"; st.session_state.sid = str(sid_input); st.rerun()
     st.stop()
 
 # --- واجهة المعلم ---
@@ -70,7 +62,6 @@ if st.session_state.role == "teacher":
         st.dataframe(df_st, use_container_width=True, hide_index=True)
         st.divider()
         col_del, col_add = st.columns([1, 2])
-        
         with col_del:
             st.subheader("🗑️ حذف طالب")
             if not df_st.empty:
@@ -83,7 +74,6 @@ if st.session_state.role == "teacher":
                                 if cell: ws.delete_rows(cell.row)
                             except: pass
                         st.success("تم الحذف"); st.rerun()
-        
         with col_add:
             st.subheader("📝 إضافة طالب جديد")
             with st.form("add_student_form", clear_on_submit=True):
@@ -94,13 +84,13 @@ if st.session_state.role == "teacher":
                 lev_v = c2.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
                 if st.form_submit_button("إضافة الطالب"):
                     sh.worksheet("students").append_row([id_v, name_v, cls_v, "1447هـ", "اللغة الإنجليزية", lev_v, "", "", 0])
-                    st.success("تمت الإضافة"); st.rerun()
+                    st.success("تمت الإضافة"); time.sleep(1); st.rerun()
 
     elif menu == "الدرجات والسلوك":
         tab1, tab2 = st.tabs(["📝 الدرجات", "🎭 السلوك"])
         with tab1:
             if not df_st.empty:
-                target = st.selectbox("اختر الطالب للدرجات", [""] + df_st.iloc[:, 1].tolist())
+                target = st.selectbox("اختر الطالب", [""] + df_st.iloc[:, 1].tolist())
                 if target:
                     with st.form("grades_form"):
                         v1, v2, v3 = st.number_input("ف1", 0), st.number_input("ف2", 0), st.number_input("المشاركة", 0)
@@ -116,7 +106,7 @@ if st.session_state.role == "teacher":
         with tab2:
             st.subheader("🎭 رصد وفلترة السلوك")
             if not df_st.empty:
-                sel_st = st.selectbox("اسم الطالب للملاحظة", [""] + df_st.iloc[:, 1].tolist())
+                sel_st = st.selectbox("اسم الطالب", [""] + df_st.iloc[:, 1].tolist())
                 if sel_st:
                     with st.form("behavior_form_t", clear_on_submit=True):
                         t_v = st.radio("النوع", ["⭐ متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (-5)", "❌ سلبي (-10)"], horizontal=True)
@@ -127,10 +117,9 @@ if st.session_state.role == "teacher":
                             ws_st = sh.worksheet("students"); c = ws_st.find(sel_st)
                             old = int(ws_st.cell(c.row, 9).value or 0)
                             ws_st.update_cell(c.row, 9, old + pts)
-                            st.success("تم الحفظ ✅"); time.sleep(0.5); st.rerun()
+                            st.success("تم الحفظ ✅"); time.sleep(1); st.rerun()
                     
                     st.divider()
-                    st.write(f"🔍 سجل الطالب المختار: {sel_st}")
                     df_bh_all = fetch_data("behavior")
                     if not df_bh_all.empty:
                         f_bh = df_bh_all[df_bh_all.iloc[:, 0] == sel_st].iloc[::-1]
@@ -153,9 +142,7 @@ elif st.session_state.role == "student":
     if not df_st.empty:
         matches = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid]
         if not matches.empty:
-            s_data = matches.iloc[0]
-            s_name = s_data.iloc[1]
-            
+            s_data = matches.iloc[0]; s_name = s_data.iloc[1]
             st.title(f"🌟 أهلاً بك: {s_name}")
             pts = int(s_data.iloc[8] or 0)
             medal = "🏆 بطل التحدي" if pts >= 100 else "🥇 وسام ذهبي" if pts >= 50 else "🥈 وسام فضي"
@@ -180,34 +167,39 @@ elif st.session_state.role == "student":
                     st.subheader("🎭 سجل السلوك")
                     df_bh = fetch_data("behavior")
                     if not df_bh.empty:
-                        # إضافة مؤشر الصف الحقيقي لتجنب تضارب التحديثات
                         df_bh['real_row_idx'] = range(2, len(df_bh) + 2)
                         my_bh = df_bh[df_bh.iloc[:, 0] == s_name].iloc[::-1]
                         
                         for _, row in my_bh.iterrows():
-                            is_r = "✅" in str(row.iloc[4])
+                            status = str(row.iloc[4])
+                            is_r = "✅" in status or "تمت" in status
                             bg = "#E8F5E9" if is_r else "#FFF3E0"
                             st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:5px; margin-bottom:5px;'><b>{row.iloc[2]}</b>: {row.iloc[3]}</div>", unsafe_allow_html=True)
                             
                             if not is_r:
-                                # حماية الزر من الضغط المتكرر الذي يسبب الشاشة البيضاء
-                                btn_label = "🙏 شكراً أستاذي (تأكيد القراءة)"
-                                if st.button(btn_label, key=f"thx_btn_{row['real_row_idx']}"):
-                                    if not st.session_state.updating:
-                                        st.session_state.updating = True
-                                        try:
-                                            with st.spinner("جاري تأكيد القراءة..."):
-                                                sh.worksheet("behavior").update_cell(int(row['real_row_idx']), 5, "✅ تمت القراءة")
-                                                st.balloons()
-                                                time.sleep(0.5)
-                                                st.session_state.updating = False
-                                                st.rerun()
-                                        except:
-                                            st.session_state.updating = False
-                                            st.error("الخادم مشغول، يرجى المحاولة مرة أخرى")
+                                # التعديل الجذري لمنع الرسائل الحمراء
+                                if st.button(f"🙏 شكراً أستاذي زياد", key=f"thx_{row['real_row_idx']}", disabled=st.session_state.is_processing):
+                                    st.session_state.is_processing = True
+                                    try:
+                                        with st.spinner("جاري الحفظ..."):
+                                            # محاولة تحديث الخلية مع نظام إعادة المحاولة الصامتة
+                                            success = False
+                                            for _ in range(3): # يحاول 3 مرات في حال انشغال الخادم
+                                                try:
+                                                    sh.worksheet("behavior").update_cell(int(row['real_row_idx']), 5, "✅ تمت القراءة")
+                                                    success = True; break
+                                                except: time.sleep(1) 
+                                            if success:
+                                                st.balloons(); time.sleep(0.5)
+                                                st.session_state.is_processing = False; st.rerun()
+                                            else:
+                                                st.session_state.is_processing = False
+                                                st.error("نعتذر، جوجل مشغولة حالياً. حاول مجدداً بعد ثوانٍ.")
+                                    except:
+                                        st.session_state.is_processing = False
 
             with t2:
-                with st.form("update_personal_data"):
+                with st.form("up_pers_data"):
                     mail = st.text_input("إيميل ولي الأمر", value=str(s_data.iloc[6]))
                     phone = st.text_input("رقم الجوال", value=str(s_data.iloc[7]))
                     if st.form_submit_button("حفظ"):
