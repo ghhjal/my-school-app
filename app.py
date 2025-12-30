@@ -176,54 +176,87 @@ if st.session_state.role == "teacher":
                 else:
                     st.info("لا يوجد طلاب مسجلون حالياً.")
 
-    # --- 2. شاشة رصد الدرجات (المطورة) ---
-    if menu == "📝 رصد الدرجات":
-        st.markdown("<h2 style='text-align: right;'>📝 رصد وتحديث درجات الطلاب</h2>", unsafe_allow_html=True)
+    # 1. استدعاء المكتبات (الأدوات الأساسية) - يجب أن تكون في القمة
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+import time
+
+# 2. الاتصال بقاعدة البيانات (قوقل شيت)
+# تأكد أن "st.secrets" تحتوي على بيانات اعتماد حسابك
+def get_db_connection():
+    try:
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+        return gspread.authorize(creds).open_by_key("1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c")
+    except Exception as e:
+        st.error(f"فشل الاتصال بـ Google Sheets: {e}")
+        return None
+
+sh = get_db_connection()
+
+# 3. دالة جلب البيانات الذكية
+def fetch_safe(sheet_name):
+    try:
+        ws = sh.worksheet(sheet_name)
+        data = ws.get_all_values()
+        if len(data) > 1:
+            df = pd.DataFrame(data[1:], columns=data[0])
+            return df
+        return pd.DataFrame()
+    except:
+        return pd.DataFrame()
+
+# 4. واجهة شاشة الدرجات
+st.header("📝 رصد وتحديث درجات الطلاب")
+
+# جلب الطلاب من شيت students لجلب الأسماء
+df_st = fetch_safe("students")
+
+if df_st.empty:
+    st.warning("⚠️ لا توجد بيانات طلاب. تأكد من وجود أسماء في شيت 'students'.")
+else:
+    # جلب الأسماء من العمود الثاني (index 1) كما في ملفك
+    student_list = df_st.iloc[:, 1].tolist()
+    
+    with st.container(border=True):
+        sel_name = st.selectbox("🎯 اختر اسم الطالب للرصد", [""] + student_list)
         
-        # جلب البيانات لضمان وجود الطلاب
-        df_st = fetch("students")
-        
-        if df_st.empty:
-            st.warning("⚠️ لا توجد بيانات طلاب. يرجى إضافتهم من شاشة إدارة الطلاب أولاً.")
-        else:
-            # حل مشكلة الاختيار: نحدد عمود الأسماء بدقة (العمود الثاني عادة)
-            student_list = df_st.iloc[:, 1].tolist() 
+        if sel_name:
+            # محاولة جلب الدرجات الحالية من شيت grades
+            df_g = fetch_safe("grades")
+            v = [0, 0, 0] # قيم افتراضية للفترات والمشاركة
             
-            # تصميم منطقة الاختيار والرصد
-            with st.container(border=True):
-                sel_student = st.selectbox("🎯 اختر الطالب المراد رصد درجاته", [""] + student_list)
+            if not df_g.empty and sel_name in df_g.iloc[:, 0].values:
+                # إذا كان الطالب له سجل سابق، اسحب درجاته
+                row = df_g[df_g.iloc[:, 0] == sel_name].iloc[0]
+                v = [int(row.iloc[1] or 0), int(row.iloc[2] or 0), int(row.iloc[3] or 0)]
+            
+            with st.form("grade_form"):
+                col1, col2, col3 = st.columns(3)
+                with col1: p1 = st.number_input("فترة 1", 0, 100, value=v[0])
+                with col2: p2 = st.number_input("فترة 2", 0, 100, value=v[1])
+                with col3: pf = st.number_input("مشاركة", 0, 100, value=v[2])
                 
-                if sel_student:
-                    # محاولة جلب الدرجات الحالية للطالب إذا وجدت
-                    df_grades = fetch("grades")
-                    current_val = [0, 0, 0]
-                    if not df_grades.empty and sel_student in df_grades.iloc[:, 0].values:
-                        row = df_grades[df_grades.iloc[:, 0] == sel_student].iloc[0]
-                        current_val = [int(row.iloc[1]), int(row.iloc[2]), int(row.iloc[3])]
+                if st.form_submit_button("💾 حفظ الدرجات"):
+                    ws_g = sh.worksheet("grades")
+                    try:
+                        cell = ws_g.find(sel_name)
+                        # تحديث الصف (الأعمدة B, C, D)
+                        ws_g.update(f'B{cell.row}:D{cell.row}', [[p1, p2, pf]])
+                        st.success(f"تم التحديث لـ {sel_name}")
+                    except:
+                        # إضافة صف جديد إذا لم يكن موجوداً
+                        ws_g.append_row([sel_name, p1, p2, pf])
+                        st.success(f"تم الرصد الجديد لـ {sel_name}")
+                    
+                    time.sleep(1)
+                    st.rerun()
 
-                    with st.form("grade_update_form"):
-                        c1, c2, c3 = st.columns(3)
-                        with c1: f1 = st.number_input("فترة 1", 0, 100, value=current_val[0])
-                        with c2: f2 = st.number_input("فترة 2", 0, 100, value=current_val[1])
-                        with c3: pt = st.number_input("مشاركة", 0, 100, value=current_val[2])
-                        
-                        if st.form_submit_button("💾 حفظ الدرجات"):
-                            ws_g = sh.worksheet("grades")
-                            try:
-                                # البحث عن الطالب لتحديثه أو إضافته كجديد
-                                cell = ws_g.find(sel_student)
-                                ws_g.update(f'B{cell.row}:D{cell.row}', [[f1, f2, pt]])
-                            except:
-                                ws_g.append_row([sel_student, f1, f2, pt])
-                            
-                            st.success(f"✅ تم تحديث درجات الطالب: {sel_student}")
-                            time.sleep(1)
-                            st.rerun()
-
-            st.divider()
-            st.subheader("📊 جدول الدرجات العام")
-            st.dataframe(fetch("grades"), use_container_width=True, hide_index=True)
-
+st.divider()
+st.subheader("📊 معاينة جدول الدرجات")
+st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
     # --- 1. شاشة إدارة الطلاب (التصميم الاحترافي المصحح) ---
     elif menu == "👥 إدارة الطلاب":
         st.markdown("<h2 style='text-align: right;'>👥 إدارة سجلات الطلاب</h2>", unsafe_allow_html=True)
