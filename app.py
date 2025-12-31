@@ -69,39 +69,57 @@ if st.session_state.role == "teacher":
     st.sidebar.button("🚗 خروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.selectbox("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
 
-    # 1. إدارة الطلاب
-    if menu == "👥 إدارة الطلاب":
-        st.header("👥 إدارة بيانات الطلاب")
-        df_st = fetch_safe("students")
-        st.dataframe(df_st, use_container_width=True, hide_index=True)
+   if menu == "👥 إدارة الطلاب":
+        st.header("👥 تأسيس بيانات الطلاب")
         
-        with st.form("add_st_form"):
-            st.subheader("➕ إضافة طالب جديد")
-            c1, c2, c3 = st.columns(3)
-            nid = c1.text_input("الرقم الأكاديمي")
-            nname = c2.text_input("الاسم الثلاثي")
-            nstage = c3.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-            c4, c5, c6 = st.columns(3)
-            nclass = c4.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            nyear = c5.text_input("العام", value="1447هـ")
-            nsub = c6.text_input("المادة", value="لغة إنجليزية")
-            if st.form_submit_button("إضافة الطالب"):
-                if nid and nname:
-                    sh.worksheet("students").append_row([nid, nname, nclass, nyear, "1", nsub, nstage, "", "", "0"])
-                    st.success("تمت الإضافة بنجاح"); st.rerun()
+        # 1. عرض الجدول الحالي
+        df_st = fetch_safe("students")
+        if not df_st.empty:
+            # عرض الأعمدة الأساسية فقط للمعلم لتسهيل الرؤية
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
         
         st.divider()
-        st.subheader("🗑️ حذف طالب من النظام")
-        del_target = st.selectbox("اختر الطالب المراد حذفه نهائياً", [""] + df_st.iloc[:, 1].tolist())
-        if st.button("⚠️ تنفيذ الحذف الشامل"):
-            if del_target:
-                for sn in ["students", "grades", "behavior"]:
-                    try:
-                        ws = sh.worksheet(sn)
-                        cell = ws.find(del_target)
-                        ws.delete_rows(cell.row)
-                    except: pass
-                st.warning(f"تم حذف {del_target} من كافة الجداول"); time.sleep(1); st.rerun()
+        
+        # 2. نموذج إضافة طالب (تأسيس فقط)
+        with st.form("add_st_form"):
+            st.subheader("➕ إضافة طالب جديد للنظام")
+            c1, c2, c3 = st.columns(3)
+            nid = c1.text_input("الرقم الأكاديمي (ID)")
+            nname = c2.text_input("الاسم الثلاثي")
+            nclass = c3.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            
+            c4, c5, c6 = st.columns(3)
+            nstage = c4.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+            nyear = c5.text_input("العام الدراسي", value="1447هـ")
+            nsub = c6.text_input("المادة", value="لغة إنجليزية")
+            
+            if st.form_submit_button("✅ تأسيس الطالب"):
+                if nid and nname:
+                    # نرسل قيم فارغة للبريد والجوال (الأعمدة 7 و 8) ليقوم الطالب بتعبئتها لاحقاً
+                    # الترتيب: ID(0), Name(1), Class(2), Year(3), Status(4), Sub(5), Stage(6), Email(7), Phone(8), Points(9)
+                    new_student = [nid, nname, nclass, nyear, "نشط", nsub, nstage, "", "", "0"]
+                    sh.worksheet("students").append_row(new_student)
+                    st.success(f"تم تأسيس حساب الطالب {nname} بنجاح")
+                    st.rerun()
+                else:
+                    st.error("يرجى إدخال الرقم الأكاديمي والاسم")
+
+        st.divider()
+
+        # 3. قسم الحذف (كما هو لضمان التحكم)
+        st.subheader("🗑️ حذف طالب")
+        if not df_st.empty:
+            del_name = st.selectbox("اختر الطالب لحذفه", [""] + df_st.iloc[:, 1].tolist())
+            if st.button("⚠️ حذف نهائي"):
+                if del_name:
+                    for sn in ["students", "grades", "behavior"]:
+                        try:
+                            ws = sh.worksheet(sn)
+                            cell = ws.find(del_name)
+                            ws.delete_rows(cell.row)
+                        except: pass
+                    st.warning(f"تم حذف {del_name}")
+                    st.rerun()
 
     # 2. شاشة الدرجات
     elif menu == "📝 شاشة الدرجات":
