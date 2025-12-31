@@ -249,9 +249,9 @@ if st.session_state.role == "teacher":
             </div>
         """, unsafe_allow_html=True)
 
-        # 1. نموذج الإضافة
+        # 1. نموذج الإضافة (تم إزالة أي رسائل خطأ ثابتة من هنا)
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form_final", clear_on_submit=True):
+            with st.form("announcement_form_final_v3", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه")
@@ -262,46 +262,47 @@ if st.session_state.role == "teacher":
                 if btn_post:
                     if a_title:
                         try:
-                            # محاولة الحفظ الفعلية
+                            # الحفظ المباشر في جدول 'exams'
                             sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
                             st.success("✅ تم نشر التنبيه بنجاح")
                             time.sleep(1)
                             st.rerun()
-                        except:
-                            # لا يظهر هذا الخطأ إلا إذا كانت الورقة غير موجودة فعلاً
-                            st.error("⚠️ خطأ تقني: ورقة 'exams' غير موجودة في ملفك")
+                        except Exception as e:
+                            # تظهر فقط في حال وجود مشكلة حقيقية
+                            st.error(f"⚠️ فشل الاتصال بجدول exams: {e}")
                     else:
                         st.warning("⚠️ يرجى كتابة عنوان التنبيه")
 
-        # 2. عرض التنبيهات (ترتيب تنازلي: الأحدث في الأعلى)
+        st.divider()
+
+        # 2. عرض التنبيهات (الترتيب: من الأحدث للأقدم)
         st.markdown("### 📋 التنبيهات المنشورة حالياً")
+        
+        # جلب البيانات والتأكد من أنها ليست فارغة
         df_ann = fetch_safe("exams")
         
-        if not df_ann.empty:
-            # عكس الترتيب لعرض الأحدث أولاً
+        if df_ann is not None and not df_ann.empty:
+            # عكس البيانات لعرض الأحدث في الأعلى
             reversed_df = df_ann.iloc[::-1]
             
             for index, row in reversed_df.iterrows():
-                # الحفاظ على المؤشر الأصلي للحذف الصحيح من الشيت
-                original_row_index = index 
-                
+                # استخدام index الأصلي لضمان حذف السطر الصحيح من جوجل شيت
                 with st.container(border=True):
                     col_text, col_btn = st.columns([4, 1])
                     with col_text:
                         st.markdown(f"**[{row[0]}]** - {row[1]}")
                         st.caption(f"📅 الموعد: {row[2]}")
                     with col_btn:
-                        # زر الحذف مع تعريف المفتاح الفريد لكل صف
-                        if st.button(f"🗑️ حذف", key=f"del_ann_{original_row_index}"):
+                        if st.button(f"🗑️ حذف", key=f"del_ann_final_{index}"):
                             try:
                                 ws_exam = sh.worksheet("exams")
-                                # الحذف يعتمد على الفهرس الأصلي في جوجل شيت
-                                ws_exam.delete_rows(original_row_index + 2)
-                                st.toast(f"تم حذف التنبيه بنجاح")
-                                time.sleep(1)
+                                # الحذف يعتمد على الفهرس الفعلي (index + 2)
+                                ws_exam.delete_rows(int(index) + 2)
+                                st.toast(f"تم حذف التنبيه")
+                                time.sleep(0.5)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"فشل الحذف: {e}")
+                                st.error(f"خطأ في الحذف: {e}")
         else:
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 # ==========================================
