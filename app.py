@@ -163,31 +163,62 @@ if menu == "👥 إدارة الطلاب":
                     st.warning(f"تم حذف الطالب {target} وكل بياناته المرتبطة.")
                     st.rerun()
 
-    # 2. شاشة الدرجات
+    # 2. شاشة الدرجات (تم إصلاح الربط البرمجي)
     elif menu == "📝 شاشة الدرجات":
-        st.header("📝 رصد الدرجات الدراسية")
+        # هيدر جمالي للشاشة
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #8B5CF6 0%, #6D28D9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <h1 style="margin:0;">📝 بوابة رصد الدرجات</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">تسجيل نتائج الفترات وأعمال السنة بدقة</p>
+            </div>
+        """, unsafe_allow_html=True)
+
         df_st = fetch_safe("students")
-        target = st.selectbox("اختر الطالب", [""] + df_st.iloc[:, 1].tolist())
-        if target:
-            df_g = fetch_safe("grades")
-            curr = df_g[df_g.iloc[:, 0] == target]
-            v1 = int(curr.iloc[0, 1]) if not curr.empty else 0
-            v2 = int(curr.iloc[0, 2]) if not curr.empty else 0
-            v3 = int(curr.iloc[0, 3]) if not curr.empty else 0
-            with st.form("grade_form"):
-                c1, c2, c3 = st.columns(3)
-                p1 = c1.number_input("الفترة الأولى", 0, 100, value=v1)
-                p2 = c2.number_input("الفترة الثانية", 0, 100, value=v2)
-                part = c3.number_input("درجة المشاركة", 0, 100, value=v3)
-                if st.form_submit_button("حفظ وتحديث الدرجات"):
-                    ws = sh.worksheet("grades")
-                    try:
-                        cell = ws.find(target)
-                        ws.update(f'B{cell.row}:D{cell.row}', [[p1, p2, part]])
-                    except: ws.append_row([target, p1, p2, part])
-                    st.success("تم التحديث"); st.rerun()
-        st.subheader("📋 جدول الدرجات العام")
-        st.dataframe(fetch_safe("grades"), use_container_width=True)
+        
+        # حاوية اختيار الطالب
+        with st.container(border=True):
+            target = st.selectbox("🎯 اختر الطالب المراد رصد درجاته", [""] + df_st.iloc[:, 1].tolist())
+            
+            if target:
+                df_g = fetch_safe("grades")
+                curr = df_g[df_g.iloc[:, 0] == target]
+                
+                # جلب الدرجات الحالية إن وجدت
+                v1 = int(curr.iloc[0, 1]) if not curr.empty else 0
+                v2 = int(curr.iloc[0, 2]) if not curr.empty else 0
+                v3 = int(curr.iloc[0, 3]) if not curr.empty else 0
+                
+                st.markdown(f"#### ✍️ رصد درجات الطالب: <span style='color:#6D28D9;'>{target}</span>", unsafe_allow_html=True)
+                
+                with st.form("grade_form_pro", clear_on_submit=True):
+                    c1, c2, c3 = st.columns(3)
+                    p1 = c1.number_input("📉 الفترة الأولى", 0, 100, value=v1)
+                    p2 = c2.number_input("📉 الفترة الثانية", 0, 100, value=v2)
+                    part = c3.number_input("⭐ المشاركة", 0, 100, value=v3)
+                    
+                    if st.form_submit_button("💾 حفظ وتحديث الدرجات"):
+                        ws = sh.worksheet("grades")
+                        try:
+                            # البحث عن اسم الطالب لتحديث صفه
+                            cell = ws.find(target)
+                            ws.update(f'B{cell.row}:D{cell.row}', [[p1, p2, part]])
+                        except:
+                            # إذا لم يوجد، يتم إنشاء صف جديد
+                            ws.append_row([target, p1, p2, part])
+                        
+                        st.balloons()
+                        st.success(f"تم تحديث درجات {target} بنجاح")
+                        st.rerun()
+
+        # عرض الجدول العام بتنسيق نظيف
+        st.write("")
+        st.markdown("<h3 style='color: #6D28D9;'>📊 السجل العام للنتائج</h3>", unsafe_allow_html=True)
+        with st.container(border=True):
+            df_grades_all = fetch_safe("grades")
+            if not df_grades_all.empty:
+                st.dataframe(df_grades_all, use_container_width=True, hide_index=True)
+            else:
+                st.info("لم يتم رصد أي درجات حتى الآن.")
 
     # 3. شاشة رصد السلوك (تم إعادتها داخل نطاق شرط المعلم)
     elif menu == "🎭 رصد السلوك":
