@@ -241,64 +241,66 @@ if st.session_state.role == "teacher":
                 st_history = df_b[df_b.iloc[:, 0] == b_name]
                 st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
    # --- القسم الرابع: شاشة الاختبارات (إصدار البحث الذكي للجوال) ---
-    # --- القسم الرابع: شاشة الاختبارات (إصدار مخصص حسب جدول الأستاذ زياد) ---
+   # --- القسم الرابع: شاشة التنبيهات والإعلانات (مع ميزة الحذف) ---
     elif menu == "📢 شاشة الاختبارات":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
-                <h1 style="margin:0;">📢 رصد وتوثيق الاختبارات</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">منصة الأستاذ زياد الذكية - سجل الصفوف</p>
+                <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إضافة وحذف مواعيد الاختبارات والنشاطات</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # جلب البيانات لفلترة الطلاب حسب الصف لاحقاً إذا رغبت
-        df_st = fetch_safe("students")
-        
-        with st.container(border=True):
-            with st.form("exam_custom_form", clear_on_submit=True):
-                # 1. اختيار الصف (الكل أو صف معين)
-                st.markdown("##### 🏫 بيانات المجموعة")
-                e_class = st.selectbox("📁 اختر الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+        # 1. نموذج إضافة تنبيه جديد
+        with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
+            with st.form("announcement_form", clear_on_submit=True):
+                c1, c2, c3 = st.columns([1, 2, 1])
+                a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                a_title = c2.text_input("📝 عنوان التنبيه", placeholder="مثال: اختبار لغتي الفصل الأول")
+                a_date = c3.date_input("📅 الموعد")
                 
-                # 2. حقل العنوان وحقل التاريخ
-                c1, c2 = st.columns(2)
-                e_title = c1.text_input("📝 عنوان الاختبار / الفعالية", placeholder="مثال: اختبار شهري، مراجعة...")
-                e_date = c2.date_input("📅 تاريخ اليوم")
+                btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
                 
-                st.divider()
-                
-                # 3. اختيار الطالب مع ميزة البحث الذكي (متوافق مع الجوال)
-                st.markdown("##### 🎯 رصد الدرجة للطالب")
-                e_search = st.text_input("🔍 ابحث عن اسم الطالب", placeholder="اكتب الحروف الأولى...")
-                
-                all_names = df_st.iloc[:, 1].tolist()
-                filtered_names = [n for n in all_names if e_search in n] if e_search else all_names
-                
-                e_student = st.selectbox("👤 اختر اسم الطالب من النتائج:", [""] + filtered_names)
-                
-                # حقل الدرجة (اختياري حسب الحاجة)
-                e_grade = st.number_input("💯 الدرجة (إن وجدت)", min_value=0.0, max_value=100.0, value=0.0)
-
-                btn_save_exam = st.form_submit_button("💾 حفظ البيانات في السجل")
-
-                if btn_save_exam:
-                    if e_title and e_student:
+                if btn_post:
+                    if a_title:
                         try:
-                            # الحفظ في جدول 'exams' حسب الترتيب: الصف، العنوان، التاريخ
-                            # سنضيف اسم الطالب والدرجة أيضاً ليكون السجل مكتملاً
-                            sh.worksheet("exams").append_row([e_class, e_title, str(e_date), e_student, e_grade])
-                            st.success(f"✅ تم بنجاح رصد ({e_title}) للطالب {e_student}")
+                            # الحفظ في جدول 'exams' حسب الترتيب الجديد
+                            sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
+                            st.success("✅ تم نشر التنبيه بنجاح")
                             time.sleep(1)
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"⚠️ تأكد من وجود ورقة 'exams' بنفس الترتيب: {e}")
+                        except:
+                            st.error("⚠️ تأكد من وجود ورقة 'exams' في ملفك")
                     else:
-                        st.warning("⚠️ يرجى تعبئة العنوان واختيار الطالب")
+                        st.warning("⚠️ يرجى كتابة عنوان للتنبيه")
 
-        # عرض سجل الاختبارات المرصودة
-        st.markdown("### 📊 سجل الاختبارات والنشاطات")
-        df_exams = fetch_safe("exams")
-        if not df_exams.empty:
-            st.dataframe(df_exams.iloc[::-1], use_container_width=True, hide_index=True)
+        # 2. عرض التنبيهات الحالية مع ميزة الحذف
+        st.markdown("### 📋 التنبيهات المنشورة حالياً")
+        df_ann = fetch_safe("exams")
+        
+        if not df_ann.empty:
+            # عرض كل تنبيه في بطاقة منفصلة مع زر حذف
+            for index, row in df_ann.iterrows():
+                with st.container(border=True):
+                    col_text, col_btn = st.columns([4, 1])
+                    
+                    with col_text:
+                        st.markdown(f"**[{row[0]}]** - {row[1]}")
+                        st.caption(f"📅 الموعد: {row[2]}")
+                    
+                    with col_btn:
+                        # زر الحذف (يستخدم رقم الصف في جوجل شيت)
+                        if st.button(f"🗑️ حذف", key=f"del_{index}"):
+                            try:
+                                ws_exam = sh.worksheet("exams")
+                                # +2 لأن الفهرس يبدأ من 0 وهناك صف عناوين في جوجل شيت
+                                ws_exam.delete_rows(index + 2)
+                                st.toast(f"تم حذف: {row[1]}")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"فشل الحذف: {e}")
+        else:
+            st.info("📭 لا توجد تنبيهات منشورة حالياً")
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
