@@ -73,60 +73,85 @@ if st.session_state.role == "teacher":
     # تعريف القائمة الرئيسية (تأكد من مطابقة الإيموجي والاسم تماماً)
     menu = st.sidebar.selectbox("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
 
-    # 1. منطق شاشة إدارة الطلاب
-    if menu == "👥 إدارة الطلاب":
-        st.header("👥 تأسيس بيانات الطلاب")
+   if menu == "👥 إدارة الطلاب":
+        # تصميم عنوان احترافي في أعلى الصفحة
+        st.markdown("""
+            <div style="background-color: #1E3A8A; padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <h1 style="color: white; margin: 0; font-family: 'Arial';">👥 مركز التحكم بالطلاب</h1>
+                <p style="color: #d1d5db; margin-top: 10px;">أهلاً بك يا أستاذي.. هنا يمكنك تأسيس وإدارة بيانات طلابك بكل سهولة</p>
+            </div>
+        """, unsafe_allow_html=True)
         
-        # جلب البيانات الحالية للعرض
+        # جلب البيانات
         df_st = fetch_safe("students")
-        if not df_st.empty:
-            st.subheader("📋 قائمة الطلاب المسجلين")
-            st.dataframe(df_st, use_container_width=True, hide_index=True)
         
-        st.divider()
+        # 1. عرض الجدول بداخل حاوية أنيقة
+        with st.container(border=True):
+            st.markdown("<h3 style='color: #1E3A8A;'>📋 قائمة الطلاب الحالية</h3>", unsafe_allow_html=True)
+            if not df_st.empty:
+                st.dataframe(df_st, use_container_width=True, hide_index=True)
+            else:
+                st.info("لا يوجد طلاب مسجلون حالياً.")
         
-        # نموذج التأسيس (الاسم والرقم فقط)
-        with st.form("add_st_form"):
-            st.subheader("➕ إضافة طالب جديد")
+        st.write("") # مسافة جمالية
+
+        # 2. تصميم نموذج الإضافة كبطاقة (Card)
+        st.markdown("""
+            <div style="background-color: #f8fafc; padding: 15px; border-right: 5px solid #10b981; border-radius: 10px; margin-bottom: 10px;">
+                <h3 style="color: #065f46; margin: 0;">➕ تأسيس حساب طالب جديد</h3>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("add_st_form", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
-            nid = c1.text_input("الرقم الأكاديمي (ID)")
-            nname = c2.text_input("الاسم الثلاثي")
-            nclass = c3.selectbox("الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            nid = c1.text_input("🔢 الرقم الأكاديمي (ID)")
+            nname = c2.text_input("👤 الاسم الثلاثي")
+            nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
             
             c4, c5, c6 = st.columns(3)
-            nstage = c4.selectbox("المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-            nyear = c5.text_input("العام الدراسي", value="1447هـ")
-            nsub = c6.text_input("المادة", value="لغة إنجليزية")
+            nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+            nyear = c5.text_input("🗓️ العام الدراسي", value="1447هـ")
+            nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
             
-            if st.form_submit_button("✅ اعتماد التأسيس"):
+            # زر الإضافة بتصميم streamlit الافتراضي داخل الفورم
+            submit = st.form_submit_button("✅ اعتماد التأسيس وإضافة الطالب")
+            
+            if submit:
                 if nid and nname:
-                    # نترك أعمدة البريد (7) والجوال (8) فارغة ليملأها الطالب
                     # الترتيب: ID, Name, Class, Year, Status, Sub, Stage, Email, Phone, Points
                     new_student = [nid, nname, nclass, nyear, "نشط", nsub, nstage, "", "", "0"]
                     sh.worksheet("students").append_row(new_student)
-                    st.success(f"تم تأسيس حساب الطالب {nname} بنجاح")
+                    st.balloons() # إضافة تأثير احتفالي عند النجاح
+                    st.success(f"🎉 تم تأسيس حساب الطالب {nname} بنجاح")
                     st.rerun()
                 else:
-                    st.error("⚠️ يرجى تعبئة الرقم الأكاديمي والاسم")
+                    st.error("⚠️ يرجى تعبئة الرقم الأكاديمي والاسم لضمان صحة البيانات")
 
-        st.divider()
+        st.write("")
 
-        # قسم الحذف (للتنظيف المستمر)
-        st.subheader("🗑️ حذف طالب")
-        if not df_st.empty:
-            del_target = st.selectbox("اختر الطالب المراد حذفه", [""] + df_st.iloc[:, 1].tolist())
-            if st.button("⚠️ تنفيذ الحذف النهائي"):
-                if del_target:
-                    # الحذف من كل الشيتات لضمان عدم وجود بيانات يتيمة
-                    for sn in ["students", "grades", "behavior"]:
-                        try:
-                            ws = sh.worksheet(sn)
-                            cell = ws.find(del_target)
-                            ws.delete_rows(cell.row)
-                        except: pass
-                    st.warning(f"تم حذف {del_target} من النظام")
-                    st.rerun()
-                    st.rerun()
+        # 3. قسم الحذف بتصميم تحذيري
+        st.markdown("""
+            <div style="background-color: #fff1f2; padding: 15px; border-right: 5px solid #e11d48; border-radius: 10px; margin-bottom: 10px;">
+                <h3 style="color: #9f1239; margin: 0;">🗑️ منطقة الحذف النهائي</h3>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.container(border=True):
+            if not df_st.empty:
+                del_target = st.selectbox("اختر الطالب المراد حذفه نهائياً من كافة السجلات", [""] + df_st.iloc[:, 1].tolist())
+                if st.button("⚠️ تنفيذ الحذف الشامل"):
+                    if del_target:
+                        with st.spinner('جاري تنظيف السجلات...'):
+                            for sn in ["students", "grades", "behavior"]:
+                                try:
+                                    ws = sh.worksheet(sn)
+                                    cell = ws.find(del_target)
+                                    ws.delete_rows(cell.row)
+                                except: pass
+                        st.warning(f"تم حذف {del_target} بنجاح من النظام")
+                        st.rerun()
+            else:
+                st.info("القائمة فارغة، لا يوجد ما يمكن حذفه.")
 
     # 2. شاشة الدرجات
     elif menu == "📝 شاشة الدرجات":
