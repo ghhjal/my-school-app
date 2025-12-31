@@ -242,16 +242,17 @@ if st.session_state.role == "teacher":
                 st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
    # --- القسم الرابع: شاشة التنبيهات (الإصدار المصحح والمنظم) ---
     elif menu == "📢 شاشة الاختبارات":
+        import urllib.parse
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة المواعيد بذكاء - منصة الأستاذ زياد</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة المواعيد والتواصل الفوري - الأستاذ زياد</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 1. نموذج الإضافة (تم إلغاء رسائل "فشل" الحمراء تماماً)
+        # 1. نموذج الإضافة الصامت
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form_silent_v5", clear_on_submit=True):
+            with st.form("announcement_form_wa_v6", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه")
@@ -262,20 +263,17 @@ if st.session_state.role == "teacher":
                 if btn_post and a_title:
                     try:
                         sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
-                        st.balloons() # احتفال بسيط بالنجاح بدلاً من الرسائل الجامدة
-                        time.sleep(1)
+                        st.balloons()
+                        time.sleep(0.5)
                         st.rerun()
                     except:
-                        pass # صمت تام في حال وجود أي مشكلة تقنية عابرة
+                        pass
 
         st.markdown("### 📋 التنبيهات المنشورة (الأحدث أولاً)")
-        
         df_ann = fetch_safe("exams")
         
         if df_ann is not None and not df_ann.empty:
-            # الترتيب من الأحدث إلى الأقدم
             reversed_df = df_ann.iloc[::-1]
-            
             color_map = {
                 "الكل": "#E0F2FE", "الأول": "#F0FDF4", "الثاني": "#FFF7ED", 
                 "الثالث": "#FAF5FF", "الرابع": "#FEF2F2", "الخامس": "#F5F3FF", "السادس": "#ECFEFF"
@@ -284,6 +282,19 @@ if st.session_state.role == "teacher":
             for index, row in reversed_df.iterrows():
                 bg_color = color_map.get(row[0], "#FFFFFF")
                 
+                # نص الرسالة المنسق للواتساب
+                wa_msg = (
+                    f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
+                    f"----------------------------------\n"
+                    f"🏫 *الصف:* {row[0]}\n"
+                    f"📝 *الموضوع:* {row[1]}\n"
+                    f"📅 *الموعد:* {row[2]}\n"
+                    f"----------------------------------\n"
+                    f"يرجى العلم والاستعداد. مع تمنياتي لكم بالتوفيق 🌟"
+                )
+                encoded_msg = urllib.parse.quote(wa_msg)
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+
                 # عرض البطاقة الملونة
                 st.markdown(f"""
                     <div style="background-color: {bg_color}; padding: 15px; border-radius: 10px; border-right: 5px solid #4F46E5; margin-bottom: 5px;">
@@ -293,15 +304,18 @@ if st.session_state.role == "teacher":
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # زر الحذف (بدون رسائل فشل حمراء)
-                if st.button(f"🗑️ حذف الإعلان", key=f"del_silent_{index}"):
-                    try:
-                        ws_exam = sh.worksheet("exams")
-                        # الحذف الفعلي من السطر الصحيح
-                        ws_exam.delete_rows(int(index) + 2)
-                        st.rerun()
-                    except:
-                        pass # صمت تام
+                # أزرار التحكم (واتساب وحذف)
+                col1, col2, col_empty = st.columns([1.5, 1, 3])
+                with col1:
+                    st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:5px 10px; border-radius:5px; text-align:center; font-size:14px; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
+                with col2:
+                    if st.button(f"🗑️ حذف", key=f"del_wa_{index}"):
+                        try:
+                            ws_exam = sh.worksheet("exams")
+                            ws_exam.delete_rows(int(index) + 2)
+                            st.rerun()
+                        except:
+                            pass
         else:
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 # ==========================================
