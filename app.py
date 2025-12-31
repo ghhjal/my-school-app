@@ -240,8 +240,7 @@ if st.session_state.role == "teacher":
             if not df_b.empty:
                 st_history = df_b[df_b.iloc[:, 0] == b_name]
                 st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
-   # --- القسم الرابع: شاشة الاختبارات (إصدار البحث الذكي للجوال) ---
-   # --- القسم الرابع: شاشة التنبيهات والإعلانات (مع ميزة الحذف) ---
+   # --- القسم الرابع: شاشة التنبيهات (الإصدار المصحح والمنظم) ---
     elif menu == "📢 شاشة الاختبارات":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
@@ -252,7 +251,7 @@ if st.session_state.role == "teacher":
 
         # 1. نموذج إضافة تنبيه جديد
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form", clear_on_submit=True):
+            with st.form("announcement_form_v2", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه", placeholder="مثال: اختبار لغتي الفصل الأول")
@@ -263,37 +262,44 @@ if st.session_state.role == "teacher":
                 if btn_post:
                     if a_title:
                         try:
-                            # الحفظ في جدول 'exams' حسب الترتيب الجديد
+                            # الحفظ في جدول 'exams'
                             sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
                             st.success("✅ تم نشر التنبيه بنجاح")
                             time.sleep(1)
                             st.rerun()
                         except:
-                            st.error("⚠️ تأكد من وجود ورقة 'exams' في ملفك")
+                            st.error("⚠️ يرجى التأكد من تسمية الورقة 'exams' في ملفك")
                     else:
                         st.warning("⚠️ يرجى كتابة عنوان للتنبيه")
 
-        # 2. عرض التنبيهات الحالية مع ميزة الحذف
+        # 2. عرض التنبيهات الحالية (من الأحدث إلى الأقدم)
         st.markdown("### 📋 التنبيهات المنشورة حالياً")
         df_ann = fetch_safe("exams")
         
         if not df_ann.empty:
-            # عرض كل تنبيه في بطاقة منفصلة مع زر حذف
-            for index, row in df_ann.iterrows():
+            # تحويل البيانات إلى قائمة وعكسها لجعل الأحدث في الأعلى
+            reversed_df = df_ann.iloc[::-1]
+            
+            for index, row in reversed_df.iterrows():
+                # حساب الرقم الحقيقي للصف في جوجل شيت للحذف بشكل صحيح
+                # الترتيب في DataFrame المعكوس يختلف، لذا نحتاج للمؤشر الأصلي
+                real_index = index 
+                
                 with st.container(border=True):
                     col_text, col_btn = st.columns([4, 1])
                     
                     with col_text:
+                        # عرض الصف والعنوان والتاريخ بتنسيق واضح
                         st.markdown(f"**[{row[0]}]** - {row[1]}")
                         st.caption(f"📅 الموعد: {row[2]}")
                     
                     with col_btn:
-                        # زر الحذف (يستخدم رقم الصف في جوجل شيت)
-                        if st.button(f"🗑️ حذف", key=f"del_{index}"):
+                        # زر الحذف المرتبط بالصف الصحيح
+                        if st.button(f"🗑️ حذف", key=f"del_{real_index}"):
                             try:
                                 ws_exam = sh.worksheet("exams")
-                                # +2 لأن الفهرس يبدأ من 0 وهناك صف عناوين في جوجل شيت
-                                ws_exam.delete_rows(index + 2)
+                                # +2 للوصول للصف الصحيح (1 للعنوان و1 لأن الفهرس يبدأ بـ 0)
+                                ws_exam.delete_rows(real_index + 2)
                                 st.toast(f"تم حذف: {row[1]}")
                                 time.sleep(1)
                                 st.rerun()
