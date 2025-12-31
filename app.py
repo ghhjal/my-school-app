@@ -192,7 +192,6 @@ if st.session_state.role == "teacher":
                 if btn_save or btn_mail or btn_wa:
                     if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-                        # تحديث النقاط في ورقة الطلاب
                         try:
                             ws_st = sh.worksheet("students")
                             cell = ws_st.find(b_name)
@@ -200,14 +199,18 @@ if st.session_state.role == "teacher":
                             current_p = int(ws_st.cell(cell.row, 9).value or 0)
                             ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                         except: pass
-                        
-                        full_msg = f"تقرير سلوك: {b_name}\nنوع السلوك: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
-                        if btn_mail and s_email:
-                            st.markdown(f'<meta http-equiv="refresh" content="0;url=mailto:{s_email}?subject=تقرير&body={urllib.parse.quote(full_msg)}">', unsafe_allow_html=True)
-                        if btn_wa and s_phone:
-                            wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
-                            st.markdown(f'<a href="{wa_url}" target="_blank">✅ اضغط هنا لإرسال الواتساب</a>', unsafe_allow_html=True)
-                        st.success("تم الحفظ بنجاح")
+                        st.success("✅ تم الحفظ بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+
+            # --- هنا إعادة الجدول الذي سألت عنه يا أستاذ زياد ---
+            st.divider()
+            st.subheader(f"📋 سجل سلوك: {b_name}")
+            df_beh_logs = fetch_safe("behavior")
+            if not df_beh_logs.empty:
+                # تصفية السجل للطالب المختار فقط وعرضه من الأحدث للأقدم
+                specific_logs = df_beh_logs[df_beh_logs.iloc[:, 0] == b_name].iloc[::-1]
+                st.dataframe(specific_logs, use_container_width=True, hide_index=True)
 
     elif menu == "📢 شاشة الاختبارات":
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center;"><h1>📢 شاشة الاختبارات</h1></div>', unsafe_allow_html=True)
