@@ -176,11 +176,10 @@ if menu == "🎭 رصد السلوك":
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
-# --- قسم شاشة الطالب (مستقل تماماً عن متغيرات المعلم) ---
+# --- شاشة الطالب (مستقلة تماماً لمنع الأخطاء) ---
 if st.session_state.role == "student":
     # 1. جلب البيانات الأساسية
     df_st = fetch_safe("students")
-    # التأكد من العثور على بيانات الطالب
     s_data = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid]
     
     if not s_data.empty:
@@ -191,62 +190,62 @@ if st.session_state.role == "student":
         s_points = s_row.iloc[9]
         s_class = s_row.iloc[2]
 
-        # 2. تنبيهات الإعلانات في أعلى الشاشة
+        # 2. قسم الإعلانات (أعلى الشاشة - وضوح تام للجوال)
         df_ex = fetch_safe("exams")
         if not df_ex.empty:
-            # عرض الإعلانات الخاصة بصف الطالب أو الموجهة للكل
             my_ex = df_ex[(df_ex.iloc[:, 2] == s_class) | (df_ex.iloc[:, 2] == "الكل")]
             for _, ex in my_ex.iterrows():
-                st.warning(f"🔔 **تنبيه:** {ex.iloc[1]} | 📅 التاريخ: {ex.iloc[0]}")
+                st.warning(f"🔔 **إعلان هام:** {ex.iloc[1]} \n\n 📅 التاريخ: {ex.iloc[0]}")
 
-        # 3. واجهة الهوية والأوسمة (تصميم واضح للجوال)
+        # 3. واجهة الهوية والأوسمة (تصميم عمودي للجوال)
         st.markdown(f"""
-            <div style="text-align: center; background-color: #ffffff; padding: 20px; border-radius: 20px; box-shadow: 0px 4px 12px rgba(0,0,0,0.1); border-top: 6px solid #1E3A8A; margin-bottom: 20px;">
-                <h2 style="color: #1E3A8A; margin-bottom: 5px;">مرحباً يا بطل: {s_name}</h2>
-                <p style="color: #666; font-size: 14px;">📧 {s_email} | 📱 {s_phone}</p>
-                <div style="display: flex; justify-content: center; gap: 30px; margin-top: 15px;">
+            <div style="text-align: center; background-color: #ffffff; padding: 15px; border-radius: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #1E3A8A; margin-top: 10px;">
+                <h3 style="color: #1E3A8A; margin-bottom: 5px;">مرحباً: {s_name}</h3>
+                <p style="font-size: 13px; color: #666;">📧 {s_email} | 📱 {s_phone}</p>
+                <div style="display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
                     <div style="text-align: center;">
-                        <div style="font-size: 40px;">🏆</div>
-                        <div style="font-weight: bold; color: #1E3A8A;">{s_points}</div>
-                        <div style="font-size: 12px; color: #888;">نقطة</div>
+                        <div style="font-size: 35px;">🏆</div>
+                        <div style="font-weight: bold; color: #1E3A8A; font-size: 18px;">{s_points}</div>
+                        <div style="font-size: 11px; color: #888;">نقطة</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 40px;">🥇</div>
-                        <div style="font-weight: bold; color: #1E3A8A;">متميز</div>
-                        <div style="font-size: 12px; color: #888;">وسام</div>
+                        <div style="font-size: 35px;">🥇</div>
+                        <div style="font-weight: bold; color: #1E3A8A; font-size: 18px;">متميز</div>
+                        <div style="font-size: 11px; color: #888;">وسام</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 4. التبويبات (الدرجات والملاحظات)
+        st.write("") 
+
+        # 4. التبويبات (النتائج والملاحظات)
+        # تم استخدام metric بدلاً من جداول لمنع أخطاء DeltaGenerator
         t1, t2 = st.tabs(["📊 نتيجتي الدراسية", "🎭 سجل ملاحظاتي"])
         
         with t1:
-            st.subheader("📝 الدرجات المرصودة")
             df_g = fetch_safe("grades")
             if not df_g.empty:
                 my_g = df_g[df_g.iloc[:, 0] == s_name]
                 if not my_g.empty:
-                    # حل مشكلة DeltaGenerator بعرض الدرجات كمقاييس واضحة
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("الفترة 1", f"{my_g.iloc[0, 1]}")
-                    c2.metric("الفترة 2", f"{my_g.iloc[0, 2]}")
-                    c3.metric("المشاركة", f"{my_g.iloc[0, 3]}")
+                    st.metric("الفترة الأولى", f"{my_g.iloc[0, 1]}")
+                    st.metric("الفترة الثانية", f"{my_g.iloc[0, 2]}")
+                    st.metric("درجة المشاركة", f"{my_g.iloc[0, 3]}")
                 else:
                     st.info("لا توجد درجات مرصودة حالياً.")
 
         with t2:
-            st.subheader("📜 ملاحظات المعلم")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
                 my_b = df_b[df_b.iloc[:, 0] == s_name]
                 if not my_b.empty:
                     for _, row in my_b.iterrows():
-                        # تنسيق الملاحظات في صناديق واضحة
-                        with st.container(border=True):
-                            st.write(f"🗓️ **التاريخ:** {row.iloc[1]} | 🏷️ **النوع:** {row.iloc[2]}")
-                            st.info(f"{row.iloc[3]}")
-                            # تم إلغاء زر "شكراً أستاذي" لضمان استقرار الشاشة
+                        # استخدام expander لسهولة القراءة من الجوال
+                        with st.expander(f"🗓️ {row.iloc[1]} | {row.iloc[2]}", expanded=True):
+                            st.info(f"📝 {row.iloc[3]}")
                 else:
-                    st.info("سجلك السلوكي متميز ولا توجد ملاحظات.")
+                    st.info("سجلك السلوكي نظيف.")
+
+    # زر الخروج في أسفل القائمة الجانبية بعيداً عن كود الشاشة
+    st.sidebar.markdown("---")
+    st.sidebar.button("🚗 تسجيل خروج", on_click=lambda: st.session_state.update({"role": None}))
