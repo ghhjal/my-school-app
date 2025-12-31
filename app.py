@@ -320,7 +320,7 @@ if st.session_state.role == "teacher":
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب الاحترافية (بطاقات عرضية + تنظيم ذكي)
+# 👨‍🎓 واجهة الطالب الاحترافية (تصميم البطاقات الملونة)
 # ==========================================
 elif st.session_state.role == "student":
     # 1. جلب البيانات
@@ -340,35 +340,36 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 👤 بطاقة التعريف والأوسمة (تصميم عرضي موحد) ---
+    # --- 👤 بطاقة التعريف والأوسمة المؤطرة ---
     st.markdown(f"""
         <div style="background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; text-align: center;">
-            <div style="color: #64748b; font-size: 0.9rem;">الملف الشخصي للطلاب</div>
+            <div style="color: #64748b; font-size: 0.9rem;">الملف الشخصي للطالب</div>
             <h2 style="margin: 5px 0; color: #1e3a8a;">{s_name}</h2>
             <div style="background: #f1f5f9; display: inline-block; padding: 2px 15px; border-radius: 50px; font-size: 0.8rem; color: #475569; margin-bottom: 15px;">🏫 {s_class}</div>
-            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 15px 0;">
-            <div style="display: flex; justify-content: space-around; align-items: center;">
-                <div style="opacity: {'1' if s_points >= 10 else '0.2'}; filter: {'grayscale(0)' if s_points >= 10 else 'grayscale(100%)'};">
-                    <div style="font-size: 1.8rem;">🥉</div><div style="font-size: 0.7rem; font-weight: bold;">برونزي</div>
+            
+            <div style="display: flex; justify-content: space-around; margin: 15px 0;">
+                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 10 else '0.2'};">
+                    <div style="font-size: 1.5rem;">🥉</div><div style="font-size: 0.6rem; font-weight: bold; color: #cd7f32;">برونزي</div>
                 </div>
-                <div style="opacity: {'1' if s_points >= 50 else '0.2'}; filter: {'grayscale(0)' if s_points >= 50 else 'grayscale(100%)'};">
-                    <div style="font-size: 1.8rem;">🥈</div><div style="font-size: 0.7rem; font-weight: bold;">فضي</div>
+                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 50 else '0.2'};">
+                    <div style="font-size: 1.5rem;">🥈</div><div style="font-size: 0.6rem; font-weight: bold; color: #7f8c8d;">فضي</div>
                 </div>
-                <div style="opacity: {'1' if s_points >= 100 else '0.2'}; filter: {'grayscale(0)' if s_points >= 100 else 'grayscale(100%)'};">
-                    <div style="font-size: 1.8rem;">🥇</div><div style="font-size: 0.7rem; font-weight: bold;">ذهبي</div>
+                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 100 else '0.2'};">
+                    <div style="font-size: 1.5rem;">🥇</div><div style="font-size: 0.6rem; font-weight: bold; color: #d4af37;">ذهبي</div>
                 </div>
             </div>
-            <div style="margin-top: 15px; background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 10px; border-radius: 12px;">
+
+            <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 12px; border-radius: 15px; box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);">
                 <small>رصيد النقاط الحالي</small><br>
-                <b style="font-size: 1.5rem;">{s_points} نقطة</b>
+                <b style="font-size: 1.8rem;">{s_points}</b>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
     st.write("")
 
-    # --- 📊 التبويبات (الاختبارات والسلوك) ---
-    tab_exam, tab_behavior, tab_settings = st.tabs(["📢 التنبيهات", "🎭 سلوكي", "⚙️ الإعدادات"])
+    # --- 📊 التبويبات ---
+    tab_exam, tab_behavior, tab_settings = st.tabs(["📢 التنبيهات", "🎭 سجل السلوك", "⚙️ الإعدادات"])
 
     with tab_exam:
         df_ex = fetch_safe("exams")
@@ -376,12 +377,12 @@ elif st.session_state.role == "student":
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
                 st.markdown(f"""
-                    <div style="background: white; padding: 12px; border-radius: 10px; border-right: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:8px;">
-                        <div style="font-weight: bold; color: #1e3a8a;">{r[1]}</div>
-                        <div style="font-size: 0.8rem; color: #64748b;">📅 التاريخ: {r[2]}</div>
+                    <div style="background: #f0f7ff; padding: 15px; border-radius: 12px; border-right: 5px solid #3b82f6; margin-bottom: 10px;">
+                        <div style="font-weight: bold; color: #1e3a8a;">📢 {r[1]}</div>
+                        <div style="font-size: 0.85rem; color: #64748b; margin-top:5px;">📅 موعدنا: {r[2]}</div>
                     </div>
                 """, unsafe_allow_html=True)
-        else: st.info("لا توجد تنبيهات")
+        else: st.info("لا توجد تنبيهات جديدة")
 
     with tab_behavior:
         df_beh = fetch_safe("behavior")
@@ -389,29 +390,32 @@ elif st.session_state.role == "student":
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             if not f_beh.empty:
                 for _, r in f_beh.iloc[::-1].iterrows():
-                    color = "#10b981" if "+" in str(r[2]) else "#ef4444"
+                    # تحديد الألوان بناءً على نوع السلوك
+                    is_positive = "+" in str(r[2])
+                    bg_color = "#f0fff4" if is_positive else "#fff5f5"
+                    border_color = "#38a169" if is_positive else "#e53e3e"
+                    text_color = "#2f855a" if is_positive else "#c53030"
+                    
                     st.markdown(f"""
-                        <div style="background: white; padding: 12px; border-radius: 10px; border-right: 4px solid {color}; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:8px;">
-                            <b style="color: {color};">{r[2]}</b><br>
-                            <span style="font-size: 0.9rem;">{r[3]}</span><br>
-                            <small style="color: #94a3b8;">🗓️ {r[1]}</small>
+                        <div style="background: {bg_color}; padding: 15px; border-radius: 12px; border: 1px solid {border_color}; border-right: 8px solid {border_color}; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <b style="color: {text_color}; font-size: 1.1rem;">{r[2]}</b>
+                                <small style="color: #718096;">🗓️ {r[1]}</small>
+                            </div>
+                            <div style="margin-top: 8px; color: #4a5568; font-size: 0.95rem; line-height: 1.4;">{r[3]}</div>
                         </div>
                     """, unsafe_allow_html=True)
-            else: st.info("لا توجد ملاحظات مسجلة")
+            else: st.info("سجلك السلوكي نظيف حالياً")
 
     with tab_settings:
-        st.markdown("#### ⚙️ التحكم بالحساب")
-        with st.form("settings_form"):
+        with st.form("settings_st"):
             new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
-            save_btn = st.form_submit_button("💾 حفظ التعديلات", use_container_width=True)
-            if save_btn:
+            if st.form_submit_button("💾 حفظ البيانات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم الحفظ!"); st.rerun()
+                st.success("تم التحديث!"); st.rerun()
         
         st.write("---")
-        # زر الخروج بجانب الإعدادات
-        if st.button("🚗 تسجيل الخروج من المنصة", use_container_width=True, type="secondary"):
-            st.session_state.role = None
-            st.rerun()
+        if st.button("🚗 تسجيل الخروج", use_container_width=True):
+            st.session_state.role = None; st.rerun()
