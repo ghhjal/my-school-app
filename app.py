@@ -222,28 +222,33 @@ elif st.session_state.role == "student":
                 c3.metric("المشاركة", f"{my_g.iloc[0, 3]} / 100")
             else: st.info("لم يتم رصد درجاتك بعد.")
 
-    with t2:
-        df_b = fetch_safe("behavior")
-        if not df_b.empty:
-            my_b = df_b[df_b.iloc[:, 0] == s_name]
-            for i, row in my_b.iterrows():
-                status = str(row.iloc[4])
-                with st.container(border=True):
-                    st.write(f"📅 {row.iloc[1]} | {row.iloc[2]}")
-                    st.info(row.iloc[3])
-                    
-                    # منطق زر الشكر: فعال ويختفي فوراً
-                    if "✅ تمت القراءة" not in status:
-                        if st.button(f"❤️ شكراً أستاذي (تأكيد القراءة)", key=f"thx_{i}"):
-                            try:
-                                ws = sh.worksheet("behavior")
-                                all_v = ws.get_all_values()
-                                for idx, r in enumerate(all_v):
-                                    if r[0] == s_name and r[3] == row.iloc[3]:
-                                        ws.update_cell(idx + 1, 5, "✅ تمت القراءة")
-                                        st.success("تم الإرسال!")
-                                        time.sleep(0.5)
-                                        st.rerun() # الإخفاء الفوري للزر
-                            except: st.error("فشل التحديث")
-                    else:
-                        st.markdown("<span style='color: green; font-weight: bold;'>✅ تمت القراءة وشكر المعلم</span>", unsafe_allow_html=True)
+   # داخل قسم الطالب (student role) في تبويب "ملاحظاتي السلوكية"
+with t2:
+    df_b = fetch_safe("behavior")
+    if not df_b.empty:
+        # عرض ملاحظات الطالب الحالي فقط
+        my_b = df_b[df_b.iloc[:, 0] == s_name]
+        
+        for i, row in my_b.iterrows():
+            # التأكد من وجود عمود الحالة (العمود الخامس)
+            status = str(row.iloc[4]) if len(row) > 4 else "لم تُقرأ بعد"
+            
+            with st.container(border=True):
+                st.write(f"📅 **التاريخ:** {row.iloc[1]} | **النوع:** {row.iloc[2]}")
+                st.info(f"💬 {row.iloc[3]}")
+                
+                # منطق الزر: يظهر فقط إذا كانت الحالة "لم تُقرأ"
+                if "تمت القراءة" not in status:
+                    if st.button(f"❤️ شكراً أستاذ زياد (تأكيد القراءة)", key=f"btn_{i}"):
+                        ws_b = sh.worksheet("behavior")
+                        all_v = ws_b.get_all_values()
+                        # البحث عن رقم الصف الصحيح للتحديث
+                        for idx, r in enumerate(all_v):
+                            if r[0] == s_name and r[3] == row.iloc[3]:
+                                ws_b.update_cell(idx + 1, 5, "✅ تمت القراءة وشكر المعلم")
+                                st.success("تم إرسال شكرك للأستاذ!")
+                                time.sleep(0.5)
+                                st.rerun() # هذا الأمر يخفي الزر فوراً
+                else:
+                    # ما يظهر للطالب بعد اختفاء الزر
+                    st.markdown("<span style='color: green;'>✅ تمت القراءة وشكر المعلم</span>", unsafe_allow_html=True)
