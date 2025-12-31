@@ -405,22 +405,31 @@ elif st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-    with t_beh:
+   with t_beh:
+        st.markdown("### 🎭 سجل الانضباط والسلوك")
         df_beh = fetch_safe("behavior")
         if not df_beh.empty:
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
-            for _, r in f_beh.iloc[::-1].iterrows():
-                is_pos = "+" in str(r[2])
-                bg = "#059669" if is_pos else "#dc2626" # أخضر فاقع أو أحمر فاقع
-                st.markdown(f"""
-                    <div style="background: {bg}; padding: 15px; border-radius: 12px; color: white; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between;">
-                            <b style="font-size: 1.1rem;">{r[2]}</b>
-                            <small style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 5px;">{r[1]}</small>
+            if not f_beh.empty:
+                for _, r in f_beh.iloc[::-1].iterrows():
+                    is_pos = "+" in str(r[2])
+                    # ألوان هادئة (Pastel) مريحة للعين
+                    bg = "#f0fdf4" if is_pos else "#fef2f2"  # أخضر فاتح جداً أو أحمر فاتح جداً
+                    border = "#bbf7d0" if is_pos else "#fecaca"  # إطار أغمق قليلاً للتميز
+                    text_color = "#166534" if is_pos else "#991b1b" # لون نص داكن للوضوح
+                    icon = "✅" if is_pos else "⚠️"
+                    
+                    st.markdown(f"""
+                        <div style="background: {bg}; padding: 16px; border-radius: 12px; border: 1px solid {border}; border-right: 8px solid {text_color}; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <b style="color: {text_color}; font-size: 1.1rem;">{icon} {r[2]}</b>
+                                <span style="font-size: 0.8rem; color: #64748b; background: white; padding: 2px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">{r[1]}</span>
+                            </div>
+                            <div style="color: #475569; font-size: 0.95rem; line-height: 1.5;">{r[3]}</div>
                         </div>
-                        <div style="margin-top: 8px; font-size: 1rem;">{r[3]}</div>
-                    </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+            else:
+                st.success("سجلك السلوكي نظيف ومتميز!")
 
     with t_set:
         with st.form("settings_student"):
