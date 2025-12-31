@@ -67,7 +67,56 @@ def send_email_notification(to_email, subject, body):
     except Exception as e:
         st.error(f"خطأ في إرسال الإيميل: {e}")
         return False
+# أضف هذا المتغير في بداية قسم "إدارة الجلسة" (Session State)
+if 'email_count' not in st.session_state:
+    st.session_state.email_count = 0
 
+# --- تعديل دالة إرسال الإيميل لتزيد العداد ---
+def send_email_notification(to_email, subject, body):
+    try:
+        email_set = st.secrets["email_settings"]
+        msg = MIMEMultipart()
+        msg['From'] = email_set["sender_email"]
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(email_set["sender_email"], email_set["sender_password"])
+        server.send_message(msg)
+        server.quit()
+        
+        # زيادة العداد عند نجاح الإرسال
+        st.session_state.email_count += 1
+        return True
+    except Exception as e:
+        st.error(f"خطأ في إرسال الإيميل: {e}")
+        return False
+
+# --- إضافة العداد في شريط جانبي أو أسفل شاشة السلوك ---
+if menu == "🎭 رصد السلوك":
+    # (كود الرصد السابق هنا...)
+    
+    # العداد الذكي في القائمة الجانبية أو أسفل الصفحة
+    with st.sidebar:
+        st.divider()
+        st.markdown("### 📊 مراقب الإرسال اليومي")
+        count = st.session_state.email_count
+        limit = 500
+        
+        # تغيير اللون حسب العدد
+        color = "green" if count < 300 else "orange" if count < 450 else "red"
+        
+        st.markdown(f"""
+            <div style="padding:10px; border-radius:10px; background-color:#f0f2f6; border-right: 5px solid {color};">
+                <small>الإيميلات المرسلة الآن:</small><br>
+                <b style="font-size:1.2rem; color:{color};">{count} / {limit}</b>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if count >= 450:
+            st.warning("⚠️ اقتربت من الحد اليومي لـ Gmail (500 إيميل).")
 # إدارة الجلسة
 if 'role' not in st.session_state: st.session_state.role = None
 if 'sid' not in st.session_state: st.session_state.sid = None
