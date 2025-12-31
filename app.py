@@ -168,42 +168,75 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     elif menu == "🎭 رصد السلوك":
-        st.header("🎭 رصد السلوك")
+        # 1. الهيدر (العنوان الملون) الذي فقدناه
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h1 style="margin:0;">🎭 رصد السلوك والتواصل الفوري</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">منصة الأستاذ زياد الذكية</p>
+            </div>
+        """, unsafe_allow_html=True)
+
         df_st = fetch_safe("students")
-        search = st.text_input("🔍 ابحث عن الاسم")
-        filtered = [n for n in df_st.iloc[:,1].tolist() if search in n]
-        b_name = st.selectbox("🎯 الطالب:", [""] + filtered)
+        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا)")
+        all_names = df_st.iloc[:, 1].tolist()
+        filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
+        b_name = st.selectbox("🎯 اختر الطالب المطلوب:", [""] + filtered_names)
         
         if b_name:
-            s_info = df_st[df_st.iloc[:,1] == b_name].iloc[0]
-            s_phone = str(s_info[7]).split('.')[0]
-            with st.form("beh_form"):
-                b_type = st.selectbox("النوع", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)"])
-                b_note = st.text_area("الملاحظة")
-                btn_wa = st.form_submit_button("💬 حفظ وإرسال واتساب")
-                
-                if btn_wa and b_note:
-                    sh.worksheet("behavior").append_row([b_name, str(datetime.now().date()), b_type, b_note])
-                    # التنسيق الذي طلبته للواتساب
-                    wa_msg = (
-                        f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
-                        f"----------------------------------\n"
-                        f"🏫 *الطالب:* {b_name}\n"
-                        f"📝 *السلوك:* {b_type}\n"
-                        f"💬 *الملاحظة:* {b_note}\n"
-                        f"📅 *التاريخ:* {datetime.now().date()}\n"
-                        f"----------------------------------\n"
-                        f"يرجى العلم والمتابعة. مع تمنياتي لكم بالتوفيق 🌟"
-                    )
-                    wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(wa_msg)}"
-                    st.markdown(f'<a href="{wa_url}" target="_blank">✅ اضغط هنا لإرسال الرسالة</a>', unsafe_allow_html=True)
-                    st.success("تم الحفظ")
+            student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
+            s_email = student_info[6] 
+            s_phone = str(student_info[7]).split('.')[0]
+            
+            with st.container(border=True):
+                with st.form("behavior_form_complete", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
+                    b_date = c2.date_input("📅 التاريخ")
+                    b_note = st.text_area("📝 نص الملاحظة السلوكية")
+                    
+                    st.divider()
+                    # 2. إعادة الأزرار الثلاثة (حفظ، إيميل، واتساب)
+                    col1, col2, col3 = st.columns(3)
+                    btn_save = col1.form_submit_button("💾 رصد وحفظ فقط")
+                    btn_mail = col2.form_submit_button("📧 رصد وإيميل منظم")
+                    btn_wa = col3.form_submit_button("💬 رصد وواتساب منظم")
 
-            st.divider()
-            st.subheader("📋 سجل سلوك الطالب")
-            df_beh = fetch_safe("behavior")
-            if not df_beh.empty:
-                st.dataframe(df_beh[df_beh.iloc[:,0] == b_name].iloc[::-1], use_container_width=True, hide_index=True)
+                    if btn_save or btn_mail or btn_wa:
+                        if b_note:
+                            # حفظ البيانات في الشيت
+                            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
+                            
+                            # تحديث نقاط الطالب
+                            try:
+                                ws_st = sh.worksheet("students")
+                                cell = ws_st.find(b_name)
+                                p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
+                                current_p = int(ws_st.cell(cell.row, 9).value or 0)
+                                ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
+                            except: pass
+
+                            # التنسيق الاحترافي للرسالة
+                            full_msg = (
+                                f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
+                                f"----------------------------------\n"
+                                f"🏫 *الطالب:* {b_name}\n"
+                                f"🏷️ *نوع السلوك:* {b_type}\n"
+                                f"📝 *الملاحظة:* {b_note}\n"
+                                f"📅 *التاريخ:* {b_date}\n"
+                                f"----------------------------------\n"
+                                f"يرجى العلم والمتابعة. مع تمنياتي لكم بالتوفيق 🌟"
+                            )
+
+                            if btn_mail and s_email:
+                                mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
+                                st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
+                            
+                            if btn_wa and s_phone:
+                                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
+                                st.markdown(f"""
+                                    <div style="background-color: #f0fff4; border: 1px solid #25D366; padding: 15px; border-radius: 10px; text-align: center;">
+                                        <p style="color: #2c3e50; font-weight: bold;">✅ تم الحفظ بنجاح</p>
+                                        <a href="{wa_url}" target="_blank"
 
     elif menu == "📢 شاشة الاختبارات":
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center;"><h1>📢 شاشة الاختبارات</h1></div>', unsafe_allow_html=True)
