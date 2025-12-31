@@ -322,56 +322,71 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
 elif menu == "👨‍🎓 شاشة الطالب":
-        st.markdown('<h2 style="text-align:center; color:#10B981;">👨‍🎓 بوابة الطالب</h2>', unsafe_allow_html=True)
-        
-        # جلب البيانات
+        st.markdown("""
+            <style>
+            .stMetric { background-color: #f0fdf4; padding: 15px; border-radius: 15px; border: 1px solid #10b981; }
+            .announcement-card { background-color: #ffffff; padding: 15px; border-radius: 12px; border-right: 5px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; }
+            </style>
+            <div style="background: linear-gradient(90deg, #059669 0%, #10B981 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h1 style="margin:0;">✨ بوابة التميز الدراسي</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.9;">منصة الطالب الذكية - الأستاذ زياد</p>
+            </div>
+        """, unsafe_allow_html=True)
+
         df_st = fetch_safe("students")
         
         if df_st is not None and not df_st.empty:
-            # البحث عن الطالب
-            all_names = df_st.iloc[:, 1].tolist()
-            target_student = st.selectbox("🎯 ابحث عن اسمك واختاره:", [""] + all_names)
+            # محرك البحث (تصميم مريح للعين)
+            with st.container(border=True):
+                st.write("🔍 **ادخل اسمك لعرض ملفك الشخصي:**")
+                all_names = df_st.iloc[:, 1].tolist()
+                target_student = st.selectbox("اختر اسمك من القائمة:", [""] + all_names, label_visibility="collapsed")
 
             if target_student:
-                # استخراج الصفوف
-                s_data = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
-                
-                # عرض البيانات الأساسية
+                # جلب البيانات
+                s_row = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
+                s_class = str(s_row[2])
+                s_points = s_row[8] if s_row[8] else 0
+
+                # عرض النقاط والصف (تصميم بطاقات)
                 c1, c2 = st.columns(2)
-                c1.metric("🌟 رصيد النقاط", f"{s_data[8]} ن")
-                c2.metric("🏫 الصف", f"{s_data[2]}")
+                with c1:
+                    st.metric("🌟 رصيدك من النقاط", f"{s_points} نقطة")
+                with c2:
+                    st.metric("🏫 الصف الدراسي", s_class)
 
-                # --- نموذج تحديث البيانات (الإيميل والجوال) ---
-                with st.form("update_info"):
-                    st.write("📝 تحديث بيانات التواصل")
-                    # القيمة الافتراضية من الأعمدة G و H
-                    mail_val = str(s_data[6]) if s_data[6] else ""
-                    phone_val = str(s_data[7]) if s_data[7] else ""
-                    
-                    new_mail = st.text_input("📧 الإيميل", value=mail_val)
-                    new_phone = st.text_input("📱 الجوال", value=phone_val)
-                    
-                    if st.form_submit_button("حفظ التعديلات"):
-                        try:
-                            ws = sh.worksheet("students")
-                            cell = ws.find(target_student)
-                            # تحديث العمود G (7) والعمود H (8)
-                            ws.update_cell(cell.row, 7, new_mail)
-                            ws.update_cell(cell.row, 8, new_phone)
-                            st.success("✅ تم التحديث")
-                            time.sleep(1)
-                            st.rerun()
-                        except:
-                            st.error("خطأ في الاتصال")
+                # قسم تحديث البيانات (رقم الجوال والإيميل)
+                with st.expander("📝 تحديث بيانات التواصل الخاصة بك"):
+                    with st.form("update_data_form"):
+                        # الأعمدة G و H
+                        new_email = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]) if s_row[6] else "")
+                        new_phone = st.text_input("📱 رقم الجوال", value=str(s_row[7]) if s_row[7] else "")
+                        if st.form_submit_button("حفظ التعديلات"):
+                            try:
+                                ws = sh.worksheet("students")
+                                cell = ws.find(target_student)
+                                ws.update_cell(cell.row, 7, new_email) # عمود G
+                                ws.update_cell(cell.row, 8, new_phone) # عمود H
+                                st.success("🎉 تم تحديث بياناتك بنجاح!")
+                                time.sleep(1)
+                                st.rerun()
+                            except:
+                                st.error("فشل التحديث، يرجى المحاولة لاحقاً")
 
-                # --- عرض التنبيهات الخاصة بالصف ---
-                st.markdown("---")
-                st.write(f"📢 تنبيهات صف {s_data[2]}")
+                st.markdown("### 📢 جدول الاختبارات والتنبيهات")
                 df_ex = fetch_safe("exams")
                 if df_ex is not None and not df_ex.empty:
-                    # فلترة التنبيهات
-                    f_ex = df_ex[(df_ex.iloc[:, 0] == s_data[2]) | (df_ex.iloc[:, 0] == "الكل")]
-                    for _, r in f_ex.iloc[::-1].iterrows():
-                        st.info(f"📍 {r[1]} \n 📅 {r[2]}")
+                    # فلترة حسب صف الطالب
+                    f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
+                    if not f_ex.empty:
+                        for _, r in f_ex.iloc[::-1].iterrows():
+                            st.markdown(f"""
+                                <div class="announcement-card">
+                                    <div style="color:#059669; font-weight:bold;">📍 {r[1]}</div>
+                                    <div style="font-size:0.9em; color:#666; margin-top:5px;">📅 موعدنا: {r[2]}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.info("لا توجد تنبيهات جديدة لصفك حالياً.")
         else:
-            st.warning("جاري تحميل البيانات.. تأكد من وجود ورقة students")
+            st.warning("⚠️ جاري تهيئة البيانات، يرجى التأكد من اتصال الإنترنت.")
