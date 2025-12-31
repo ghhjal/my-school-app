@@ -5,80 +5,83 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# --- الإعدادات الأساسية ---
+import streamlit as st
+# استيراد المكتبات الأخرى (gspread, pandas إلخ) تأكد أنها موجودة في بداية ملفك
+
+# --- 1. تهيئة الحالة (حل مشكلة AttributeError) ---
+if 'role' not in st.session_state:
+    st.session_state.role = None
+if 'sid' not in st.session_state:
+    st.session_state.sid = None
+
+# --- 2. دالة جلب البيانات (تأكد من وجودها) ---
+# def fetch_safe(sheet_name): ... (كود الجلب الخاص بك)
+
 # ==========================================
-# 🏠 الصفحة الرئيسية (نسخة الجوال الاحترافية)
+# 🏠 الصفحة الرئيسية (تصميم متجاوب للجوال)
 # ==========================================
 if st.session_state.role is None:
-    # 1. قسم الترحيب العلوي - خطوط متجاوبة
+    # هيدر الصفحة
     st.markdown("""
-        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 15px; text-align: center; border-radius: 15px; margin-bottom: 20px; color: white;">
-            <h2 style="font-family: 'Cairo', sans-serif; font-size: 1.8rem; margin: 0;">🌟 منصة الأستاذ زياد العمري</h2>
-            <p style="font-size: 1rem; opacity: 0.9; margin-top: 10px;">نحو تميز إبداعي في اللغة الإنجليزية</p>
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 15px; text-align: center; border-radius: 15px; color: white;">
+            <h2 style="font-family: 'Cairo', sans-serif; font-size: 1.6rem; margin: 0;">🌟 منصة الأستاذ زياد العمري</h2>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">اللغة الإنجليزية بأسلوب عصري ومحفز</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. قسم الإحصائيات - ترتيب ذكي للجوال
-    df_st = fetch_safe("students")
-    total_students = len(df_st) if not df_st.empty else 0
+    # إحصائيات سريعة (تصميم مرن للجوال)
+    st.markdown("""
+        <div style="display: flex; gap: 10px; margin: 15px 0; justify-content: center;">
+            <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
+                <div style="font-size: 1.2rem;">📊</div><div style="font-size: 0.7rem; color: #64748b;">تقارير دقيقة</div>
+            </div>
+            <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
+                <div style="font-size: 1.2rem;">🏆</div><div style="font-size: 0.7rem; color: #64748b;">أوسمة تميز</div>
+            </div>
+            <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center;">
+                <div style="font-size: 1.2rem;">✨</div><div style="font-size: 0.7rem; color: #64748b;">تحديث يومي</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # نموذج تسجيل الدخول
+    st.markdown("<div style='text-align: center; font-weight: bold; color: #1e3a8a; margin-bottom: 10px;'>🔐 دخول المستخدم</div>", unsafe_allow_html=True)
     
-    # استخدام حاوية CSS لجعل البطاقات تظهر بجانب بعضها في الكمبيوتر وتحت بعضها في الجوال
-    st.markdown(f"""
-        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-            <div style="flex: 1; min-width: 100px; background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 1.5rem;">👨‍🎓</div>
-                <div style="color: #64748b; font-size: 0.7rem;">الطلاب</div>
-                <div style="color: #1e3a8a; font-size: 1.2rem; font-weight: bold;">{total_students}</div>
-            </div>
-            <div style="flex: 1; min-width: 100px; background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 1.5rem;">📝</div>
-                <div style="color: #64748b; font-size: 0.7rem;">الدرجات</div>
-                <div style="color: #1e3a8a; font-size: 1.2rem; font-weight: bold;">100%</div>
-            </div>
-            <div style="flex: 1; min-width: 100px; background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 1.5rem;">🏆</div>
-                <div style="color: #64748b; font-size: 0.7rem;">الأوسمة</div>
-                <div style="color: #1e3a8a; font-size: 1.2rem; font-weight: bold;">مفعلة</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.write("") # مسافة بسيطة
-
-    # 3. صندوق تسجيل الدخول الممركز
-    # نستخدم حاوية بسيطة لضمان عدم تمدد المدخلات بشكل مشوه على الجوال
-    with st.container():
-        st.markdown("<h4 style='text-align: center; color: #1e3a8a; margin-bottom: 15px;'>🔐 تسجيل الدخول</h4>", unsafe_allow_html=True)
-        
-        # اختيار النوع بأزرار واضحة للجوال
-        login_type = st.segmented_control("", ["طالب", "معلم"], default="طالب")
-        
-        # حقل الإدخال وزر الدخول
-        user_id = st.text_input("أدخل الكود الخاص بك (ID)", placeholder="مثال: 1001", help="الكود المسجل في كشف الدرجات")
-        
-        if st.button("🚀 دخول للمنصة", use_container_width=True, type="primary"):
-            if login_type == "معلم":
-                if user_id == "1234": # غير الكود هنا للرقم السري الخاص بك
-                    st.session_state.role = "admin"
-                    st.success("أهلاً بك يا أستاذ زياد")
-                    st.rerun()
-                else:
-                    st.error("عذراً، كود المعلم غير صحيح")
+    # استخدام خيار واضح للجوال
+    user_type = st.radio("", ["طالب", "معلم"], horizontal=True, label_visibility="collapsed")
+    
+    login_id = st.text_input("أدخل كود الدخول الخاص بك", placeholder="مثال: 1001")
+    
+    if st.button("🚀 دخول للمنصة", use_container_width=True, type="primary"):
+        if user_type == "معلم":
+            if login_id == "1234": # الكود الخاص بك
+                st.session_state.role = "admin"
+                st.rerun()
             else:
-                if not df_st.empty and user_id in df_st.iloc[:, 0].astype(str).values:
-                    st.session_state.role = "student"
-                    st.session_state.sid = user_id
-                    st.rerun()
-                else:
-                    st.error("رقم الكود غير مسجل، يرجى التواصل مع الأستاذ")
+                st.error("كود المعلم غير صحيح")
+        else:
+            # التأكد من وجود الكود في ملف الطلاب
+            df_st = fetch_safe("students")
+            if not df_st.empty and str(login_id) in df_st.iloc[:, 0].astype(str).values:
+                st.session_state.role = "student"
+                st.session_state.sid = str(login_id)
+                st.rerun()
+            else:
+                st.error("الكود غير موجود، تواصل مع معلمك")
 
-    # 4. تذييل الصفحة بسيط للجوال
-    st.markdown("""
-        <div style="margin-top: 40px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-            <p style="color: #94a3b8; font-size: 0.75rem; margin: 0;">جميع الحقوق محفوظة © 2025</p>
-            <b style="color: #1e3a8a; font-size: 0.8rem;">الأستاذ زياد العمري</b>
-        </div>
-    """, unsafe_allow_html=True)
+# ==========================================
+# 👨‍🏫 واجهة المعلم (توضع هنا)
+# ==========================================
+elif st.session_state.role == "admin":
+    # (ضع كود المعلم الذي أعددناه سابقاً هنا)
+    pass
+
+# ==========================================
+# 👨‍🎓 واجهة الطالب (توضع هنا)
+# ==========================================
+elif st.session_state.role == "student":
+    # (ضع كود الطالب المطور الذي أعددناه سابقاً هنا)
+    pass
 
 # ==========================================
 # 🛠️ واجهة المعلم (تصميم احترافي موحد)
