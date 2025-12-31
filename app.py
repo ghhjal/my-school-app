@@ -132,24 +132,20 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
- # --- القسم الثالث: رصد السلوك (تم إصلاح الإزاحة والربط الذكي) ---
-    elif menu == "🎭 رصد السلوك":
+ elif menu == "🎭 رصد السلوك":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">🎭 سجل السلوك والملاحظات الذكي</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">رصد فوري وتواصل مباشر مع أولياء الأمور</p>
             </div>
         """, unsafe_allow_html=True)
 
         df_st = fetch_safe("students")
         
-        # 1. اختيار الطالب (يعمل كفلتر حي خارج النموذج لمنع الجمود)
         st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
         b_name = st.selectbox("🎯 اختر الطالب للرصد أو عرض السجل", [""] + df_st.iloc[:, 1].tolist())
         st.markdown('</div>', unsafe_allow_html=True)
 
         if b_name:
-            # جلب بيانات التواصل (البريد والجوال)
             student_data = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
             s_email = student_data[7] 
             s_phone = student_data[8]
@@ -158,30 +154,23 @@ if st.session_state.role == "teacher":
                 st.markdown(f"### ✍️ رصد سلوك لـ: {b_name}")
                 with st.form("behavior_final_form", clear_on_submit=False):
                     c1, c2 = st.columns(2)
-                    # 1. تعابير عند كل نوع سلوك كما طلبت
-                    b_type = c1.selectbox("🏷️ نوع السلوك", [
-                        "🌟 متميز (+10)", 
-                        "✅ إيجابي (+5)", 
-                        "⚠️ تنبيه (0)", 
-                        "❌ سلبي (-5)", 
-                        "🚫 مخالفة (-10)"
-                    ])
+                    b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
                     b_date = c2.date_input("📅 التاريخ")
                     b_note = st.text_area("📝 نص الملاحظة السلوكية")
                     
                     st.divider()
-                    # 2. أزرار الرصد والإرسال
                     col1, col2, col3 = st.columns(3)
-                    save_only = col1.form_submit_button("💾 رصد فقط")
-                    save_mail = col2.form_submit_button("📧 رصد وإرسال إيميل")
-                    save_wa = col3.form_submit_button("💬 رصد وإرسال واتساب")
+                    btn_save = col1.form_submit_button("💾 رصد فقط")
+                    btn_mail = col2.form_submit_button("📧 رصد وإرسال إيميل")
+                    btn_wa = col3.form_submit_button("💬 رصد وإرسال واتساب")
 
-                    if save_only or save_mail or save_wa:
+                    # الحل: التحقق من ضغط أي زر من الثلاثة
+                    if btn_save or btn_mail or btn_wa:
                         if b_note:
-                            # حفظ البيانات في شيت السلوك (بدون حقل الحالة)
+                            # 1. تنفيذ عملية الحفظ "مرة واحدة فقط" مهما كان الزر المضغوط
                             sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                             
-                            # تحديث النقاط في شيت الطلاب
+                            # 2. تحديث النقاط (مرة واحدة فقط)
                             try:
                                 ws_st = sh.worksheet("students")
                                 cell = ws_st.find(b_name)
@@ -190,32 +179,30 @@ if st.session_state.role == "teacher":
                                 ws_st.update_cell(cell.row, 10, str(current_p + points_map.get(b_type, 0)))
                             except: pass
 
-                            # تحضير نص الرسالة للتواصل
-                            msg = f"مرحباً، تم رصد سلوك للطالب: {b_name}\nالنوع: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
+                            # 3. معالجة الإرسال بناءً على نوع الزر المختار
+                            msg_text = f"تم رصد ملاحظة سلوكية للطالب: {b_name}\nالنوع: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
                             
-                            if save_mail and s_email:
-                                mail_link = f"mailto:{s_email}?subject=سجل السلوك - {b_name}&body={msg}"
+                            if btn_mail and s_email:
+                                mail_link = f"mailto:{s_email}?subject=سجل السلوك - {b_name}&body={msg_text}"
                                 st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{mail_link}\'">', unsafe_allow_html=True)
                             
-                            if save_wa and s_phone:
-                                wa_link = f"https://wa.me/{s_phone}?text={msg.replace(' ', '%20')}"
-                                st.write(f"👉 [اضغط هنا لإرسال عبر واتساب]({wa_link})")
+                            if btn_wa and s_phone:
+                                wa_link = f"https://wa.me/{s_phone}?text={msg_text.replace(' ', '%20')}"
+                                st.write(f"👉 [اضغط هنا لإرسال الواتساب]({wa_link})")
 
                             st.success(f"✅ تم الحفظ بنجاح")
-                            time.sleep(1); st.rerun()
+                            time.sleep(1)
+                            st.rerun()
                         else:
-                            st.error("⚠️ يرجى كتابة الملاحظة")
+                            st.error("⚠️ يرجى كتابة الملاحظة قبل الحفظ")
 
-            # 3. عرض السجل السلوكي بالأسفل (فلتر حي)
+            # عرض السجل بدون عمود الحالة
             st.write("")
             st.markdown(f"#### 📜 السجل السلوكي لـ: {b_name}")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
-                # عرض أول 4 أعمدة فقط (حذف الحالة)
                 student_history = df_b[df_b.iloc[:, 0] == b_name]
                 st.dataframe(student_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
-        else:
-            st.info("💡 اختر طالباً من القائمة بالأعلى لاستعراض سجله أو رصد ملاحظة جديدة.")
 
     elif menu == "📢 شاشة الاختبارات":
         st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
