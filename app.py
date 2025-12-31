@@ -168,49 +168,42 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     elif menu == "🎭 رصد السلوك":
-        st.markdown('<div style="background:linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;"><h1>🎭 رصد السلوك والتواصل الفوري</h1></div>', unsafe_allow_html=True)
+        st.header("🎭 رصد السلوك")
         df_st = fetch_safe("students")
-        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا)")
-        all_names = df_st.iloc[:, 1].tolist()
-        filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
-        b_name = st.selectbox("🎯 اختر الطالب المطلوب:", [""] + filtered_names)
+        search = st.text_input("🔍 ابحث عن الاسم")
+        filtered = [n for n in df_st.iloc[:,1].tolist() if search in n]
+        b_name = st.selectbox("🎯 الطالب:", [""] + filtered)
         
         if b_name:
-            student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_info[6] 
-            s_phone = str(student_info[7]).split('.')[0]
-            with st.form("behavior_form", clear_on_submit=True):
-                c1, c2 = st.columns(2)
-                b_type = c1.selectbox("🏷️ النوع", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
-                b_date = c2.date_input("📅 التاريخ")
-                b_note = st.text_area("📝 نص الملاحظة السلوكية")
-                c_b1, c_b2, c_b3 = st.columns(3)
-                btn_save = c_b1.form_submit_button("💾 رصد وحفظ")
-                btn_mail = c_b2.form_submit_button("📧 رصد وإيميل")
-                btn_wa = c_b3.form_submit_button("💬 رصد وواتساب")
+            s_info = df_st[df_st.iloc[:,1] == b_name].iloc[0]
+            s_phone = str(s_info[7]).split('.')[0]
+            with st.form("beh_form"):
+                b_type = st.selectbox("النوع", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)"])
+                b_note = st.text_area("الملاحظة")
+                btn_wa = st.form_submit_button("💬 حفظ وإرسال واتساب")
+                
+                if btn_wa and b_note:
+                    sh.worksheet("behavior").append_row([b_name, str(datetime.now().date()), b_type, b_note])
+                    # التنسيق الذي طلبته للواتساب
+                    wa_msg = (
+                        f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
+                        f"----------------------------------\n"
+                        f"🏫 *الطالب:* {b_name}\n"
+                        f"📝 *السلوك:* {b_type}\n"
+                        f"💬 *الملاحظة:* {b_note}\n"
+                        f"📅 *التاريخ:* {datetime.now().date()}\n"
+                        f"----------------------------------\n"
+                        f"يرجى العلم والمتابعة. مع تمنياتي لكم بالتوفيق 🌟"
+                    )
+                    wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(wa_msg)}"
+                    st.markdown(f'<a href="{wa_url}" target="_blank">✅ اضغط هنا لإرسال الرسالة</a>', unsafe_allow_html=True)
+                    st.success("تم الحفظ")
 
-                if btn_save or btn_mail or btn_wa:
-                    if b_note:
-                        sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-                        try:
-                            ws_st = sh.worksheet("students")
-                            cell = ws_st.find(b_name)
-                            p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
-                            current_p = int(ws_st.cell(cell.row, 9).value or 0)
-                            ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
-                        except: pass
-                        st.success("✅ تم الحفظ بنجاح")
-                        time.sleep(1)
-                        st.rerun()
-
-            # --- هنا إعادة الجدول الذي سألت عنه يا أستاذ زياد ---
             st.divider()
-            st.subheader(f"📋 سجل سلوك: {b_name}")
-            df_beh_logs = fetch_safe("behavior")
-            if not df_beh_logs.empty:
-                # تصفية السجل للطالب المختار فقط وعرضه من الأحدث للأقدم
-                specific_logs = df_beh_logs[df_beh_logs.iloc[:, 0] == b_name].iloc[::-1]
-                st.dataframe(specific_logs, use_container_width=True, hide_index=True)
+            st.subheader("📋 سجل سلوك الطالب")
+            df_beh = fetch_safe("behavior")
+            if not df_beh.empty:
+                st.dataframe(df_beh[df_beh.iloc[:,0] == b_name].iloc[::-1], use_container_width=True, hide_index=True)
 
     elif menu == "📢 شاشة الاختبارات":
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center;"><h1>📢 شاشة الاختبارات</h1></div>', unsafe_allow_html=True)
