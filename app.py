@@ -143,8 +143,18 @@ if st.session_state.role == "teacher":
             </div>
         """, unsafe_allow_html=True)
 
-        df_st = fetch_safe("students")
-        b_name = st.selectbox("🎯 اختر اسم الطالب", [""] + df_st.iloc[:, 1].tolist())
+        # اختيار الطالب باستخدام ميزة البحث الذكي (Searchable Selectbox)
+        st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
+        
+        # أضفنا "placeholder" لمساعدة الأستاذ على معرفة إمكانية البحث بالكتابة
+        b_name = st.selectbox(
+            "🎯 ابحث عن اسم الطالب (اكتب أول حروف من اسمه)", 
+            [""] + df_st.iloc[:, 1].tolist(),
+            index=0,
+            placeholder="اكتب اسم الطالب هنا للبحث...",
+            help="يمكنك كتابة أي جزء من اسم الطالب لتصفية القائمة بسرعة"
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if b_name:
             # جلب البيانات (العمود G للإيميل والعمود H للجوال)
