@@ -132,9 +132,9 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
-# --- القسم الثالث: رصد السلوك (الإصدار الاحترافي ببحث ذكي وتنسيق فائق) ---
+# --- القسم الثالث: رصد السلوك (إصدار الجوال والحاسوب المطور) ---
     elif menu == "🎭 رصد السلوك":
-        import urllib.parse  # ضروري لتشفير الرموز ومنع ظهور علامات الاستفهام
+        import urllib.parse  # حل مشكلة علامات الاستفهام
         
         st.markdown("""
             <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
@@ -145,14 +145,24 @@ if st.session_state.role == "teacher":
 
         df_st = fetch_safe("students")
         
-        # اختيار الطالب باستخدام ميزة البحث الذكي بالكتابة
+        # --- محرك البحث الذكي (متوافق مع الجوال) ---
         st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
+        
+        # 1. مربع نصي يفتح لوحة مفاتيح الجوال فوراً للبحث
+        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا)", placeholder="اكتب اسم الطالب للفلترة...")
+
+        # 2. تصفية القائمة بناءً على البحث
+        all_names = df_st.iloc[:, 1].tolist()
+        if search_term:
+            filtered_names = [name for name in all_names if search_term in name]
+        else:
+            filtered_names = all_names
+
+        # 3. اختيار الاسم من القائمة المفلترة
         b_name = st.selectbox(
-            "🎯 ابحث عن اسم الطالب (اكتب الاسم مباشرة للبحث)", 
-            [""] + df_st.iloc[:, 1].tolist(),
-            index=0,
-            placeholder="اكتب هنا للبحث عن طالب...",
-            help="هذه الميزة تساعدك في العثور على الطالب بسرعة وسط القوائم الكبيرة"
+            "🎯 اختر الطالب المطلوب:", 
+            [""] + filtered_names,
+            help="إذا كتبت في المربع أعلاه، ستظهر هنا الأسماء المطابقة فقط"
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -160,10 +170,10 @@ if st.session_state.role == "teacher":
             # جلب البيانات (العمود G للإيميل والعمود H للجوال)
             student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
             s_email = student_info[6] 
-            s_phone = str(student_info[7]).split('.')[0] # تنظيف الرقم لضمان الإرسال
+            s_phone = str(student_info[7]).split('.')[0] # تنظيف الرقم لضمان فتح الواتساب
             
             with st.container(border=True):
-                with st.form("behavior_smart_search_v13", clear_on_submit=True):
+                with st.form("behavior_mobile_friendly_v14", clear_on_submit=True):
                     c1, c2 = st.columns(2)
                     b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
                     b_date = c2.date_input("📅 التاريخ")
@@ -177,7 +187,7 @@ if st.session_state.role == "teacher":
 
                     if btn_save or btn_mail or btn_wa:
                         if b_note:
-                            # 1. الحفظ في جوجل شيت وتحديث النقاط
+                            # 1. الحفظ وتحديث النقاط
                             sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                             try:
                                 ws_st = sh.worksheet("students")
@@ -187,7 +197,7 @@ if st.session_state.role == "teacher":
                                 ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                             except: pass
 
-                            # 2. نص الرسالة المنظم والاحترافي
+                            # 2. نص الرسالة المنسق والاحترافي
                             full_msg = (
                                 f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
                                 f"----------------------------------------\n"
@@ -198,12 +208,12 @@ if st.session_state.role == "teacher":
                                 f"🏛️ منصة الأستاذ زياد الذكية"
                             )
                             
-                            # 3. التواصل (إيميل)
+                            # 3. إرسال الإيميل
                             if btn_mail and s_email:
                                 mail_url = f"mailto:{s_email}?subject=تقرير سلوك: {b_name}&body={urllib.parse.quote(full_msg)}"
                                 st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
                             
-                            # 4. التواصل (واتساب - حل نهائي للرموز)
+                            # 4. إرسال الواتساب (حل نهائي للرموز)
                             if btn_wa and s_phone:
                                 encoded_msg = urllib.parse.quote(full_msg)
                                 wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={encoded_msg}"
@@ -212,7 +222,7 @@ if st.session_state.role == "teacher":
                                         <p style="color: #2c3e50; font-weight: bold;">✅ تم الحفظ بنجاح</p>
                                         <a href="{wa_url}" target="_blank" style="text-decoration: none;">
                                             <div style="background-color: #25D366; color: white; padding: 12px 25px; display: inline-block; border-radius: 5px; font-weight: bold;">
-                                                💬 إرسال التقرير المنسق عبر واتساب
+                                                💬 إرسال التقرير عبر واتساب
                                             </div>
                                         </a>
                                     </div>
@@ -225,14 +235,11 @@ if st.session_state.role == "teacher":
                         else:
                             st.error("⚠️ يرجى كتابة نص الملاحظة")
 
-            # عرض السجل التاريخي المنظم
+            # عرض السجل التاريخي
             df_b = fetch_safe("behavior")
             if not df_b.empty:
                 st_history = df_b[df_b.iloc[:, 0] == b_name]
                 st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
-    # --- القسم الرابع: شاشة الاختبارات (تصحيح المسافات البادئة) ---
-    elif menu == "📢 شاشة الاختبارات":
-        st.info("جاري العمل على برمجة شاشة الاختبارات...")
     elif menu == "📢 شاشة الاختبارات":
         st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
 # ==========================================
