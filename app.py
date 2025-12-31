@@ -132,10 +132,10 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
-  # --- القسم الثالث: رصد السلوك (تعديل: العرض المباشر حسب الطالب المختار) ---
+ # --- القسم الثالث: رصد السلوك (تحديث: تفاعل حي وحذف حقل الحالة) ---
     elif menu == "🎭 رصد السلوك":
         st.markdown("""
-            <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">🎭 سجل السلوك والملاحظات</h1>
                 <p style="margin:5px 0 0 0; opacity: 0.8;">رصد فوري واستعراض مباشر لتاريخ الطالب السلوكي</p>
             </div>
@@ -143,48 +143,58 @@ if st.session_state.role == "teacher":
 
         df_st = fetch_safe("students")
         
-        # 1. قسم الرصد العلوي
-        with st.container(border=True):
-            st.markdown("### ✍️ إضافة ملاحظة سلوكية")
-            with st.form("behavior_pro_form", clear_on_submit=True):
-                c1, c2, c3 = st.columns(3)
-                # هذا الاختيار سيعمل كفلتر للجدول بالأسفل أيضاً
-                b_name = c1.selectbox("👤 اختيار الطالب", [""] + df_st.iloc[:, 1].tolist())
-                b_type = c2.selectbox("🏷️ نوع السلوك", ["إيجابي (+5)", "متميز (+10)", "تنبيه (0)", "سلبي (-5)", "مخالفة (-10)"])
-                b_date = c3.date_input("📅 التاريخ")
-                
-                b_note = st.text_area("📝 نص الملاحظة السلوكية")
-                
-                if st.form_submit_button("🚀 رصد السلوك وتحديث النقاط"):
-                    if b_name and b_note:
-                        sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note, "لم تقرأ بعد"])
-                        # تحديث النقاط في شيت الطلاب
-                        try:
-                            ws_st = sh.worksheet("students")
-                            cell = ws_st.find(b_name)
-                            current_points = int(ws_st.cell(cell.row, 10).value or 0)
-                            points_map = {"إيجابي (+5)": 5, "متميز (+10)": 10, "تنبيه (0)": 0, "سلبي (-5)": -5, "مخالفة (-10)": -10}
-                            new_total = current_points + points_map.get(b_type, 0)
-                            ws_st.update_cell(cell.row, 10, str(new_total))
-                        except: pass
-                        st.success(f"✅ تم الحفظ وتحديث نقاط {b_name}"); st.rerun()
-                    else:
-                        st.warning("⚠️ يرجى اختيار الطالب وكتابة الملاحظة")
+        # 1. اختيار الطالب (خارج الفورم لضمان التفاعل الحي وعدم الجمود)
+        st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
+        b_name = st.selectbox("🎯 الخطوة الأولى: اختر الطالب للرصد أو عرض السجل", [""] + df_st.iloc[:, 1].tolist())
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # 2. العرض التلقائي بالأسفل بناءً على اختيار الطالب من الأعلى
+        # 2. نموذج الرصد (يظهر فقط عند اختيار طالب)
         if b_name:
+            with st.container(border=True):
+                st.markdown(f"### ✍️ إضافة ملاحظة لـ: {b_name}")
+                with st.form("behavior_pro_form", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    b_type = c1.selectbox("🏷️ نوع السلوك", ["إيجابي (+5)", "متميز (+10)", "تنبيه (0)", "سلبي (-5)", "مخالفة (-10)"])
+                    b_date = c2.date_input("📅 التاريخ")
+                    
+                    b_note = st.text_area("📝 نص الملاحظة السلوكية (مثلاً: مشاركة فاعلة في الدرس)")
+                    
+                    if st.form_submit_button("🚀 حفظ الملاحظة وتحديث النقاط"):
+                        if b_note:
+                            # تسجيل السلوك (بدون حقل الحالة)
+                            # الترتيب الجديد: الاسم (0)، التاريخ (1)، النوع (2)، الملاحظة (3)
+                            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
+                            
+                            # تحديث النقاط في جدول الطلاب تلقائياً
+                            try:
+                                ws_st = sh.worksheet("students")
+                                cell = ws_st.find(b_name)
+                                current_p = int(ws_st.cell(cell.row, 10).value or 0)
+                                points_map = {"إيجابي (+5)": 5, "متميز (+10)": 10, "تنبيه (0)": 0, "سلبي (-5)": -5, "مخالفة (-10)": -10}
+                                new_p = current_p + points_map.get(b_type, 0)
+                                ws_st.update_cell(cell.row, 10, str(new_p))
+                            except: pass
+                            
+                            st.success(f"✅ تم حفظ ملاحظة {b_name} بنجاح")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("⚠️ يرجى كتابة نص الملاحظة")
+
+            # 3. العرض التلقائي لسجل الطالب (الفلتر الحي)
             st.write("")
-            st.markdown(f"<h3 style='color: #D97706;'>📜 سجل ملاحظات الطالب: {b_name}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='color: #D97706;'>📜 السجل السلوكي للطالب: {b_name}</h3>", unsafe_allow_html=True)
             df_b = fetch_safe("behavior")
             if not df_b.empty:
-                # فلترة الجدول بناءً على b_name المختار في الفورم أعلاه
+                # تصفية البيانات للطالب المختار فقط
                 student_history = df_b[df_b.iloc[:, 0] == b_name]
                 if not student_history.empty:
-                    st.dataframe(student_history.iloc[::-1], use_container_width=True, hide_index=True)
+                    # عرض الجدول بدون عمود الحالة (الأعمدة من 0 إلى 3 فقط)
+                    st.dataframe(student_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
                 else:
-                    st.info(f"لا توجد سجلات سابقة للطالب {b_name}")
+                    st.info(f"لا توجد ملاحظات مسجلة سابقاً لـ {b_name}")
         else:
-            st.info("💡 اختر طالباً من القائمة بالأعلى لاستعراض سجله السلوكي هنا.")
+            st.info("💡 يرجى اختيار طالب من القائمة أعلاه للبدء برصد السلوك أو استعراض السجل.")
 
     elif menu == "📢 شاشة الاختبارات":
         st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
