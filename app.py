@@ -323,13 +323,15 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 واجهة الطالب الاحترافية (تصميم البطاقات الملونة)
 # ==========================================
 elif st.session_state.role == "student":
-    # 1. جلب البيانات من الملف الأصلي
+    # 1. جلب البيانات من ملف الطالب
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name = s_row[1]
     s_class = s_row[2]
-    try: s_points = int(s_row[8]) if s_row[8] else 0
-    except: s_points = 0
+    try: 
+        s_points = int(s_row[8]) if s_row[8] else 0
+    except: 
+        s_points = 0
     
     # --- 📢 شريط الإعلانات العلوي الملون ---
     st.markdown(f"""
@@ -366,25 +368,28 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات الملونة (حل مشكلة التداخل) ---
+    # --- 📊 التبويبات الملونة (لمنع التداخل) ---
     tab_exam, tab_behavior, tab_settings = st.tabs(["📢 التنبيهات", "🎭 سجل السلوك", "⚙️ الإعدادات"])
 
     with tab_exam:
         df_ex = fetch_safe("exams")
         if not df_ex.empty:
+            # فلترة حسب صف الطالب أو التنبيهات العامة
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
                 st.markdown(f"""
                     <div style="background: #f0f7ff; padding: 15px; border-radius: 12px; border-right: 6px solid #3b82f6; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                         <div style="font-weight: bold; color: #1e3a8a; font-size: 1.1rem;">📢 {r[1]}</div>
-                        <div style="font-size: 0.9rem; color: #64748b; margin-top:5px;">📅 الموعد المخطط: {r[2]}</div>
+                        <div style="font-size: 0.9rem; color: #64748b; margin-top:5px;">📅 الموعد: {r[2]}</div>
                     </div>
                 """, unsafe_allow_html=True)
-        else: st.info("لا توجد تنبيهات منشورة لصفك")
+        else: 
+            st.info("لا توجد تنبيهات منشورة لصفك حالياً")
 
     with tab_behavior:
         df_beh = fetch_safe("behavior")
         if not df_beh.empty:
+            # عرض ملاحظات الطالب الحالي فقط
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             if not f_beh.empty:
                 for _, r in f_beh.iloc[::-1].iterrows():
@@ -398,10 +403,11 @@ elif st.session_state.role == "student":
                                 <b style="color: {txt}; font-size: 1.1rem;">{r[2]}</b>
                                 <span style="background: white; padding: 2px 8px; border-radius: 5px; font-size: 0.8rem; border: 1px solid {brd}; color: {txt};">{r[1]}</span>
                             </div>
-                            <div style="margin-top: 10px; color: #4a5568; font-size: 1rem; line-height: 1.5; font-weight: 500;">{r[3]}</div>
+                            <div style="margin-top: 10px; color: #4a5568; font-size: 1rem; font-weight: 500;">{r[3]}</div>
                         </div>
                     """, unsafe_allow_html=True)
-            else: st.success("سجلك السلوكي نظيف تماماً.. استمر في التميز!")
+            else: 
+                st.success("سجلك السلوكي نظيف ومتميز تماماً!")
 
     with tab_settings:
         st.markdown("#### ⚙️ تحديث ملفك الشخصي")
@@ -410,11 +416,13 @@ elif st.session_state.role == "student":
             new_phone = st.text_input("📱 رقم الجوال", value=str(s_row[7]))
             if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
-                ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم تحديث بياناتك!"); st.rerun()
+                ws.update_cell(cell.row, 7, new_mail)
+                ws.update_cell(cell.row, 8, new_phone)
+                st.success("تم تحديث بياناتك بنجاح!")
+                st.rerun()
         
         st.write("---")
-        # زر الخروج المنظم
+        # زر الخروج منظم داخل الإعدادات لسهولة الوصول
         if st.button("🚗 تسجيل الخروج من المنصة", use_container_width=True, type="secondary"):
             st.session_state.role = None
             st.rerun()
