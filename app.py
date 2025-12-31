@@ -320,35 +320,101 @@ if st.session_state.role == "teacher":
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (مستقلة وتدعم الجوال)
+# 👨‍🎓 واجهة الطالب الاحترافية (تصميم Mobile App)
 # ==========================================
 elif st.session_state.role == "student":
+    # جلب بيانات الطالب بدقة
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     
-    # هيدر أخضر مميز للطالب
-    st.markdown(f'<div style="background: linear-gradient(90deg, #059669 0%, #10B981 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 20px;"> <h1>مرحباً بك يا متميز: {s_row[1]}</h1> </div>', unsafe_allow_html=True)
+    s_name = s_row[1]
+    s_class = s_row[2]
+    s_points = s_row[8] if s_row[8] else "0"
+    s_email = s_row[6]
+    s_phone = s_row[7]
+
+    # --- الهيدر العلوي الأنيق ---
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
+                    padding: 30px 20px; border-radius: 20px; color: white; 
+                    text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+            <div style="font-size: 1.2rem; opacity: 0.9;">مرحباً بك مجدداً</div>
+            <h1 style="margin: 10px 0; font-size: 1.8rem;">{s_name}</h1>
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); 
+                        padding: 5px 15px; border-radius: 50px; font-size: 0.9rem;">
+                📚 الصف: {s_class}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # --- قسم النقاط (البطاقة الذهبية) ---
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(f"""
+            <div style="background: white; padding: 20px; border-radius: 15px; 
+                        text-align: center; border-bottom: 5px solid #f59e0b; 
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="font-size: 2.5rem;">🌟</div>
+                <div style="color: #6b7280; font-size: 0.9rem;">رصيدك من النقاط</div>
+                <div style="color: #f59e0b; font-size: 2rem; font-weight: bold;">{s_points}</div>
+            </div>
+        """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    col1.metric("🌟 رصيد نقاطك", f"{s_row[8]} نقطة")
-    col2.metric("🏫 الصف الدراسي", s_row[2])
+    with c2:
+        # زر خروج سريع بتصميم يتناسب مع الجوال
+        st.write("") # مسافة
+        if st.button("🚗 تسجيل الخروج", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
 
-    with st.expander("⚙️ تحديث بيانات التواصل الخاصة بك"):
-        with st.form("st_update"):
-            new_mail = st.text_input("📧 بريدك الإلكتروني", value=str(s_row[6]))
-            new_phone = st.text_input("📱 رقم جوال ولي الأمر", value=str(s_row[7]))
-            if st.form_submit_button("✅ حفظ التعديلات"):
-                ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
-                ws.update_cell(cell.row, 7, new_mail)
-                ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم تحديث بياناتك بنجاح!"); time.sleep(1); st.rerun()
+    st.divider()
 
-    st.markdown("### 📢 جدول التنبيهات والاختبارات")
+    # --- قسم التنبيهات (بطاقات المواعيد) ---
+    st.markdown("### 📢 آخر التنبيهات والمواعيد")
     df_ex = fetch_safe("exams")
     if not df_ex.empty:
-        f_ex = df_ex[(df_ex.iloc[:, 0] == s_row[2]) | (df_ex.iloc[:, 0] == "الكل")]
-        for _, r in f_ex.iloc[::-1].iterrows():
-            st.info(f"📍 {r[1]} | 📅 الموعد: {r[2]}")
+        # فلترة التنبيهات الخاصة بصف الطالب أو العامة
+        f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
+        if not f_ex.empty:
+            for _, r in f_ex.iloc[::-1].iterrows():
+                st.markdown(f"""
+                    <div style="background: white; padding: 15px; border-radius: 12px; 
+                                border-right: 5px solid #3b82f6; margin-bottom: 12px; 
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; 
+                                justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; color: #1e3a8a; font-size: 1.1rem;">📍 {r[1]}</div>
+                            <div style="color: #6b7280; font-size: 0.85rem; margin-top: 5px;">📅 موعدنا: {r[2]}</div>
+                        </div>
+                        <div style="font-size: 1.5rem;">🔔</div>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("لا توجد تنبيهات جديدة لصفك حالياً.")
+
+    # --- قسم تحديث البيانات (Expander بتصميم نظيف) ---
+    with st.expander("📝 تحديث بيانات التواصل الخاصة بك"):
+        with st.form("student_update_form"):
+            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_email))
+            new_phone = st.text_input("📱 رقم جوال ولي الأمر", value=str(s_phone))
             
-    if st.sidebar.button("🚗 خروج"):
-        st.session_state.role = None; st.rerun()
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.form_submit_button("✅ حفظ التغييرات", use_container_width=True):
+                try:
+                    ws = sh.worksheet("students")
+                    cell = ws.find(st.session_state.sid)
+                    ws.update_cell(cell.row, 7, new_mail) # العمود G
+                    ws.update_cell(cell.row, 8, new_phone) # العمود H
+                    st.success("🎉 تم التحديث بنجاح")
+                    time.sleep(1)
+                    st.rerun()
+                except:
+                    st.error("عذراً، حدث خطأ أثناء التحديث")
+
+    # --- فوتر بسيط ---
+    st.markdown(f"""
+        <div style="text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 50px;">
+            منصة الأستاذ زياد العمري - لغة إنجليزية<br>
+            حقوق النشر محفوظة {datetime.now().year} ©
+        </div>
+    """, unsafe_allow_html=True)
