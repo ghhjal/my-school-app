@@ -321,64 +321,77 @@ if st.session_state.role == "teacher":
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
-# --- القسم الخامس: شاشة الطالب (عرض النتائج والمواعيد) ---
+# --- القسم الخامس: شاشة الطالب (تحديث البيانات والمتابعة) ---
     elif menu == "👨‍🎓 شاشة الطالب":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #10B981 0%, #059669 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">👨‍🎓 بوابة الطالب الذكية</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">تابع مستواك وآخر التنبيهات أولاً بأول</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">حدث بياناتك وتابع نقاطك وتنبيهاتك</p>
             </div>
         """, unsafe_allow_html=True)
 
         df_st = fetch_safe("students")
         
-        # --- محرك البحث الذكي للطالب (متوافق مع الجوال) ---
-        st.markdown('<div style="background-color: #ecfdf5; padding: 15px; border-radius: 10px; border: 1px solid #10b981; margin-bottom: 20px;">', unsafe_allow_html=True)
-        st.markdown("##### 🔍 ابحث عن اسمك لعرض ملفك:")
-        student_search = st.text_input("", placeholder="اكتب اسمك هنا...")
+        # --- 1. البحث عن الطالب للدخول إلى ملفه ---
+        st.markdown('<div style="background-color: #ecfdf5; padding: 15px; border-radius: 10px; border: 1px solid #10b981;">', unsafe_allow_html=True)
+        s_search = st.text_input("🔍 ابحث عن اسمك للدخول:", placeholder="اكتب اسمك هنا...")
         
         all_names = df_st.iloc[:, 1].tolist()
-        filtered_names = [n for n in all_names if student_search in n] if student_search else all_names
-        
-        target_student = st.selectbox("🎯 اختر الاسم الصحيح من القائمة:", [""] + filtered_names)
+        filtered_names = [n for n in all_names if s_search in n] if s_search else all_names
+        target_student = st.selectbox("🎯 اختر اسمك الصحيح من القائمة:", [""] + filtered_names)
         st.markdown('</div>', unsafe_allow_html=True)
 
         if target_student:
-            # جلب بيانات الطالب (النقاط في العمود I والصف في العمود C)
-            s_data = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
-            s_class = s_data[2]  # الصف
-            s_points = s_data[8] # النقاط (العمود التاسع)
+            # جلب بيانات الطالب الحالية
+            student_row = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
+            s_class = student_row[2]  # العمود C: الصف
+            s_email_old = student_row[6] # العمود G: الإيميل
+            s_phone_old = student_row[7] # العمود H: الجوال
+            s_points = student_row[8] # العمود I: النقاط
 
-            # 1. عرض رصيد النقاط بشكل جذاب
-            c1, c2 = st.columns(2)
-            with c1:
-                st.metric(label="🌟 رصيد نقاطك الحالي", value=f"{s_points} نقطة")
-            with c2:
-                st.metric(label="🏫 الصف الدراسي", value=s_class)
+            # --- 2. قسم تحديث البيانات الشخصية ---
+            with st.expander("⚙️ تحديث بياناتي (الجوال والإيميل)", expanded=False):
+                with st.form("update_info_form"):
+                    new_email = st.text_input("📧 البريد الإلكتروني الجديد", value=str(s_email_old) if s_email_old else "")
+                    new_phone = st.text_input("📱 رقم الجوال (مثال: 9665...)", value=str(s_phone_old) if s_phone_old else "")
+                    btn_update = st.form_submit_button("✅ حفظ التعديلات")
+                    
+                    if btn_update:
+                        try:
+                            ws_st = sh.worksheet("students")
+                            cell = ws_st.find(target_student)
+                            # تحديث الإيميل في العمود G والجوال في العمود H
+                            ws_st.update_cell(cell.row, 7, new_email)
+                            ws_st.update_cell(cell.row, 8, new_phone)
+                            st.success("🎉 تم تحديث بياناتك بنجاح يا بطل!")
+                            time.sleep(1)
+                            st.rerun()
+                        except:
+                            pass
 
-            st.divider()
+            # --- 3. لوحة المعلومات والتميز ---
+            col1, col2 = st.columns(2)
+            col1.metric("🌟 رصيد نقاطك", f"{s_points} نقطة")
+            col2.metric("🏫 الصف الدراسي", s_class)
 
-            # 2. عرض التنبيهات الخاصة بصف هذا الطالب
-            st.markdown(f"### 📢 تنبيهات ومواعيد {s_class}")
+            # --- 4. التنبيهات الملونة (الأحدث أولاً) ---
+            st.markdown(f"### 📢 آخر تنبيهات صف {s_class}")
             df_ann = fetch_safe("exams")
             if df_ann is not None and not df_ann.empty:
                 # تصفية التنبيهات حسب صف الطالب أو "الكل"
                 student_ann = df_ann[(df_ann.iloc[:, 0] == s_class) | (df_ann.iloc[:, 0] == "الكل")]
-                
                 if not student_ann.empty:
                     for _, row in student_ann.iloc[::-1].iterrows():
-                        st.info(f"📝 **{row[1]}** \n\n 📅 الموعد: {row[2]}")
+                        st.info(f"📍 **{row[1]}** \n\n 📅 الموعد: {row[2]}")
                 else:
-                    st.write("✅ لا توجد تنبيهات حالية لصفك.")
-            
-            st.divider()
-            
-            # 3. سجل السلوك الأخير للطالب
-            st.markdown("### 📝 سجل ملاحظاتك الأخيرة")
+                    st.write("✅ لا توجد مواعيد قادمة لصفك حالياً.")
+
+            # --- 5. سجل السلوك الشخصي ---
+            st.markdown("### 📝 سجل ملاحظاتك")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
-                personal_b = df_b[df_b.iloc[:, 0] == target_student]
-                if not personal_b.empty:
-                    st.table(personal_b.iloc[::-1, 1:4].rename(columns={1: 'التاريخ', 2: 'نوع السلوك', 3: 'الملاحظة'}))
+                p_behavior = df_b[df_b.iloc[:, 0] == target_student]
+                if not p_behavior.empty:
+                    st.dataframe(p_behavior.iloc[::-1, 1:4], use_container_width=True, hide_index=True)
                 else:
-                    st.write("🌟 سجلك نظيف ومتميز، استمر!")
+                    st.success("✨ سجلك نظيف جداً.. استمر في تميزك!")
