@@ -176,60 +176,60 @@ if menu == "🎭 رصد السلوك":
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
-# --- شاشة الطالب (مع تنبيهات الإعلانات في الأعلى) ---
+# --- شاشة الطالب المستقرة ---
 if st.session_state.role == "student":
-    # زر خروج جانبي مريح للجوال
+    # زر الخروج الجانبي
     st.sidebar.button("🚗 خروج", on_click=lambda: st.session_state.update({"role": None}))
     
-    # جلب بيانات الطالب
+    # 1. جلب بيانات الطالب الأساسية
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name, s_email, s_phone, s_points = s_row.iloc[1], s_row.iloc[7], s_row.iloc[8], s_row.iloc[9]
 
-    # 1️⃣ قسم الإعلانات والتنبيهات (أعلى الشاشة)
+    # 2. تنبيهات الإعلانات (تظهر في القمة)
     df_ex = fetch_safe("exams")
     if not df_ex.empty:
-        # فلترة الإعلانات الخاصة بصف الطالب أو الموجهة للكل
+        # عرض الإعلانات الموجهة لصف الطالب أو للكل
         my_ex = df_ex[(df_ex.iloc[:, 2] == s_row.iloc[2]) | (df_ex.iloc[:, 2] == "الكل")]
         for _, ex in my_ex.iterrows():
-            # عرض التنبيه بلون أصفر مميز لجذب الانتباه
-            st.warning(f"🔔 **إعلان:** {ex.iloc[1]} \n\n 📅 التاريخ: {ex.iloc[0]}")
+            st.warning(f"🔔 **تنبيه:** {ex.iloc[1]} \n\n 📅 التاريخ: {ex.iloc[0]}")
 
-    # 2️⃣ لوحة الهوية والأوسمة (تصميم متجاوب للجوال)
+    # 3. واجهة الهوية والأوسمة (تصميم عمودي للجوال)
     st.markdown(f"""
-        <div style="text-align: center; background-color: #ffffff; padding: 15px; border-radius: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #1E3A8A; margin-top: 10px;">
-            <h3 style="color: #1E3A8A; margin-bottom: 5px;">أهلاً بك يا بطل: {s_name}</h3>
-            <p style="font-size: 14px; color: #777;">📱 {s_phone} | 📧 {s_email}</p>
-            <div style="display: flex; justify-content: space-around; align-items: center; margin-top: 10px;">
+        <div style="text-align: center; background-color: #ffffff; padding: 15px; border-radius: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #1E3A8A;">
+            <h3 style="color: #1E3A8A; margin-bottom: 5px;">مرحباً يا بطل: {s_name}</h3>
+            <p style="font-size: 13px; color: #777; margin-bottom: 10px;">📧 {s_email} <br> 📱 {s_phone}</p>
+            <div style="display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
                 <div style="text-align: center;">
-                    <div style="font-size: 40px;">🏆</div>
-                    <div style="font-weight: bold; color: #1E3A8A;">{s_points}</div>
+                    <div style="font-size: 35px;">🏆</div>
+                    <div style="font-weight: bold; color: #1E3A8A; font-size: 20px;">{s_points}</div>
                     <div style="font-size: 12px; color: #888;">نقطة</div>
                 </div>
                 <div style="text-align: center;">
-                    <div style="font-size: 40px;">🥇</div>
-                    <div style="font-weight: bold; color: #1E3A8A;">متميز</div>
+                    <div style="font-size: 35px;">🥇</div>
+                    <div style="font-weight: bold; color: #1E3A8A; font-size: 20px;">متميز</div>
                     <div style="font-size: 12px; color: #888;">وسام</div>
                 </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    st.write("") 
+    st.write("") # فاصل
 
-    # 3️⃣ التبويبات (الدرجات والملاحظات)
-    t1, t2 = st.tabs(["📊 درجاتي", "🎭 ملاحظاتي"])
+    # 4. التبويبات (الدرجات والملاحظات)
+    t1, t2 = st.tabs(["📊 نتيجتي الدراسية", "🎭 سجل ملاحظاتي"])
     
     with t1:
         df_g = fetch_safe("grades")
         if not df_g.empty:
             my_g = df_g[df_g.iloc[:, 0] == s_name]
             if not my_g.empty:
+                # عرض الدرجات كبطاقات كبيرة سهلة القراءة على الجوال
                 st.metric("الفترة الأولى", f"{my_g.iloc[0, 1]} / 100")
                 st.metric("الفترة الثانية", f"{my_g.iloc[0, 2]} / 100")
                 st.metric("درجة المشاركة", f"{my_g.iloc[0, 3]} / 100")
             else:
-                st.info("لم يتم رصد درجات حتى الآن")
+                st.info("لا توجد درجات مرصودة حالياً.")
 
     with t2:
         df_b = fetch_safe("behavior")
@@ -237,8 +237,9 @@ if st.session_state.role == "student":
             my_b = df_b[df_b.iloc[:, 0] == s_name]
             if not my_b.empty:
                 for i, row in my_b.iterrows():
-                    # استخدام expander لتوفير مساحة على الجوال
-                    with st.expander(f"🗓️ {row.iloc[1]} - {row.iloc[2]}", expanded=True):
-                        st.info(f"{row.iloc[3]}")
+                    # استخدام expander بدلاً من الجداول لضمان وضوح النص على الجوال
+                    with st.expander(f"🗓️ {row.iloc[1]} | {row.iloc[2]}", expanded=True):
+                        st.info(f"📝 {row.iloc[3]}")
+                        # تم حذف زر الشكر لضمان استقرار الحالة كما اتفقنا
             else:
-                st.info("سجلك السلوكي نظيف")
+                st.info("سجلك السلوكي نظيف ومميز.")
