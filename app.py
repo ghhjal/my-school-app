@@ -240,8 +240,74 @@ if st.session_state.role == "teacher":
             if not df_b.empty:
                 st_history = df_b[df_b.iloc[:, 0] == b_name]
                 st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
+   # --- القسم الرابع: شاشة الاختبارات (إصدار البحث الذكي للجوال) ---
     elif menu == "📢 شاشة الاختبارات":
-        st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h1 style="margin:0;">📢 رصد درجات الاختبارات</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">منصة الأستاذ زياد الذكية - سجل الدرجات</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        df_st = fetch_safe("students")
+        
+        # --- محرك البحث الذكي (متوافق مع الجوال والحاسوب) ---
+        st.markdown('<div style="background-color: #f0f7ff; padding: 10px; border-radius: 10px; border: 1px solid #bfdbfe; margin-bottom: 15px;">', unsafe_allow_html=True)
+        
+        # حقل نصي يفتح لوحة مفاتيح الجوال فوراً للبحث
+        e_search = st.text_input("🔍 ابحث عن اسم الطالب لرصد درجته", placeholder="اكتب هنا للفلترة...")
+
+        # تصفية القائمة
+        all_names = df_st.iloc[:, 1].tolist()
+        if e_search:
+            filtered_names = [name for name in all_names if e_search in name]
+        else:
+            filtered_names = all_names
+
+        # اختيار الاسم من النتائج المفلترة
+        e_name = st.selectbox(
+            "🎯 اختر الطالب من النتائج المطابقة:", 
+            [""] + filtered_names,
+            key="exam_student_select"
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if e_name:
+            with st.container(border=True):
+                with st.form("exam_form_v1", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    # نوع الاختبار والمادة
+                    e_type = c1.selectbox("📝 نوع الاختبار", ["الشهر الأول", "الشهر الثاني", "الفصل الأول", "الشهر الثالث", "الشهر الرابع", "الفصل الثاني", "الدور الثاني"])
+                    e_subject = c2.selectbox("📚 المادة", ["اللغة الإنجليزية", "اللغة العربية", "الرياضيات", "العلوم", "الدراسات"])
+                    
+                    c3, c4 = st.columns(2)
+                    # الدرجة والتاريخ
+                    e_grade = c3.number_input("💯 الدرجة المستحقة", min_value=0.0, max_value=100.0, step=0.5)
+                    e_date = c4.date_input("📅 تاريخ الرصد")
+                    
+                    e_note = st.text_input("💡 ملاحظات إضافية")
+                    
+                    btn_exam = st.form_submit_button("💾 حفظ الدرجة في جدول الاختبارات")
+
+                    if btn_exam:
+                        if e_name and e_grade is not None:
+                            try:
+                                # الحفظ في ورقة exams الموجودة لديك
+                                sh.worksheet("exams").append_row([e_name, e_subject, e_type, e_grade, str(e_date), e_note])
+                                st.success(f"✅ تم رصد درجة {e_name} بنجاح في مادة {e_subject}")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"⚠️ حدث خطأ أثناء الحفظ: {e}")
+                        else:
+                            st.warning("⚠️ يرجى التأكد من اختيار الطالب وإدخال الدرجة")
+
+        # عرض سجل الدرجات المرصودة (من الأحدث للأقدم)
+        st.markdown("### 📊 سجل الدرجات المرصودة")
+        df_exams = fetch_safe("exams")
+        if not df_exams.empty:
+            # عرض الأعمدة الأساسية فقط لتجنب الزحام في الجوال
+            st.dataframe(df_exams.iloc[::-1], use_container_width=True, hide_index=True)
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
