@@ -323,7 +323,7 @@ if st.session_state.role == "teacher":
 # ==========================================
 # --- القسم الخامس: شاشة الطالب (تحديث البيانات والمتابعة) ---
     elif menu == "👨‍🎓 شاشة الطالب":
-        import urllib.parse
+        import time
         st.markdown("""
             <div style="background: linear-gradient(90deg, #10B981 0%, #059669 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">👨‍🎓 بوابة الطالب الذكية</h1>
@@ -331,21 +331,22 @@ if st.session_state.role == "teacher":
             </div>
         """, unsafe_allow_html=True)
 
-        # جلب البيانات الأساسية من شيت الطلاب
+        # جلب البيانات بشكل آمن من جدول الطلاب
         df_st = fetch_safe("students")
         
         if df_st is not None and not df_st.empty:
             # --- محرك البحث الذكي للطالب ---
             st.markdown('<div style="background-color: #ecfdf5; padding: 15px; border-radius: 10px; border: 1px solid #10b981; margin-bottom: 20px;">', unsafe_allow_html=True)
-            s_search = st.text_input("🔍 ابحث عن اسمك للدخول إلى ملفك:", placeholder="اكتب اسمك هنا...")
+            s_search = st.text_input("🔍 ابحث عن اسمك للدخول إلى ملفك:", placeholder="اكتب اسمك هنا...", key="st_search_input")
             
+            # استخراج الأسماء من العمود الثاني (index 1)
             all_names = df_st.iloc[:, 1].tolist()
             filtered_names = [n for n in all_names if s_search in n] if s_search else all_names
-            target_student = st.selectbox("🎯 اختر اسمك من القائمة:", [""] + filtered_names, key="student_login_select")
+            target_student = st.selectbox("🎯 اختر اسمك من القائمة:", [""] + filtered_names, key="st_select_box")
             st.markdown('</div>', unsafe_allow_html=True)
 
             if target_student:
-                # استخراج بيانات الطالب من الصف المختار
+                # استخراج بيانات الطالب المختار بدقة
                 student_row = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
                 s_class = str(student_row[2]) if student_row[2] else "غير محدد"
                 s_email_old = str(student_row[6]) if student_row[6] else ""
@@ -354,7 +355,7 @@ if st.session_state.role == "teacher":
 
                 # 1. قسم تحديث البيانات (الجوال والإيميل)
                 with st.expander("⚙️ تحديث بياناتي الشخصية", expanded=False):
-                    with st.form("update_info_student"):
+                    with st.form("student_update_form"):
                         new_email = st.text_input("📧 البريد الإلكتروني", value=s_email_old)
                         new_phone = st.text_input("📱 رقم الجوال (مثال: 9665...)", value=s_phone_old)
                         btn_update = st.form_submit_button("✅ حفظ التعديلات")
@@ -363,14 +364,14 @@ if st.session_state.role == "teacher":
                             try:
                                 ws_st = sh.worksheet("students")
                                 cell = ws_st.find(target_student)
-                                # تحديث الأعمدة G و H
+                                # تحديث الأعمدة G (رقم 7) و H (رقم 8)
                                 ws_st.update_cell(cell.row, 7, new_email)
                                 ws_st.update_cell(cell.row, 8, new_phone)
                                 st.success("🎉 تم تحديث بياناتك بنجاح!")
                                 time.sleep(1)
                                 st.rerun()
                             except:
-                                st.error("⚠️ عذراً، حدث خطأ أثناء التحديث")
+                                st.error("⚠️ حدث خطأ أثناء التحديث، يرجى المحاولة لاحقاً")
 
                 # 2. لوحة التميز (عرض النقاط والصف)
                 col1, col2 = st.columns(2)
@@ -383,20 +384,12 @@ if st.session_state.role == "teacher":
                 st.markdown(f"### 📢 تنبيهات صف {s_class}")
                 df_ann = fetch_safe("exams")
                 if df_ann is not None and not df_ann.empty:
-                    # تصفية التنبيهات الخاصة بصف الطالب أو العامة (الكل)
+                    # تصفية التنبيهات الخاصة بصف الطالب أو "الكل"
                     student_ann = df_ann[(df_ann.iloc[:, 0] == s_class) | (df_ann.iloc[:, 0] == "الكل")]
                     if not student_ann.empty:
                         for _, row in student_ann.iloc[::-1].iterrows():
                             st.info(f"📍 **{row[1]}** \n\n 📅 الموعد: {row[2]}")
                     else:
-                        st.write("✅ لا توجد مواعيد جديدة حالياً.")
-
-                # 4. سجل السلوك الشخصي (من شيت behavior)
-                st.markdown("### 📝 ملاحظاتك السلوكية الأخيرة")
-                df_b = fetch_safe("behavior")
-                if df_b is not None and not df_b.empty:
-                    p_behavior = df_b[df_b.iloc[:, 0] == target_student]
-                    if not p_behavior.empty:
-                        st.dataframe(p_behavior.iloc[::-1, 1:4], use_container_width=True, hide_index=True)
+                        st.write("✅ لا توجد مواعيد جديدة حالياً لصفك.")
         else:
-            st.warning("⚠️ لا يمكن الوصول لبيانات الطلاب حالياً.")
+            st.warning("⚠️ لا يمكن تحميل بيانات الطلاب، تأكد من جدول 'students'")
