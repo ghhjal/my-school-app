@@ -132,50 +132,38 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
- # --- القسم الثالث: رصد السلوك (الحل النهائي لمنع التكرار وأخطاء الإزاحة) ---
-    elif menu == "🎭 رصد السلوك":
-        st.markdown("""
-            <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
-                <h1 style="margin:0;">🎭 سجل السلوك والملاحظات الذكي</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">رصد فوري وتواصل مباشر مع أولياء الأمور</p>
-            </div>
-        """, unsafe_allow_html=True)
+ elif menu == "🎭 رصد السلوك":
+        st.markdown('<div style="background: linear-gradient(90deg, #F59E0B, #D97706); padding: 20px; border-radius: 15px; color: white; text-align: center;"><h1>🎭 رصد السلوك والتواصل المباشر</h1></div>', unsafe_allow_html=True)
 
         df_st = fetch_safe("students")
-        
-        # اختيار الطالب (خارج الفورم لضمان التفاعل الحي)
-        st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
-        b_name = st.selectbox("🎯 اختر الطالب للرصد أو عرض السجل", [""] + df_st.iloc[:, 1].tolist())
-        st.markdown('</div>', unsafe_allow_html=True)
+        b_name = st.selectbox("🎯 اختر اسم الطالب", [""] + df_st.iloc[:, 1].tolist())
 
         if b_name:
-            # جلب بيانات التواصل
-            student_row = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_row[7] 
-            s_phone = student_row[8]
+            # جلب بيانات التواصل من جدول الطلاب
+            student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
+            s_email = student_info[7] # عمود الإيميل
+            s_phone = student_info[8] # عمود الجوال
             
             with st.container(border=True):
-                st.markdown(f"### ✍️ رصد ملاحظة لـ: {b_name}")
-                with st.form("behavior_final_v3", clear_on_submit=False):
+                with st.form("behavior_instant_comm", clear_on_submit=True):
                     c1, c2 = st.columns(2)
                     b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
                     b_date = c2.date_input("📅 التاريخ")
                     b_note = st.text_area("📝 نص الملاحظة السلوكية")
                     
                     st.divider()
-                    col_1, col_2, col_3 = st.columns(3)
-                    # تعريف الأزرار الثلاثة
-                    btn_save = col_1.form_submit_button("💾 رصد فقط")
-                    btn_mail = col_2.form_submit_button("📧 رصد وإرسال إيميل")
-                    btn_wa = col_3.form_submit_button("💬 رصد وإرسال واتساب")
+                    st.write("💡 **ملاحظة:** الضغط على الأزرار سيحفظ السلوك ويفتح لك نافذة الإرسال مباشرة.")
+                    col1, col2, col3 = st.columns(3)
+                    save_only = col1.form_submit_button("💾 حفظ فقط")
+                    save_mail = col2.form_submit_button("📧 حفظ وفتح الإيميل")
+                    save_wa = col3.form_submit_button("💬 حفظ وفتح واتساب")
 
-                    # المنطق البرمجي الموحد (يمنع التكرار)
-                    if btn_save or btn_mail or btn_wa:
+                    if save_only or save_mail or save_wa:
                         if b_note:
-                            # 1. الحفظ في جوجل شيت "مرة واحدة فقط"
+                            # منع التكرار باستخدام مفتاح فريد
                             sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                             
-                            # 2. تحديث النقاط (مرة واحدة فقط)
+                            # تحديث النقاط تلقائياً
                             try:
                                 ws_st = sh.worksheet("students")
                                 cell = ws_st.find(b_name)
@@ -184,31 +172,30 @@ if st.session_state.role == "teacher":
                                 ws_st.update_cell(cell.row, 10, str(current_p + p_map.get(b_type, 0)))
                             except: pass
 
-                            # 3. إعداد نص الرسالة
-                            msg = f"تم رصد ملاحظة سلوكية للطالب: {b_name}\nالنوع: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
+                            # تحضير الرسالة الجاهزة
+                            full_msg = f"تحية طيبة، أفيدكم برصد ملاحظة سلوكية للطالب: {b_name}\nنوع السلوك: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
                             
-                            # 4. تنفيذ وسيلة التواصل المختارة
-                            if btn_mail and s_email:
-                                mail_url = f"mailto:{s_email}?subject=سجل السلوك - {b_name}&body={msg}"
-                                st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{mail_url}\'">', unsafe_allow_html=True)
+                            # تنفيذ الفتح المباشر بناءً على اختيارك
+                            if save_mail and s_email:
+                                mailto_url = f"mailto:{s_email}?subject=ملاحظة سلوكية: {b_name}&body={full_msg}"
+                                st.markdown(f'<a href="{mailto_url}" id="send_mail" target="_blank"></a>', unsafe_allow_html=True)
+                                st.markdown(f'<script>document.getElementById("send_mail").click();</script>', unsafe_allow_html=True)
                             
-                            if btn_wa and s_phone:
-                                wa_url = f"https://wa.me/{s_phone}?text={msg.replace(' ', '%20')}"
-                                st.write(f"👉 [اضغط هنا لفتح واتساب وإرسال الرسالة]({wa_url})")
+                            if save_wa and s_phone:
+                                wa_url = f"https://wa.me/{s_phone}?text={full_msg.replace(' ', '%20')}"
+                                st.markdown(f'<a href="{wa_url}" id="send_wa" target="_blank"></a>', unsafe_allow_html=True)
+                                st.markdown(f'<script>document.getElementById("send_wa").click();</script>', unsafe_allow_html=True)
 
-                            st.success(f"✅ تم الحفظ بنجاح")
-                            time.sleep(1)
+                            st.success(f"✅ تم رصد السلوك لـ {b_name} بنجاح")
                             st.rerun()
                         else:
                             st.error("⚠️ يرجى كتابة نص الملاحظة")
 
-            # عرض السجل المفلتر (بدون حقل الحالة)
-            st.write("")
-            st.markdown(f"#### 📜 السجل التاريخي لـ: {b_name}")
+            # عرض التاريخ السلوكي المباشر للطالب المختار
+            st.markdown(f"#### 📜 سجل ملاحظات الطالب: {b_name}")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
-                student_history = df_b[df_b.iloc[:, 0] == b_name]
-                st.dataframe(student_history.iloc[::-1, :4], use_container_width=True, hide_index=True)
+                st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
     elif menu == "📢 شاشة الاختبارات":
         st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
 # ==========================================
