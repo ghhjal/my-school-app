@@ -163,62 +163,66 @@ if menu == "👥 إدارة الطلاب":
                     st.warning(f"تم حذف الطالب {target} وكل بياناته المرتبطة.")
                     st.rerun()
 
-    # 2. شاشة الدرجات (تم إصلاح الربط البرمجي)
+    # 2. شاشة الدرجات - تم إصلاح المسافات (Indentation) ومعالجة SyntaxError
     elif menu == "📝 شاشة الدرجات":
-        # هيدر جمالي للشاشة
+        # تصميم هيدر احترافي للشاشة باللون البنفسجي لتمييزها
         st.markdown("""
-            <div style="background: linear-gradient(90deg, #8B5CF6 0%, #6D28D9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <h1 style="margin:0;">📝 بوابة رصد الدرجات</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">تسجيل نتائج الفترات وأعمال السنة بدقة</p>
+            <div style="background: linear-gradient(90deg, #6366f1 0%, #4338ca 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <h1 style="margin:0;">📝 بوابة رصد النتائج</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">توثيق درجات الفترات والمشاركة في السجل الأكاديمي</p>
             </div>
         """, unsafe_allow_html=True)
 
+        # جلب بيانات الطلاب الأساسية لعمل قائمة الاختيار
         df_st = fetch_safe("students")
         
-        # حاوية اختيار الطالب
+        # حاوية الاختيار والبحث
         with st.container(border=True):
-            target = st.selectbox("🎯 اختر الطالب المراد رصد درجاته", [""] + df_st.iloc[:, 1].tolist())
+            target_student = st.selectbox("🎯 اختر الطالب المراد تحديث درجاته", [""] + df_st.iloc[:, 1].tolist())
             
-            if target:
-                df_g = fetch_safe("grades")
-                curr = df_g[df_g.iloc[:, 0] == target]
+            if target_student:
+                # جلب سجل الدرجات الحالي
+                df_grades_db = fetch_safe("grades")
+                current_record = df_grades_db[df_grades_db.iloc[:, 0] == target_student]
                 
-                # جلب الدرجات الحالية إن وجدت
-                v1 = int(curr.iloc[0, 1]) if not curr.empty else 0
-                v2 = int(curr.iloc[0, 2]) if not curr.empty else 0
-                v3 = int(curr.iloc[0, 3]) if not curr.empty else 0
+                # جلب القيم الحالية أو وضع 0 كقيمة افتراضية
+                val1 = int(current_record.iloc[0, 1]) if not current_record.empty else 0
+                val2 = int(current_record.iloc[0, 2]) if not current_record.empty else 0
+                val3 = int(current_record.iloc[0, 3]) if not current_record.empty else 0
                 
-                st.markdown(f"#### ✍️ رصد درجات الطالب: <span style='color:#6D28D9;'>{target}</span>", unsafe_allow_html=True)
+                st.markdown(f"#### ✍️ رصد الدرجات لـ: <span style='color:#4338ca;'>{target_student}</span>", unsafe_allow_html=True)
                 
-                with st.form("grade_form_pro", clear_on_submit=True):
+                # نموذج الرصد الاحترافي
+                with st.form("grade_entry_form", clear_on_submit=True):
                     c1, c2, c3 = st.columns(3)
-                    p1 = c1.number_input("📉 الفترة الأولى", 0, 100, value=v1)
-                    p2 = c2.number_input("📉 الفترة الثانية", 0, 100, value=v2)
-                    part = c3.number_input("⭐ المشاركة", 0, 100, value=v3)
+                    p1_score = c1.number_input("📉 الفترة الأولى", 0, 100, value=val1)
+                    p2_score = c2.number_input("📉 الفترة الثانية", 0, 100, value=val2)
+                    participation = c3.number_input("⭐ المشاركة", 0, 100, value=val3)
                     
-                    if st.form_submit_button("💾 حفظ وتحديث الدرجات"):
-                        ws = sh.worksheet("grades")
+                    if st.form_submit_button("💾 اعتماد وحفظ الدرجات"):
+                        worksheet_grades = sh.worksheet("grades")
                         try:
-                            # البحث عن اسم الطالب لتحديث صفه
-                            cell = ws.find(target)
-                            ws.update(f'B{cell.row}:D{cell.row}', [[p1, p2, part]])
+                            # محاولة العثور على الطالب لتحديث بياناته
+                            found_cell = worksheet_grades.find(target_student)
+                            worksheet_grades.update(f'B{found_cell.row}:D{found_cell.row}', [[p1_score, p2_score, participation]])
                         except:
-                            # إذا لم يوجد، يتم إنشاء صف جديد
-                            ws.append_row([target, p1, p2, part])
+                            # إذا كان الطالب جديداً في سجل الدرجات
+                            worksheet_grades.append_row([target_student, p1_score, p2_score, participation])
                         
                         st.balloons()
-                        st.success(f"تم تحديث درجات {target} بنجاح")
+                        st.success(f"🎉 تم رصد وتحديث درجات {target_student} بنجاح")
                         st.rerun()
 
-        # عرض الجدول العام بتنسيق نظيف
+        # 📊 استعراض الجدول العام للنتائج
         st.write("")
-        st.markdown("<h3 style='color: #6D28D9;'>📊 السجل العام للنتائج</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #4338ca;'>📋 السجل العام لدرجات الطلاب</h3>", unsafe_allow_html=True)
         with st.container(border=True):
-            df_grades_all = fetch_safe("grades")
-            if not df_grades_all.empty:
-                st.dataframe(df_grades_all, use_container_width=True, hide_index=True)
+            df_display = fetch_safe("grades")
+            if not df_display.empty:
+                # عرض البيانات بتنسيق تفاعلي
+                st.dataframe(df_display, use_container_width=True, hide_index=True)
             else:
-                st.info("لم يتم رصد أي درجات حتى الآن.")
+                st.info("لا توجد بيانات مرصودة في سجل الدرجات حالياً.")
 
     # 3. شاشة رصد السلوك (تم إعادتها داخل نطاق شرط المعلم)
     elif menu == "🎭 رصد السلوك":
