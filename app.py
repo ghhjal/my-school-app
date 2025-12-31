@@ -176,61 +176,69 @@ if menu == "🎭 رصد السلوك":
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
-elif st.session_state.role == "student":
+# --- شاشة الطالب (مع تنبيهات الإعلانات في الأعلى) ---
+if st.session_state.role == "student":
+    # زر خروج جانبي مريح للجوال
     st.sidebar.button("🚗 خروج", on_click=lambda: st.session_state.update({"role": None}))
+    
+    # جلب بيانات الطالب
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
-    s_name = s_row.iloc[1]
+    s_name, s_email, s_phone, s_points = s_row.iloc[1], s_row.iloc[7], s_row.iloc[8], s_row.iloc[9]
 
-    # --- 1. الإعلانات في الأعلى ---
+    # 1️⃣ قسم الإعلانات والتنبيهات (أعلى الشاشة)
     df_ex = fetch_safe("exams")
     if not df_ex.empty:
+        # فلترة الإعلانات الخاصة بصف الطالب أو الموجهة للكل
         my_ex = df_ex[(df_ex.iloc[:, 2] == s_row.iloc[2]) | (df_ex.iloc[:, 2] == "الكل")]
         for _, ex in my_ex.iterrows():
-            st.warning(f"⚠️ **إعلان اختبار:** {ex.iloc[1]} بتاريخ {ex.iloc[0]}")
+            # عرض التنبيه بلون أصفر مميز لجذب الانتباه
+            st.warning(f"🔔 **إعلان:** {ex.iloc[1]} \n\n 📅 التاريخ: {ex.iloc[0]}")
 
-    # --- 2. الهوية والأوسمة ---
+    # 2️⃣ لوحة الهوية والأوسمة (تصميم متجاوب للجوال)
     st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fa; padding: 15px; border-radius: 15px; border: 2px solid #1E3A8A; margin-bottom: 20px;">
-            <h2 style="color: #1E3A8A; margin:0;">👋 مرحباً بالبطل: {s_name}</h2>
-            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
-                <div style="background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100px;">
-                    <span style="font-size: 25px;">🏆</span><br><b>{s_row.iloc[9]} نقطة</b>
+        <div style="text-align: center; background-color: #ffffff; padding: 15px; border-radius: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #1E3A8A; margin-top: 10px;">
+            <h3 style="color: #1E3A8A; margin-bottom: 5px;">أهلاً بك يا بطل: {s_name}</h3>
+            <p style="font-size: 14px; color: #777;">📱 {s_phone} | 📧 {s_email}</p>
+            <div style="display: flex; justify-content: space-around; align-items: center; margin-top: 10px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 40px;">🏆</div>
+                    <div style="font-weight: bold; color: #1E3A8A;">{s_points}</div>
+                    <div style="font-size: 12px; color: #888;">نقطة</div>
                 </div>
-                <div style="background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100px;">
-                    <span style="font-size: 25px;">🥇</span><br><b>متميز</b>
+                <div style="text-align: center;">
+                    <div style="font-size: 40px;">🥇</div>
+                    <div style="font-weight: bold; color: #1E3A8A;">متميز</div>
+                    <div style="font-size: 12px; color: #888;">وسام</div>
                 </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    t1, t2 = st.tabs(["📊 درجاتي نتيجتي الدراسية", "🎭 سجل ملاحظاتي"])
+    st.write("") 
+
+    # 3️⃣ التبويبات (الدرجات والملاحظات)
+    t1, t2 = st.tabs(["📊 درجاتي", "🎭 ملاحظاتي"])
     
     with t1:
         df_g = fetch_safe("grades")
         if not df_g.empty:
             my_g = df_g[df_g.iloc[:, 0] == s_name]
             if not my_g.empty:
-                c1, c2, c3 = st.columns(3)
-                c1.metric("الفترة 1", f"{my_g.iloc[0, 1]} / 100")
-                c2.metric("الفترة 2", f"{my_g.iloc[0, 2]} / 100")
-                c3.metric("المشاركة", f"{my_g.iloc[0, 3]} / 100")
-            else: st.info("لم يتم رصد درجاتك بعد.")
+                st.metric("الفترة الأولى", f"{my_g.iloc[0, 1]} / 100")
+                st.metric("الفترة الثانية", f"{my_g.iloc[0, 2]} / 100")
+                st.metric("درجة المشاركة", f"{my_g.iloc[0, 3]} / 100")
+            else:
+                st.info("لم يتم رصد درجات حتى الآن")
 
-  # --- شاشة الطالب (ملاحظاتي السلوكية) ---
-with t2: # تبويب ملاحظاتي السلوكية
-    st.subheader("📜 سجل ملاحظات المعلم")
-    df_b = fetch_safe("behavior")
-    if not df_b.empty:
-        # عرض ملاحظات الطالب الداخل للحساب فقط
-        my_notes = df_b[df_b.iloc[:, 0] == s_name]
-        
-        if not my_notes.empty:
-            for i, row in my_notes.iterrows():
-                with st.container(border=True):
-                    # عرض التاريخ والنوع في السطر الأول
-                    st.markdown(f"🗓️ **التاريخ:** {row.iloc[1]} | 🏷️ **النوع:** {row.iloc[2]}")
-                    # عرض نص الملاحظة في صندوق ملون
-                    st.info(f"📝 {row.iloc[3]}")
-        else:
-            st.info("لا توجد ملاحظات سلوكية مسجلة لك حتى الآن.")
+    with t2:
+        df_b = fetch_safe("behavior")
+        if not df_b.empty:
+            my_b = df_b[df_b.iloc[:, 0] == s_name]
+            if not my_b.empty:
+                for i, row in my_b.iterrows():
+                    # استخدام expander لتوفير مساحة على الجوال
+                    with st.expander(f"🗓️ {row.iloc[1]} - {row.iloc[2]}", expanded=True):
+                        st.info(f"{row.iloc[3]}")
+            else:
+                st.info("سجلك السلوكي نظيف")
