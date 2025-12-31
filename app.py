@@ -132,48 +132,49 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
-# --- القسم الثالث: رصد السلوك (الإصدار الاحترافي بترميز الرسائل الموحد) ---
+# --- القسم الثالث: رصد السلوك (تحديث اسم المنصة وتنسيق الرسائل) ---
     elif menu == "🎭 رصد السلوك":
+        import urllib.parse  # مكتبة التشفير لضمان ظهور الرموز التعبيرية
+        
         st.markdown("""
             <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">🎭 رصد السلوك والتواصل الفوري</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">إرسال تقارير منظمة وشاملة بضغطة زر</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">منصة الأستاذ زياد الذكية</p>
             </div>
         """, unsafe_allow_html=True)
 
         df_st = fetch_safe("students")
         
-        # اختيار الطالب
+        # اختيار اسم الطالب
         st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
         b_name = st.selectbox("🎯 اختر اسم الطالب", [""] + df_st.iloc[:, 1].tolist())
         st.markdown('</div>', unsafe_allow_html=True)
 
         if b_name:
-            # جلب البيانات الصحيحة (G للإيميل و H للجوال)
+            # جلب البيانات (العمود G للإيميل والعمود H للجوال)
             student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_info[6]  # البريد الإلكتروني
-            s_phone = student_info[7]  # رقم الجوال
+            s_email = student_info[6] 
+            s_phone = student_info[7]
             
             with st.container(border=True):
-                with st.form("behavior_final_v9_pro", clear_on_submit=True):
+                with st.form("behavior_ziad_platform_v11", clear_on_submit=True):
                     c1, c2 = st.columns(2)
                     b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
                     b_date = c2.date_input("📅 التاريخ")
-                    b_note = st.text_area("📝 نص الملاحظة السلوكية (مثلاً: مشاركة فاعلة في الدرس) ✍️")
+                    b_note = st.text_area("📝 نص الملاحظة السلوكية")
                     
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     btn_save = col1.form_submit_button("💾 رصد وحفظ فقط")
-                    btn_mail = col2.form_submit_button("📧 رصد وإرسال إيميل")
-                    btn_wa = col3.form_submit_button("💬 رصد وإرسال واتساب")
+                    btn_mail = col2.form_submit_button("📧 رصد وإيميل منظم")
+                    btn_wa = col3.form_submit_button("💬 رصد وواتساب منظم")
 
-                    # الحفظ لمرة واحدة فقط لمنع التكرار
                     if btn_save or btn_mail or btn_wa:
                         if b_note:
-                            # 1. الحفظ في جدول السلوك
+                            # 1. الحفظ في جدول السلوك (مرة واحدة فقط لمنع التكرار)
                             sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                             
-                            # 2. تحديث النقاط (العمود I)
+                            # 2. تحديث النقاط في جدول الطلاب (العمود I)
                             try:
                                 ws_st = sh.worksheet("students")
                                 cell = ws_st.find(b_name)
@@ -182,56 +183,45 @@ if st.session_state.role == "teacher":
                                 ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                             except: pass
 
-                            # 3. إعداد نص الرسالة الموحد والمنظم بترميز الأسطر
-                            subject = f"تقرير سلوك: {b_name}"
-                            report_content = (
-                                f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}%0A"
-                                f"----------------------------------------%0A"
-                                f"🏷️ نوع السلوك: {b_type}%0A"
-                                f"📝 الملاحظة: {b_note}%0A"
-                                f"📅 التاريخ: {b_date}%0A"
-                                f"----------------------------------------%0A"
-                                f"🏛️ منصة المدرسة الذكية"
+                            # 3. صياغة الرسالة بالاسم الجديد (منصة الأستاذ زياد الذكية)
+                            full_msg = (
+                                f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
+                                f"----------------------------------------\n"
+                                f"🏷️ نوع السلوك: {b_type}\n"
+                                f"📝 الملاحظة: {b_note}\n"
+                                f"📅 التاريخ: {b_date}\n"
+                                f"----------------------------------------\n"
+                                f"🏛️ منصة الأستاذ زياد الذكية"
                             )
                             
-                            # 4. روابط التواصل الاحترافية
+                            # 4. التشفير والإرسال
                             if btn_mail and s_email:
-                                # فتح الإيميل بنص منظم
-                                mail_link = f"mailto:{s_email}?subject={subject}&body={report_content}"
-                                st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_link}">', unsafe_allow_html=True)
+                                encoded_mail_body = urllib.parse.quote(full_msg)
+                                mail_url = f"mailto:{s_email}?subject=تقرير سلوك: {b_name}&body={encoded_mail_body}"
+                                st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
                             
                             if btn_wa and s_phone:
-                                # 1. تحضير الرسالة بتنسيق متوافق مع الواتساب
-                                # نستخدم \n للأسطر الحقيقية واسم المنصة مع رموز واضحة
-                                wa_msg = (
-                                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
-                                    f"----------------------------------------\n"
-                                    f"🏷️ نوع السلوك: {b_type}\n"
-                                    f"📝 الملاحظة: {b_note}\n"
-                                    f"📅 التاريخ: {b_date}\n"
-                                    f"----------------------------------------\n"
-                                    f"🏛️ منصة المدرسة الذكية"
-                                )
-                                
-                                # 2. ترميز الرسالة للرابط (URL Encoding)
-                                import urllib.parse
-                                wa_url = f"https://wa.me/{s_phone}?text={urllib.parse.quote(wa_msg)}"
-                                
-                                # 3. عرض زر الواتساب الثابت (بدون اختفاء)
+                                encoded_wa_msg = urllib.parse.quote(full_msg)
+                                wa_url = f"https://wa.me/{s_phone}?text={encoded_wa_msg}"
                                 st.markdown(f"""
                                     <div style="background-color: #f0fff4; border: 1px solid #25D366; padding: 15px; border-radius: 10px; text-align: center; margin-top: 10px;">
-                                        <p style="color: #2c3e50; font-weight: bold; margin-bottom: 10px;">✅ تم حفظ السلوك في جوجل شيت</p>
+                                        <p style="color: #2c3e50; font-weight: bold;">✅ تم حفظ السلوك بنجاح</p>
                                         <a href="{wa_url}" target="_blank" style="text-decoration: none;">
                                             <div style="background-color: #25D366; color: white; padding: 12px 25px; display: inline-block; border-radius: 5px; font-weight: bold;">
-                                                💬 إرسال التقرير المنظم عبر واتساب
+                                                💬 إرسال التقرير عبر واتساب
                                             </div>
                                         </a>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                
-                                st.info("ℹ️ اضغط على الزر الأخضر أعلاه لفتح محادثة واتساب والرسالة جاهزة.")
 
-            # عرض سجل الملاحظات التاريخي للطالب
+                            if btn_save:
+                                st.success("✅ تم حفظ الملاحظة بنجاح")
+                                time.sleep(1)
+                                st.rerun()
+                        else:
+                            st.error("⚠️ يرجى كتابة نص الملاحظة")
+
+            # عرض السجل التاريخي
             st.markdown(f"#### 📜 سجل ملاحظات: {b_name}")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
