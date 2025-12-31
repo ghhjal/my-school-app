@@ -245,13 +245,13 @@ if st.session_state.role == "teacher":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">إضافة وحذف مواعيد الاختبارات والنشاطات</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة مواعيد الاختبارات بذكاء وألوان منظمة</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 1. نموذج الإضافة (تم إزالة أي رسائل خطأ ثابتة من هنا)
+        # 1. نموذج الإضافة النظيف (بدون رسائل خطأ ثابتة)
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form_final_v3", clear_on_submit=True):
+            with st.form("announcement_form_color_v4", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه")
@@ -262,47 +262,58 @@ if st.session_state.role == "teacher":
                 if btn_post:
                     if a_title:
                         try:
-                            # الحفظ المباشر في جدول 'exams'
+                            # الحفظ في جدول 'exams'
                             sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
                             st.success("✅ تم نشر التنبيه بنجاح")
                             time.sleep(1)
                             st.rerun()
-                        except Exception as e:
-                            # تظهر فقط في حال وجود مشكلة حقيقية
-                            st.error(f"⚠️ فشل الاتصال بجدول exams: {e}")
+                        except:
+                            st.error("⚠️ فشل الاتصال بجدول exams")
                     else:
                         st.warning("⚠️ يرجى كتابة عنوان التنبيه")
 
-        st.divider()
-
-        # 2. عرض التنبيهات (الترتيب: من الأحدث للأقدم)
-        st.markdown("### 📋 التنبيهات المنشورة حالياً")
+        st.markdown("### 📋 التنبيهات المنشورة (الأحدث أولاً)")
         
-        # جلب البيانات والتأكد من أنها ليست فارغة
         df_ann = fetch_safe("exams")
         
         if df_ann is not None and not df_ann.empty:
-            # عكس البيانات لعرض الأحدث في الأعلى
+            # ترتيب تنازلي: الأحدث في الأعلى
             reversed_df = df_ann.iloc[::-1]
             
+            # قاموس الألوان حسب الصف لتمييز الإعلانات
+            color_map = {
+                "الكل": "#E0F2FE",    # أزرق فاتح
+                "الأول": "#F0FDF4",   # أخضر فاتح
+                "الثاني": "#FFF7ED",  # برتقالي فاتح
+                "الثالث": "#FAF5FF",  # بنفسجي فاتح
+                "الرابع": "#FEF2F2",  # أحمر فاتح
+                "الخامس": "#F5F3FF",  # نيلي فاتح
+                "السادس": "#ECFEFF"   # تركوازي
+            }
+
             for index, row in reversed_df.iterrows():
-                # استخدام index الأصلي لضمان حذف السطر الصحيح من جوجل شيت
-                with st.container(border=True):
-                    col_text, col_btn = st.columns([4, 1])
-                    with col_text:
-                        st.markdown(f"**[{row[0]}]** - {row[1]}")
-                        st.caption(f"📅 الموعد: {row[2]}")
-                    with col_btn:
-                        if st.button(f"🗑️ حذف", key=f"del_ann_final_{index}"):
-                            try:
-                                ws_exam = sh.worksheet("exams")
-                                # الحذف يعتمد على الفهرس الفعلي (index + 2)
-                                ws_exam.delete_rows(int(index) + 2)
-                                st.toast(f"تم حذف التنبيه")
-                                time.sleep(0.5)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"خطأ في الحذف: {e}")
+                bg_color = color_map.get(row[0], "#FFFFFF")
+                
+                # تصميم بطاقة التنبيه الملونة
+                st.markdown(f"""
+                    <div style="background-color: {bg_color}; padding: 15px; border-radius: 10px; border-right: 5px solid #4F46E5; margin-bottom: 10px;">
+                        <span style="color: #4F46E5; font-weight: bold;">[{row[0]}]</span> 
+                        <span style="font-size: 1.1em; margin-right: 10px;">{row[1]}</span>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">📅 الموعد: {row[2]}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # زر الحذف أسفل كل بطاقة
+                col_spacer, col_del = st.columns([5, 1])
+                if col_del.button(f"🗑️ حذف", key=f"del_btn_{index}"):
+                    try:
+                        ws_exam = sh.worksheet("exams")
+                        ws_exam.delete_rows(int(index) + 2)
+                        st.toast("تم الحذف بنجاح")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except:
+                        st.error("فشل الحذف")
         else:
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 # ==========================================
