@@ -167,7 +167,7 @@ if st.session_state.role == "teacher":
         st.divider()
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    elif menu == "🎭 رصد السلوك":
+   elif menu == "🎭 رصد السلوك":
         # 1. الهيدر (العنوان الملون) الذي فقدناه
         st.markdown("""
             <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
@@ -236,7 +236,26 @@ if st.session_state.role == "teacher":
                                 st.markdown(f"""
                                     <div style="background-color: #f0fff4; border: 1px solid #25D366; padding: 15px; border-radius: 10px; text-align: center;">
                                         <p style="color: #2c3e50; font-weight: bold;">✅ تم الحفظ بنجاح</p>
-                                        <a href="{wa_url}" target="_blank"
+                                        <a href="{wa_url}" target="_blank" style="text-decoration: none;">
+                                            <div style="background-color: #25D366; color: white; padding: 12px 25px; border-radius: 5px; font-weight: bold;">💬 إرسال عبر واتساب الآن</div>
+                                        </a>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                            
+                            if btn_save:
+                                st.success("✅ تم الحفظ بنجاح")
+                                time.sleep(1)
+                                st.rerun()
+                        else:
+                            st.error("⚠️ يرجى كتابة نص الملاحظة")
+
+            # 3. الجدول التاريخي أسفل الشاشة
+            st.divider()
+            st.subheader(f"📋 سجل ملاحظات الطالب: {b_name}")
+            df_beh_all = fetch_safe("behavior")
+            if not df_beh_all.empty:
+                st_history = df_beh_all[df_beh_all.iloc[:, 0] == b_name].iloc[::-1]
+                st.dataframe(st_history, use_container_width=True, hide_index=True)
 
     elif menu == "📢 شاشة الاختبارات":
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center;"><h1>📢 شاشة الاختبارات</h1></div>', unsafe_allow_html=True)
