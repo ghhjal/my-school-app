@@ -62,13 +62,14 @@ if st.session_state.role is None:
     st.stop()
 
 # ==========================================
+# ==========================================
 # 🛠️ واجهة المعلم (إدارة متكاملة)
 # ==========================================
 if st.session_state.role == "teacher":
     st.sidebar.button("🚗 خروج", on_click=lambda: st.session_state.update({"role": None}))
     menu = st.sidebar.selectbox("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
 
-    # 1. إدارة الطلاب (كاملة الحقول + الحذف)
+    # 1. إدارة الطلاب
     if menu == "👥 إدارة الطلاب":
         st.header("👥 إدارة بيانات الطلاب")
         df_st = fetch_safe("students")
@@ -102,7 +103,7 @@ if st.session_state.role == "teacher":
                     except: pass
                 st.warning(f"تم حذف {del_target} من كافة الجداول"); time.sleep(1); st.rerun()
 
-    # 2. شاشة الدرجات (الفترات والمشاركة)
+    # 2. شاشة الدرجات
     elif menu == "📝 شاشة الدرجات":
         st.header("📝 رصد الدرجات الدراسية")
         df_st = fetch_safe("students")
@@ -128,31 +129,32 @@ if st.session_state.role == "teacher":
         st.subheader("📋 جدول الدرجات العام")
         st.dataframe(fetch_safe("grades"), use_container_width=True)
 
-    # --- شاشة رصد السلوك (عند المعلم) ---
-if menu == "🎭 رصد السلوك":
-    st.header("🎭 سجل السلوك والملاحظات")
-    df_st = fetch_safe("students")
-    
-    with st.form("behavior_form"):
-        c1, c2, c3 = st.columns(3)
-        b_name = c1.selectbox("الطالب", [""] + df_st.iloc[:, 1].tolist())
-        b_type = c2.selectbox("نوع السلوك", ["إيجابي", "سلبي", "تنبيه"])
-        b_date = c3.date_input("التاريخ")
-        b_note = st.text_area("نص الملاحظة")
-        if st.form_submit_button("رصد الملاحظة"):
-            # يتم التسجيل الآن بدون الحاجة لحقل "الحالة" المعقد برمجياً
-            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-            st.success("تم الرصد بنجاح"); st.rerun()
+    # 3. شاشة رصد السلوك (تم إعادتها داخل نطاق شرط المعلم)
+    elif menu == "🎭 رصد السلوك":
+        st.header("🎭 سجل السلوك والملاحظات")
+        df_st = fetch_safe("students")
+        
+        with st.form("behavior_form"):
+            c1, c2, c3 = st.columns(3)
+            b_name = c1.selectbox("الطالب", [""] + df_st.iloc[:, 1].tolist())
+            b_type = c2.selectbox("نوع السلوك", ["إيجابي", "سلبي", "تنبيه"])
+            b_date = c3.date_input("التاريخ")
+            b_note = st.text_area("نص الملاحظة")
+            if st.form_submit_button("رصد الملاحظة"):
+                # إضافة السلوك مع عمود خامس للحالة "لم تُقرأ بعد" لربطها بشاشة الطالب
+                sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note, "لم تُقرأ بعد"])
+                st.success("تم الرصد بنجاح"); st.rerun()
 
-    st.divider()
-    st.subheader("🔍 استعراض الفلتر الذكي")
-    f_name = st.selectbox("اختر اسم الطالب لعرض سجلاته فقط", ["الكل"] + df_st.iloc[:, 1].unique().tolist())
-    df_b = fetch_safe("behavior")
-    if not df_b.empty:
-        # الفلتر يعمل الآن مباشرة على جدول البيانات
-        view_df = df_b if f_name == "الكل" else df_b[df_b.iloc[:, 0] == f_name]
-        st.table(view_df)
-    # 4. شاشة الاختبارات (تعمل الآن بانتظام)
+        st.divider()
+        st.subheader("🔍 استعراض الفلتر الذكي")
+        f_name = st.selectbox("اختر اسم الطالب لعرض سجلاته فقط", ["الكل"] + df_st.iloc[:, 1].unique().tolist())
+        df_b = fetch_safe("behavior")
+        if not df_b.empty:
+            view_df = df_b if f_name == "الكل" else df_b[df_b.iloc[:, 0] == f_name]
+            # استخدام dataframe لضمان التوافق مع الجوال
+            st.dataframe(view_df, use_container_width=True, hide_index=True)
+
+    # 4. شاشة الاختبارات (تم إعادتها داخل نطاق شرط المعلم)
     elif menu == "📢 شاشة الاختبارات":
         st.header("📢 إدارة إعلانات الاختبارات")
         with st.form("ex_form"):
@@ -162,17 +164,17 @@ if menu == "🎭 رصد السلوك":
             e_title = c3.text_input("موضوع الاختبار")
             if st.form_submit_button("نشر الإعلان"):
                 sh.worksheet("exams").append_row([str(e_date), e_title, e_class])
-                st.success("تم النشر"); st.rerun()
+                st.success("تم النشر بنجاح"); st.rerun()
         
         df_ex = fetch_safe("exams")
         if not df_ex.empty:
             for i, row in df_ex.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([5, 1])
+                    # عرض الإعلان بشكل أنيق
                     c1.write(f"📢 **{row.iloc[1]}** | 📅 {row.iloc[0]} | 👥 {row.iloc[2]}")
                     if c2.button("🗑️ حذف", key=f"del_ex_{i}"):
                         sh.worksheet("exams").delete_rows(i + 2); st.rerun()
-
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
