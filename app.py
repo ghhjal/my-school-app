@@ -138,20 +138,20 @@ if menu == "🎭 رصد السلوك":
         b_name = c1.selectbox("الطالب", [""] + df_st.iloc[:, 1].tolist())
         b_type = c2.selectbox("نوع السلوك", ["إيجابي", "سلبي", "تنبيه"])
         b_date = c3.date_input("التاريخ")
-        b_note = st.text_area("الملاحظة")
-        if st.form_submit_button("رصد"):
-            # هنا يتم ضبط الحالة تلقائياً إلى "لم تتم القراءة"
-            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note, "لم تتم القراءة"])
-            st.success("تم الرصد"); st.rerun()
+        b_note = st.text_area("نص الملاحظة")
+        if st.form_submit_button("رصد الملاحظة"):
+            # يتم التسجيل الآن بدون الحاجة لحقل "الحالة" المعقد برمجياً
+            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
+            st.success("تم الرصد بنجاح"); st.rerun()
 
     st.divider()
-    # الفلتر الذكي للجدول
-    filter_student = st.selectbox("🔍 عرض ملاحظات طالب معين", ["الكل"] + df_st.iloc[:, 1].unique().tolist())
+    st.subheader("🔍 استعراض الفلتر الذكي")
+    f_name = st.selectbox("اختر اسم الطالب لعرض سجلاته فقط", ["الكل"] + df_st.iloc[:, 1].unique().tolist())
     df_b = fetch_safe("behavior")
     if not df_b.empty:
-        # عرض الجدول بناءً على الفلتر
-        display_df = df_b if filter_student == "الكل" else df_b[df_b.iloc[:, 0] == filter_student]
-        st.table(display_df)
+        # الفلتر يعمل الآن مباشرة على جدول البيانات
+        view_df = df_b if f_name == "الكل" else df_b[df_b.iloc[:, 0] == f_name]
+        st.table(view_df)
     # 4. شاشة الاختبارات (تعمل الآن بانتظام)
     elif menu == "📢 شاشة الاختبارات":
         st.header("📢 إدارة إعلانات الاختبارات")
