@@ -201,21 +201,35 @@ if st.session_state.role == "teacher":
                                 st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_link}">', unsafe_allow_html=True)
                             
                             if btn_wa and s_phone:
-                                # 1. تحضير الرابط المنظم
-                                wa_msg = report_content.replace("%0A", "\n")
-                                wa_url = f"https://wa.me/{s_phone}?text={wa_msg.replace(' ', '%20')}"
+                                # 1. تحضير الرسالة بتنسيق متوافق مع الواتساب
+                                # نستخدم \n للأسطر الحقيقية واسم المنصة مع رموز واضحة
+                                wa_msg = (
+                                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
+                                    f"----------------------------------------\n"
+                                    f"🏷️ نوع السلوك: {b_type}\n"
+                                    f"📝 الملاحظة: {b_note}\n"
+                                    f"📅 التاريخ: {b_date}\n"
+                                    f"----------------------------------------\n"
+                                    f"🏛️ منصة المدرسة الذكية"
+                                )
                                 
-                                # 2. عرض زر واتساب كبير وواضح بدلاً من الرابط الصغير
+                                # 2. ترميز الرسالة للرابط (URL Encoding)
+                                import urllib.parse
+                                wa_url = f"https://wa.me/{s_phone}?text={urllib.parse.quote(wa_msg)}"
+                                
+                                # 3. عرض زر الواتساب الثابت (بدون اختفاء)
                                 st.markdown(f"""
-                                    <a href="{wa_url}" target="_blank" style="text-decoration: none;">
-                                        <div style="background-color: #25D366; color: white; padding: 15px; text-align: center; border-radius: 10px; font-weight: bold; margin-top: 10px;">
-                                            ✅ تم الحفظ.. اضغط هنا لفتح واتساب الآن 💬
-                                        </div>
-                                    </a>
+                                    <div style="background-color: #f0fff4; border: 1px solid #25D366; padding: 15px; border-radius: 10px; text-align: center; margin-top: 10px;">
+                                        <p style="color: #2c3e50; font-weight: bold; margin-bottom: 10px;">✅ تم حفظ السلوك في جوجل شيت</p>
+                                        <a href="{wa_url}" target="_blank" style="text-decoration: none;">
+                                            <div style="background-color: #25D366; color: white; padding: 12px 25px; display: inline-block; border-radius: 5px; font-weight: bold;">
+                                                💬 إرسال التقرير المنظم عبر واتساب
+                                            </div>
+                                        </a>
+                                    </div>
                                 """, unsafe_allow_html=True)
                                 
-                                # 3. ملاحظة: أزلنا st.rerun() هنا ليبقى الزر ظاهراً لك
-                                st.info("ℹ️ تم تسجيل البيانات في جوجل شيت بنجاح. يرجى الضغط على الزر الأخضر أعلاه للإرسال.")
+                                st.info("ℹ️ اضغط على الزر الأخضر أعلاه لفتح محادثة واتساب والرسالة جاهزة.")
 
             # عرض سجل الملاحظات التاريخي للطالب
             st.markdown(f"#### 📜 سجل ملاحظات: {b_name}")
