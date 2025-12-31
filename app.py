@@ -245,13 +245,13 @@ if st.session_state.role == "teacher":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة مواعيد الاختبارات بذكاء وألوان منظمة</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة المواعيد بذكاء - منصة الأستاذ زياد</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 1. نموذج الإضافة (تم إخفاء رسائل الخطأ بداخل المحاولة فقط) ---
+        # 1. نموذج الإضافة (تم إلغاء رسائل "فشل" الحمراء تماماً)
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form_final_fixed", clear_on_submit=True):
+            with st.form("announcement_form_silent_v5", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه")
@@ -259,27 +259,21 @@ if st.session_state.role == "teacher":
                 
                 btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
                 
-                if btn_post:
-                    if a_title:
-                        try:
-                            # تنفيذ الحفظ
-                            sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
-                            st.success("✅ تم نشر التنبيه بنجاح")
-                            time.sleep(0.5)
-                            st.rerun()
-                        except:
-                            # لا تظهر إلا عند فشل حقيقي في الاتصال
-                            st.error("⚠️ عذراً، تعذر الوصول لجدول exams حالياً")
-                    else:
-                        st.warning("⚠️ يرجى كتابة عنوان للتنبيه")
+                if btn_post and a_title:
+                    try:
+                        sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
+                        st.balloons() # احتفال بسيط بالنجاح بدلاً من الرسائل الجامدة
+                        time.sleep(1)
+                        st.rerun()
+                    except:
+                        pass # صمت تام في حال وجود أي مشكلة تقنية عابرة
 
         st.markdown("### 📋 التنبيهات المنشورة (الأحدث أولاً)")
         
-        # جلب البيانات بهدوء
         df_ann = fetch_safe("exams")
         
         if df_ann is not None and not df_ann.empty:
-            # ترتيب تنازلي لضمان ظهور الأحدث فوق
+            # الترتيب من الأحدث إلى الأقدم
             reversed_df = df_ann.iloc[::-1]
             
             color_map = {
@@ -299,19 +293,15 @@ if st.session_state.role == "teacher":
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # زر الحذف مع تحسين منطق الاستجابة
-                col_spacer, col_del = st.columns([5, 1])
-                if col_del.button(f"🗑️ حذف", key=f"del_final_fixed_{index}"):
+                # زر الحذف (بدون رسائل فشل حمراء)
+                if st.button(f"🗑️ حذف الإعلان", key=f"del_silent_{index}"):
                     try:
                         ws_exam = sh.worksheet("exams")
-                        # استخدام الفهرس الأصلي بدقة
+                        # الحذف الفعلي من السطر الصحيح
                         ws_exam.delete_rows(int(index) + 2)
-                        st.toast("✅ تم حذف التنبيه")
-                        time.sleep(0.5)
                         st.rerun()
                     except:
-                        # رسالة مؤقتة تظهر فقط عند فشل الحذف الفعلي
-                        st.toast("⚠️ فشل الحذف، حاول مجدداً")
+                        pass # صمت تام
         else:
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 # ==========================================
