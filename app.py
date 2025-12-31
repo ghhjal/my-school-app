@@ -132,31 +132,30 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
-# --- القسم الثالث: رصد السلوك (تم ضبط المسافات ومنع التكرار وتصحيح الإيميل) ---
+# --- القسم الثالث: رصد السلوك (الإصدار الاحترافي بترميز الرسائل) ---
     elif menu == "🎭 رصد السلوك":
         st.markdown("""
             <div style="background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">🎭 رصد السلوك والتواصل الفوري</h1>
-                <p style="margin:5px 0 0 0; opacity: 0.8;">إرسال رسائل بريد وواتساب دقيقة وتلقائية</p>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إرسال تقارير سلوكية منظمة بضغطة زر</p>
             </div>
         """, unsafe_allow_html=True)
 
         df_st = fetch_safe("students")
         
-        # اختيار الطالب خارج الفورم لضمان التفاعل الحي
+        # حاوية اختيار الطالب
         st.markdown('<div style="background-color: #fffbeb; padding: 10px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 15px;">', unsafe_allow_html=True)
         b_name = st.selectbox("🎯 اختر اسم الطالب", [""] + df_st.iloc[:, 1].tolist())
         st.markdown('</div>', unsafe_allow_html=True)
 
         if b_name:
-            # تصحيح جلب البيانات: العمود 6 للإيميل والعمود 7 للجوال (بناءً على صفرية الفهرس)
-            # في Pandas، العمود G هو index 6 والعمود H هو index 7 إذا بدأنا من A=0
+            # جلب البيانات (العمود G للإيميل والعمود H للجوال)
             student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_info[6]  # العمود G (الإيميل)
-            s_phone = student_info[7]  # العمود H (الجوال)
+            s_email = student_info[6]  # البريد الإلكتروني
+            s_phone = student_info[7]  # رقم الجوال
             
             with st.container(border=True):
-                with st.form("behavior_final_v7", clear_on_submit=True):
+                with st.form("behavior_professional_v8", clear_on_submit=True):
                     c1, c2 = st.columns(2)
                     b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
                     b_date = c2.date_input("📅 التاريخ")
@@ -165,48 +164,60 @@ if st.session_state.role == "teacher":
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     btn_save = col1.form_submit_button("💾 رصد فقط")
-                    btn_mail = col2.form_submit_button("📧 رصد وفتح الإيميل")
-                    btn_wa = col3.form_submit_button("💬 رصد وفتح واتساب")
+                    btn_mail = col2.form_submit_button("📧 رصد وإيميل منظم")
+                    btn_wa = col3.form_submit_button("💬 رصد وواتساب منظم")
 
-                    # تنفيذ الحفظ مرة واحدة فقط مهما كان الزر المضغوط
+                    # تنفيذ الحفظ لمرة واحدة فقط
                     if btn_save or btn_mail or btn_wa:
                         if b_note:
                             # 1. الحفظ في جدول السلوك
                             sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                             
-                            # 2. تحديث رصيد النقاط (العمود العاشر J)
+                            # 2. تحديث النقاط (العمود I)
                             try:
                                 ws_st = sh.worksheet("students")
                                 cell = ws_st.find(b_name)
                                 p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
-                                current_p = int(ws_st.cell(cell.row, 9).value or 0) # العمود I هو index 8
+                                current_p = int(ws_st.cell(cell.row, 9).value or 0)
                                 ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                             except: pass
 
-                            # 3. إعداد نص الرسالة
-                            msg = f"تم رصد ملاحظة سلوكية للطالب: {b_name}\nالنوع: {b_type}\nالملاحظة: {b_note}\nالتاريخ: {b_date}"
+                            # 3. إعداد نص الرسالة بترميز الأسطر (%0A) لتحسين المظهر
+                            subject = f"تقرير سلوك: {b_name}"
+                            msg_body = (
+                                f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}%0A"
+                                f"----------------------------------------%0A"
+                                f"🏷️ نوع السلوك: {b_type}%0A"
+                                f"📝 الملاحظة: {b_note}%0A"
+                                f"📅 التاريخ: {b_date}%0A"
+                                f"----------------------------------------%0A"
+                                f"منصة المدرسة الذكية"
+                            )
                             
-                            # 4. معالجة الإرسال (تصحيح حقل المستلم)
+                            # 4. تفعيل روابط التواصل المنظمة
                             if btn_mail and s_email:
-                                mail_url = f"mailto:{s_email}?subject=سلوك: {b_name}&body={msg}"
-                                st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
+                                # فتح البريد مع المستلم الصحيح
+                                mail_link = f"mailto:{s_email}?subject={subject}&body={msg_body}"
+                                st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_link}">', unsafe_allow_html=True)
                             
                             if btn_wa and s_phone:
-                                wa_url = f"https://wa.me/{s_phone}?text={msg.replace(' ', '%20')}"
-                                st.write(f"🔗 [اضغط هنا لإرسال الواتساب]({wa_url})")
+                                # فتح واتساب بنص مرتب
+                                wa_msg = msg_body.replace("%0A", "\n")
+                                wa_url = f"https://wa.me/{s_phone}?text={wa_msg.replace(' ', '%20')}"
+                                st.write(f"🔗 [اضغط هنا لإرسال التقرير عبر واتساب]({wa_url})")
 
-                            st.success(f"✅ تم الحفظ بنجاح")
+                            st.success(f"✅ تم تسجيل الملاحظة وتنسيق الرسالة")
                             time.sleep(1)
                             st.rerun()
                         else:
                             st.error("⚠️ يرجى كتابة نص الملاحظة")
 
-            # عرض السجل التاريخي المفلتر
+            # عرض السجل التاريخي المنظم
             st.markdown(f"#### 📜 سجل ملاحظات: {b_name}")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
                 st_history = df_b[df_b.iloc[:, 0] == b_name]
-                st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)               
+                st.dataframe(st_history.iloc[::-1, :4], use_container_width=True, hide_index=True)            
     elif menu == "📢 شاشة الاختبارات":
         st.info("قسم الاختبارات جاهز للبرمجة الجمالية لاحقاً")
 # ==========================================
