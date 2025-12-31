@@ -24,14 +24,15 @@ def fetch_safe(sheet_name):
     try:
         ws = sh.worksheet(sheet_name)
         data = ws.get_all_values()
-        if len(data) > 0:
-            # حل مشكلة Duplicate columns (الرسالة الحمراء) نهائياً
-            headers = []
-            for i, h in enumerate(data[0]):
-                h_name = h.strip() if h.strip() else f"col_{i}"
-                if h_name in headers: h_name = f"{h_name}_{i}"
-                headers.append(h_name)
-            return pd.DataFrame(data[1:], columns=headers)
+        if len(data) > 1:
+            # تنظيف وتوحيد أسماء الأعمدة لمنع الأخطاء
+            raw_headers = data[0]
+            clean_headers = []
+            for i, h in enumerate(raw_headers):
+                name = h.strip() if h.strip() else f"col_{i}"
+                if name in clean_headers: name = f"{name}_{i}"
+                clean_headers.append(name)
+            return pd.DataFrame(data[1:], columns=clean_headers)
         return pd.DataFrame()
     except: return pd.DataFrame()
 
@@ -128,27 +129,33 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True)
 
     # 3. رصد السلوك (الفلتر والحالة الذكية)
-    elif menu == "🎭 رصد السلوك":
-        st.header("🎭 سجل السلوك والملاحظات")
-        df_st = fetch_safe("students")
-        with st.form("bh_form"):
-            c1, c2, c3 = st.columns(3)
-            b_name = c1.selectbox("الطالب", [""] + df_st.iloc[:, 1].tolist())
-            b_type = c2.selectbox("نوع السلوك", ["إيجابي", "سلبي", "تنبيه", "أخرى"])
-            b_date = c3.date_input("تاريخ الملاحظة")
-            b_note = st.text_area("نص الملاحظة السلوكية")
-            if st.form_submit_button("رصد السلوك"):
-                # الحالة عند الرصد هي دائماً "⏳ لم يتم القراءة"
-                sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note, "⏳ لم يتم القراءة"])
-                st.success("تم الرصد بنجاح"); st.rerun()
-        
-        st.divider()
-        st.subheader("🔍 استعراض الفلتر الذكي")
-        f_name = st.selectbox("فلترة الجدول بالأسفل حسب الطالب", ["عرض الكل"] + df_st.iloc[:, 1].tolist())
-        df_b = fetch_safe("behavior")
-        if not df_b.empty:
-            view_df = df_b if f_name == "عرض الكل" else df_b[df_b.iloc[:, 0] == f_name]
-            st.table(view_df)
+    # داخل قسم المعلم (teacher role) تحت خيار "رصد السلوك"
+if menu == "🎭 رصد السلوك":
+    st.header("🎭 سجل السلوك والملاحظات")
+    df_st = fetch_safe("students")
+    
+    # نموذج الرصد
+    with st.form("bh_form"):
+        c1, c2, c3 = st.columns(3)
+        b_name = c1.selectbox("الطالب", [""] + df_st.iloc[:, 1].tolist())
+        b_type = c2.selectbox("نوع السلوك", ["إيجابي", "سلبي", "تنبيه"])
+        b_date = c3.date_input("تاريخ الملاحظة")
+        b_note = st.text_area("نص الملاحظة")
+        if st.form_submit_button("رصد السلوك"):
+            # الحالة الافتراضية عند الرصد هي "لم تُقرأ بعد"
+            sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note, "لم تُقرأ بعد"])
+            st.success("تم الرصد بنجاح"); st.rerun()
+
+    st.divider()
+    st.subheader("🔍 استعراض الفلتر الذكي")
+    # الفلتر الذي طلبته ليعمل مع الجدول بالأسفل
+    f_name = st.selectbox("فلترة الجدول بالأسفل حسب الطالب", ["الكل"] + df_st.iloc[:, 1].unique().tolist())
+    
+    df_b = fetch_safe("behavior")
+    if not df_b.empty:
+        # منطق الفلترة
+        view_df = df_b if f_name == "الكل" else df_b[df_b.iloc[:, 0] == f_name]
+        st.table(view_df) # عرض الجدول المفلتر
 
     # 4. شاشة الاختبارات (تعمل الآن بانتظام)
     elif menu == "📢 شاشة الاختبارات":
