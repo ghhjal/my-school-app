@@ -320,109 +320,110 @@ if st.session_state.role == "teacher":
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب الملونة (تنبيهات واضحة + شاشة درجات)
+# 👨‍🎓 واجهة الطالب (النسخة النهائية: درجات + ألوان قوية)
 # ==========================================
 elif st.session_state.role == "student":
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name, s_class = s_row[1], s_row[2]
     
-    # استخراج الدرجات (حسب ترتيب الأعمدة في ملفك)
+    # جلب الدرجات من الأعمدة (تأكد من ترتيب الأعمدة في ملفك)
     try:
-        participation = s_row[3] # عمود المشاركة
-        homework = s_row[4]      # عمود الواجبات
-        quizzes = s_row[5]       # عمود الاختبارات القصيرة
+        # نفترض الأعمدة: 3=مشاركة، 4=واجبات، 5=اختبارات
+        grade_part = s_row[3] if s_row[3] else "0"
+        grade_hw = s_row[4] if s_row[4] else "0"
+        grade_exam = s_row[5] if s_row[5] else "0"
         s_points = int(s_row[8]) if s_row[8] else 0
     except:
-        participation, homework, quizzes, s_points = "0", "0", "0", 0
+        grade_part, grade_hw, grade_exam, s_points = "0", "0", "0", 0
 
-    # 1. شريط الإعلان العلوي
-    st.markdown(f'<div style="background:#1e3a8a;padding:10px;margin:-1rem -1rem 1rem -1rem;border-bottom:4px solid #f59e0b;"><marquee direction="right" style="color:white;font-weight:bold;">✨ أهلاً بك يا بطل.. درجاتك ونقاطك وتنبيهاتك في مكان واحد ✨</marquee></div>', unsafe_allow_html=True)
+    # 1. شريط الإعلان العلوي (تصميم ثابت)
+    st.markdown(f'<div style="background:#1e3a8a;padding:10px;margin:-1rem -1rem 1rem -1rem;border-bottom:4px solid #f59e0b;text-align:center;"><span style="color:white;font-weight:bold;">✨ منصة التميز للطالب: {s_name} ✨</span></div>', unsafe_allow_html=True)
 
-    # 2. بطاقة التعريف والأوسمة المؤطرة
+    # 2. الأوسمة والبطاقة التعريفية (مغلفة بـ st.markdown لمنع ظهور الكود كنص)
     st.markdown(f"""
-    <div style="background: white; border-radius: 20px; padding: 20px; border: 1px solid #e2e8f0; text-align: center; margin-bottom: 20px;">
-        <h2 style="color: #1e3a8a; margin:0;">{s_name}</h2>
-        <div style="background: #edf2f7; display: inline-block; padding: 2px 15px; border-radius: 50px; font-size: 0.9rem; margin: 10px 0;">🏫 صف: {s_class}</div>
-        
-        <div style="display: flex; justify-content: space-around; margin: 20px 0;">
-            <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 10 else '0.2'};">
-                <div style="font-size: 1.5rem;">🥉</div><div style="font-size: 0.7rem; font-weight: bold; color: #cd7f32;">برونزي</div>
+    <div style="background: white; border-radius: 15px; padding: 15px; border: 1px solid #e2e8f0; text-align: center; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
+            <div style="border: 2px solid #cd7f32; padding: 8px; border-radius: 12px; width: 30%; opacity: {'1' if s_points >= 10 else '0.2'};">
+                <div style="font-size: 1.2rem;">🥉</div><div style="font-size: 0.7rem; font-weight: bold; color: #cd7f32;">برونزي</div>
             </div>
-            <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 50 else '0.2'};">
-                <div style="font-size: 1.5rem;">🥈</div><div style="font-size: 0.7rem; font-weight: bold; color: #7f8c8d;">فضي</div>
+            <div style="border: 2px solid #c0c0c0; padding: 8px; border-radius: 12px; width: 30%; opacity: {'1' if s_points >= 50 else '0.2'};">
+                <div style="font-size: 1.2rem;">🥈</div><div style="font-size: 0.7rem; font-weight: bold; color: #7f8c8d;">فضي</div>
             </div>
-            <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 100 else '0.2'};">
-                <div style="font-size: 1.5rem;">🥇</div><div style="font-size: 0.7rem; font-weight: bold; color: #d4af37;">ذهبي</div>
+            <div style="border: 2px solid #ffd700; padding: 8px; border-radius: 12px; width: 30%; opacity: {'1' if s_points >= 100 else '0.2'};">
+                <div style="font-size: 1.2rem;">🥇</div><div style="font-size: 0.7rem; font-weight: bold; color: #d4af37;">ذهبي</div>
             </div>
         </div>
-
-        <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 15px; border-radius: 15px;">
-            <small>رصيد النقاط السلوكية</small><br><b style="font-size: 2rem;">{s_points}</b>
+        <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 10px; border-radius: 10px;">
+            <small>رصيد النقاط السلوكية</small><br><b style="font-size: 1.8rem;">{s_points}</b>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. التبويبات (أضفنا تبويب الدرجات)
+    # 3. التبويبات (تنبيهات واضحة + درجات + سلوك)
     t_ex, t_grade, t_beh, t_set = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "⚙️ الإعدادات"])
 
     with t_ex:
-        st.subheader("📢 مواعيد هامة")
+        st.markdown("### 🔔 إشعارات هامة")
         df_ex = fetch_safe("exams")
         if not df_ex.empty:
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
+                # استخدام لون أزرق غامق جداً للوضوح
                 st.markdown(f"""
-                <div style="background: #2b6cb0; padding: 15px; border-radius: 12px; color: white; margin-bottom: 10px; border-right: 8px solid #f59e0b;">
-                    <b style="font-size: 1.1rem;">📍 {r[1]}</b><br>
-                    <span style="opacity: 0.9;">📅 الموعد: {r[2]}</span>
+                <div style="background: #003366; padding: 15px; border-radius: 10px; color: white; margin-bottom: 10px; border-left: 8px solid #ffd700;">
+                    <b style="font-size: 1.1rem;">📢 {r[1]}</b><br>
+                    <span style="color: #ffd700;">📅 التاريخ: {r[2]}</span>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            st.info("لا توجد تنبيهات حالياً")
 
     with t_grade:
-        st.subheader("📊 سجل الدرجات الأكاديمية")
+        st.markdown("### 📊 سجل الدرجات الأكاديمية")
         st.markdown(f"""
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; text-align:center;">
-                <small>المشاركة</small><br><b style="font-size:1.2rem; color:#1e3a8a;">{participation}</b>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                <b style="color: #1e3a8a;">📝 المشاركة والنشاط</b>
+                <b style="color: #1e3a8a; font-size: 1.2rem;">{grade_part}</b>
             </div>
-            <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; text-align:center;">
-                <small>الواجبات</small><br><b style="font-size:1.2rem; color:#1e3a8a;">{homework}</b>
+            <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                <b style="color: #1e3a8a;">🏠 الواجبات المنزلية</b>
+                <b style="color: #1e3a8a; font-size: 1.2rem;">{grade_hw}</b>
             </div>
-            <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; text-align:center;">
-                <small>الاختبارات</small><br><b style="font-size:1.2rem; color:#1e3a8a;">{quizzes}</b>
-            </div>
-            <div style="background:#1e3a8a; padding:15px; border-radius:10px; color:white; text-align:center;">
-                <small>التقييم العام</small><br><b style="font-size:1.2rem;">ممتاز ✨</b>
+            <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                <b style="color: #1e3a8a;">📝 الاختبارات القصيرة</b>
+                <b style="color: #1e3a8a; font-size: 1.2rem;">{grade_exam}</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with t_beh:
-        st.subheader("🎭 السجل السلوكي")
+        st.markdown("### 🎭 سجل الانضباط والسلوك")
         df_beh = fetch_safe("behavior")
         if not df_beh.empty:
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             for _, r in f_beh.iloc[::-1].iterrows():
                 is_pos = "+" in str(r[2])
-                bg = "#22c55e" if is_pos else "#ef4444" # ألوان فاقعة (أخضر وأحمر)
+                # ألوان فاقعة جداً للتمييز
+                bg_color = "#15803d" if is_pos else "#b91c1c" # أخضر غامق أو أحمر غامق
                 st.markdown(f"""
-                <div style="background: {bg}; padding: 15px; border-radius: 12px; color: white; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between;">
-                        <b>{r[2]}</b>
+                <div style="background: {bg_color}; padding: 15px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span>{r[2]}</span>
                         <small>{r[1]}</small>
                     </div>
-                    <div style="margin-top:5px; font-size:0.95rem;">{r[3]}</div>
+                    <div style="margin-top: 5px; font-size: 0.9rem; opacity: 0.9;">{r[3]}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
     with t_set:
-        with st.form("final_set"):
-            new_mail = st.text_input("الإيميل", value=str(s_row[6]))
-            new_phone = st.text_input("الجوال", value=str(s_row[7]))
-            if st.form_submit_button("💾 حفظ التغييرات", use_container_width=True):
+        with st.form("settings_form"):
+            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
+            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
+            if st.form_submit_button("💾 حفظ البيانات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم الحفظ"); st.rerun()
-        if st.button("🚗 خروج"):
+                st.success("تم التحديث بنجاح!"); st.rerun()
+        if st.button("🚗 تسجيل الخروج", use_container_width=True):
             st.session_state.role = None; st.rerun()
