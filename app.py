@@ -320,101 +320,103 @@ if st.session_state.role == "teacher":
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب الاحترافية (تصميم Mobile App)
+# 👨‍🎓 واجهة الطالب المنظمة (تنبيهات + سلوك منفصلين)
 # ==========================================
 elif st.session_state.role == "student":
-    # جلب بيانات الطالب بدقة
+    # 1. جلب البيانات الأساسية
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
-    
     s_name = s_row[1]
     s_class = s_row[2]
-    s_points = s_row[8] if s_row[8] else "0"
-    s_email = s_row[6]
-    s_phone = s_row[7]
+    try: s_points = int(s_row[8]) if s_row[8] else 0
+    except: s_points = 0
+    
+    # --- 📢 شريط الإعلانات العلوى ---
+    st.markdown(f"""
+        <div style="background: #ebf8ff; padding: 10px; border-bottom: 2px solid #4299e1; margin: -1rem -1rem 1rem -1rem;">
+            <marquee direction="right" scrollamount="6" style="color: #2b6cb0; font-weight: bold;">
+                ✨ أهلاً بك يا بطل.. تابع نقاطك وتنبيهاتك أولاً بأول ✨
+            </marquee>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # --- الهيدر العلوي الأنيق ---
+    # --- 👤 الهيدر الرئيسي ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
-                    padding: 30px 20px; border-radius: 20px; color: white; 
-                    text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-            <div style="font-size: 1.2rem; opacity: 0.9;">مرحباً بك مجدداً</div>
-            <h1 style="margin: 10px 0; font-size: 1.8rem;">{s_name}</h1>
-            <div style="display: inline-block; background: rgba(255,255,255,0.2); 
-                        padding: 5px 15px; border-radius: 50px; font-size: 0.9rem;">
-                📚 الصف: {s_class}
-            </div>
+                    padding: 20px; border-radius: 15px; color: white; text-align: center;">
+            <h2 style="margin:0;">{s_name}</h2>
+            <p style="margin:0; opacity:0.8;">الصف: {s_class}</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- قسم النقاط (البطاقة الذهبية) ---
-    c1, c2 = st.columns(2)
+    # --- 🏅 قسم الأوسمة والتحفيز ---
+    st.write("")
+    c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown(f"""
-            <div style="background: white; padding: 20px; border-radius: 15px; 
-                        text-align: center; border-bottom: 5px solid #f59e0b; 
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <div style="font-size: 2.5rem;">🌟</div>
-                <div style="color: #6b7280; font-size: 0.9rem;">رصيدك من النقاط</div>
-                <div style="color: #f59e0b; font-size: 2rem; font-weight: bold;">{s_points}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    
+        op = "1" if s_points >= 10 else "0.2"
+        st.markdown(f'<div style="text-align:center; opacity:{op};">🥉<br><small>برونزي</small></div>', unsafe_allow_html=True)
     with c2:
-        # زر خروج سريع بتصميم يتناسب مع الجوال
-        st.write("") # مسافة
-        if st.button("🚗 تسجيل الخروج", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
+        op = "1" if s_points >= 50 else "0.2"
+        st.markdown(f'<div style="text-align:center; opacity:{op};">🥈<br><small>فضي</small></div>', unsafe_allow_html=True)
+    with c3:
+        op = "1" if s_points >= 100 else "0.2"
+        st.markdown(f'<div style="text-align:center; opacity:{op};">🥇<br><small>ذهبي</small></div>', unsafe_allow_html=True)
 
-    st.divider()
+    # --- 📊 تفاصيل الطالب (مقسمة لتابات لتجنب التداخل) ---
+    tab_exam, tab_behavior, tab_settings = st.tabs(["📢 الاختبارات والتنبيهات", "🎭 سجلي السلوكي", "⚙️ الإعدادات"])
 
-    # --- قسم التنبيهات (بطاقات المواعيد) ---
-    st.markdown("### 📢 آخر التنبيهات والمواعيد")
-    df_ex = fetch_safe("exams")
-    if not df_ex.empty:
-        # فلترة التنبيهات الخاصة بصف الطالب أو العامة
-        f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
-        if not f_ex.empty:
-            for _, r in f_ex.iloc[::-1].iterrows():
-                st.markdown(f"""
-                    <div style="background: white; padding: 15px; border-radius: 12px; 
-                                border-right: 5px solid #3b82f6; margin-bottom: 12px; 
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; 
-                                justify-content: space-between; align-items: center;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: bold; color: #1e3a8a; font-size: 1.1rem;">📍 {r[1]}</div>
-                            <div style="color: #6b7280; font-size: 0.85rem; margin-top: 5px;">📅 موعدنا: {r[2]}</div>
+    # 💠 القسم الأول: التنبيهات والاختبارات
+    with tab_exam:
+        st.markdown("#### 📅 المواعيد العامة لصفك")
+        df_ex = fetch_safe("exams")
+        if not df_ex.empty:
+            f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
+            if not f_ex.empty:
+                for _, r in f_ex.iloc[::-1].iterrows():
+                    st.markdown(f"""
+                        <div style="background: #ffffff; padding: 12px; border-radius: 10px; border-right: 5px solid #3182ce; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:10px;">
+                            <b style="color:#2c5282;">📍 {r[1]}</b><br>
+                            <small style="color:#4a5568;">📅 الموعد: {r[2]}</small>
                         </div>
-                        <div style="font-size: 1.5rem;">🔔</div>
-                    </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("لا توجد تنبيهات جديدة لصفك حالياً.")
+                    """, unsafe_allow_html=True)
+            else: st.info("لا توجد مواعيد معلنة حالياً")
 
-    # --- قسم تحديث البيانات (Expander بتصميم نظيف) ---
-    with st.expander("📝 تحديث بيانات التواصل الخاصة بك"):
-        with st.form("student_update_form"):
-            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_email))
-            new_phone = st.text_input("📱 رقم جوال ولي الأمر", value=str(s_phone))
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.form_submit_button("✅ حفظ التغييرات", use_container_width=True):
-                try:
-                    ws = sh.worksheet("students")
-                    cell = ws.find(st.session_state.sid)
-                    ws.update_cell(cell.row, 7, new_mail) # العمود G
-                    ws.update_cell(cell.row, 8, new_phone) # العمود H
-                    st.success("🎉 تم التحديث بنجاح")
-                    time.sleep(1)
-                    st.rerun()
-                except:
-                    st.error("عذراً، حدث خطأ أثناء التحديث")
+    # 💠 القسم الثاني: الملاحظات السلوكية (التي رصدها المعلم)
+    with tab_behavior:
+        st.markdown("#### 📝 ملاحظات المعلم على أدائك")
+        df_beh = fetch_safe("behavior")
+        if not df_beh.empty:
+            # فلترة السلوك الخاص بهذا الطالب فقط عن طريق الاسم
+            f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
+            if not f_beh.empty:
+                for _, r in f_beh.iloc[::-1].iterrows():
+                    # تحديد لون الملاحظة بناءً على نوعها
+                    color = "#48bb78" if "+" in str(r[2]) else "#f56565"
+                    if "تنبيه" in str(r[2]): color = "#ed8936"
+                    
+                    st.markdown(f"""
+                        <div style="background: #ffffff; padding: 12px; border-radius: 10px; border-right: 5px solid {color}; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:10px;">
+                            <b style="color:{color};">{r[2]}</b><br>
+                            <p style="margin:5px 0; font-size:0.9rem;">{r[3]}</p>
+                            <small style="color:#a0aec0;">🗓️ {r[1]}</small>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else: st.info("سجلك نظيف ومتميز.. استمر!")
 
-    # --- فوتر بسيط ---
-    st.markdown(f"""
-        <div style="text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 50px;">
-            منصة الأستاذ زياد العمري - لغة إنجليزية<br>
-            حقوق النشر محفوظة {datetime.now().year} ©
-        </div>
-    """, unsafe_allow_html=True)
+    # 💠 القسم الثالث: الإعدادات
+    with tab_settings:
+        st.markdown("#### ⚙️ تحديث البيانات")
+        with st.form("st_up"):
+            new_mail = st.text_input("📧 الإيميل", value=str(s_row[6]))
+            new_phone = st.text_input("📱 الجوال", value=str(s_row[7]))
+            if st.form_submit_button("حفظ"):
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                ws.update_cell(cell.row, 7, new_mail)
+                ws.update_cell(cell.row, 8, new_phone)
+                st.success("تم التحديث")
+                st.rerun()
+    
+    if st.sidebar.button("🚗 خروج"):
+        st.session_state.role = None
+        st.rerun()
