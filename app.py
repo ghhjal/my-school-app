@@ -320,20 +320,18 @@ if st.session_state.role == "teacher":
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب الاحترافية (تصميم البطاقات الملونة)
+# 👨‍🎓 واجهة الطالب الاحترافية (نسخة مصححة ومطورة)
 # ==========================================
 elif st.session_state.role == "student":
-    # 1. جلب البيانات من ملف الطالب
+    # 1. جلب البيانات
     df_st = fetch_safe("students")
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name = s_row[1]
     s_class = s_row[2]
-    try: 
-        s_points = int(s_row[8]) if s_row[8] else 0
-    except: 
-        s_points = 0
+    try: s_points = int(s_row[8]) if s_row[8] else 0
+    except: s_points = 0
     
-    # --- 📢 شريط الإعلانات العلوي الملون ---
+    # --- 📢 شريط الإعلانات العلوي ---
     st.markdown(f"""
         <div style="background: #1e3a8a; padding: 10px; margin: -1rem -1rem 1rem -1rem; border-bottom: 3px solid #f59e0b;">
             <marquee direction="right" scrollamount="6" style="color: white; font-weight: bold; font-family: 'Cairo', sans-serif;">
@@ -343,6 +341,7 @@ elif st.session_state.role == "student":
     """, unsafe_allow_html=True)
 
     # --- 👤 بطاقة التعريف والأوسمة المؤطرة ---
+    # ملاحظة: تم استخدام unsafe_allow_html=True هنا لحل مشكلة ظهور الكود كنص
     st.markdown(f"""
         <div style="background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; text-align: center; margin-bottom: 20px;">
             <div style="color: #64748b; font-size: 0.9rem;">الملف الشخصي للطالب</div>
@@ -368,13 +367,12 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات الملونة (لمنع التداخل) ---
+    # --- 📊 التبويبات الملونة ---
     tab_exam, tab_behavior, tab_settings = st.tabs(["📢 التنبيهات", "🎭 سجل السلوك", "⚙️ الإعدادات"])
 
     with tab_exam:
         df_ex = fetch_safe("exams")
         if not df_ex.empty:
-            # فلترة حسب صف الطالب أو التنبيهات العامة
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
                 st.markdown(f"""
@@ -383,20 +381,16 @@ elif st.session_state.role == "student":
                         <div style="font-size: 0.9rem; color: #64748b; margin-top:5px;">📅 الموعد: {r[2]}</div>
                     </div>
                 """, unsafe_allow_html=True)
-        else: 
-            st.info("لا توجد تنبيهات منشورة لصفك حالياً")
+        else: st.info("لا توجد تنبيهات منشورة لصفك")
 
     with tab_behavior:
         df_beh = fetch_safe("behavior")
         if not df_beh.empty:
-            # عرض ملاحظات الطالب الحالي فقط
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             if not f_beh.empty:
                 for _, r in f_beh.iloc[::-1].iterrows():
                     is_pos = "+" in str(r[2])
-                    bg = "#f0fff4" if is_pos else "#fff5f5"
-                    brd = "#38a169" if is_pos else "#e53e3e"
-                    txt = "#2f855a" if is_pos else "#c53030"
+                    bg, brd, txt = ("#f0fff4", "#38a169", "#2f855a") if is_pos else ("#fff5f5", "#e53e3e", "#c53030")
                     st.markdown(f"""
                         <div style="background: {bg}; padding: 15px; border-radius: 12px; border: 1px solid {brd}; border-right: 10px solid {brd}; margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -406,23 +400,18 @@ elif st.session_state.role == "student":
                             <div style="margin-top: 10px; color: #4a5568; font-size: 1rem; font-weight: 500;">{r[3]}</div>
                         </div>
                     """, unsafe_allow_html=True)
-            else: 
-                st.success("سجلك السلوكي نظيف ومتميز تماماً!")
+            else: st.success("سجلك السلوكي نظيف ومتميز تماماً!")
 
     with tab_settings:
-        st.markdown("#### ⚙️ تحديث ملفك الشخصي")
         with st.form("st_settings_form"):
-            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
+            new_email = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             new_phone = st.text_input("📱 رقم الجوال", value=str(s_row[7]))
             if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, new_mail)
                 ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم تحديث بياناتك بنجاح!")
-                st.rerun()
+                st.success("تم تحديث بياناتك بنجاح!"); st.rerun()
         
         st.write("---")
-        # زر الخروج منظم داخل الإعدادات لسهولة الوصول
-        if st.button("🚗 تسجيل الخروج من المنصة", use_container_width=True, type="secondary"):
-            st.session_state.role = None
-            st.rerun()
+        if st.button("🚗 تسجيل الخروج من المنصة", use_container_width=True):
+            st.session_state.role = None; st.rerun()
