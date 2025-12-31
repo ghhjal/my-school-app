@@ -201,15 +201,21 @@ if st.session_state.role == "teacher":
                                 st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_link}">', unsafe_allow_html=True)
                             
                             if btn_wa and s_phone:
-                                # فتح واتساب بنص منظم (الاسم، النوع، الملاحظة، التاريخ)
-                                wa_url = f"https://wa.me/{s_phone}?text={report_content.replace(' ', '%20')}"
-                                st.write(f"🔗 [اضغط هنا لإرسال التقرير المنظم عبر واتساب]({wa_url})")
-
-                            st.success(f"✅ تم الحفظ وتنسيق التقرير بنجاح")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("⚠️ يرجى كتابة نص الملاحظة")
+                                # 1. تحضير الرابط المنظم
+                                wa_msg = report_content.replace("%0A", "\n")
+                                wa_url = f"https://wa.me/{s_phone}?text={wa_msg.replace(' ', '%20')}"
+                                
+                                # 2. عرض زر واتساب كبير وواضح بدلاً من الرابط الصغير
+                                st.markdown(f"""
+                                    <a href="{wa_url}" target="_blank" style="text-decoration: none;">
+                                        <div style="background-color: #25D366; color: white; padding: 15px; text-align: center; border-radius: 10px; font-weight: bold; margin-top: 10px;">
+                                            ✅ تم الحفظ.. اضغط هنا لفتح واتساب الآن 💬
+                                        </div>
+                                    </a>
+                                """, unsafe_allow_html=True)
+                                
+                                # 3. ملاحظة: أزلنا st.rerun() هنا ليبقى الزر ظاهراً لك
+                                st.info("ℹ️ تم تسجيل البيانات في جوجل شيت بنجاح. يرجى الضغط على الزر الأخضر أعلاه للإرسال.")
 
             # عرض سجل الملاحظات التاريخي للطالب
             st.markdown(f"#### 📜 سجل ملاحظات: {b_name}")
