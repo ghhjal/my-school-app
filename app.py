@@ -321,76 +321,64 @@ if st.session_state.role == "teacher":
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تصميم احترافي وفعال)
 # ==========================================
-# --- شاشة الطالب (مستقلة تماماً لمنع الأخطاء) ---
-if st.session_state.role == "student":
-    # 1. جلب البيانات الأساسية
-    df_st = fetch_safe("students")
-    s_data = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid]
-    
-    if not s_data.empty:
-        s_row = s_data.iloc[0]
-        s_name = s_row.iloc[1]
-        s_email = s_row.iloc[7]
-        s_phone = s_row.iloc[8]
-        s_points = s_row.iloc[9]
-        s_class = s_row.iloc[2]
-
-        # 2. قسم الإعلانات (أعلى الشاشة - وضوح تام للجوال)
-        df_ex = fetch_safe("exams")
-        if not df_ex.empty:
-            my_ex = df_ex[(df_ex.iloc[:, 2] == s_class) | (df_ex.iloc[:, 2] == "الكل")]
-            for _, ex in my_ex.iterrows():
-                st.warning(f"🔔 **إعلان هام:** {ex.iloc[1]} \n\n 📅 التاريخ: {ex.iloc[0]}")
-
-        # 3. واجهة الهوية والأوسمة (تصميم عمودي للجوال)
-        st.markdown(f"""
-            <div style="text-align: center; background-color: #ffffff; padding: 15px; border-radius: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #1E3A8A; margin-top: 10px;">
-                <h3 style="color: #1E3A8A; margin-bottom: 5px;">مرحباً: {s_name}</h3>
-                <p style="font-size: 13px; color: #666;">📧 {s_email} | 📱 {s_phone}</p>
-                <div style="display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
-                    <div style="text-align: center;">
-                        <div style="font-size: 35px;">🏆</div>
-                        <div style="font-weight: bold; color: #1E3A8A; font-size: 18px;">{s_points}</div>
-                        <div style="font-size: 11px; color: #888;">نقطة</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 35px;">🥇</div>
-                        <div style="font-weight: bold; color: #1E3A8A; font-size: 18px;">متميز</div>
-                        <div style="font-size: 11px; color: #888;">وسام</div>
-                    </div>
-                </div>
+# --- القسم الخامس: شاشة الطالب (عرض النتائج والمواعيد) ---
+    elif menu == "👨‍🎓 شاشة الطالب":
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #10B981 0%, #059669 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h1 style="margin:0;">👨‍🎓 بوابة الطالب الذكية</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">تابع مستواك وآخر التنبيهات أولاً بأول</p>
             </div>
         """, unsafe_allow_html=True)
 
-        st.write("") 
-
-        # 4. التبويبات (النتائج والملاحظات)
-        # تم استخدام metric بدلاً من جداول لمنع أخطاء DeltaGenerator
-        t1, t2 = st.tabs(["📊 نتيجتي الدراسية", "🎭 سجل ملاحظاتي"])
+        df_st = fetch_safe("students")
         
-        with t1:
-            df_g = fetch_safe("grades")
-            if not df_g.empty:
-                my_g = df_g[df_g.iloc[:, 0] == s_name]
-                if not my_g.empty:
-                    st.metric("الفترة الأولى", f"{my_g.iloc[0, 1]}")
-                    st.metric("الفترة الثانية", f"{my_g.iloc[0, 2]}")
-                    st.metric("درجة المشاركة", f"{my_g.iloc[0, 3]}")
-                else:
-                    st.info("لا توجد درجات مرصودة حالياً.")
+        # --- محرك البحث الذكي للطالب (متوافق مع الجوال) ---
+        st.markdown('<div style="background-color: #ecfdf5; padding: 15px; border-radius: 10px; border: 1px solid #10b981; margin-bottom: 20px;">', unsafe_allow_html=True)
+        st.markdown("##### 🔍 ابحث عن اسمك لعرض ملفك:")
+        student_search = st.text_input("", placeholder="اكتب اسمك هنا...")
+        
+        all_names = df_st.iloc[:, 1].tolist()
+        filtered_names = [n for n in all_names if student_search in n] if student_search else all_names
+        
+        target_student = st.selectbox("🎯 اختر الاسم الصحيح من القائمة:", [""] + filtered_names)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with t2:
+        if target_student:
+            # جلب بيانات الطالب (النقاط في العمود I والصف في العمود C)
+            s_data = df_st[df_st.iloc[:, 1] == target_student].iloc[0]
+            s_class = s_data[2]  # الصف
+            s_points = s_data[8] # النقاط (العمود التاسع)
+
+            # 1. عرض رصيد النقاط بشكل جذاب
+            c1, c2 = st.columns(2)
+            with c1:
+                st.metric(label="🌟 رصيد نقاطك الحالي", value=f"{s_points} نقطة")
+            with c2:
+                st.metric(label="🏫 الصف الدراسي", value=s_class)
+
+            st.divider()
+
+            # 2. عرض التنبيهات الخاصة بصف هذا الطالب
+            st.markdown(f"### 📢 تنبيهات ومواعيد {s_class}")
+            df_ann = fetch_safe("exams")
+            if df_ann is not None and not df_ann.empty:
+                # تصفية التنبيهات حسب صف الطالب أو "الكل"
+                student_ann = df_ann[(df_ann.iloc[:, 0] == s_class) | (df_ann.iloc[:, 0] == "الكل")]
+                
+                if not student_ann.empty:
+                    for _, row in student_ann.iloc[::-1].iterrows():
+                        st.info(f"📝 **{row[1]}** \n\n 📅 الموعد: {row[2]}")
+                else:
+                    st.write("✅ لا توجد تنبيهات حالية لصفك.")
+            
+            st.divider()
+            
+            # 3. سجل السلوك الأخير للطالب
+            st.markdown("### 📝 سجل ملاحظاتك الأخيرة")
             df_b = fetch_safe("behavior")
             if not df_b.empty:
-                my_b = df_b[df_b.iloc[:, 0] == s_name]
-                if not my_b.empty:
-                    for _, row in my_b.iterrows():
-                        # استخدام expander لسهولة القراءة من الجوال
-                        with st.expander(f"🗓️ {row.iloc[1]} | {row.iloc[2]}", expanded=True):
-                            st.info(f"📝 {row.iloc[3]}")
+                personal_b = df_b[df_b.iloc[:, 0] == target_student]
+                if not personal_b.empty:
+                    st.table(personal_b.iloc[::-1, 1:4].rename(columns={1: 'التاريخ', 2: 'نوع السلوك', 3: 'الملاحظة'}))
                 else:
-                    st.info("سجلك السلوكي نظيف.")
-
-    # زر الخروج في أسفل القائمة الجانبية بعيداً عن كود الشاشة
-    st.sidebar.markdown("---")
-    st.sidebar.button("🚗 تسجيل خروج", on_click=lambda: st.session_state.update({"role": None}))
+                    st.write("🌟 سجلك نظيف ومتميز، استمر!")
