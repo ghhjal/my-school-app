@@ -4,10 +4,10 @@ import pandas as pd
 import time
 from google.oauth2.service_account import Credentials
 
-# إعدادات الصفحة
+# إعداد الصفحة
 st.set_page_config(page_title="منصة الأستاذ زياد", layout="wide")
 
-# التصميم الاحترافي (RTL + Header)
+# التصميم مع الشعار والاسم (RTL)
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -21,7 +21,6 @@ st.markdown("""
         color: white;
         text-align: center;
         margin: -60px -20px 20px -20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     .logo-container {
         background: rgba(255, 255, 255, 0.2);
@@ -31,19 +30,19 @@ st.markdown("""
     }
     .logo-container i { font-size: 30px; color: white; }
     .stTextInput input { border-radius: 12px !important; padding: 12px !important; text-align: right !important; }
-    .stButton>button { background-color: #2563eb !important; color: white !important; border-radius: 12px !important; width: 100%; height: 50px; font-weight: bold; border: none; }
+    .stButton>button { background-color: #2563eb !important; color: white !important; border-radius: 12px !important; width: 100%; height: 50px; font-weight: bold; }
     </style>
 
     <div class="header-box">
         <div class="logo-container"><i class="bi bi-graph-up-arrow"></i></div>
         <h2 style="margin:0;">منصة الأستاذ زياد</h2>
-        <p style="opacity: 0.8; font-size: 14px;">بوابتك نحو التميز والنجاح</p>
+        <p style="opacity: 0.8; font-size: 14px;">نحو مستقبل تعليمي مشرق</p>
     </div>
     """, unsafe_allow_html=True)
 
-# الاتصال بـ Google Sheets
+# دالة الاتصال بالبيانات
 @st.cache_resource
-def get_google_sheet():
+def get_sheet_client():
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -53,69 +52,61 @@ def get_google_sheet():
     except:
         return None
 
-# شاشة تسجيل الدخول
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# نظام الدخول
+if "auth" not in st.session_state:
+    st.session_state.auth = False
 
-if not st.session_state.logged_in:
-    tab1, tab2 = st.tabs(["👨‍🎓 دخول الطالب", "👨‍🏫 بوابة المعلم"])
+if not st.session_state.auth:
+    tab1, tab2 = st.tabs(["👨‍🎓 دخول الطالب", "👨‍🏫 المعلم"])
     
     with tab1:
         st.write("")
-        user_id = st.text_input("رقم الهوية الأكاديمي", placeholder="ادخل رقم الهوية", key="id_input")
+        user_input = st.text_input("رقم الهوية الأكاديمي", placeholder="ادخل رقم الهوية", key="std_id")
         
         if st.button("تسجيل الدخول"):
-            client = get_google_sheet()
-            
-            if client is None:
-                st.error("⚠️ عذراً، هناك مشكلة فنية في الاتصال بقاعدة البيانات.")
+            if not user_input:
+                st.warning("⚠️ يرجى إدخال رقم الهوية أولاً.")
             else:
-                try:
-                    sheet = client.worksheet("students")
-                    data = pd.DataFrame(sheet.get_all_records())
-                    
-                    # تنظيف المدخلات والبيانات لضمان المطابقة الدقيقة
-                    data['id'] = data['id'].astype(str).str.strip()
-                    input_id = str(user_id).strip()
-                    
-                    # البحث عن المستخدم
-                    user_row = data[data['id'] == input_id]
-                    
-                    if not user_row.empty:
-                        st.session_state.logged_in = True
-                        st.session_state.user_data = user_row.iloc[0].to_dict()
-                        st.success("✅ مرحباً بك! تم الدخول بنجاح.")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        # الرسالة التي طلبتها عند إدخال رقم خطأ
-                        st.error("❌ عذراً، رقم الهوية الذي أدخلته غير مسجل في المنصة.")
+                client = get_sheet_client()
+                if client:
+                    try:
+                        sheet = client.worksheet("students")
+                        # جلب البيانات وتحويلها لجدول
+                        df = pd.DataFrame(sheet.get_all_records())
                         
-                except Exception as e:
-                    st.error("⚠️ عذراً، تعذر الوصول إلى بيانات الطلاب حالياً.")
-
-    with tab2:
-        st.info("بوابة المعلمين متاحة عبر الصلاحيات الإدارية.")
+                        # تنظيف البيانات للمقارنة
+                        df['id'] = df['id'].astype(str).str.strip()
+                        search_id = str(user_input).strip()
+                        
+                        # البحث عن الرقم
+                        match = df[df['id'] == search_id]
+                        
+                        if not match.empty:
+                            st.session_state.auth = True
+                            st.session_state.data = match.iloc[0].to_dict()
+                            st.success("✅ مرحباً بك! جاري التحميل...")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            # الرسالة المطلوبة عند إدخال رقم خطأ
+                            st.error("❌ عذراً، رقم الهوية الذي أدخلته غير مسجل لدينا.")
+                            
+                    except Exception as e:
+                        st.error("⚠️ عذراً، حدث خطأ في قراءة بيانات الطلاب.")
+                else:
+                    st.error("⚠️ فشل الاتصال بقاعدة البيانات.")
     st.stop()
 
-# لوحة الطالب بعد الدخول
-if st.session_state.logged_in:
-    u = st.session_state.user_data
+# لوحة الطالب بعد النجاح
+if st.session_state.auth:
+    std = st.session_state.data
     st.markdown(f"""
         <div style="background: white; padding: 25px; border-radius: 20px; border-right: 10px solid #2563eb; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-            <h3 style="margin:0;">مرحباً بك: {u['name']}</h3>
-            <p style="color:#64748b;">رقم الهوية: {u['id']}</p>
-            <div style="display: flex; gap: 20px; margin-top: 15px;">
-                <div style="background: #eff6ff; padding: 10px 20px; border-radius: 12px; color: #2563eb;">
-                    <b>🏆 النقاط:</b> {u.get('النقاط', 0)}
-                </div>
-                <div style="background: #f8fafc; padding: 10px 20px; border-radius: 12px;">
-                    <b>📚 الصف:</b> {u.get('class', '-')}
-                </div>
-            </div>
+            <h3 style="margin:0;">مرحباً بك: {std['name']}</h3>
+            <p style="color:#64748b;">رقم الهوية: {std['id']}</p>
         </div>
     """, unsafe_allow_html=True)
     
-    if st.button("🚪 تسجيل الخروج"):
+    if st.button("🚪 خروج"):
         st.session_state.clear()
         st.rerun()
