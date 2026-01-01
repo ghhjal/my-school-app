@@ -226,36 +226,36 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- باقي الأقسام تتبع نفس الهيكل ---
-# --- القسم الثالث: رصد السلوك (إصدار الجوال السريع) ---
+# --- القسم الثالث: رصد السلوك (الإصدار الاحترافي المتكامل للجوال والحاسوب) ---
     elif menu == "🎭 رصد السلوك":
-        # كود لتحسين عرض الشاشة على الجوال وإخفاء الفراغات الجانبية
-        st.markdown("""
-            <style>
-                /* جعل محتوى الصفحة يأخذ العرض الكامل في الجوال */
-                .block-container {
-                    padding-top: 1rem;
-                    padding-bottom: 0rem;
-                    padding-left: 1rem;
-                    padding-right: 1rem;
-                }
-                
-                /* تصغير حجم الخطوط لتناسب شاشة الجوال الصغير */
-                @media (max-width: 640px) {
-                    .stMarkdown h3 { font-size: 1.1rem !important; }
-                    .stButton button { padding: 0.5rem; font-size: 14px; }
-                }
-
-                /* لمسة اختيارية: إخفاء القائمة الجانبية تلقائياً في الشاشات الصغيرة جداً */
-                @media (max-width: 768px) {
-                    [data-testid="stSidebarNav"] { display: none; }
-                }
-            </style>
-        """, unsafe_allow_html=True)
         import smtplib
+        import time
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         import urllib.parse 
 
+        # 1. كود CSS لتحسين واجهة الجوال وإخفاء البكسلات المزعجة في القائمة الجانبية
+        st.markdown("""
+            <style>
+                /* جعل المحتوى مريح للعين في الجوال */
+                .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+                
+                /* تحسين شكل الأزرار لتكون سهلة الضغط */
+                .stButton button {
+                    border-radius: 8px;
+                    height: 3em;
+                    font-weight: bold;
+                }
+
+                /* إخفاء البكسلات/التداخل في القائمة الجانبية على الجوال */
+                @media (max-width: 768px) {
+                    [data-testid="stSidebarNav"] { display: none; }
+                    .stMarkdown h3 { font-size: 1.2rem !important; }
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # دالة الإرسال التلقائي الصامت
         def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
             try:
                 email_set = st.secrets["email_settings"]
@@ -283,21 +283,15 @@ if st.session_state.role == "teacher":
 
         st.subheader("🎭 رصد السلوك والتواصل الفوري")
 
-        # جلب البيانات
+        # جلب البيانات لفلترة الأسماء
         df_st = fetch_safe("students")
         all_names = df_st.iloc[:, 1].tolist()
 
-        # 1. إصلاح البحث الفوري للجوال باستخدام Key مستقل
-        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا للفلترة)", key="name_search_input")
+        # 2. إصلاح البحث الفوري: حقل نصي يفلتر قائمة الأسماء فوراً (مثالي للجوال)
+        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا للفلترة)", placeholder="مثلاً: زياد...")
+        filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
         
-        # فلترة الأسماء بناءً على النص المكتوب
-        if search_term:
-            filtered_names = [name for name in all_names if search_term in name]
-        else:
-            filtered_names = all_names
-
-        # قائمة الاختيار تعرض الأسماء المفلترة فقط
-        b_name = st.selectbox("🎯 اختر الطالب المطلوب:", [""] + filtered_names, key="student_selector")
+        b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + filtered_names)
 
         if b_name:
             student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
@@ -313,15 +307,14 @@ if st.session_state.role == "teacher":
                 st.markdown("---")
                 st.write("✨ **خيارات الحفظ والتواصل الاحترافية:**")
                 
+                # 3. تصميم الأزرار الاحترافي (صفين متساويين)
                 col1, col2 = st.columns(2)
-                
-                # الأزرار بتصميمها الاحترافي
                 btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
                 btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True)
                 btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
                 btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)
 
-                # تنسيق الرسائل (مطابق للصور)
+                # تنسيق الرسالة (كما في صور الواتساب الخاصة بك)
                 full_msg = (
                     f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
                     f"----------------------------------------\n"
@@ -332,9 +325,10 @@ if st.session_state.role == "teacher":
                     f"🏛️ منصة الأستاذ زياد الذكية"
                 )
 
-                # --- منطق التنفيذ (الحفظ فقط في الزر الأول) ---
+                # 4. منطق التنفيذ: زر الحفظ هو الوحيد الذي يسجل البيانات
                 if btn_save:
                     if b_note:
+                        # الحفظ في الشيت وتحديث النقاط
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                         try:
                             ws_st = sh.worksheet("students")
@@ -343,39 +337,39 @@ if st.session_state.role == "teacher":
                             current_p = int(ws_st.cell(cell.row, 9).value or 0)
                             ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                         except: pass
-                        st.success("✅ تم تسجيل الملاحظة في السجل وتحديث النقاط")
+                        st.success("✅ تم الحفظ بنجاح وتحديث نقاط الطالب")
                         time.sleep(1); st.rerun()
                     else:
-                        st.error("⚠️ يرجى كتابة نص الملاحظة أولاً")
+                        st.error("⚠️ يرجى كتابة نص الملاحظة")
 
-                # أزرار التواصل (لا تحفظ شيئاً في الشيت)
+                # أزرار التواصل: تقوم بالإرسال فقط بناءً على البيانات المدخلة (بدون حفظ متكرر)
                 if btn_auto:
                     if s_email:
-                        with st.spinner("جاري الإرسال..."):
+                        with st.spinner("جاري الإرسال التلقائي..."):
                             if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
-                                st.success(f"✅ تم الإرسال التلقائي لـ {s_email}")
-                            else: st.error("❌ فشل الإرسال")
-                    else: st.warning("⚠️ لا يوجد بريد مسجل")
+                                st.success(f"✅ تم الإرسال إلى {s_email}")
+                            else: st.error("❌ فشل الإرسال الصامت")
+                    else: st.warning("⚠️ لا يوجد بريد لهذا الطالب")
 
                 if btn_mail and s_email:
-                    mail_url = f"mailto:{s_email}?subject=إشعار سلوكي&body={urllib.parse.quote(full_msg)}"
+                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
                     st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
                 
                 if btn_wa and s_phone:
                     wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
                     st.markdown(f"""
                         <div style="background-color: #f0fff4; border: 1px solid #25D366; padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px;">
-                            <a href="{wa_url}" target="_blank" style="text-decoration: none; color: white; background-color: #25D366; padding: 8px 15px; border-radius: 5px; font-weight: bold;">
-                                💬 اضغط هنا للإرسال عبر واتساب
+                            <a href="{wa_url}" target="_blank" style="text-decoration: none; color: white; background-color: #25D366; padding: 10px 20px; border-radius: 8px; font-weight: bold; display: inline-block;">
+                                💬 اضغط هنا لفتح واتساب والإرسال
                             </a>
                         </div>
                     """, unsafe_allow_html=True)
 
-        # السجل التاريخي
+        # عرض سجل الملاحظات السابقة للطالب المختار
         df_b = fetch_safe("behavior")
-        if not df_b.empty:
+        if not df_b.empty and b_name:
             st.write("---")
-            st.write("🗓️ **سجل الملاحظات السابقة لهذا الطالب:**")
+            st.write(f"🗓️ سجل ملاحظات الطالب: **{b_name}**")
             st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
 # ==========================================
 # 👨‍🎓 واجهة الطالب (تم تصحيح جلب النقاط فقط)
