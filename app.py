@@ -120,6 +120,7 @@ if st.session_state.role == "teacher":
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
 
     # --- القسم الأول: إدارة الطلاب ---
+    # --- القسم الأول: إدارة الطلاب (تعديل الأعمدة ليتوافق مع طلبك والجدول) ---
     if menu == "👥 إدارة الطلاب":
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
         
@@ -129,7 +130,7 @@ if st.session_state.role == "teacher":
             st.subheader("📋 السجل الحالي")
             st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-        with st.form("add_student_pro", clear_on_submit=True):
+        with st.form("add_student_pro_v2", clear_on_submit=True):
             st.markdown("### ➕ تأسيس طالب جديد")
             c1, c2, c3 = st.columns(3)
             nid = c1.text_input("🔢 الرقم الأكاديمي")
@@ -137,15 +138,38 @@ if st.session_state.role == "teacher":
             nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
             
             c4, c5, c6 = st.columns(3)
-            nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-            nyear = c5.text_input("🗓️ العام", value="1447هـ")
-            nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
+            nstage = c4.selectbox("🎓 المرحلة الدراسية (sem)", ["ابتدائي", "متوسط", "ثانوي"]) # يوضع في العمود E
+            nsub = c5.text_input("📚 المادة (عمود F)", value="لغة إنجليزية") # يوضع في العمود F
+            nyear = c6.text_input("🗓️ العام", value="1447هـ") # يوضع في العمود D
+            
+            c7, c8 = st.columns(2)
+            nmail = c7.text_input("📧 البريد الإلكتروني") # يوضع في العمود G
+            nphone = c8.text_input("📱 جوال ولي الأمر (بدون +)") # يوضع في العمود H
             
             if st.form_submit_button("✅ اعتماد التأسيس"):
                 if nid and nname:
-                    sh.worksheet("students").append_row([nid, nname, nclass, nyear, "نشط", nsub, nstage, "", "", "0"])
-                    st.success("تم التأسيس بنجاح"); st.rerun()
-
+                    # الترتيب الدقيق حسب الصورة students.png (9 أعمدة فقط)
+                    # A:id, B:name, C:class, D:year, E:sem(Stage), F:Subject, G:Email, H:Phone, I:Points
+                    row_to_add = [
+                        nid,    # A
+                        nname,  # B
+                        nclass, # C
+                        nyear,  # D
+                        nstage, # E (المرحلة الدراسية)
+                        nsub,   # F (المادة الدراسية)
+                        nmail,  # G (الإيميل)
+                        nphone, # H (الجوال)
+                        "0"     # I (النقاط تبدأ بصفر)
+                    ]
+                    try:
+                        sh.worksheet("students").append_row(row_to_add)
+                        st.success(f"✅ تم إضافة الطالب {nname} بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء الحفظ: {e}")
+                else:
+                    st.warning("⚠️ يرجى ملء الحقول الأساسية (الرقم والاسم)")
 
     # --- القسم الثاني: شاشة الدرجات (تم إصلاح الخطأ هنا) ---
     elif menu == "📝 شاشة الدرجات":
