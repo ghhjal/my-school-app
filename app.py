@@ -499,11 +499,25 @@ elif st.session_state.role == "student":
 
     with t_set:
         with st.form("st_settings_final"):
+            # عرض البيانات الحالية
             new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
+            
             if st.form_submit_button("✅ حفظ البيانات", use_container_width=True):
-                ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
-                ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
-                st.success("تم التحديث بنجاح!"); st.rerun()
+                with st.spinner("جاري تحديث البيانات..."):
+                    # 1. التحديث في جوجل شيت (العمود G هو 7 والعمود H هو 8)
+                    ws = sh.worksheet("students")
+                    cell = ws.find(st.session_state.sid)
+                    ws.update_cell(cell.row, 7, new_mail)
+                    ws.update_cell(cell.row, 8, new_phone)
+                    
+                    # 2. السر هنا: تنظيف الذاكرة المؤقتة لكي يضطر التطبيق لجلب البيانات الجديدة فوراً
+                    st.cache_data.clear() 
+                    
+                    st.success("✅ تم تحديث بياناتك بنجاح!")
+                    time.sleep(1)
+                    st.rerun() # إعادة تشغيل الصفحة لعرض البيانات الجديدة
+
         if st.button("🚗 تسجيل الخروج", use_container_width=True):
-            st.session_state.role = None; st.rerun()
+            st.session_state.role = None
+            st.rerun()
