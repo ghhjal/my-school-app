@@ -228,6 +228,29 @@ if st.session_state.role == "teacher":
     # --- باقي الأقسام تتبع نفس الهيكل ---
 # --- القسم الثالث: رصد السلوك (إصدار الجوال السريع) ---
     elif menu == "🎭 رصد السلوك":
+        # كود لتحسين عرض الشاشة على الجوال وإخفاء الفراغات الجانبية
+        st.markdown("""
+            <style>
+                /* جعل محتوى الصفحة يأخذ العرض الكامل في الجوال */
+                .block-container {
+                    padding-top: 1rem;
+                    padding-bottom: 0rem;
+                    padding-left: 1rem;
+                    padding-right: 1rem;
+                }
+                
+                /* تصغير حجم الخطوط لتناسب شاشة الجوال الصغير */
+                @media (max-width: 640px) {
+                    .stMarkdown h3 { font-size: 1.1rem !important; }
+                    .stButton button { padding: 0.5rem; font-size: 14px; }
+                }
+
+                /* لمسة اختيارية: إخفاء القائمة الجانبية تلقائياً في الشاشات الصغيرة جداً */
+                @media (max-width: 768px) {
+                    [data-testid="stSidebarNav"] { display: none; }
+                }
+            </style>
+        """, unsafe_allow_html=True)
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
