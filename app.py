@@ -119,18 +119,18 @@ if st.session_state.role == "teacher":
     st.sidebar.divider()
     st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
 
-    # --- القسم الأول: إدارة الطلاب ---
-    # --- القسم الأول: إدارة الطلاب (تعديل الأعمدة ليتوافق مع طلبك والجدول) ---
+    # --- القسم الأول: إدارة الطلاب (المطور مع خاصية الحذف الشامل) ---
     if menu == "👥 إدارة الطلاب":
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
         
         df_st = fetch_safe("students")
         st.write("")
         with st.container(border=True):
-            st.subheader("📋 السجل الحالي")
+            st.subheader("📋 السجل الحالي للطلاب")
             st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-        with st.form("add_student_pro_v2", clear_on_submit=True):
+        # 1. نموذج إضافة طالب جديد (بالترتيب الصحيح للأعمدة)
+        with st.form("add_student_pro_v3", clear_on_submit=True):
             st.markdown("### ➕ تأسيس طالب جديد")
             c1, c2, c3 = st.columns(3)
             nid = c1.text_input("🔢 الرقم الأكاديمي")
@@ -138,38 +138,59 @@ if st.session_state.role == "teacher":
             nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
             
             c4, c5, c6 = st.columns(3)
-            nstage = c4.selectbox("🎓 المرحلة الدراسية (sem)", ["ابتدائي", "متوسط", "ثانوي"]) # يوضع في العمود E
-            nsub = c5.text_input("📚 المادة (عمود F)", value="لغة إنجليزية") # يوضع في العمود F
-            nyear = c6.text_input("🗓️ العام", value="1447هـ") # يوضع في العمود D
+            nstage = c4.selectbox("🎓 المرحلة (sem)", ["ابتدائي", "متوسط", "ثانوي"])
+            nsub = c5.text_input("📚 المادة (عمود F)", value="لغة إنجليزية")
+            nyear = c6.text_input("🗓️ العام", value="1447هـ")
             
             c7, c8 = st.columns(2)
-            nmail = c7.text_input("📧 البريد الإلكتروني") # يوضع في العمود G
-            nphone = c8.text_input("📱 جوال ولي الأمر (بدون +)") # يوضع في العمود H
+            nmail = c7.text_input("📧 البريد الإلكتروني")
+            nphone = c8.text_input("📱 جوال ولي الأمر")
             
             if st.form_submit_button("✅ اعتماد التأسيس"):
                 if nid and nname:
-                    # الترتيب الدقيق حسب الصورة students.png (9 أعمدة فقط)
-                    # A:id, B:name, C:class, D:year, E:sem(Stage), F:Subject, G:Email, H:Phone, I:Points
-                    row_to_add = [
-                        nid,    # A
-                        nname,  # B
-                        nclass, # C
-                        nyear,  # D
-                        nstage, # E (المرحلة الدراسية)
-                        nsub,   # F (المادة الدراسية)
-                        nmail,  # G (الإيميل)
-                        nphone, # H (الجوال)
-                        "0"     # I (النقاط تبدأ بصفر)
-                    ]
+                    # الترتيب: ID, Name, Class, Year, Stage, Subject, Email, Phone, Points
+                    row_to_add = [nid, nname, nclass, nyear, nstage, nsub, nmail, nphone, "0"]
+                    sh.worksheet("students").append_row(row_to_add)
+                    st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
+
+        # 2. زر الحذف النهائي (الميزة الجديدة)
+        st.divider()
+        with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
+            st.error("⚠️ تحذير: سيتم حذف الطالب نهائياً من قائمة الطلاب والدرجات وسجل السلوك.")
+            del_name = st.selectbox("🎯 اختر الطالب المراد حذفه نهائياً:", [""] + df_st.iloc[:, 1].tolist(), key="delete_list")
+            
+            if st.button("🚨 تنفيذ الحذف النهائي الآن"):
+                if del_name:
                     try:
-                        sh.worksheet("students").append_row(row_to_add)
-                        st.success(f"✅ تم إضافة الطالب {nname} بنجاح")
-                        time.sleep(1)
-                        st.rerun()
+                        with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
+                            # أ. الحذف من شيت الطلاب (students)
+                            ws_st = sh.worksheet("students")
+                            c_st = ws_st.find(del_name)
+                            if c_st: ws_st.delete_rows(c_st.row)
+                            
+                            # ب. الحذف من شيت الدرجات (grades)
+                            try:
+                                ws_gr = sh.worksheet("grades")
+                                c_gr = ws_gr.find(del_name)
+                                if c_gr: ws_gr.delete_rows(c_gr.row)
+                            except: pass # في حال لم تكن له درجات بعد
+                            
+                            # ج. الحذف من شيت السلوك (behavior) - حذف كافة الأسطر المرتبطة به
+                            try:
+                                ws_bh = sh.worksheet("behavior")
+                                matches = ws_bh.findall(del_name)
+                                # الحذف من الأسفل للأعلى لضمان عدم تغير أرقام الصفوف أثناء المسح
+                                for m in reversed(matches):
+                                    if m.col == 1: # التأكد أنه في عمود الاسم
+                                        ws_bh.delete_rows(m.row)
+                            except: pass
+                            
+                            st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته من جميع الجداول")
+                            time.sleep(1); st.rerun()
                     except Exception as e:
-                        st.error(f"حدث خطأ أثناء الحفظ: {e}")
+                        st.error(f"حدث خطأ: {e}")
                 else:
-                    st.warning("⚠️ يرجى ملء الحقول الأساسية (الرقم والاسم)")
+                    st.warning("يرجى اختيار اسم الطالب أولاً")
 
     # --- القسم الثاني: شاشة الدرجات (تم إصلاح الخطأ هنا) ---
     elif menu == "📝 شاشة الدرجات":
