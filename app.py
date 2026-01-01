@@ -9,13 +9,14 @@ from google.oauth2.service_account import Credentials
 # 1. إعدادات الصفحة والتصميم العام (Logo & Header)
 st.set_page_config(page_title="منصة الأستاذ زياد التعليمية", layout="wide")
 
-st.markdown("""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { 
-        font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; 
-    }
+# --- 📢 شريط الإعلانات العلوي (مع تمييز اسم الطالب) ---
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 15px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+            <h3 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+                🎯 لوحة إنجاز الطالب: <span style="color: #ffd700; font-weight: 900;">{s_name}</span>
+            </h3>
+        </div>
+    """, unsafe_allow_html=True)
     .header-box { 
         background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%); 
         padding: 35px; border-radius: 0 0 35px 35px; color: white; text-align: center; 
