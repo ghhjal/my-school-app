@@ -489,3 +489,4 @@ elif st.session_state.role == "student":
                 st.success("تم التحديث بنجاح!"); st.rerun()
         if st.button("🚗 تسجيل الخروج", use_container_width=True):
             st.session_state.role = None; st.rerun()
+
