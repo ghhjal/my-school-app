@@ -372,141 +372,107 @@ if st.session_state.role == "teacher":
             st.write(f"🗓️ سجل ملاحظات الطالب: **{b_name}**")
             st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
 # ==========================================
-# 👨‍🎓 واجهة الطالب الكاملة (النسخة الاحترافية الشاملة)
+# 👨‍🎓 واجهة الطالب (تحديث الخطوط الكبيرة والواضحة)
 # ==========================================
 elif st.session_state.role == "student":
-    # 1. جلب البيانات الأساسية
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades") 
     df_beh = fetch_safe("behavior")
     df_ex = fetch_safe("exams")
     
     try:
-        # البحث عن بيانات الطالب باستخدام المعرف (sid)
         student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         if not student_data.empty:
             s_row = student_data.iloc[0]
-            s_name = s_row[1]    # اسم الطالب
-            s_class = s_row[2]   # الفصل / المرحلة الدراسية
-            
-            # جلب النقاط من العمود التاسع (فهرس 8) وتحويلها لرقم
-            if len(s_row) >= 9:
-                val = str(s_row[8]).strip()
-                s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
-            else:
-                s_points = 0
+            s_name, s_class = s_row[1], s_row[2]
+            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
+            s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
         else:
-            st.error("⚠️ لم يتم العثور على بيانات الطالب")
+            st.error("⚠️ بيانات الطالب غير موجودة")
             st.stop()
     except Exception as e:
-        st.error(f"❌ خطأ في النظام: {e}")
+        st.error(f"❌ خطأ: {e}")
         st.stop()
 
-    # حساب المتبقي للوسام التالي للتحفيز
-    next_badge, points_to_next = "", 0
-    if s_points < 10: next_badge, points_to_next = "البرونزي", 10 - s_points
-    elif s_points < 50: next_badge, points_to_next = "الفضي", 50 - s_points
-    elif s_points < 100: next_badge, points_to_next = "الذهبي", 100 - s_points
-
-    # جلب الدرجات الأكاديمية (المشاركة، الواجبات، الاختبارات)
-    try:
-        g_data = df_grades[df_grades.iloc[:, 0].astype(str) == s_name]
-        p1, p2, perf = (g_data.iloc[0][1], g_data.iloc[0][2], g_data.iloc[0][3]) if not g_data.empty else ("-", "-", "-")
-    except: p1, p2, perf = "-", "-", "-"
-
-    # --- 📢 1. شريط الإعلانات العلوي (الاسم والفصل) ---
+    # --- 📢 العنوان العلوي ---
     st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 15px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
-            <h3 style="color: white; margin: 0; font-family: 'Cairo', sans-serif;">
-                🎯 لوحة إنجاز الطالب: <span style="color: #ffd700; font-weight: bold;">{s_name}</span>
-            </h3>
-            <div style="background: rgba(255,255,255,0.15); display: inline-block; padding: 2px 15px; border-radius: 10px; margin-top: 8px; border: 1px solid rgba(255,255,255,0.2);">
-                <span style="color: #ffffff; font-size: 0.9rem;">🏫 الفصل: {s_class}</span>
+        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
+            <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.5rem;">
+                🎯 إنجاز الطالب: <span style="color: #ffd700;">{s_name}</span>
+            </h2>
+            <div style="background: rgba(0,0,0,0.2); display: inline-block; padding: 5px 20px; border-radius: 10px; margin-top: 10px;">
+                <b style="color: white; font-size: 1.1rem;">🏫 {s_class}</b>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 👤 2. بطاقة الأوسمة والنقاط الذكية ---
+    # --- 👤 بطاقة النقاط ---
     st.markdown(f"""
-        <div style="background: white; border-radius: 15px; padding: 20px; border: 1px solid #e2e8f0; text-align: center; margin-top: 15px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; background: #fffcf9; opacity: {'1' if s_points >= 10 else '0.2'};">
-                    <div style="font-size: 1.8rem;">🥉</div><div style="font-weight: bold; color: #cd7f32; font-size: 0.7rem;">برونزي</div>
-                </div>
-                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; background: #f8f9fa; opacity: {'1' if s_points >= 50 else '0.2'};">
-                    <div style="font-size: 1.8rem;">🥈</div><div style="font-weight: bold; color: #7f8c8d; font-size: 0.7rem;">فضي</div>
-                </div>
-                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; background: #fffdf0; opacity: {'1' if s_points >= 100 else '0.2'};">
-                    <div style="font-size: 1.8rem;">🥇</div><div style="font-weight: bold; color: #d4af37; font-size: 0.7rem;">ذهبي</div>
-                </div>
-            </div>
-            <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 15px; border-radius: 15px;">
-                <small style="font-size: 0.9rem;">رصيد النقاط السلوكية</small><br>
-                <b style="font-size: 2.8rem;">{s_points}</b>
-                {f'<div style="font-size: 0.75rem; margin-top:5px; background: rgba(255,255,255,0.2); border-radius: 10px; padding: 2px;">🚀 بقي لك {points_to_next} نقطة للوسام {next_badge}</div>' if points_to_next > 0 else ''}
+        <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; margin-top: 15px;">
+            <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 20px; border-radius: 15px; box-shadow: 0px 4px 10px rgba(245,158,11,0.4);">
+                <b style="font-size: 1.2rem; display: block; margin-bottom: 5px;">رصيد النقاط السلوكية</b>
+                <b style="font-size: 3.5rem; line-height: 1;">{s_points}</b>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 3. التبويبات الرئيسية ---
+    # --- 📊 التبويبات (بخطوط محسنة) ---
     t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "🏆 المتصدرون", "⚙️ الإعدادات"])
 
     with t_ex:
         if not df_ex.empty:
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
-                st.markdown(f'<div style="background: #002347; padding: 15px; border-radius: 12px; border-right: 8px solid #f59e0b; margin-bottom: 10px;"><b style="color: #ffd700;">📢 {r[1]}</b><br><span style="color: white; font-size: 0.85rem;">📅 {r[2]}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background: #002347; padding: 15px; border-radius: 12px; border-right: 8px solid #f59e0b; margin-bottom: 10px;"><b style="color: #ffd700; font-size: 1.2rem;">📢 {r[1]}</b><br><b style="color: white; font-size: 1rem;">📅 {r[2]}</b></div>', unsafe_allow_html=True)
 
     with t_grade:
-        st.markdown('<h4 style="text-align:right; color:#1e3a8a;">📊 سجل المستوى الأكاديمي</h4>', unsafe_allow_html=True)
-        def gc(t, v, c): return f'<div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div style="display: flex; align-items: center;"><div style="width: 8px; height: 20px; background: {c}; border-radius: 10px; margin-left: 10px;"></div><b>{t}</b></div><b style="font-size: 1.3rem; color: #d97706;">{v}</b></div>'
-        st.markdown(gc("درجة المشاركة التفاعلية", p1, "#3b82f6"), unsafe_allow_html=True)
-        st.markdown(gc("إنجاز الواجبات والمهام", p2, "#10b981"), unsafe_allow_html=True)
-        st.markdown(gc("نتائج الاختبارات القصيرة", perf, "#f59e0b"), unsafe_allow_html=True)
+        st.markdown('<h3 style="text-align:right; color:#1e3a8a; font-size: 1.3rem;">📊 السجل الأكاديمي</h3>', unsafe_allow_html=True)
+        try:
+            g_data = df_grades[df_grades.iloc[:, 0].astype(str) == s_name]
+            p1, p2, perf = (g_data.iloc[0][1], g_data.iloc[0][2], g_data.iloc[0][3]) if not g_data.empty else ("-", "-", "-")
+        except: p1, p2, perf = "-", "-", "-"
+        
+        def gc(t, v, c): return f'<div style="background: #ffffff; padding: 15px; border-radius: 12px; border: 2px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><b style="font-size: 1.1rem; color: #1e293b;">{t}</b><b style="font-size: 1.6rem; color: {c};">{v}</b></div>'
+        st.markdown(gc("المشاركة التفاعلية", p1, "#3b82f6"), unsafe_allow_html=True)
+        st.markdown(gc("إنجاز الواجبات", p2, "#10b981"), unsafe_allow_html=True)
+        st.markdown(gc("الاختبارات القصيرة", perf, "#f59e0b"), unsafe_allow_html=True)
 
     with t_beh:
-        st.markdown('<h4 style="text-align:right; color:#1e3a8a;">🎭 ملاحظات الانضباط</h4>', unsafe_allow_html=True)
+        st.markdown('<h3 style="text-align:right; color:#1e3a8a; font-size: 1.3rem;">🎭 سجل الانضباط</h3>', unsafe_allow_html=True)
         if not df_beh.empty:
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
+            if f_beh.empty: st.info("سجلك نظيف وممتاز!")
             for _, r in f_beh.iloc[::-1].iterrows():
                 is_pos = any(x in str(r[2]) for x in ["+", "🌟", "✅"])
-                color = "#166534" if is_pos else "#991b1b"
-                st.markdown(f'<div style="background: {"#f0fdf4" if is_pos else "#fef2f2"}; padding: 12px; border-radius: 12px; border-right: 6px solid {color}; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between;"><b>{"✅" if is_pos else "⚠️"} {r[2]}</b><small>{r[1]}</small></div><div style="font-size: 0.9rem; color: #475569;">{r[3]}</div></div>', unsafe_allow_html=True)
+                color = "#065f46" if is_pos else "#991b1b"
+                st.markdown(f'<div style="background: {"#f0fdf4" if is_pos else "#fef2f2"}; padding: 15px; border-radius: 12px; border-right: 8px solid {color}; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between;"><b style="font-size: 1.1rem; color: {color};">{"✅" if is_pos else "⚠️"} {r[2]}</b><b style="font-size: 0.9rem; color: #64748b;">{r[1]}</b></div><div style="font-size: 1rem; color: #1e293b; margin-top:5px; font-weight: 500;">{r[3]}</div></div>', unsafe_allow_html=True)
 
     with t_lead:
-        st.markdown('<h4 style="text-align:right; color:#1e3a8a;">🏆 أبطال المنصة</h4>', unsafe_allow_html=True)
-        # طريقة ترتيب آمنة ومبسطة لتجنب أخطاء NameError
+        st.markdown('<h3 style="text-align:right; color:#1e3a8a; font-size: 1.3rem;">🏆 أبطال الصف</h3>', unsafe_allow_html=True)
         try:
             leader_list = df_st.values.tolist()
             def get_p(x):
                 try: return int(float(str(x[8])))
                 except: return 0
             leader_list.sort(key=get_p, reverse=True)
-            top_10 = leader_list[:10]
-            for rank_idx, s_row_leader in enumerate(top_10):
+            for rank_idx, l_row in enumerate(leader_list[:10]):
                 rank = rank_idx + 1
-                c_name = s_row_leader[1]
-                c_points = get_p(s_row_leader)
-                is_me = (str(c_name) == str(s_name))
-                if rank == 1: icon, col = "👑", "#ffd700"
-                elif rank == 2: icon, col = "🥈", "#c0c0c0"
-                elif rank == 3: icon, col = "🥉", "#cd7f32"
-                else: icon, col = f"#{rank}", "#64748b"
-                st.markdown(f'<div style="background: {"#eff6ff" if is_me else "white"}; padding: 10px; border-radius: 12px; border: {"2px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div style="display: flex; align-items: center;"><b style="width: 30px; color: {col}; text-align: center;">{icon}</b><b style="font-size: 0.9rem;">{c_name} {" (أنت) " if is_me else ""}</b></div><div style="background: {col}; color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">{c_points} ن</div></div>', unsafe_allow_html=True)
-        except: st.info("جاري تحديث القائمة...")
+                is_me = (str(l_row[1]) == str(s_name))
+                icon, col = ("👑", "#ffd700") if rank==1 else (("🥈", "#94a3b8") if rank==2 else (("🥉", "#cd7f32") if rank==3 else (f"#{rank}", "#64748b")))
+                st.markdown(f'<div style="background: {"#eff6ff" if is_me else "white"}; padding: 12px; border-radius: 12px; border: {"3px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div style="display: flex; align-items: center;"><b style="width: 40px; font-size: 1.2rem; color: {col}; text-align: center;">{icon}</b><b style="font-size: 1.1rem; color: #1e293b;">{l_row[1]} {" (أنت)" if is_me else ""}</b></div><b style="background: {col}; color: white; padding: 5px 12px; border-radius: 10px; font-size: 1rem;">{get_p(l_row)}</b></div>', unsafe_allow_html=True)
+        except: st.info("جاري التحديث...")
 
     with t_set:
         with st.form("set_f"):
-            st.write("⚙️ إعدادات التواصل")
+            st.markdown("<b>⚙️ تحديث البيانات</b>", unsafe_allow_html=True)
             m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             p = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
-            if st.form_submit_button("✅ حفظ البيانات", use_container_width=True):
+            if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
                 ws = sh.worksheet("students")
                 cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
-                st.cache_data.clear(); st.success("✅ تم التحديث بنجاح"); time.sleep(1); st.rerun()
+                st.cache_data.clear(); st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
     
-    if st.button("🚗 تسجيل الخروج من المنصة", use_container_width=True):
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🚗 تسجيل الخروج", use_container_width=True):
         st.session_state.role = None; st.rerun()
-        st.session_state.role = None; st.rerun()
-        st.rerun()
