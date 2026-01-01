@@ -36,7 +36,9 @@ def fetch(sheet_name):
         ws = sh.worksheet(sheet_name)
         data = ws.get_all_values()
         if len(data) > 1:
-            return pd.DataFrame(data[1:], columns=data[0])
+            df = pd.DataFrame(data[1:], columns=data[0])
+            # تنظيف البيانات من أي مسافات خفية في الجدول نفسه
+            return df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
         return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
@@ -45,26 +47,19 @@ def fetch(sheet_name):
 # 🛡️ أدوات الأمان
 # =========================
 def hash_pwd(password):
-    """تشفير كلمة المرور"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """تشفير كلمة المرور باستخدام SHA-256"""
+    return hashlib.sha256(password.encode().strip()).hexdigest()
 
 def clean(x): 
     return html.escape(str(x).strip())
 
-def rate_limit(sec=4):
+def rate_limit(sec=2):
     now = time.time()
     if "last_attempt" in st.session_state:
         if now - st.session_state.last_attempt < sec:
-            st.warning(f"⏳ فضلاً انتظر {sec} ثوانٍ")
+            st.warning(f"⏳ فضلاً انتظر ثانية...")
             st.stop()
     st.session_state.last_attempt = now
-
-def require(role):
-    if not st.session_state.get("auth"):
-        st.stop()
-    if st.session_state.role != role:
-        st.error("🚫 غير مصرح لك بالدخول لهذه الصفحة")
-        st.stop()
 
 def log(action):
     try:
@@ -77,7 +72,7 @@ def log(action):
         pass
 
 # =========================
-# 🧠 إدارة الجلسة (Session State)
+# 🧠 إدارة الجلسة
 # =========================
 if "auth" not in st.session_state:
     st.session_state.auth = False
@@ -85,120 +80,97 @@ if "auth" not in st.session_state:
     st.session_state.user = None
 
 # =========================
-# 🔐 نظام تسجيل الدخول
+# 🔐 نظام تسجيل الدخول (معدل)
 # =========================
 if not st.session_state.auth:
     st.title("🔐 تسجيل الدخول للمنصة")
     
-    with st.container():
-        u = clean(st.text_input("اسم المستخدم"))
-        p = st.text_input("كلمة المرور", type="password")
+    with st.form("login_form"):
+        u_input = st.text_input("اسم المستخدم (Username)")
+        p_input = st.text_input("كلمة المرور", type="password")
+        submit = st.form_submit_button("دخول", use_container_width=True)
+
+    if submit:
+        rate_limit()
+        u = clean(u_input).lower() # تحويل لسمول لضمان المطابقة
+        h = hash_pwd(p_input)
         
-        if st.button("تسجيل الدخول", use_container_width=True):
-            rate_limit()
-            df_users = fetch("users")
+        df_users = fetch("users")
+        
+        if not df_users.empty:
+            # البحث مع تجاهل حالة الأحرف في اسم المستخدم وتنظيف المسافات
+            user_match = df_users[
+                (df_users['username'].str.lower() == u) & 
+                (df_users['password_hash'] == h)
+            ]
             
-            if not df_users.empty:
-                h = hash_pwd(p)
-                # التأكد من مطابقة اسم المستخدم وكلمة المرور
-                user_match = df_users[(df_users['username'] == u) & (df_users['password_hash'] == h)]
-                
-                if not user_match.empty:
-                    st.session_state.auth = True
-                    st.session_state.role = user_match.iloc[0]['role']
-                    st.session_state.user = u
-                    log("login")
-                    st.success("تم تسجيل الدخول بنجاح!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ بيانات الدخول غير صحيحة")
+            if not user_match.empty:
+                st.session_state.auth = True
+                st.session_state.role = user_match.iloc[0]['role'].strip().lower()
+                st.session_state.user = user_match.iloc[0]['username']
+                log("login")
+                st.success("✅ تم التحقق.. جاري التحويل")
+                time.sleep(1)
+                st.rerun()
             else:
-                st.error("⚠️ فشل الوصول إلى قائمة المستخدمين")
+                st.error("❌ بيانات الدخول غير صحيحة. تأكد من كلمة المرور واسم المستخدم.")
+                # لمساعدتك في التصحيح، سأظهر الـ Hash الناتج (يمكنك حذفه لاحقاً)
+                st.info(f"الـ Hash لـ '{p_input}' هو: {h}")
+        else:
+            st.error("⚠️ فشل الوصول إلى ورقة 'users' في الجدول.")
     st.stop()
 
 # =========================
 # 👨‍🏫 لوحة تحكم المعلم
 # =========================
 if st.session_state.role == "teacher":
-    st.sidebar.title(f"مرحباً أ/ {st.session_state.user}")
+    st.sidebar.title(f"👨‍🏫 أ/ {st.session_state.user}")
     if st.sidebar.button("🚪 تسجيل الخروج"):
-        log("logout")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        st.session_state.clear()
         st.rerun()
 
-    menu = st.sidebar.selectbox("القائمة الرئيسية", [
-        "👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 الاختبارات"
-    ])
+    menu = st.sidebar.selectbox("القائمة", ["👥 الطلاب", "📝 الدرجات", "🎭 السلوك"])
 
     if menu == "👥 الطلاب":
-        st.header("👥 إدارة بيانات الطلاب")
+        st.header("👥 إدارة الطلاب")
         st.dataframe(fetch("students"), use_container_width=True)
-
-        with st.form("add_student", clear_on_submit=True):
-            sid = clean(st.text_input("الرقم الأكاديمي (Username)"))
-            name = clean(st.text_input("اسم الطالب بالكامل"))
-            if st.form_submit_button("➕ إضافة طالب جديد"):
-                if sid and name:
-                    rate_limit()
-                    sh.worksheet("students").append_row([
-                        str(uuid.uuid4()), sid, name, "نشط", "0"
-                    ])
-                    log(f"added student: {sid}")
-                    st.success("تمت إضافة الطالب بنجاح")
-                    st.rerun()
-                else:
-                    st.warning("يرجى ملء جميع الحقول")
+        
+        with st.form("add_student"):
+            sid = clean(st.text_input("الرقم الأكاديمي"))
+            name = clean(st.text_input("اسم الطالب"))
+            if st.form_submit_button("➕ إضافة"):
+                sh.worksheet("students").append_row([str(uuid.uuid4()), sid, name, "نشط", "0"])
+                st.success("تمت الإضافة")
+                st.rerun()
 
     elif menu == "📝 الدرجات":
-        st.header("📝 رصد درجات الطلاب")
+        st.header("📝 الدرجات")
         st.dataframe(fetch("grades"), use_container_width=True)
-
-    elif menu == "🎭 السلوك":
-        st.header("🎭 سجل السلوك والمنضبط")
-        st.dataframe(fetch("behavior"), use_container_width=True)
-
-    elif menu == "📢 الاختبارات":
-        st.header("📢 جدول الاختبارات")
-        st.dataframe(fetch("exams"), use_container_width=True)
 
 # =========================
 # 👨‍🎓 لوحة الطالب
 # =========================
 elif st.session_state.role == "student":
-    st.title(f"👨‍🎓 لوحة الطالب")
+    st.sidebar.title(f"👨‍🎓 الطالب: {st.session_state.user}")
     if st.sidebar.button("🚪 خروج"):
-        log("logout")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        st.session_state.clear()
         st.rerun()
 
-    # جلب بيانات الطالب بناءً على اسم المستخدم الخاص به
+    st.title("📊 لوحة بياناتي")
     df_students = fetch("students")
-    # البحث في العمود الثاني (index 1) الذي يمثل الرقم الأكاديمي/Username
+    # البحث عن بيانات الطالب بناءً على اسم المستخدم (الذي يفترض أن يكون هو الرقم الأكاديمي)
     me = df_students[df_students.iloc[:, 1] == st.session_state.user]
 
     if not me.empty:
-        student_name = me.iloc[0, 2]
-        st.info(f"مرحباً بك الطالب: **{student_name}**")
-
-        t1, t2, t3 = st.tabs(["📢 جدول الاختبارات", "📊 كشف الدرجات", "🎭 سجل السلوك"])
-
-        with t1:
-            st.dataframe(fetch("exams"), use_container_width=True)
-        with t2:
-            st.dataframe(fetch("grades"), use_container_width=True)
-        with t3:
-            st.dataframe(fetch("behavior"), use_container_width=True)
+        st.info(f"مرحباً بك: **{me.iloc[0, 2]}**")
+        t1, t2 = st.tabs(["📊 الدرجات", "🎭 السلوك"])
+        with t1: st.dataframe(fetch("grades"), use_container_width=True)
+        with t2: st.dataframe(fetch("behavior"), use_container_width=True)
     else:
-        st.warning("لم يتم العثور على بياناتك في سجل الطلاب. تواصل مع المعلم.")
+        st.warning("تم تسجيل دخولك بنجاح كحساب، لكن لم نجد اسمك في ورقة 'students'.")
 
-# =========================
-# 🛑 حماية إضافية
-# =========================
 else:
-    st.error("دور المستخدم غير محدد.")
+    st.warning("دور المستخدم غير معرّف بشكل صحيح في الجدول.")
     if st.button("العودة"):
         st.session_state.clear()
         st.rerun()
