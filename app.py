@@ -130,6 +130,7 @@ if st.session_state.role == "teacher":
                     sh.worksheet("students").append_row([nid, nname, nclass, nyear, "نشط", nsub, nstage, "", "", "0"])
                     st.success("تم التأسيس بنجاح"); st.rerun()
 
+
     # --- القسم الثاني: شاشة الدرجات (تم إصلاح الخطأ هنا) ---
     elif menu == "📝 شاشة الدرجات":
         st.markdown('<div style="background:linear-gradient(90deg,#6366f1,#4338ca);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
