@@ -146,4 +146,54 @@ elif st.session_state.role == "student":
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name, s_class = s_row[1], s_row[2]
     
-    try: s_points = int(s
+    try: s_points = int(s_row[9]) if s_row[9] else 0 # عمود النقاط
+    except: s_points = 0
+
+    try:
+        g_row = df_grades[df_grades.iloc[:, 0].astype(str) == s_name].iloc[0]
+        p1, p2, perf = g_row[1], g_row[2], g_row[3]
+    except: p1, p2, perf = "-", "-", "-"
+
+    st.markdown(f"""
+        <div style="background: #1e3a8a; padding: 12px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
+            <h3 style="color: white; margin: 0;">🎯 لوحة إنجاز الطالب: {s_name}</h3>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # بطاقة الأوسمة
+    st.markdown(f"""
+        <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; margin-top: 15px;">
+            <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                <div style="opacity: {'1' if s_points >= 10 else '0.2'};">🥉<br>برونزي</div>
+                <div style="opacity: {'1' if s_points >= 50 else '0.2'};">🥈<br>فضي</div>
+                <div style="opacity: {'1' if s_points >= 100 else '0.2'};">🥇<br>ذهبي</div>
+            </div>
+            <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 15px; border-radius: 15px;">
+                <small>رصيد النقاط السلوكية</small><br><b style="font-size: 2rem;">{s_points}</b>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    t_ex, t_grade, t_beh, t_set = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "⚙️ الإعدادات"])
+
+    with t_ex:
+        df_ex = fetch_safe("exams")
+        if not df_ex.empty:
+            f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
+            for _, r in f_ex.iloc[::-1].iterrows():
+                st.warning(f"📢 {r[1]} - الموعد: {r[2]}")
+
+    with t_grade:
+        st.metric("درجة المشاركة (p1)", p1)
+        st.metric("درجة الواجبات (p2)", p2)
+        st.metric("الاختبارات القصيرة (perf)", perf)
+
+    with t_beh:
+        df_beh = fetch_safe("behavior")
+        if not df_beh.empty:
+            f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
+            st.dataframe(f_beh.iloc[::-1], use_container_width=True, hide_index=True)
+
+    with t_set:
+        if st.button("🚗 تسجيل الخروج", use_container_width=True):
+            st.session_state.clear(); st.rerun()
