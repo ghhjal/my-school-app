@@ -218,8 +218,8 @@ if st.session_state.role == "teacher":
         if b_name:
             # جلب البيانات (العمود G للإيميل والعمود H للجوال)
             student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_info[6] 
-            s_phone = str(student_info[7]).split('.')[0] # تنظيف الرقم لضمان فتح الواتساب
+            s_email = student_info[7] 
+            s_phone = str(student_info[8]).split('.')[0] # تنظيف الرقم لضمان فتح الواتساب
             
             with st.container(border=True):
                 with st.form("behavior_mobile_friendly_v14", clear_on_submit=True):
@@ -479,8 +479,8 @@ elif st.session_state.role == "student":
 
     with t_set:
         with st.form("st_settings_final"):
-            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
-            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
+            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[7]))
+            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[8]))
             if st.form_submit_button("✅ حفظ البيانات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
