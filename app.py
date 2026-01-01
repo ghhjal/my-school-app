@@ -466,16 +466,23 @@ elif st.session_state.role == "student":
                 """, unsafe_allow_html=True)
 
     with t_grade:
-        st.markdown(f"""<h4 style="text-align:right; color:#1e3a8a; margin: 15px 0 10px 0;">📊 سجل الدرجات الأكاديمية</h4>""", unsafe_allow_html=True)
-        def grade_card(title, value):
+        st.markdown(f"""<h4 style="text-align:right; color:#1e3a8a; margin: 15px 0 10px 0;">📊 سجل المستوى الأكاديمي</h4>""", unsafe_allow_html=True)
+        
+        # دالة لتصميم بطاقات الدرجات بشكل أنيق بدون رموز تقنية
+        def grade_card(title, value, color="#1e3a8a"):
             return f"""
-                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <b style="color: #1e3a8a;">{title}</b>
+                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; box-shadow: 1px 1px 3px rgba(0,0,0,0.02);">
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 8px; height: 25px; background: {color}; border-radius: 10px; margin-left: 10px;"></div>
+                        <b style="color: #475569; font-size: 1rem;">{title}</b>
+                    </div>
                     <b style="font-size: 1.4rem; color: #d97706;">{value}</b>
                 </div>"""
-        st.markdown(grade_card("درجة المشاركة (p1)", p1), unsafe_allow_html=True)
-        st.markdown(grade_card("درجة الواجبات (p2)", p2), unsafe_allow_html=True)
-        st.markdown(grade_card("الاختبارات القصيرة (perf)", perf), unsafe_allow_html=True)
+
+        # عرض الدرجات بمسمياتها التربوية الواضحة
+        st.markdown(grade_card("درجة المشاركة التفاعلية", p1, "#3b82f6"), unsafe_allow_html=True)
+        st.markdown(grade_card("إنجاز الواجبات والمهام", p2, "#10b981"), unsafe_allow_html=True)
+        st.markdown(grade_card("نتائج الاختبارات القصيرة", perf, "#f59e0b"), unsafe_allow_html=True)
 
     with t_beh:
         st.markdown(f"""<h4 style="text-align:right; color:#1e3a8a; margin: 15px 0 10px 0;">🎭 ملاحظات السلوك والانضباط</h4>""", unsafe_allow_html=True)
