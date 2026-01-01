@@ -382,11 +382,11 @@ elif st.session_state.role == "student":
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name, s_class = s_row[1], s_row[2]
     
-    # --- التعديل هنا: جلب النقاط السلوكية من العمود I (رقم 8) ---
+   # جلب النقاط السلوكية من العمود التاسع (I) والذي يحمل رقم 8 برمجياً
     try:
-        # التأكد من تنظيف القيمة وتحويلها لرقم صحيح
-        raw_points = str(s_row[8]).strip() if len(s_row) > 8 else "0"
-        s_points = int(float(raw_points)) if raw_points and raw_points != "None" else 0
+        # قمنا بتحويل القيمة لنص ثم تنظيفها ثم تحويلها لرقم لضمان عمل الأوسمة
+        raw_val = str(s_row[8]).strip() if len(s_row) > 8 else "0"
+        s_points = int(float(raw_val)) if raw_val and raw_val != "None" else 0
     except:
         s_points = 0
     # --------------------------------------------------------
