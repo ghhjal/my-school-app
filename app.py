@@ -54,8 +54,24 @@ def fetch_safe(worksheet_name):
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
-        return pd.DataFrame(data[1:], columns=data[0])
-    except: return pd.DataFrame()
+        
+        # تحويل البيانات إلى DataFrame
+        df = pd.DataFrame(data[1:], columns=data[0])
+        
+        # 1. حذف الأعمدة التي ليس لها اسم (تظهر كأعمدة فارغة في الإكسل)
+        df = df.loc[:, df.columns != '']
+        
+        # 2. التعامل مع الأسماء المكررة إن وجدت بإضافة رقم بجانبها
+        cols = pd.Series(df.columns)
+        for i, col in enumerate(cols):
+            if (cols == col).sum() > 1:
+                cols[i] = f"{col}_{i}"
+        df.columns = cols
+        
+        return df
+    except Exception as e:
+        st.error(f"خطأ في جلب البيانات من {worksheet_name}: {e}")
+        return pd.DataFrame()
 
 # 3. نظام الجلسات والتحقق
 if "role" not in st.session_state:
