@@ -23,7 +23,7 @@ def get_db():
         st.secrets["gcp_service_account"],
         scopes=scopes
     )
-    return gspread.authorize(creds).open_by_key(st.secrets["https://docs.google.com/spreadsheets/d/1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c/edit?usp=sharing"])
+    return gspread.authorize(creds).open_by_key(st.secrets["1_GSVxCKCamdoydymH6Nt5NQ0C_mmQfGTNrnb9ilUD_c"])
 
 sh = get_db()
 
