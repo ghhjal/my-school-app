@@ -5,19 +5,9 @@ import hashlib
 import time
 from google.oauth2.service_account import Credentials
 
-# 1. إعداد الصفحة
+# 1. إعدادات الصفحة والتنسيق الاحترافي
 st.set_page_config(page_title="منصة الأستاذ زياد", layout="wide")
 
-# 2. دالة التشفير (لضمان أمان كلمة المرور)
-def make_hashes(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
-
-def check_hashes(password, hashed_text):
-    if make_hashes(password) == hashed_text:
-        return True
-    return False
-
-# 3. التصميم الاحترافي (Header & Logo)
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -46,7 +36,13 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# 4. الاتصال ببيانات جوجل
+# 2. وظائف التشفير المطابقة لجدولك
+def check_hashes(password, hashed_text):
+    # تحويل كلمة المرور المدخلة إلى SHA-256 والمقارنة
+    calc_hash = hashlib.sha256(str.encode(password)).hexdigest()
+    return calc_hash == hashed_text
+
+# 3. الاتصال ببيانات جوجل
 @st.cache_resource
 def get_db():
     try:
@@ -55,19 +51,18 @@ def get_db():
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
-    except:
-        return None
+    except: return None
 
 client = get_db()
 
-# 5. إدارة الجلسة
+# 4. إدارة الجلسة
 if "role" not in st.session_state:
     st.session_state.role = None
     st.session_state.user_data = None
 
 # --- شاشة تسجيل الدخول ---
 if st.session_state.role is None:
-    tab1, tab2 = st.tabs(["👨‍🎓 دخول الطالب", "👨‍🏫 دخول المعلم (مشفر)"])
+    tab1, tab2 = st.tabs(["👨‍🎓 دخول الطالب", "👨‍🏫 دخول المعلم"])
     
     with tab1:
         st.write("")
@@ -84,38 +79,49 @@ if st.session_state.role is None:
                         st.rerun()
                     else:
                         st.error("❌ عذراً، رقم الهوية الذي أدخلته غير مسجل لدينا.")
-                except: st.error("⚠️ خطأ في قراءة بيانات الطلاب")
+                except: st.error("⚠️ تعذر الوصول لبيانات الطلاب حالياً")
 
     with tab2:
         st.write("")
-        admin_user = st.text_input("اسم المستخدم", placeholder="Username")
+        admin_user = st.text_input("اسم المستخدم (المعلم)", placeholder="Username")
         admin_pass = st.text_input("كلمة المرور", type="password", placeholder="Password")
         
         if st.button("دخول المعلم الآمن"):
             if client:
                 try:
-                    # جلب بيانات المستخدمين من ورقة users
+                    # جلب البيانات من ورقة users كما تظهر في صورتك
                     user_sheet = pd.DataFrame(client.worksheet("users").get_all_records())
-                    # البحث عن المعلم وتدقيق كلمة المرور المشفرة
-                    user_row = user_sheet[user_sheet['username'] == admin_user]
+                    # البحث عن المعلم في عمود username
+                    user_row = user_sheet[user_sheet['username'] == admin_user.strip()]
                     
                     if not user_row.empty:
-                        hashed_pw = user_row.iloc[0]['password']
-                        if check_hashes(admin_pass, hashed_pw):
+                        # جلب الهاش من عمود password_hash كما في الصورة
+                        stored_hash = user_row.iloc[0]['password_hash']
+                        if check_hashes(admin_pass, stored_hash):
                             st.session_state.role = "teacher"
+                            st.session_state.user_data = {"name": admin_user}
                             st.rerun()
                         else:
                             st.error("❌ كلمة المرور غير صحيحة")
                     else:
                         st.error("❌ اسم المستخدم غير موجود")
-                except: st.error("⚠️ فشل الوصول لجدول الصلاحيات")
+                except Exception as e:
+                    st.error(f"⚠️ خطأ في صلاحيات المعلم")
     st.stop()
 
-# --- لوحة المعلم بعد الدخول الآمن ---
+# --- لوحة المعلم ---
 if st.session_state.role == "teacher":
-    st.success("✅ تم الدخول بنظام التشفير الآمن")
-    st.header("👨‍🏫 لوحة تحكم المعلم")
+    st.success(f"مرحباً بك يا أستاذ {st.session_state.user_data['name']}")
+    # هنا يمكنك إضافة أدوات المعلم
+    if st.button("تسجيل الخروج"):
+        st.session_state.clear()
+        st.rerun()
+
+# --- واجهة الطالب ---
+elif st.session_state.role == "student":
+    u = st.session_state.user_data
+    st.info(f"مرحباً بك: {u['name']}")
     # عرض البيانات...
     if st.button("تسجيل الخروج"):
-        st.session_state.role = None
+        st.session_state.clear()
         st.rerun()
