@@ -481,8 +481,8 @@ elif st.session_state.role == "student":
 
     with t_set:
         with st.form("st_settings_final"):
-            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[7]))
-            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[8]))
+            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
+            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
             if st.form_submit_button("✅ حفظ البيانات", use_container_width=True):
                 ws = sh.worksheet("students"); cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, new_mail); ws.update_cell(cell.row, 8, new_phone)
