@@ -470,14 +470,45 @@ elif st.session_state.role == "student":
 
     with t_lead:
         st.markdown('<h4 style="text-align:right; color:#1e3a8a;">🏆 أبطال المنصة</h4>', unsafe_allow_html=True)
-        df_all_st.iloc[:, 8] = pd.to_numeric(df_all_st.iloc[:, 8], errors='coerce').fillna(0)
-        df_l = df_all_st.sort_values(by=df_all_st.columns[8], ascending=False).head(10)
-        for i, r in df_l.iterrows():
-            rank = df_l.index.get_loc(i) + 1
-            is_me = (str(r[1]) == str(s_name))
-            icon, col = ("👑", "#ffd700") if rank==1 else (("🥈", "#c0c0c0") if rank==2 else (("🥉", "#cd7f32") if rank==3 else (f"#{rank}", "#64748b")))
-            st.markdown(f'<div style="background: {"#eff6ff" if is_me else "white"}; padding: 10px; border-radius: 12px; border: {"2px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div style="display: flex; align-items: center;"><b style="width: 30px; color: {col};">{icon}</b><b style="font-size: 0.9rem;">{r[1]} {" (أنت) " if is_me else ""}</b></div><div style="background: {col}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">{int(r[8])} ن</div></div>', unsafe_allow_html=True)
+        
+        # تحويل النقاط لرقمي بطريقة بايثون المباشرة (لتجنب خطأ NameError: pd)
+        try:
+            # ترتيب الطلاب: نأخذ نسخة من القائمة ونرتبها حسب عمود النقاط (فهرس 8)
+            leader_list = df_st.values.tolist()
+            # دالة للترتيب تتأكد أن القيمة رقمية
+            def get_points(x):
+                try: return int(float(str(x[8])))
+                except: return 0
+            
+            leader_list.sort(key=get_points, reverse=True)
+            top_10 = leader_list[:10] # أفضل 10 طلاب
 
+            for rank_idx, student_row in enumerate(top_10):
+                rank = rank_idx + 1
+                curr_name = student_row[1]
+                curr_points = get_points(student_row)
+                
+                is_me = (str(curr_name) == str(s_name))
+                
+                # تنسيق الألوان والمراكز
+                if rank == 1: icon, col = "👑", "#ffd700"
+                elif rank == 2: icon, col = "🥈", "#c0c0c0"
+                elif rank == 3: icon, col = "🥉", "#cd7f32"
+                else: icon, col = f"#{rank}", "#64748b"
+
+                st.markdown(f"""
+                    <div style="background: {"#eff6ff" if is_me else "white"}; padding: 10px; border-radius: 12px; border: {"2px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center;">
+                            <b style="width: 30px; color: {col}; text-align: center;">{icon}</b>
+                            <b style="font-size: 0.9rem; color: #1e293b;">{curr_name} {" (أنت) " if is_me else ""}</b>
+                        </div>
+                        <div style="background: {col}; color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">
+                            {curr_points} ن
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+        except Exception as e:
+            st.info("جاري تحديث قائمة المتصدرين...")
     with t_set:
         with st.form("set_f"):
             m = st.text_input("📧 البريد", value=str(s_row[6]))
