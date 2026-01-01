@@ -372,7 +372,7 @@ if st.session_state.role == "teacher":
 
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (كودك الأصلي)
+# 👨‍🎓 واجهة الطالب (تم تصحيح جلب النقاط فقط)
 # ==========================================
 elif st.session_state.role == "student":
     # 1. جلب البيانات من الجداول (students & grades)
@@ -382,9 +382,14 @@ elif st.session_state.role == "student":
     s_row = df_st[df_st.iloc[:, 0].astype(str) == st.session_state.sid].iloc[0]
     s_name, s_class = s_row[1], s_row[2]
     
-    # جلب النقاط السلوكية
-    try: s_points = int(s_row[8]) if s_row[8] else 0
-    except: s_points = 0
+    # --- التعديل هنا: جلب النقاط السلوكية من العمود I (رقم 8) ---
+    try:
+        # التأكد من تنظيف القيمة وتحويلها لرقم صحيح
+        raw_points = str(s_row[8]).strip() if len(s_row) > 8 else "0"
+        s_points = int(float(raw_points)) if raw_points and raw_points != "None" else 0
+    except:
+        s_points = 0
+    # --------------------------------------------------------
 
     # جلب الدرجات الأكاديمية من ورقة grades
     try:
@@ -462,7 +467,6 @@ elif st.session_state.role == "student":
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             for _, r in f_beh.iloc[::-1].iterrows():
                 is_pos = "+" in str(r[2])
-                # ألوان هادئة ومريحة للعين (Pastel)
                 bg = "#f0fdf4" if is_pos else "#fef2f2"
                 text_color = "#166534" if is_pos else "#991b1b"
                 icon = "✅" if is_pos else "⚠️"
@@ -489,4 +493,3 @@ elif st.session_state.role == "student":
                 st.success("تم التحديث بنجاح!"); st.rerun()
         if st.button("🚗 تسجيل الخروج", use_container_width=True):
             st.session_state.role = None; st.rerun()
-
