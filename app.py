@@ -110,31 +110,25 @@ if st.session_state.role is None:
     st.stop()
 
 # ==========================================
-# 👨‍🏫 أولاً: واجهة المعلم (شرط الصلاحية)
+# 👨‍🏫 أولاً: واجهة المعلم (إصدار التطبيق)
 # ==========================================
 if st.session_state.role == "teacher":
     
-    # 1. كود CSS السحري: إخفاء القائمة الجانبية وتحسين مظهر التبويبات
+    # 1. كود CSS لإخفاء القائمة الجانبية وتحسين التبويبات
     st.markdown("""
         <style>
             [data-testid="stSidebar"], [data-testid="stSidebarNav"] { display: none !important; }
             .block-container { padding-top: 1rem; max-width: 100%; }
             .stTabs [data-baseweb="tab-list"] { gap: 5px; justify-content: center; }
             .stTabs [data-baseweb="tab"] {
-                background-color: #f1f5f9;
-                border-radius: 10px 10px 0 0;
-                padding: 10px 15px;
-                font-weight: bold;
-                font-size: 0.9rem;
+                background-color: #f1f5f9; border-radius: 10px 10px 0 0;
+                padding: 10px 15px; font-weight: bold; font-size: 0.9rem;
             }
-            .stTabs [aria-selected="true"] {
-                background-color: #3b82f6 !important;
-                color: white !important;
-            }
+            .stTabs [aria-selected="true"] { background-color: #3b82f6 !important; color: white !important; }
         </style>
     """, unsafe_allow_html=True)
 
-    # 2. العنوان الرئيسي
+    # 2. العنوان الرئيسي للمعلم
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
             <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.4rem;">👨‍🏫 منصة الأستاذ زياد الذكية</h2>
@@ -142,7 +136,7 @@ if st.session_state.role == "teacher":
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. تعريف التبويبات (داخل شرط المعلم فقط لمنع ظهورها للطالب)
+    # 3. تبويبات المعلم
     t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
         "👥 إدارة الطلاب", "📝 رصد الدرجات", "🎭 رصد السلوك", "📢 التنبيهات", "🔍 البحث الذكي", "🚗 تسجيل الخروج"
     ])
