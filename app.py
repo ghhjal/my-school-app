@@ -130,65 +130,7 @@ if st.session_state.role == "teacher":
         "🚗 خروج"
     ])
 
-    # --- التبويب الأول: إدارة الطلاب ---
-    with t_manage:
-        st.markdown('<h3 style="text-align:right; color:#1e3a8a;">👥 سجل الطلاب الحالي</h3>', unsafe_allow_html=True)
-        df_st = fetch_safe("students")
-        if not df_st.empty:
-            st.dataframe(df_st.iloc[:, :4], use_container_width=True) # عرض أول 4 أعمدة فقط للوضوح
-        
-        with st.expander("➕ إضافة طالب جديد"):
-            with st.form("add_student"):
-                n_id = st.text_input("الرقم الأكاديمي")
-                n_name = st.text_input("اسم الطالب")
-                n_class = st.selectbox("الفصل", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                if st.form_submit_button("حفظ الطالب الجديد"):
-                    # هنا كود الإضافة لجوجل شيت (نفس الذي كان لديك)
-                    st.success("تمت إضافة الطالب بنجاح!")
-
-    # --- التبويب الثاني: رصد الدرجات ---
-    with t_grades:
-        st.markdown('<h3 style="text-align:right; color:#1e3a8a;">📝 رصد الدرجات الأكاديمية</h3>', unsafe_allow_html=True)
-        df_st = fetch_safe("students")
-        target_st = st.selectbox("اختر الطالب للرصد:", df_st.iloc[:, 1].tolist(), key="grade_st")
-        col1, col2, col3 = st.columns(3)
-        with col1: p1_new = st.text_input("المشاركة")
-        with col2: p2_new = st.text_input("الواجبات")
-        with col3: perf_new = st.text_input("الاختبارات")
-        if st.button("حفظ الدرجات", use_container_width=True):
-            st.success(f"تم تحديث درجات {target_st}")
-
-    # --- التبويب الثالث: رصد السلوك (الأهم) ---
-    with t_behavior:
-        st.markdown('<h3 style="text-align:right; color:#1e3a8a;">🎭 رصد السلوك والتميز</h3>', unsafe_allow_html=True)
-        df_st = fetch_safe("students")
-        st_name = st.selectbox("الطالب المستهدف:", df_st.iloc[:, 1].tolist(), key="beh_st")
-        beh_type = st.radio("نوع الملاحظة:", ["🌟 إيجابية (+)", "⚠️ تنبيه (-)"], horizontal=True)
-        beh_text = st.text_area("تفاصيل الملاحظة (مثال: مشاركة متميزة، عدم إحضار كتاب..)")
-        points_change = st.number_input("تعديل النقاط (مثال: 5 أو -5)", value=5 if "🌟" in beh_type else -5)
-        
-        if st.button("🚀 تسجيل في سجل الطالب", use_container_width=True):
-            # كود تحديث النقاط في شيت الطلاب + إضافة سطر في شيت السلوك
-            st.balloons()
-            st.success(f"تمت إضافة {points_change} نقطة لرصيد {st_name}")
-
-    # --- التبويب الرابع: التنبيهات ---
-    with t_exams:
-        st.markdown('<h3 style="text-align:right; color:#1e3a8a;">📢 إضافة إعلان أو اختبار</h3>', unsafe_allow_html=True)
-        with st.form("exam_form"):
-            ex_class = st.selectbox("موجه لطلاب فصل:", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            ex_title = st.text_input("عنوان التنبيه (مثال: اختبار لغتي القصير)")
-            ex_date = st.date_input("موعد التنفيذ")
-            if st.form_submit_button("نشر التنبيه للطلاب"):
-                st.success("تم النشر بنجاح!")
-
-    # --- التبويب الخامس: الخروج ---
-    with t_logout:
-        st.markdown("### هل ترغب في تسجيل الخروج؟")
-        if st.button("تسجيل الخروج الآن", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
-
+   
     # --- القسم الأول: إدارة الطلاب (المطور مع خاصية الحذف الشامل) ---
     if menu == "👥 إدارة الطلاب":
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
