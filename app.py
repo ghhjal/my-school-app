@@ -127,13 +127,7 @@ if st.session_state.role == "teacher":
         "👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 التنبيهات", "🚗 خروج"
     ])
 
-    # --- التبويب الخامس: الخروج ---
-    with t_logout:
-        if st.button("🚨 تسجيل الخروج النهائي", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
-
-    
+       
     # --- التبويب الأول: إدارة الطلاب (الكود المطور الذي أرسلته) ---
     with t_manage:
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;margin-top:10px;"><h3>👥 إدارة الطلاب</h3></div>', unsafe_allow_html=True)
@@ -249,7 +243,6 @@ if st.session_state.role == "teacher":
         st.subheader("📊 جدول الدرجات العام")
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    # --- باقي الأقسام تتبع نفس الهيكل ---
 # --- التبويب الثالث: رصد السلوك (الإصدار الاحترافي المتكامل) ---
     with t_behavior:
         import smtplib
@@ -462,6 +455,12 @@ if st.session_state.role == "teacher":
                             pass
         else:
             st.info("📭 لا توجد تنبيهات منشورة حالياً")
+
+             # --- التبويب الخامس: الخروج ---
+    with t_logout:
+        if st.button("🚨 تسجيل الخروج النهائي", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
 
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
