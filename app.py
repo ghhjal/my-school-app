@@ -429,18 +429,17 @@ with t_logout:
 # ==========================================
 elif st.session_state.role == "student":
     df_st = fetch_safe("students")
-    df_grades = fetch_safe("grades") 
-    df_beh = fetch_safe("behavior")
-    df_ex = fetch_safe("exams")
+    # جلب بيانات الطالب الحالي
+    student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
     
-    try:
-        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-        if not student_data.empty:
-            s_row = student_data.iloc[0]
-            s_name, s_class = s_row[1], s_row[2]
-            s_phone = str(s_row[7]).split('.')[0] if len(s_row) >= 8 else ""
-            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
+    if not student_data.empty:
+        s_row = student_data.iloc[0]
+        s_name, s_class = s_row[1], s_row[2]
+        # قراءة النقاط من العمود التاسع (index 8)
+        try:
+            val = str(s_row[8]).strip()
+            s_points = int(float(val)) if val and val != "None" else 0
+        except: s_points = 0
         else:
             st.error("⚠️ بيانات الطالب غير موجودة")
             st.stop()
