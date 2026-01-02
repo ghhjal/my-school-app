@@ -425,23 +425,22 @@ with t_logout:
         st.rerun()
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (التصميم الأصلي + إصلاح الأخطاء)
+# 👨‍🎓 واجهة الطالب (نفس تصميمك الأصلي 100% مع الإصلاح)
 # ==========================================
-elif st.session_state.role == "student":
-    # 1. جلب البيانات (تأكد من مطابقة أسماء الشيتات)
+
+# ملاحظة: تأكد أن هذا الجزء يبدأ بعد انتهاء كود "المعلم" مباشرة
+if st.session_state.role == "student":
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades") 
     df_beh = fetch_safe("behavior")
     df_ex = fetch_safe("exams")
     
     try:
-        # البحث عن بيانات الطالب برقم الهوية (sid)
         student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         if not student_data.empty:
             s_row = student_data.iloc[0]
             s_name, s_class = s_row[1], s_row[2]
-            s_phone = str(s_row[7]).split('.')[0] # رقم الجوال للإرسال
-            # جلب النقاط من العمود التاسع
+            s_phone = str(s_row[7]).split('.')[0]
             val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
             s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
         else:
@@ -451,13 +450,13 @@ elif st.session_state.role == "student":
         st.error(f"❌ خطأ: {e}")
         st.stop()
 
-    # حساب المتبقي للوسام التالي (كما في كودك)
+    # حساب المتبقي للوسام التالي
     next_badge, points_to_next = "", 0
     if s_points < 10: next_badge, points_to_next = "البرونزي", 10 - s_points
     elif s_points < 50: next_badge, points_to_next = "الفضي", 50 - s_points
     elif s_points < 100: next_badge, points_to_next = "الذهبي", 100 - s_points
 
-    # --- 📢 العنوان العلوي (التصميم الأصلي) ---
+    # --- 📢 العنوان العلوي (تصميمك الأصلي) ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
             <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.5rem;">
@@ -469,17 +468,17 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 👤 نظام الأوسمة والنقاط (التصميم الأصلي) ---
+    # --- 👤 نظام الأوسمة والنقاط (تصميمك الأصلي) ---
     st.markdown(f"""
         <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; margin-top: 15px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; background: #fffcf9; opacity: {'1' if s_points >= 10 else '0.15'}; transform: {'scale(1.1)' if 10 <= s_points < 50 else 'scale(1)'};">
+                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; background: #fffcf9; opacity: {'1' if s_points >= 10 else '0.15'}; transform: {'scale(1.1)' if 10 <= s_points < 50 else 'scale(1)'}; border-width: {'3px' if 10 <= s_points < 50 else '1px'};">
                     <div style="font-size: 2rem;">🥉</div><b style="color: #cd7f32; font-size: 0.8rem;">برونزي</b>
                 </div>
-                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; background: #f8f9fa; opacity: {'1' if s_points >= 50 else '0.15'}; transform: {'scale(1.1)' if 50 <= s_points < 100 else 'scale(1)'};">
+                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; background: #f8f9fa; opacity: {'1' if s_points >= 50 else '0.15'}; transform: {'scale(1.1)' if 50 <= s_points < 100 else 'scale(1)'}; border-width: {'3px' if 50 <= s_points < 100 else '1px'};">
                     <div style="font-size: 2rem;">🥈</div><b style="color: #7f8c8d; font-size: 0.8rem;">فضي</b>
                 </div>
-                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; background: #fffdf0; opacity: {'1' if s_points >= 100 else '0.15'}; transform: {'scale(1.1)' if s_points >= 100 else 'scale(1)'};">
+                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; background: #fffdf0; opacity: {'1' if s_points >= 100 else '0.15'}; transform: {'scale(1.1)' if s_points >= 100 else 'scale(1)'}; border-width: {'3px' if s_points >= 100 else '1px'};">
                     <div style="font-size: 2rem;">🥇</div><b style="color: #d4af37; font-size: 0.8rem;">ذهبي</b>
                 </div>
             </div>
@@ -521,18 +520,18 @@ elif st.session_state.role == "student":
                 is_pos = any(x in str(r[2]) for x in ["+", "🌟", "✅"])
                 color = "#065f46" if is_pos else "#991b1b"
                 
-                # إضافة أيقونة الواتساب هنا (طلبك الأساسي)
-                msg = f"تقرير سلوك الطالب: {s_name}\n🏷️ {r[2]}\n📝 {r[3]}\n📅 {r[1]}"
-                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(msg)}"
+                # --- ميزة الواتساب (الإرسال السريع) ---
+                msg_text = f"إشعار سلوكي للطالب: {s_name}\n🏷️ النوع: {r[2]}\n📝 الملاحظة: {r[3]}\n📅 التاريخ: {r[1]}"
+                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(msg_text)}"
                 
                 st.markdown(f'''
                     <div style="background: {"#f0fdf4" if is_pos else "#fef2f2"}; padding: 15px; border-radius: 12px; border-right: 8px solid {color}; margin-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <b style="font-size: 1.1rem; color: {color};">{"✅" if is_pos else "⚠️"} {r[2]}</b>
-                            <a href="{wa_url}" target="_blank" style="text-decoration:none;">🟢 <small>إرسال</small></a>
+                            <a href="{wa_url}" target="_blank" style="background:#25D366; color:white; padding:2px 8px; border-radius:5px; font-size:0.7rem; text-decoration:none;">💬 واتساب</a>
                         </div>
-                        <div style="font-size: 1rem; color: #1e293b; margin-top:5px;">{r[3]}</div>
-                        <div style="font-size: 0.8rem; color: #64748b; text-align: left;">📅 {r[1]}</div>
+                        <div style="font-size: 1.1rem; color: #1e293b; margin-top:5px; font-weight: bold;">{r[3]}</div>
+                        <div style="text-align:left; font-size:0.8rem; color:#64748b;">📅 {r[1]}</div>
                     </div>
                 ''', unsafe_allow_html=True)
 
