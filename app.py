@@ -159,7 +159,7 @@ t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
 ])
 
     # --- القسم الأول: إدارة الطلاب (كامل كما هو) ---
-    with t_students:
+with t_students:
         st.markdown('<div style="background:#1E3A8A;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>👥 إدارة الطلاب والتأسيس</h4></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         with st.container(border=True):
