@@ -382,74 +382,85 @@ if st.session_state.role == "teacher":
             st.divider()
             st.write(f"🗓️ السجل السلوكي لـ: **{b_name}**")
             st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
-            # --- التبويب الرابع: شاشة التنبيهات والاختبارات (المطورة كلياً) ---
-    with t_exams:
-        st.markdown('<div style="background:linear-gradient(90deg,#f59e0b,#d97706);padding:20px;border-radius:15px;color:white;text-align:center;margin-top:10px;"><h3>📢 إدارة التنبيهات والاختبارات</h3></div>', unsafe_allow_html=True)
-        
-        # 1. نموذج إضافة تنبيه جديد
-        with st.form("exam_announcement_form", clear_on_submit=True):
-            st.markdown("### 📝 إضافة تنبيه جديد")
-            
-            # حقل النوع (اختيار صف معين أو الكل) كما طلبت
-            ex_class = st.selectbox("🎯 توجيه التنبيه إلى:", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"], key="ex_class_sel")
-            
-            # حقل العنوان (العنود B في الشيت)
-            ex_title = st.text_input("📝 عنوان التنبيه (مثلاً: اختبار لغتي القصير)", placeholder="اكتب نص التنبيه هنا...")
-            
-            # حقل التاريخ (العمود C في الشيت)
-            ex_date = st.date_input("📅 تاريخ التنفيذ/الاختبار", key="ex_date_sel")
-            
-            st.write("---")
-            c1, c2 = st.columns(2)
-            
-            # زر إرسال التنبيه للمنصة
-            submit_platform = c1.form_submit_button("🚀 نشر في المنصة")
-            
-            # زر الإرسال للواتساب (للمجموعات)
-            submit_whatsapp = c2.form_submit_button("💬 نشر في مجموعات الواتساب")
+            # --- القسم الرابع: شاشة التنبيهات (الإصدار المصحح والمنظم) ---
+    elif menu == "📢 شاشة الاختبارات":
+        import urllib.parse
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة المواعيد والتواصل الفوري - الأستاذ زياد</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-            if submit_platform:
-                if ex_title:
+        # 1. نموذج الإضافة الصامت
+        with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
+            with st.form("announcement_form_wa_v6", clear_on_submit=True):
+                c1, c2, c3 = st.columns([1, 2, 1])
+                a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                a_title = c2.text_input("📝 عنوان التنبيه")
+                a_date = c3.date_input("📅 الموعد")
+                
+                btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
+                
+                if btn_post and a_title:
                     try:
-                        ws_ex = sh.worksheet("exams")
-                        # إضافة البيانات حسب ترتيب أعمدة الشيت (الصف، العنوان، التاريخ)
-                        ws_ex.append_row([ex_class, ex_title, str(ex_date)])
-                        st.success(f"✅ تم نشر التنبيه لطلاب صف: {ex_class}")
-                        st.cache_data.clear()
-                        time.sleep(1)
+                        sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
+                        st.balloons()
+                        time.sleep(0.5)
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ خطأ في الاتصال بالشيت: {e}")
-                else:
-                    st.error("⚠️ يرجى كتابة عنوان التنبيه أولاً")
+                    except:
+                        pass
 
-            if submit_whatsapp:
-                if ex_title:
-                    # تنسيق الرسالة لمجموعات الواتساب
-                    wa_msg = (
-                        f"📢 *تنبيه هام من الأستاذ زياد*\n"
-                        f"--------------------------\n"
-                        f"🎯 الموجه لهم: {ex_class}\n"
-                        f"📝 الموضوع: {ex_title}\n"
-                        f"📅 التاريخ: {ex_date}\n"
-                        f"--------------------------\n"
-                        f"يرجى الاستعداد والمتابعة عبر المنصة."
-                    )
-                    wa_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(wa_msg)}"
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={wa_url}">', unsafe_allow_html=True)
-                    st.info("📲 جاري فتح الواتساب للإرسال للمجموعة...")
-                else:
-                    st.error("⚠️ يرجى كتابة نص التنبيه للإرسال")
+        st.markdown("### 📋 التنبيهات المنشورة (الأحدث أولاً)")
+        df_ann = fetch_safe("exams")
+        
+        if df_ann is not None and not df_ann.empty:
+            reversed_df = df_ann.iloc[::-1]
+            color_map = {
+                "الكل": "#E0F2FE", "الأول": "#F0FDF4", "الثاني": "#FFF7ED", 
+                "الثالث": "#FAF5FF", "الرابع": "#FEF2F2", "الخامس": "#F5F3FF", "السادس": "#ECFEFF"
+            }
 
-        # 2. عرض سجل التنبيهات الحالية (من شيت exams)
-        st.divider()
-        st.subheader("📋 سجل التنبيهات المنشورة")
-        df_ex_view = fetch_safe("exams")
-        if not df_ex_view.empty:
-            # عرض التنبيهات من الأحدث إلى الأقدم
-            st.dataframe(df_ex_view.iloc[::-1], use_container_width=True, hide_index=True)
+            for index, row in reversed_df.iterrows():
+                bg_color = color_map.get(row[0], "#FFFFFF")
+                
+                # نص الرسالة المنسق للواتساب
+                wa_msg = (
+                    f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
+                    f"----------------------------------\n"
+                    f"🏫 *الصف:* {row[0]}\n"
+                    f"📝 *الموضوع:* {row[1]}\n"
+                    f"📅 *الموعد:* {row[2]}\n"
+                    f"----------------------------------\n"
+                    f"يرجى العلم والاستعداد. مع تمنياتي لكم بالتوفيق 🌟"
+                )
+                encoded_msg = urllib.parse.quote(wa_msg)
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+
+                # عرض البطاقة الملونة
+                st.markdown(f"""
+                    <div style="background-color: {bg_color}; padding: 15px; border-radius: 10px; border-right: 5px solid #4F46E5; margin-bottom: 5px;">
+                        <span style="color: #4F46E5; font-weight: bold;">[{row[0]}]</span> 
+                        <span style="font-size: 1.1em; margin-right: 10px;">{row[1]}</span>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">📅 الموعد: {row[2]}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # أزرار التحكم (واتساب وحذف)
+                col1, col2, col_empty = st.columns([1.5, 1, 3])
+                with col1:
+                    st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:5px 10px; border-radius:5px; text-align:center; font-size:14px; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
+                with col2:
+                    if st.button(f"🗑️ حذف", key=f"del_wa_{index}"):
+                        try:
+                            ws_exam = sh.worksheet("exams")
+                            ws_exam.delete_rows(int(index) + 2)
+                            st.rerun()
+                        except:
+                            pass
         else:
-            st.info("لا توجد تنبيهات منشورة حالياً.")
+            st.info("📭 لا توجد تنبيهات منشورة حالياً")
+
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
 # ==========================================
