@@ -113,11 +113,44 @@ if st.session_state.role is None:
 # 🛠️ واجهة المعلم (كودك الأصلي)
 # ==========================================
 if st.session_state.role == "teacher":
-    # 1. القائمة الجانبية الموحدة
-    st.sidebar.markdown("### 👨‍🏫 لوحة التحكم")
-    menu = st.sidebar.selectbox("القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
+    # --- 🎨 تنسيق القائمة الجانبية ---
+    st.sidebar.markdown(f"""
+        <div style="text-align: center; padding: 10px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <h4 style="color: #1e3a8a; margin: 0;">👨‍🏫 أ. زياد</h4>
+            <small style="color: #64748b;">مدير المنصة التعليمية</small>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # --- 📋 القائمة الرئيسية بأيقونات ---
+    menu_options = {
+        "👥 إدارة الطلاب": "students_manage",
+        "📝 شاشة الدرجات": "grades_screen",
+        "🎭 رصد السلوك": "behavior_record",
+        "📢 شاشة الاختبارات": "exams_announcement"
+    }
+    
+    menu = st.sidebar.selectbox(
+        "اختر المهمة المطلوبة:",
+        list(menu_options.keys())
+    )
+
     st.sidebar.divider()
-    st.sidebar.button("🚗 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}))
+
+    # --- 📊 إحصائيات سريعة (إضافة لمسة إبداعية) ---
+    st.sidebar.markdown("### 📈 نظرة سريعة")
+    # هنا يمكنك جلب عدد الطلاب الكلي من الشيت
+    try:
+        total_st = len(fetch_safe("students"))
+        st.sidebar.info(f"عدد الطلاب المسجلين: {total_st}")
+    except:
+        pass
+
+    st.sidebar.divider()
+    
+    # زر تسجيل الخروج
+    if st.sidebar.button("🚗 تسجيل الخروج", use_container_width=True):
+        st.session_state.role = None
+        st.rerun()
 
     # --- القسم الأول: إدارة الطلاب (المطور مع خاصية الحذف الشامل) ---
     if menu == "👥 إدارة الطلاب":
