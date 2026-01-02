@@ -425,21 +425,21 @@ with t_logout:
         st.rerun()
 
 # ==========================================
-# 👨‍🎓 ثانياً: واجهة الطالب (نفس تصميمك الأصلي بالكامل)
+# 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
 # ==========================================
 elif st.session_state.role == "student":
     df_st = fetch_safe("students")
-    # جلب بيانات الطالب الحالي
-    student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+    df_grades = fetch_safe("grades") 
+    df_beh = fetch_safe("behavior")
+    df_ex = fetch_safe("exams")
     
-    if not student_data.empty:
-        s_row = student_data.iloc[0]
-        s_name, s_class = s_row[1], s_row[2]
-        # قراءة النقاط من العمود التاسع (index 8)
-        try:
-            val = str(s_row[8]).strip()
-            s_points = int(float(val)) if val and val != "None" else 0
-        except: s_points = 0
+    try:
+        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        if not student_data.empty:
+            s_row = student_data.iloc[0]
+            s_name, s_class = s_row[1], s_row[2]
+            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
+            s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
         else:
             st.error("⚠️ بيانات الطالب غير موجودة")
             st.stop()
@@ -453,7 +453,7 @@ elif st.session_state.role == "student":
     elif s_points < 50: next_badge, points_to_next = "الفضي", 50 - s_points
     elif s_points < 100: next_badge, points_to_next = "الذهبي", 100 - s_points
 
-    # --- 📢 العنوان العلوي ---
+    # --- 📢 العنوان العلوي (الاسم والفصل) ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
             <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.5rem;">
@@ -465,7 +465,7 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 👤 نظام الأوسمة والنقاط ---
+    # --- 👤 نظام الأوسمة والنقاط (تمت إعادتها وتوضيحها) ---
     st.markdown(f"""
         <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; margin-top: 15px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
@@ -487,7 +487,7 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات (نفس ترتيبك بالضبط) ---
+    # --- 📊 التبويبات (خطوط كبيرة واضحة) ---
     t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "🏆 المتصدرون", "⚙️ الإعدادات"])
 
     with t_ex:
@@ -502,47 +502,46 @@ elif st.session_state.role == "student":
             g_data = df_grades[df_grades.iloc[:, 0].astype(str) == s_name]
             p1, p2, perf = (g_data.iloc[0][1], g_data.iloc[0][2], g_data.iloc[0][3]) if not g_data.empty else ("-", "-", "-")
         except: p1, p2, perf = "-", "-", "-"
+        
         def gc(t, v, c): return f'<div style="background: #ffffff; padding: 15px; border-radius: 12px; border: 2px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><b style="font-size: 1.1rem; color: #1e293b;">{t}</b><b style="font-size: 1.7rem; color: {c};">{v}</b></div>'
         st.markdown(gc("المشاركة التفاعلية", p1, "#3b82f6"), unsafe_allow_html=True)
         st.markdown(gc("إنجاز الواجبات", p2, "#10b981"), unsafe_allow_html=True)
         st.markdown(gc("الاختبارات القصيرة", perf, "#f59e0b"), unsafe_allow_html=True)
 
     with t_beh:
-        import urllib.parse
         st.markdown('<h3 style="text-align:right; color:#1e3a8a; font-size: 1.3rem;">🎭 سجل الانضباط</h3>', unsafe_allow_html=True)
         if not df_beh.empty:
             f_beh = df_beh[df_beh.iloc[:, 0] == s_name]
             for _, r in f_beh.iloc[::-1].iterrows():
                 is_pos = any(x in str(r[2]) for x in ["+", "🌟", "✅"])
                 color = "#065f46" if is_pos else "#991b1b"
-                
-                # إشعار واتساب للطالب
-                msg = f"تقرير سلوك: {s_name}\n🏷️ {r[2]}\n📝 {r[3]}\n📅 {r[1]}"
-                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(msg)}"
-                
-                st.markdown(f'''
-                    <div style="background: {"#f0fdf4" if is_pos else "#fef2f2"}; padding: 15px; border-radius: 12px; border-right: 8px solid {color}; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <b style="font-size: 1.1rem; color: {color};">{"✅" if is_pos else "⚠️"} {r[2]}</b>
-                            <a href="{wa_url}" target="_blank" style="text-decoration:none;">🟢 <small>واتساب</small></a>
-                        </div>
-                        <div style="font-size: 1.1rem; color: #1e293b; margin-top:5px; font-weight: bold;">{r[3]}</div>
-                        <div style="text-align:left; font-size:0.8rem; color:#64748b;">📅 {r[1]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
+                st.markdown(f'<div style="background: {"#f0fdf4" if is_pos else "#fef2f2"}; padding: 15px; border-radius: 12px; border-right: 8px solid {color}; margin-bottom: 10px;"><div style="display: flex; justify-content: space-between;"><b style="font-size: 1.1rem; color: {color};">{"✅" if is_pos else "⚠️"} {r[2]}</b><b style="font-size: 0.9rem; color: #64748b;">{r[1]}</b></div><div style="font-size: 1.1rem; color: #1e293b; margin-top:5px; font-weight: bold;">{r[3]}</div></div>', unsafe_allow_html=True)
 
     with t_lead:
-        # (كود المتصدرون كما هو)
         st.markdown('<h3 style="text-align:right; color:#1e3a8a; font-size: 1.3rem;">🏆 أبطال الصف</h3>', unsafe_allow_html=True)
-        # ... كود الأبطال ...
+        try:
+            leader_list = df_st.values.tolist()
+            def get_p(x):
+                try: return int(float(str(x[8])))
+                except: return 0
+            leader_list.sort(key=get_p, reverse=True)
+            for rank_idx, l_row in enumerate(leader_list[:10]):
+                rank = rank_idx + 1
+                is_me = (str(l_row[1]) == str(s_name))
+                icon, col = ("👑", "#ffd700") if rank==1 else (("🥈", "#94a3b8") if rank==2 else (("🥉", "#cd7f32") if rank==3 else (f"#{rank}", "#64748b")))
+                st.markdown(f'<div style="background: {"#eff6ff" if is_me else "white"}; padding: 12px; border-radius: 12px; border: {"3px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div style="display: flex; align-items: center;"><b style="width: 40px; font-size: 1.3rem; color: {col}; text-align: center;">{icon}</b><b style="font-size: 1.1rem; color: #1e293b;">{l_row[1]} {" (أنت)" if is_me else ""}</b></div><b style="background: {col}; color: white; padding: 5px 15px; border-radius: 10px; font-size: 1.1rem; font-weight: bold;">{get_p(l_row)}</b></div>', unsafe_allow_html=True)
+        except: st.info("جاري التحديث...")
 
     with t_set:
         with st.form("set_f"):
+            st.markdown("<b>⚙️ تحديث البيانات</b>", unsafe_allow_html=True)
             m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             p = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
             if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
-                # كود التحديث...
-                st.success("✅ تم الحفظ"); st.rerun()
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
+                st.cache_data.clear(); st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
     
     if st.button("🚗 تسجيل الخروج", use_container_width=True):
         st.session_state.role = None; st.rerun()
