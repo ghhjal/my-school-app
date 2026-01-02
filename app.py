@@ -217,47 +217,114 @@ if st.session_state.role == "teacher":
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
     # --- 🎭 تبويب: رصد السلوك (تنسيق الرسالة المطول) ---
+   # --- القسم الثالث: رصد السلوك (النسخة الأصلية الكاملة) ---
     with t_behavior:
-        import urllib.parse
-        st.subheader("🎭 رصد السلوك والتواصل الفوري")
-        if df_st is not None and not df_st.empty:
-            b_name = st.selectbox("🎯 اختر الطالب:", [""] + df_st.iloc[:, 1].tolist(), key="bh_sel")
-            if b_name:
-                student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-                s_phone = str(student_info[7]).split('.')[0]
-                with st.container(border=True):
-                    c1, c2 = st.columns(2)
-                    b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
-                    b_date = c2.date_input("📅 التاريخ")
-                    b_note = st.text_area("📝 نص الملاحظة السلوكية")
-                    
-                    # صياغة الرسالة كما في كودك الأصلي
-                    full_msg = (
-                        f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
-                        f"----------------------------------------\n"
-                        f"🏷️ نوع السلوك: {b_type}\n"
-                        f"📝 الملاحظة: {b_note}\n"
-                        f"📅 التاريخ: {b_date}\n"
-                        f"----------------------------------------\n"
-                        f"🏛️ منصة الأستاذ زياد الذكية"
-                    )
+        import smtplib, time, urllib.parse
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
 
-                    col1, col2 = st.columns(2)
-                    if col1.button("💾 رصد وحفظ فقط"):
+        # 1. دالة إرسال الإيميل التلقائي (Silent Email) كما في كودك
+        def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
+            try:
+                email_set = st.secrets["email_settings"]
+                msg = MIMEMultipart()
+                msg['From'] = email_set["sender_email"]
+                msg['To'] = to_email
+                msg['Subject'] = f"🔔 إشعار سلوكي: {student_name}"
+                body = (
+                    f"تحية طيبة، تم رصد ملاحظة للطالب: {student_name}\n"
+                    f"نوع السلوك: {b_type}\n"
+                    f"الملاحظة: {b_note}\n"
+                    f"التاريخ: {b_date}"
+                )
+                msg.attach(MIMEText(body, 'plain', 'utf-8'))
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()
+                server.login(email_set["sender_email"], email_set["sender_password"])
+                server.send_message(msg)
+                server.quit()
+                return True
+            except:
+                return False
+
+        st.subheader("🎭 رصد السلوك والتواصل الفوري")
+        df_st = fetch_safe("students")
+        all_names = df_st.iloc[:, 1].tolist()
+        
+        # البحث والفلترة
+        search_term = st.text_input("🔍 ابحث عن اسم الطالب", key="beh_search_input")
+        filtered_names = [n for n in all_names if search_term in n] if search_term else all_names
+        b_name = st.selectbox("🎯 اختر الطالب:", [""] + filtered_names, key="beh_target_select")
+
+        if b_name:
+            student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
+            s_email = student_info[6]
+            s_phone = str(student_info[7]).split('.')[0]
+            
+            with st.container(border=True):
+                c1, c2 = st.columns(2)
+                b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
+                b_date = c2.date_input("📅 التاريخ", key="beh_date_pick")
+                b_note = st.text_area("📝 نص الملاحظة السلوكية")
+                
+                # تنسيق الرسالة الموحد
+                full_msg = (
+                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
+                    f"----------------------------------------\n"
+                    f"🏷️ نوع السلوك: {b_type}\n"
+                    f"📝 الملاحظة: {b_note}\n"
+                    f"📅 التاريخ: {b_date}\n"
+                    f"----------------------------------------\n"
+                    f"🏛️ منصة الأستاذ زياد الذكية"
+                )
+
+                # 💡 توزيع الأزرار الأربعة كما في تصميمك الأصلي
+                col1, col2 = st.columns(2)
+                
+                # الزر 1: حفظ فقط
+                if col1.button("💾 رصد وحفظ فقط", use_container_width=True):
+                    if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-                        try: # تحديث النقاط في شيت الطلاب
+                        try:
                             ws_st = sh.worksheet("students")
                             cell = ws_st.find(b_name)
                             p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
-                            curr_p = int(ws_st.cell(cell.row, 9).value or 0)
-                            ws_st.update_cell(cell.row, 9, str(curr_p + p_map.get(b_type, 0)))
+                            current_p = int(ws_st.cell(cell.row, 9).value or 0)
+                            ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                         except: pass
-                        st.success("✅ تم الحفظ وتحديث النقاط"); st.rerun()
-                    
-                    if col2.button("💬 إرسال عبر واتساب"):
-                        wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
-                        st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:8px;text-align:center;font-weight:bold;">💬 فتح واتساب</div></a>', unsafe_allow_html=True)
+                        st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
 
+                # الزر 2: إشعار تلقائي صامت
+                if col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True):
+                    if s_email:
+                        with st.spinner("جاري الإرسال..."):
+                            if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
+                                st.success("✅ تم إرسال الإيميل التلقائي بنجاح")
+                            else:
+                                st.error("❌ فشل الإرسال التلقائي")
+
+                # الزر 3: إيميل يدوي (Mailto)
+                if col1.button("📧 إيميل منظم (يدوي)", use_container_width=True):
+                    if s_email:
+                        mail_url = f"mailto:{s_email}?subject=إشعار سلوكي&body={urllib.parse.quote(full_msg)}"
+                        st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
+
+                # الزر 4: واتساب
+                if col2.button("💬 رصد وواتساب", use_container_width=True):
+                    wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
+                    st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:8px;text-align:center;font-weight:bold;">💬 فتح واتساب</div></a>', unsafe_allow_html=True)
+
+        # 📋 الجدول السفلي لعرض السجل (موجود كما طلبت)
+        st.divider()
+        df_b = fetch_safe("behavior")
+        if df_b is not None and not df_b.empty:
+            if b_name:
+                st.markdown(f"**📋 سجل ملاحظات الطالب: {b_name}**")
+                filtered_b = df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4]
+                st.dataframe(filtered_b, use_container_width=True, hide_index=True)
+            else:
+                st.markdown("**📋 آخر الملاحظات السلوكية العامة**")
+                st.dataframe(df_b.iloc[::-1, :4].head(10), use_container_width=True, hide_index=True)
     # --- 📢 تبويب: الاختبارات ---
     with t_exams:
         st.markdown("### 📢 مركز التنبيهات")
