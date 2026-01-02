@@ -393,7 +393,8 @@ if st.session_state.role == "teacher":
         if st.button("🚨 نعم، تسجيل الخروج النهائي", use_container_width=True):
             st.session_state.role = None
             st.rerun()
-# --- التبويب الجديد: البحث الذكي الشامل ---
+
+    # --- التبويب الجديد: البحث الذكي الشامل ---
     with t_search:
         st.markdown('<div style="background:#1e40af;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🔍 نظام البحث والاستعلام السريع</h4></div>', unsafe_allow_html=True)
         
