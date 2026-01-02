@@ -148,8 +148,8 @@ if st.session_state.role == "teacher":
         </div>
     """, unsafe_allow_html=True)
 
-    # يجب إضافة t_search هنا بالترتيب الصحيح قبل t_logout
- t_students, t_grades, t_behavior, t_exams, t_search, t_logout = st.tabs([
+   # يجب إضافة t_search هنا بالترتيب الصحيح قبل t_logout
+t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
     "👥 الطلاب", 
     "📝 الدرجات", 
     "🎭 السلوك", 
