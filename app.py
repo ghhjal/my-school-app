@@ -187,9 +187,7 @@ with t_students:
                     st.success("💥 تم الحذف بنجاح"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
     # --- القسم الثاني: شاشة الدرجات (كامل كما هو) ---
-with t_grades:
-        st.markdown('<div style="background:#4338ca;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📝 رصد الدرجات</h4></div>', unsafe_allow_html=True)
-        # (بقية كود رصد الدرجات هنا كما هو لديك)
+
 with t_grades:
         st.markdown('<div style="background:#4338ca;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📝 رصد الدرجات</h4></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
@@ -213,10 +211,7 @@ with t_grades:
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
   # --- القسم الثالث: رصد السلوك (النسخة الكاملة المنسقة + أيقونات الإرسال السريع) ---
-with t_behavior:
-        import urllib.parse
-        st.markdown('<div style="background:#059669;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🎭 رصد السلوك والتواصل الفوري</h4></div>', unsafe_allow_html=True)
-        # (بقية كود رصد السلوك مع أزرار الواتساب هنا كما هو لديك)
+
 with t_behavior:
         import smtplib, time, urllib.parse
         from email.mime.text import MIMEText
@@ -352,9 +347,6 @@ with t_behavior:
 
     # --- القسم الرابع: شاشة التنبيهات (كاملة مع كروت الألوان والواتساب) ---
 with t_alerts:
-        st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات</h4></div>', unsafe_allow_html=True)
-        # (بقية كود التنبيهات هنا)
-with t_alerts:
         import urllib.parse
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات والإعلانات</h4></div>', unsafe_allow_html=True)
         
@@ -384,9 +376,6 @@ with t_alerts:
                     st.cache_data.clear(); st.rerun()
         else: st.info("📭 لا توجد تنبيهات حالياً")
 # --- التبويب الجديد: البحث الذكي الشامل ---
-with t_search:
-        st.markdown('<div style="background:#1e40af;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🔍 البحث والاستعلام</h4></div>', unsafe_allow_html=True)
-        # (كود البحث الذكي هنا)
 with t_search:
     st.markdown('<div style="background:#1e40af;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🔍 نظام البحث والاستعلام السريع</h4></div>', unsafe_allow_html=True)
     
@@ -419,44 +408,6 @@ with t_logout:
         st.session_state.logged_in = False
         st.rerun()
 
-# ==========================================
-# 👨‍🏫 أولاً: واجهة المعلم (إصدار التطبيق)
-# ==========================================
-if st.session_state.role == "teacher":
-    
-    # تنسيق لإخفاء القائمة الجانبية وتحسين التبويبات
-    st.markdown("""
-        <style>
-            [data-testid="stSidebar"], [data-testid="stSidebarNav"] { display: none !important; }
-            .stTabs [data-baseweb="tab-list"] { gap: 5px; justify-content: center; }
-            .stTabs [data-baseweb="tab"] {
-                background-color: #f1f5f9; border-radius: 10px 10px 0 0;
-                padding: 10px 15px; font-weight: bold;
-            }
-            .stTabs [aria-selected="true"] { background-color: #3b82f6 !important; color: white !important; }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
-            <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif;">👨‍🏫 منصة الأستاذ زياد الذكية</h2>
-        </div>
-    """, unsafe_allow_html=True)
-
-    t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
-        "👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 التنبيهات", "🔍 البحث", "🚗 خروج"
-    ])
-
-    with t_students:
-        st.subheader("إدارة بيانات الطلاب")
-        df_st = fetch_safe("students")
-        st.dataframe(df_st, use_container_width=True, hide_index=True)
-
-    # ... بقية أكواد تبويبات المعلم تضعها هنا بالداخل ...
-
-    with t_logout:
-        if st.button("تأكيد تسجيل الخروج", key="t_logout_btn"):
-            st.session_state.logged_in = False; st.rerun()
 
 # ==========================================
 # 👨‍🎓 ثانياً: واجهة الطالب (النسخة المتكاملة التي أرسلتها)
