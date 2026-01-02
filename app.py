@@ -195,49 +195,13 @@ if st.session_state.role == "teacher":
         "👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 التنبيهات", "🚗 خروج"
     ])
 
-    # --- التبويب الأول: إدارة الطلاب ---
-    with t_manage:
-        st.info("إدارة السجلات وتأسيس الطلاب")
-        df_st = fetch_safe("students")
-        st.dataframe(df_st, use_container_width=True, hide_index=True)
-        # (هنا تضع كود Form التأسيس والحذف الذي أرسلته سابقاً)
-
-    # --- التبويب الثاني: الدرجات ---
-    with t_grades:
-        st.info("رصد وتحديث درجات الطلاب")
-        # (هنا تضع كود رصد الدرجات الذي أرسلته سابقاً)
-
-    # --- التبويب الثالث: السلوك ---
-    with t_behavior:
-        st.info("رصد السلوك والتواصل الفوري")
-        # (هنا تضع كود رصد السلوك والإيميلات والواتساب)
-
-    # --- التبويب الرابع: التنبيهات (حسب الجدول الجديد) ---
-    with t_exams:
-        st.markdown('<div style="background:#f59e0b; padding:10px; border-radius:10px; color:white; text-align:center;">📢 إضافة تنبيه/اختبار جديد</div>', unsafe_allow_html=True)
-        with st.form("exam_final_form"):
-            ex_class = st.selectbox("🎯 الصف:", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            ex_title = st.text_input("📝 العنوان:")
-            ex_date = st.date_input("📅 التاريخ:")
-            if st.form_submit_button("🚀 نشر الآن"):
-                sh.worksheet("exams").append_row([ex_class, ex_title, str(ex_date)])
-                st.success("تم النشر"); st.cache_data.clear(); st.rerun()
-
     # --- التبويب الخامس: الخروج ---
     with t_logout:
         if st.button("🚨 تسجيل الخروج النهائي", use_container_width=True):
             st.session_state.role = None
             st.rerun()
 
-    # 2. نظام التبويبات بدلاً من القائمة الجانبية
-    t_manage, t_grades, t_behavior, t_exams, t_logout = st.tabs([
-        "👥 الطلاب", 
-        "📝 الدرجات", 
-        "🎭 السلوك", 
-        "📢 التنبيهات",
-        "🚗 خروج"
-    ])
-
+    
     # --- التبويب الأول: إدارة الطلاب (الكود المطور الذي أرسلته) ---
     with t_manage:
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;margin-top:10px;"><h3>👥 إدارة الطلاب</h3></div>', unsafe_allow_html=True)
