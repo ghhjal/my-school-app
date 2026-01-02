@@ -425,7 +425,7 @@ with t_logout:
         st.rerun()
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
+# 👨‍🎓 ثانياً: واجهة الطالب (النسخة المتكاملة التي أرسلتها)
 # ==========================================
 elif st.session_state.role == "student":
     df_st = fetch_safe("students")
@@ -453,7 +453,7 @@ elif st.session_state.role == "student":
     elif s_points < 50: next_badge, points_to_next = "الفضي", 50 - s_points
     elif s_points < 100: next_badge, points_to_next = "الذهبي", 100 - s_points
 
-    # --- 📢 العنوان العلوي (الاسم والفصل) ---
+    # --- 📢 العنوان العلوي ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
             <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.5rem;">
@@ -465,7 +465,7 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 👤 نظام الأوسمة والنقاط (تمت إعادتها وتوضيحها) ---
+    # --- 👤 نظام الأوسمة والنقاط ---
     st.markdown(f"""
         <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; margin-top: 15px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
@@ -487,7 +487,7 @@ elif st.session_state.role == "student":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات (خطوط كبيرة واضحة) ---
+    # --- 📊 التبويبات ---
     t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "🏆 المتصدرون", "⚙️ الإعدادات"])
 
     with t_ex:
@@ -502,7 +502,6 @@ elif st.session_state.role == "student":
             g_data = df_grades[df_grades.iloc[:, 0].astype(str) == s_name]
             p1, p2, perf = (g_data.iloc[0][1], g_data.iloc[0][2], g_data.iloc[0][3]) if not g_data.empty else ("-", "-", "-")
         except: p1, p2, perf = "-", "-", "-"
-        
         def gc(t, v, c): return f'<div style="background: #ffffff; padding: 15px; border-radius: 12px; border: 2px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><b style="font-size: 1.1rem; color: #1e293b;">{t}</b><b style="font-size: 1.7rem; color: {c};">{v}</b></div>'
         st.markdown(gc("المشاركة التفاعلية", p1, "#3b82f6"), unsafe_allow_html=True)
         st.markdown(gc("إنجاز الواجبات", p2, "#10b981"), unsafe_allow_html=True)
@@ -538,10 +537,11 @@ elif st.session_state.role == "student":
             m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
             p = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
             if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
+                # ملاحظة: تأكد من أن متغير 'sh' معرف في بداية الكود للاتصال بجوجل شيت
                 ws = sh.worksheet("students")
                 cell = ws.find(st.session_state.sid)
                 ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
                 st.cache_data.clear(); st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
-    
-    if st.button("🚗 تسجيل الخروج", use_container_width=True):
+
+    if st.button("🚗 تسجيل الخروج", key="s_logout_btn", use_container_width=True):
         st.session_state.role = None; st.rerun()
