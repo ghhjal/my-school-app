@@ -110,22 +110,16 @@ if st.session_state.role is None:
     st.stop()
 
 # ==========================================
-# 👨‍🏫 واجهة المعلم الاحترافية (إصدار التطبيق - بدون قائمة جانبية)
+# 👨‍🏫 أولاً: واجهة المعلم (شرط الصلاحية)
 # ==========================================
 if st.session_state.role == "teacher":
     
-    # 1. كود CSS السحري: إخفاء القائمة الجانبية وتحسين مظهر التبويبات للجوال
+    # 1. كود CSS السحري: إخفاء القائمة الجانبية وتحسين مظهر التبويبات
     st.markdown("""
         <style>
-            /* إخفاء القائمة الجانبية نهائياً */
             [data-testid="stSidebar"], [data-testid="stSidebarNav"] { display: none !important; }
             .block-container { padding-top: 1rem; max-width: 100%; }
-            
-            /* تحسين شكل التبويبات العلوية لتشبه أزرار التطبيق */
-            .stTabs [data-baseweb="tab-list"] {
-                gap: 5px;
-                justify-content: center;
-            }
+            .stTabs [data-baseweb="tab-list"] { gap: 5px; justify-content: center; }
             .stTabs [data-baseweb="tab"] {
                 background-color: #f1f5f9;
                 border-radius: 10px 10px 0 0;
@@ -140,7 +134,7 @@ if st.session_state.role == "teacher":
         </style>
     """, unsafe_allow_html=True)
 
-    # 2. العنوان الرئيسي الموحد
+    # 2. العنوان الرئيسي
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
             <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.4rem;">👨‍🏫 منصة الأستاذ زياد الذكية</h2>
@@ -148,16 +142,10 @@ if st.session_state.role == "teacher":
         </div>
     """, unsafe_allow_html=True)
 
-   # يجب إضافة t_search هنا بالترتيب الصحيح قبل t_logout
-t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
-    "👥 إدارة الطلاب", 
-    "📝 رصد الدرجات", 
-    "🎭 رصد السلوك", 
-    "📢 التنبيهات", 
-    "🔍 البحث الذكي", 
-    "🚗 تسجيل الخروج"
-])
-
+    # 3. تعريف التبويبات (داخل شرط المعلم فقط لمنع ظهورها للطالب)
+    t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
+        "👥 إدارة الطلاب", "📝 رصد الدرجات", "🎭 رصد السلوك", "📢 التنبيهات", "🔍 البحث الذكي", "🚗 تسجيل الخروج"
+    ])
     # --- القسم الأول: إدارة الطلاب (كامل كما هو) ---
 with t_students:
         st.markdown('<div style="background:#1E3A8A;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>👥 إدارة الطلاب والتأسيس</h4></div>', unsafe_allow_html=True)
