@@ -429,6 +429,45 @@ with t_logout:
         st.rerun()
 
 # ==========================================
+# 👨‍🏫 أولاً: واجهة المعلم (إصدار التطبيق)
+# ==========================================
+if st.session_state.role == "teacher":
+    
+    # تنسيق لإخفاء القائمة الجانبية وتحسين التبويبات
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"], [data-testid="stSidebarNav"] { display: none !important; }
+            .stTabs [data-baseweb="tab-list"] { gap: 5px; justify-content: center; }
+            .stTabs [data-baseweb="tab"] {
+                background-color: #f1f5f9; border-radius: 10px 10px 0 0;
+                padding: 10px 15px; font-weight: bold;
+            }
+            .stTabs [aria-selected="true"] { background-color: #3b82f6 !important; color: white !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
+            <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif;">👨‍🏫 منصة الأستاذ زياد الذكية</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+    t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
+        "👥 الطلاب", "📝 الدرجات", "🎭 السلوك", "📢 التنبيهات", "🔍 البحث", "🚗 خروج"
+    ])
+
+    with t_students:
+        st.subheader("إدارة بيانات الطلاب")
+        df_st = fetch_safe("students")
+        st.dataframe(df_st, use_container_width=True, hide_index=True)
+
+    # ... بقية أكواد تبويبات المعلم تضعها هنا بالداخل ...
+
+    with t_logout:
+        if st.button("تأكيد تسجيل الخروج", key="t_logout_btn"):
+            st.session_state.logged_in = False; st.rerun()
+
+# ==========================================
 # 👨‍🎓 ثانياً: واجهة الطالب (النسخة المتكاملة التي أرسلتها)
 # ==========================================
 elif st.session_state.role == "student":
