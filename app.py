@@ -113,41 +113,45 @@ if st.session_state.role is None:
 # 🛠️ واجهة المعلم (كودك الأصلي)
 # ==========================================
 if st.session_state.role == "teacher":
-    # --- 🎨 تنسيق القائمة الجانبية ---
-    st.sidebar.markdown(f"""
-        <div style="text-align: center; padding: 10px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-            <h4 style="color: #1e3a8a; margin: 0;">👨‍🏫 أ. زياد</h4>
-            <small style="color: #64748b;">مدير المنصة التعليمية</small>
+    # --- 📢 1. ترحيب علوي أنيق بديل للقائمة الجانبية ---
+    st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; margin: -1rem -1rem 1rem -1rem; border-bottom: 5px solid #f59e0b; text-align: center;">
+            <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif; font-size: 1.5rem;">
+                👨‍🏫 مرحباً بك أ. زياد
+            </h2>
+            <p style="color: #e0e7ff; margin: 5px 0 0 0;">لوحة الإدارة المدرسية المتكاملة</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📋 القائمة الرئيسية بأيقونات ---
-    menu_options = {
-        "👥 إدارة الطلاب": "students_manage",
-        "📝 شاشة الدرجات": "grades_screen",
-        "🎭 رصد السلوك": "behavior_record",
-        "📢 شاشة الاختبارات": "exams_announcement"
-    }
+    # --- 🛠️ 2. أزرار الوصول السريع (بديلة للقائمة الجانبية) ---
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    menu = st.sidebar.selectbox(
-        "اختر المهمة المطلوبة:",
-        list(menu_options.keys())
-    )
+    # سنستخدم التبويبات (Tabs) بدلاً من القائمة الجانبية لتوفير المساحة
+    t_manage, t_grades, t_behavior, t_exams = st.tabs([
+        "👥 الطلاب", 
+        "📝 الدرجات", 
+        "🎭 السلوك", 
+        "📢 الاختبارات"
+    ])
 
-    st.sidebar.divider()
+    with t_manage:
+        st.markdown("### 👥 إدارة سجل الطلاب")
+        # كود إدارة الطلاب الخاص بك يوضع هنا
+        
+    with t_grades:
+        st.markdown("### 📝 رصد الدرجات الأكاديمية")
+        # كود رصد الدرجات يوضع هنا
+        
+    with t_behavior:
+        st.markdown("### 🎭 سجل الانضباط والسلوك")
+        # كود رصد السلوك يوضع هنا
+        
+    with t_exams:
+        st.markdown("### 📢 إضافة التنبيهات والاختبارات")
+        # كود الاختبارات يوضع هنا
 
-    # --- 📊 إحصائيات سريعة (إضافة لمسة إبداعية) ---
-    st.sidebar.markdown("### 📈 نظرة سريعة")
-    # هنا يمكنك جلب عدد الطلاب الكلي من الشيت
-    try:
-        total_st = len(fetch_safe("students"))
-        st.sidebar.info(f"عدد الطلاب المسجلين: {total_st}")
-    except:
-        pass
-
-    st.sidebar.divider()
-    
-    # زر تسجيل الخروج
+    # --- 🚗 3. زر تسجيل الخروج في الأسفل ---
+    st.sidebar.write("---") # نترك القائمة الجانبية فقط للخروج لتظل بعيدة عن النظر
     if st.sidebar.button("🚗 تسجيل الخروج", use_container_width=True):
         st.session_state.role = None
         st.rerun()
