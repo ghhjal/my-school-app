@@ -144,6 +144,11 @@ if st.session_state.role == "teacher":
 with t_students:
         st.markdown('<div style="background:#1E3A8A;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>👥 إدارة الطلاب والتأسيس</h4></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
+        st.dataframe(df_st, use_container_width=True, hide_index=True)
+        # (بقية كود إضافة وحذف الطلاب هنا كما هو لديك)
+with t_students:
+        st.markdown('<div style="background:#1E3A8A;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>👥 إدارة الطلاب والتأسيس</h4></div>', unsafe_allow_html=True)
+        df_st = fetch_safe("students")
         with st.container(border=True):
             st.subheader("📋 السجل الحالي للطلاب")
             st.dataframe(df_st, use_container_width=True, hide_index=True)
@@ -189,6 +194,9 @@ with t_students:
     # --- القسم الثاني: شاشة الدرجات (كامل كما هو) ---
 with t_grades:
         st.markdown('<div style="background:#4338ca;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📝 رصد الدرجات</h4></div>', unsafe_allow_html=True)
+        # (بقية كود رصد الدرجات هنا كما هو لديك)
+with t_grades:
+        st.markdown('<div style="background:#4338ca;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📝 رصد الدرجات</h4></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         target = st.selectbox("🎯 اختر الطالب لرصد درجاته:", [""] + df_st.iloc[:, 1].tolist(), key="gr_sel")
         if target:
@@ -210,6 +218,10 @@ with t_grades:
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
   # --- القسم الثالث: رصد السلوك (النسخة الكاملة المنسقة + أيقونات الإرسال السريع) ---
+with t_behavior:
+        import urllib.parse
+        st.markdown('<div style="background:#059669;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🎭 رصد السلوك والتواصل الفوري</h4></div>', unsafe_allow_html=True)
+        # (بقية كود رصد السلوك مع أزرار الواتساب هنا كما هو لديك)
 with t_behavior:
         import smtplib, time, urllib.parse
         from email.mime.text import MIMEText
@@ -345,6 +357,9 @@ with t_behavior:
 
     # --- القسم الرابع: شاشة التنبيهات (كاملة مع كروت الألوان والواتساب) ---
 with t_alerts:
+        st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات</h4></div>', unsafe_allow_html=True)
+        # (بقية كود التنبيهات هنا)
+with t_alerts:
         import urllib.parse
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات والإعلانات</h4></div>', unsafe_allow_html=True)
         
@@ -374,6 +389,9 @@ with t_alerts:
                     st.cache_data.clear(); st.rerun()
         else: st.info("📭 لا توجد تنبيهات حالياً")
 # --- التبويب الجديد: البحث الذكي الشامل ---
+with t_search:
+        st.markdown('<div style="background:#1e40af;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🔍 البحث والاستعلام</h4></div>', unsafe_allow_html=True)
+        # (كود البحث الذكي هنا)
 with t_search:
     st.markdown('<div style="background:#1e40af;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>🔍 نظام البحث والاستعلام السريع</h4></div>', unsafe_allow_html=True)
     
