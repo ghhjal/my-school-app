@@ -362,7 +362,7 @@ with t_behavior:
                     c2.markdown(f'<a href="{wa_re_url}" target="_blank" title="إعادة إرسال بالواتساب"><div style="background:#25D366;padding:15px;border-radius:50%;text-align:center;font-size:20px;">💬</div></a>', unsafe_allow_html=True)
 
     # --- القسم الرابع: شاشة التنبيهات (كاملة مع كروت الألوان والواتساب) ---
-    with t_alerts:
+with t_alerts:
         import urllib.parse
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات والإعلانات</h4></div>', unsafe_allow_html=True)
         
