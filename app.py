@@ -382,6 +382,7 @@ if st.session_state.role == "teacher":
             st.divider()
             st.write(f"🗓️ السجل السلوكي لـ: **{b_name}**")
             st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
+           
             # --- القسم الرابع: شاشة التنبيهات (الإصدار المصحح والمنظم) ---
     elif menu == "📢 شاشة الاختبارات":
         import urllib.parse
