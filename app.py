@@ -205,7 +205,7 @@ with t_students:
                     st.success("💥 تم الحذف بنجاح"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
     # --- القسم الثاني: شاشة الدرجات (كامل كما هو) ---
-    with t_grades:
+with t_grades:
         st.markdown('<div style="background:#4338ca;padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📝 رصد الدرجات</h4></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         target = st.selectbox("🎯 اختر الطالب لرصد درجاته:", [""] + df_st.iloc[:, 1].tolist(), key="gr_sel")
@@ -228,7 +228,7 @@ with t_students:
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
   # --- القسم الثالث: رصد السلوك (النسخة الكاملة المنسقة + أيقونات الإرسال السريع) ---
-    with t_behavior:
+with t_behavior:
         import smtplib, time, urllib.parse
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
