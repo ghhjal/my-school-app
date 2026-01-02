@@ -110,67 +110,53 @@ if st.session_state.role is None:
     st.stop()
 
 # ==========================================
-# 🛠️ واجهة المعلم (النسخة الكاملة والمعدلة للجوال)
+# 🛠️ واجهة المعلم - النسخة الشاملة (البحث + الإدارة + التنسيقات)
 # ==========================================
 if st.session_state.role == "teacher":
     
-    # 1. إخفاء القائمة الجانبية وتحسين شكل التبويبات لتناسب الجوال
+    # 1. إعدادات CSS (إخفاء السايدبار + تنسيق التبويبات)
     st.markdown("""
         <style>
-            /* إخفاء السايدبار تماماً */
             [data-testid="stSidebar"], [data-testid="stSidebarNav"] { display: none !important; }
-            .block-container { padding-top: 1rem; padding-bottom: 0rem; }
-            
-            /* تنسيق علامات التبويب (Tabs) */
-            .stTabs [data-baseweb="tab-list"] {
-                gap: 5px;
-                justify-content: space-around;
-            }
+            .stTabs [data-baseweb="tab-list"] { gap: 5px; justify-content: space-around; }
             .stTabs [data-baseweb="tab"] {
-                background-color: #f1f5f9;
-                border-radius: 8px 8px 0 0;
-                padding: 8px 12px;
-                font-weight: bold;
-                font-size: 0.85rem;
+                background-color: #f8fafc; border-radius: 8px;
+                padding: 10px; font-weight: bold; font-size: 0.85rem;
             }
-            .stTabs [aria-selected="true"] {
-                background-color: #1E3A8A !important;
-                color: white !important;
-            }
-
-            /* تنسيق أزرار رصد السلوك */
-            .stButton button {
-                border-radius: 8px;
-                height: 3em;
-                font-weight: bold;
-            }
-
-            @media (max-width: 768px) {
-                .stMarkdown h3 { font-size: 1.2rem !important; }
-            }
+            .stTabs [aria-selected="true"] { background-color: #1E3A8A !important; color: white !important; }
+            .stButton button { border-radius: 8px; height: 3em; font-weight: bold; width: 100%; }
         </style>
     """, unsafe_allow_html=True)
 
-    # 2. إنشاء علامات التبويب الرئيسية
-    t_students, t_grades, t_behavior, t_exams, t_logout = st.tabs([
-        "👥 إدارة الطلاب", 
-        "📝 شاشة الدرجات", 
-        "🎭 رصد السلوك", 
-        "📢 شاشة الاختبارات",
-        "🚗 خروج"
+    # 2. إنشاء التبويبات (أضفنا تبويب البحث الذكي)
+    t_search, t_students, t_grades, t_behavior, t_exams, t_logout = st.tabs([
+        "🔍 البحث الذكي", "👥 إدارة الطلاب", "📝 رصد الدرجات", "🎭 رصد السلوك", "📢 الاختبارات", "🚗 خروج"
     ])
 
-    # --- القسم الأول: إدارة الطلاب (كامل بكل تفاصيله) ---
+    # --- 🔍 تبويب: البحث الذكي (كامل البيانات) ---
+    with t_search:
+        st.markdown("### 🔍 استعلام سريع عن طالب")
+        df_st = fetch_safe("students")
+        if df_st is not None and not df_st.empty:
+            search_query = st.text_input("اكتب اسم الطالب للبحث السريع...")
+            if search_query:
+                res = df_st[df_st.iloc[:, 1].str.contains(search_query, na=False)]
+                if not res.empty:
+                    for _, row in res.iterrows():
+                        with st.container(border=True):
+                            st.markdown(f"**👤 الطالب:** {row[1]} | **🏫 الصف:** {row[2]}")
+                            st.markdown(f"**🔢 الرقم:** {row[0]} | **📚 المادة:** {row[5]} | **⭐ النقاط:** {row[8]}")
+                else:
+                    st.warning("لم يتم العثور على نتائج.")
+
+    # --- 👥 تبويب: إدارة الطلاب (بكامل الحقول) ---
     with t_students:
         st.markdown('<div style="background:linear-gradient(90deg,#1E3A8A,#3B82F6);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
-        
         df_st = fetch_safe("students")
         st.write("")
-        with st.container(border=True):
-            st.subheader("📋 السجل الحالي للطلاب")
-            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-        with st.form("add_student_pro_v3", clear_on_submit=True):
+        with st.form("add_student_final", clear_on_submit=True):
             st.markdown("### ➕ تأسيس طالب جديد")
             c1, c2, c3 = st.columns(3)
             nid = c1.text_input("🔢 الرقم الأكاديمي")
@@ -188,220 +174,116 @@ if st.session_state.role == "teacher":
             
             if st.form_submit_button("✅ اعتماد التأسيس"):
                 if nid and nname:
-                    row_to_add = [nid, nname, nclass, nyear, nstage, nsub, nmail, nphone, "0"]
-                    sh.worksheet("students").append_row(row_to_add)
+                    sh.worksheet("students").append_row([nid, nname, nclass, nyear, nstage, nsub, nmail, nphone, "0"])
                     st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
 
         st.divider()
-        with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
-            st.error("⚠️ تحذير: سيتم حذف الطالب نهائياً من كافة السجلات.")
-            del_name = st.selectbox("🎯 اختر الطالب المراد حذفه نهائياً:", [""] + df_st.iloc[:, 1].tolist(), key="delete_list")
-            
-            if st.button("🚨 تنفيذ الحذف النهائي الآن"):
-                if del_name:
-                    try:
-                        with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
-                            ws_st = sh.worksheet("students")
-                            c_st = ws_st.find(del_name)
-                            if c_st: ws_st.delete_rows(c_st.row)
-                            
+        with st.expander("🗑️ منطقة الحذف النهائي (حذف شامل)"):
+            if df_st is not None and not df_st.empty:
+                del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist(), key="del_list")
+                if st.button("🚨 تنفيذ الحذف من كافة السجلات"):
+                    if del_name:
+                        for sheet_n in ["students", "grades", "behavior"]:
                             try:
-                                ws_gr = sh.worksheet("grades")
-                                c_gr = ws_gr.find(del_name)
-                                if c_gr: ws_gr.delete_rows(c_gr.row)
+                                ws = sh.worksheet(sheet_n)
+                                cell = ws.find(del_name)
+                                if cell: ws.delete_rows(cell.row)
                             except: pass
-                            
-                            try:
-                                ws_bh = sh.worksheet("behavior")
-                                matches = ws_bh.findall(del_name)
-                                for m in reversed(matches):
-                                    if m.col == 1: ws_bh.delete_rows(m.row)
-                            except: pass
-                            
-                            st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته من جميع الجداول")
-                            time.sleep(1); st.rerun()
-                    except Exception as e:
-                        st.error(f"حدث خطأ: {e}")
+                        st.success(f"💥 تم حذف {del_name} نهائياً"); time.sleep(1); st.rerun()
 
-    # --- القسم الثاني: شاشة الدرجات ---
+    # --- 📝 تبويب: رصد الدرجات ---
     with t_grades:
         st.markdown('<div style="background:linear-gradient(90deg,#6366f1,#4338ca);padding:20px;border-radius:15px;color:white;text-align:center;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
-        
-        df_st = fetch_safe("students")
-        target = st.selectbox("🎯 اختر الطالب", [""] + df_st.iloc[:, 1].tolist(), key="grade_sel")
-        
-        if target:
-            df_g = fetch_safe("grades")
-            curr = df_g[df_g.iloc[:, 0] == target]
-            v1 = int(curr.iloc[0, 1]) if not curr.empty else 0
-            v2 = int(curr.iloc[0, 2]) if not curr.empty else 0
-            v3 = int(curr.iloc[0, 3]) if not curr.empty else 0
-            
-            with st.form("grade_pro_form"):
-                st.markdown(f"**تحديث درجات الطالب: {target}**")
-                c1, c2, c3 = st.columns(3)
-                p1 = c1.number_input("📉 الفترة الأولى", 0, 100, value=v1)
-                p2 = c2.number_input("📉 الفترة الثانية", 0, 100, value=v2)
-                part = c3.number_input("⭐ المشاركة", 0, 100, value=v3)
-                
-                if st.form_submit_button("💾 حفظ الدرجات"):
-                    ws = sh.worksheet("grades")
-                    try:
-                        cell = ws.find(target)
-                        ws.update(f'B{cell.row}:D{cell.row}', [[p1, p2, part]])
-                    except:
-                        ws.append_row([target, p1, p2, part])
-                    st.success("تم الحفظ"); st.rerun()
-
-        st.divider()
+        if df_st is not None and not df_st.empty:
+            target_g = st.selectbox("🎯 اختر الطالب للرصد", [""] + df_st.iloc[:, 1].tolist(), key="gr_sel")
+            if target_g:
+                df_g = fetch_safe("grades")
+                curr = df_g[df_g.iloc[:, 0] == target_g] if not df_g.empty else pd.DataFrame()
+                v1 = int(curr.iloc[0, 1]) if not curr.empty else 0
+                v2 = int(curr.iloc[0, 2]) if not curr.empty else 0
+                v3 = int(curr.iloc[0, 3]) if not curr.empty else 0
+                with st.form("grade_form_pro"):
+                    c1, c2, c3 = st.columns(3)
+                    p1 = c1.number_input("📉 الفترة الأولى", 0, 100, value=v1)
+                    p2 = c2.number_input("📉 الفترة الثانية", 0, 100, value=v2)
+                    part = c3.number_input("⭐ المشاركة", 0, 100, value=v3)
+                    if st.form_submit_button("💾 حفظ الدرجات"):
+                        ws = sh.worksheet("grades")
+                        try:
+                            cell = ws.find(target_g)
+                            ws.update(f'B{cell.row}:D{cell.row}', [[p1, p2, part]])
+                        except: ws.append_row([target_g, p1, p2, part])
+                        st.success("✅ تم تحديث الدرجات"); st.rerun()
         st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    # --- القسم الثالث: رصد السلوك (بكامل التنسيقات والرسائل) ---
+    # --- 🎭 تبويب: رصد السلوك (تنسيق الرسالة المطول) ---
     with t_behavior:
-        import smtplib, time, urllib.parse
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-
-        def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
-            try:
-                email_set = st.secrets["email_settings"]
-                msg = MIMEMultipart()
-                msg['From'] = email_set["sender_email"]
-                msg['To'] = to_email
-                msg['Subject'] = f"🔔 إشعار سلوكي فوري: {student_name}"
-                body = (
-                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {student_name}\n"
-                    f"----------------------------------------\n"
-                    f"🏷️ نوع السلوك: {b_type}\n"
-                    f"📝 الملاحظة: {b_note}\n"
-                    f"📅 التاريخ: {b_date}\n"
-                    f"----------------------------------------\n"
-                    f"🏛️ منصة الأستاذ زياد الذكية"
-                )
-                msg.attach(MIMEText(body, 'plain', 'utf-8'))
-                server = smtplib.SMTP('smtp.gmail.com', 587)
-                server.starttls()
-                server.login(email_set["sender_email"], email_set["sender_password"])
-                server.send_message(msg)
-                server.quit()
-                return True
-            except: return False
-
+        import urllib.parse
         st.subheader("🎭 رصد السلوك والتواصل الفوري")
-        df_st = fetch_safe("students")
-        all_names = df_st.iloc[:, 1].tolist()
+        if df_st is not None and not df_st.empty:
+            b_name = st.selectbox("🎯 اختر الطالب:", [""] + df_st.iloc[:, 1].tolist(), key="bh_sel")
+            if b_name:
+                student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
+                s_phone = str(student_info[7]).split('.')[0]
+                with st.container(border=True):
+                    c1, c2 = st.columns(2)
+                    b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
+                    b_date = c2.date_input("📅 التاريخ")
+                    b_note = st.text_area("📝 نص الملاحظة السلوكية")
+                    
+                    # صياغة الرسالة كما في كودك الأصلي
+                    full_msg = (
+                        f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
+                        f"----------------------------------------\n"
+                        f"🏷️ نوع السلوك: {b_type}\n"
+                        f"📝 الملاحظة: {b_note}\n"
+                        f"📅 التاريخ: {b_date}\n"
+                        f"----------------------------------------\n"
+                        f"🏛️ منصة الأستاذ زياد الذكية"
+                    )
 
-        search_term = st.text_input("🔍 ابحث عن اسم الطالب (اكتب هنا للفلترة)", key="beh_search")
-        filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
-        b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + filtered_names, key="beh_target")
-
-        if b_name:
-            student_info = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-            s_email = student_info[6] 
-            s_phone = str(student_info[7]).split('.')[0]
-            
-            with st.container(border=True):
-                c1, c2 = st.columns(2)
-                b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
-                b_date = c2.date_input("📅 التاريخ")
-                b_note = st.text_area("📝 نص الملاحظة السلوكية")
-                
-                # --- تنسيق الرسالة الأصلي ---
-                full_msg = (
-                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
-                    f"----------------------------------------\n"
-                    f"🏷️ نوع السلوك: {b_type}\n"
-                    f"📝 الملاحظة: {b_note}\n"
-                    f"📅 التاريخ: {b_date}\n"
-                    f"----------------------------------------\n"
-                    f"🏛️ منصة الأستاذ زياد الذكية"
-                )
-
-                col1, col2 = st.columns(2)
-                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
-                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True)
-                btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
-                btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)
-
-                if btn_save:
-                    if b_note:
+                    col1, col2 = st.columns(2)
+                    if col1.button("💾 رصد وحفظ فقط"):
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-                        try:
+                        try: # تحديث النقاط في شيت الطلاب
                             ws_st = sh.worksheet("students")
                             cell = ws_st.find(b_name)
                             p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
-                            current_p = int(ws_st.cell(cell.row, 9).value or 0)
-                            ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
+                            curr_p = int(ws_st.cell(cell.row, 9).value or 0)
+                            ws_st.update_cell(cell.row, 9, str(curr_p + p_map.get(b_type, 0)))
                         except: pass
-                        st.success("✅ تم الحفظ بنجاح وتحديث النقاط")
-                        time.sleep(1); st.rerun()
+                        st.success("✅ تم الحفظ وتحديث النقاط"); st.rerun()
+                    
+                    if col2.button("💬 إرسال عبر واتساب"):
+                        wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
+                        st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:8px;text-align:center;font-weight:bold;">💬 فتح واتساب</div></a>', unsafe_allow_html=True)
 
-                if btn_auto and s_email:
-                    with st.spinner("جاري الإرسال..."):
-                        if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date): st.success(f"✅ تم الإرسال")
-                        else: st.error("❌ فشل الإرسال")
-
-                if btn_mail and s_email:
-                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
-
-                if btn_wa and s_phone:
-                    wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
-                    st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366;color:white;padding:10px;border-radius:8px;text-align:center;font-weight:bold;">💬 اضغط لفتح واتساب والإرسال</div></a>', unsafe_allow_html=True)
-
-        df_b = fetch_safe("behavior")
-        if not df_b.empty and b_name:
-            st.write(f"🗓️ سجل ملاحظات الطالب: **{b_name}**")
-            st.dataframe(df_b[df_b.iloc[:, 0] == b_name].iloc[::-1, :4], use_container_width=True, hide_index=True)
-
-    # --- القسم الرابع: شاشة الاختبارات (مع البطاقات الملونة وتنسيق الواتساب) ---
+    # --- 📢 تبويب: الاختبارات ---
     with t_exams:
-        st.markdown('<div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;"><h1>📢 مركز التنبيهات والإعلانات</h1></div>', unsafe_allow_html=True)
+        st.markdown("### 📢 مركز التنبيهات")
+        with st.form("exam_form_f"):
+            c1, c2, c3 = st.columns([1,2,1])
+            e_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            e_title = c2.text_input("📝 عنوان التنبيه")
+            e_date = c3.date_input("📅 الموعد")
+            if st.form_submit_button("🚀 نشر"):
+                sh.worksheet("exams").append_row([e_class, e_title, str(e_date)])
+                st.balloons(); st.rerun()
         
-        with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("ann_form", clear_on_submit=True):
-                c1, c2, c3 = st.columns([1, 2, 1])
-                a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                a_title = c2.text_input("📝 عنوان التنبيه")
-                a_date = c3.date_input("📅 الموعد")
-                if st.form_submit_button("🚀 نشر التنبيه الآن"):
-                    sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
-                    st.balloons(); time.sleep(0.5); st.rerun()
+        df_ex = fetch_safe("exams")
+        if df_ex is not None:
+            for i, row in df_ex.iloc[::-1].iterrows():
+                st.info(f"📍 {row[0]} | {row[1]} | 📅 {row[2]}")
+                wa_msg_ex = f"📢 *تنبيه من منصة الأستاذ زياد*\nالصف: {row[0]}\nالموضوع: {row[1]}\nالموعد: {row[2]}"
+                wa_url_ex = f"https://api.whatsapp.com/send?text={urllib.parse.quote(wa_msg_ex)}"
+                st.markdown(f'<a href="{wa_url_ex}" target="_blank" style="color:#25D366;text-decoration:none;font-weight:bold;">🔗 مشاركة عبر واتساب</a>', unsafe_allow_html=True)
+                if st.button("🗑️ حذف التنبيه", key=f"del_ex_{i}"):
+                    sh.worksheet("exams").delete_rows(int(i)+2); st.rerun()
 
-        df_ann = fetch_safe("exams")
-        if df_ann is not None and not df_ann.empty:
-            color_map = {"الكل": "#E0F2FE", "الأول": "#F0FDF4", "الثاني": "#FFF7ED", "الثالث": "#FAF5FF", "الرابع": "#FEF2F2", "الخامس": "#F5F3FF", "السادس": "#ECFEFF"}
-            for index, row in df_ann.iloc[::-1].iterrows():
-                bg_color = color_map.get(row[0], "#FFFFFF")
-                # نص رسالة الواتساب المنسق
-                wa_msg_exam = (
-                    f"📢 *تنبيه من منصة الأستاذ زياد الذكية*\n"
-                    f"----------------------------------\n"
-                    f"🏫 *الصف:* {row[0]}\n"
-                    f"📝 *الموضوع:* {row[1]}\n"
-                    f"📅 *الموعد:* {row[2]}\n"
-                    f"----------------------------------\n"
-                    f"يرجى العلم والاستعداد. مع تمنياتي لكم بالتوفيق 🌟"
-                )
-                
-                st.markdown(f'<div style="background-color: {bg_color}; padding: 15px; border-radius: 10px; border-right: 5px solid #4F46E5; margin-bottom: 5px;"><b>[{row[0]}]</b> {row[1]}<br><small>📅 الموعد: {row[2]}</small></div>', unsafe_allow_html=True)
-                
-                c1, c2, _ = st.columns([1.5, 1, 3])
-                with c1:
-                    wa_url_ex = f"https://api.whatsapp.com/send?text={urllib.parse.quote(wa_msg_exam)}"
-                    st.markdown(f'<a href="{wa_url_ex}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:5px; border-radius:5px; text-align:center; font-size:14px; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
-                with c2:
-                    if st.button("🗑️ حذف", key=f"del_ex_{index}"):
-                        sh.worksheet("exams").delete_rows(int(index) + 2); st.rerun()
-        else:
-            st.info("📭 لا توجد تنبيهات")
-
-    # --- تسجيل الخروج ---
+    # --- 🚗 تبويب: تسجيل الخروج ---
     with t_logout:
-        st.write("### تسجيل الخروج")
-        if st.button("🚗 تأكيد تسجيل الخروج", use_container_width=True):
-            st.session_state.update({"role": None, "logged_in": False})
-            st.rerun()
+        if st.button("🚗 تسجيل الخروج الآن"):
+            st.session_state.clear(); st.rerun()
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
 # ==========================================
