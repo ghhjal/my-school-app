@@ -149,13 +149,13 @@ if st.session_state.role == "teacher":
     """, unsafe_allow_html=True)
 
    # يجب إضافة t_search هنا بالترتيب الصحيح قبل t_logout
-t_students, t_grades, t_behavior, t_exams, t_search, t_logout = st.tabs([
-    "👥 الطلاب", 
-    "📝 الدرجات", 
-    "🎭 السلوك", 
+t_students, t_grades, t_behavior, t_alerts, t_search, t_logout = st.tabs([
+    "👥 إدارة الطلاب", 
+    "📝 رصد الدرجات", 
+    "🎭 رصد السلوك", 
     "📢 التنبيهات", 
-    "🔍 البحث", 
-    "🚗 خروج"
+    "🔍 البحث الذكي", 
+    "🚗 تسجيل الخروج"
 ])
 
     # --- القسم الأول: إدارة الطلاب (كامل كما هو) ---
@@ -362,7 +362,7 @@ t_students, t_grades, t_behavior, t_exams, t_search, t_logout = st.tabs([
                     c2.markdown(f'<a href="{wa_re_url}" target="_blank" title="إعادة إرسال بالواتساب"><div style="background:#25D366;padding:15px;border-radius:50%;text-align:center;font-size:20px;">💬</div></a>', unsafe_allow_html=True)
 
     # --- القسم الرابع: شاشة التنبيهات (كاملة مع كروت الألوان والواتساب) ---
-    with t_exams:
+    with t_alerts:
         import urllib.parse
         st.markdown('<div style="background:linear-gradient(90deg, #4F46E5, #3B82F6);padding:10px;border-radius:10px;color:white;text-align:center;margin-top:10px;"><h4>📢 مركز التنبيهات والإعلانات</h4></div>', unsafe_allow_html=True)
         
@@ -416,12 +416,13 @@ with t_search:
             st.dataframe(view_df, use_container_width=True, hide_index=True)
         else:
             st.warning("❌ لا توجد نتائج مطابقة.")
-    # --- القسم الخامس: تسجيل الخروج ---
-    with t_logout:
-        st.warning("هل أنت متأكد من رغبتك في تسجيل الخروج؟")
-        if st.button("🚨 نعم، تسجيل الخروج النهائي", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
+    
+# --- تبويب الخروج ---
+with t_logout:
+    st.warning("هل أنت متأكد أنك تريد تسجيل الخروج؟")
+    if st.button("نعم، تسجيل الخروج"):
+        st.session_state.logged_in = False
+        st.rerun()
 
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة المتكاملة: أوسمة + خطوط واضحة)
