@@ -695,19 +695,25 @@ with tab6:
             st.warning("تم تصفير جميع النقاط")
 
 # ==============================================================================
-# 🎓 واجهة الطالب (تم الإصلاح لضمان عدم التداخل مع قسم المعلم)
+# 👨‍🎓 واجهة الطالب (النسخة المصلحة والمتكاملة)
 # ==============================================================================
 
-# تم تحويلها إلى if مستقلة تماماً لضمان عملها بشكل منفصل عن تعقيدات قسم المعلم
 if st.session_state.role == "student":
-    # 1. سحب البيانات الأساسية
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 20px; color: white; text-align: center; margin-bottom: 25px;">
+            <h1 style="margin:0;">🎓 لوحة تحكم الطالب</h1>
+            <p style="opacity: 0.9;">مرحباً بك في منصتك التعليمية الذكية</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 1. سحب البيانات الخاصة بالطالب
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades")
     df_beh = fetch_safe("behavior")
     df_ex = fetch_safe("exams")
     
     try:
-        # البحث عن بيانات الطالب باستخدام SID المخزن عند الدخول
+        # البحث عن بيانات الطالب باستخدام SID
         student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         
         if not student_data.empty:
@@ -715,61 +721,80 @@ if st.session_state.role == "student":
             s_name = s_row[1]
             s_class = s_row[2]
             
-            # معالجة النقاط (العمود التاسع) بشكل آمن من الأخطاء النصية
+            # معالجة النقاط (العمود التاسع I)
             val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            if val and val != "None" and val.replace('.','',1).isdigit():
-                s_points = int(float(val))
-            else:
-                s_points = 0
-                
-            # --- تصميم الواجهة العلوية للطالب ---
-            st.markdown(f"### 🛡️ لوحة تحكم الطالب: {s_name}")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info(f"📍 **الفصل الدراسي:** {s_class}")
-            with col2:
-                st.success(f"⭐ **رصيد النقاط:** {s_points}")
+            s_points = int(float(val)) if val.replace('.','',1).isdigit() else 0
+            
+            # عرض البطاقة التعريفية
+            with st.container(border=True):
+                c1, c2, c3 = st.columns([2, 1, 1])
+                c1.markdown(f"### 👤 {s_name}")
+                c2.metric("🏫 الصف", s_class)
+                c3.metric("⭐ رصيد النقاط", s_points)
 
-            # --- إصلاح مشكلة التبويبات (NameError) ---
-            # نقوم بتعريف التبويبات أولاً قبل البدء باستخدامها داخل 'with'
             st.divider()
-            tab_grades, tab_exams, tab_behavior = st.tabs(["📊 درجاتي", "🗓️ جدول الاختبارات", "📜 السلوك"])
 
-            with tab_grades:
-                st.subheader("📝 نتائج الاختبارات")
-                # تصفية درجات هذا الطالب فقط بناءً على رقمه (SID)
+            # إنشاء التبويبات الخاصة بالطالب
+            tab_g, tab_e, tab_b = st.tabs(["📊 درجاتي", "🗓️ المواعيد والتنبيهات", "📜 السجل السلوكي"])
+
+            with tab_g:
+                st.subheader("📝 سجل الدرجات والتقييم")
+                # تصفية الدرجات (العمود الأول في شيت الدرجات هو SID)
                 my_grades = df_grades[df_grades.iloc[:, 0].astype(str) == str(st.session_state.sid)]
                 if not my_grades.empty:
-                    st.dataframe(my_grades, use_container_width=True)
+                    # إعادة تسمية الأعمدة للعرض فقط
+                    display_grades = my_grades.copy()
+                    display_grades.columns = ["الرقم", "المشاركة (p1)", "الواجبات (p2)", "الاختبارات (perf)", "التاريخ", "ملاحظة المعلم"]
+                    st.dataframe(display_grades.drop(columns=["الرقم"]), use_container_width=True, hide_index=True)
                 else:
-                    st.warning("لم يتم رصد درجات لك حتى الآن.")
+                    st.info("لا توجد درجات مرصودة حالياً.")
 
-            with tab_exams:
-                st.subheader("📅 المواعيد القادمة")
-                # عرض الاختبارات الخاصة بفصل الطالب فقط
-                my_exams = df_ex[df_ex.iloc[:, 1] == s_class]
+            with tab_e:
+                st.subheader("📢 جدول الاختبارات والتنبيهات")
+                # عرض التنبيهات الخاصة بصف الطالب أو العامة (الكل)
+                my_exams = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
                 if not my_exams.empty:
-                    st.table(my_exams)
+                    for _, row in my_exams.iterrows():
+                        with st.chat_message("user"):
+                            st.write(f"📌 **{row[1]}**")
+                            st.caption(f"📅 التاريخ: {row[2]}")
+                            if len(row) > 3 and str(row[3]) != 'nan' and str(row[3]).strip():
+                                st.link_button("🔗 فتح الرابط المرفق", row[3])
                 else:
-                    st.info("لا توجد اختبارات مجدولة لفصلك حالياً.")
+                    st.info("لا توجد مواعيد قادمة لفصلك حالياً.")
 
-            with tab_behavior:
-                st.subheader("📈 سجل النقاط والسلوك")
-                my_behavior = df_beh[df_beh.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+            with tab_b:
+                st.subheader("📈 تقرير السلوك والتميز")
+                my_behavior = df_beh[df_beh.iloc[:, 0].astype(str) == s_name] # البحث بالاسم كما في كود المعلم
                 if not my_behavior.empty:
-                    st.dataframe(my_behavior, use_container_width=True)
+                    for _, row in my_behavior.iterrows():
+                        color = "green" if "+" in str(row[2]) else "red"
+                        st.markdown(f"""
+                            <div style="padding:15px; border-right:5px solid {color}; background:#f8fafc; border-radius:10px; margin-bottom:10px;">
+                                <strong>📅 {row[1]} | {row[2]}</strong><br>
+                                <p style="margin:5px 0 0 0;">{row[3]}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
                 else:
-                    st.info("سجلك السلوكي نظيف، استمر في التميز!")
+                    st.success("سجلك السلوكي نظيف ومتميز! استمر على هذا المنوال.")
 
         else:
-            st.error("⚠️ لم نتمكن من العثور على بياناتك. يرجى مراجعة الإدارة.")
-            st.stop()
-            
-    except Exception as e:
-        st.error(f"❌ حدث خطأ تقني في عرض البيانات: {e}")
-        st.stop()
+            st.error("⚠️ عذراً، لم نتمكن من العثور على بياناتك. يرجى مراجعة المعلم.")
 
-# زر الخروج (يظهر في أسفل الصفحة دائماً للطالب)
-if st.button("🚪 تسجيل الخروج"):
-    st.session_state.clear()
+    except Exception as e:
+        st.error(f"❌ حدث خطأ أثناء تحميل البيانات: {e}")
+
+    # زر تسجيل الخروج للطالب
+    st.sidebar.markdown("---")
+    if st.button("🚗 تسجيل الخروج من حساب الطالب", use_container_width=True):
+        st.session_state.role = None
+        st.session_state.sid = None
+        st.rerun()
+
+# --- تذييل الصفحة ---
+st.markdown("""
+    <div style="text-align: center; color: #666; font-size: 12px; margin-top: 50px; padding: 20px; border-top: 1px solid #eee;">
+        منصة زياد الذكية © 2025 | جميع الحقوق محفوظة
+    </div>
+""", unsafe_allow_html=True)
     st.rerun()
