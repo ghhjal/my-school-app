@@ -90,8 +90,6 @@ st.markdown("""
         margin-top: 30px;
         text-align: center;
         padding: 20px;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 15px;
     }
     .contact-icons {
         display: flex;
@@ -107,7 +105,7 @@ st.markdown("""
     }
     .contact-icons a:hover {
         color: #3b82f6;
-        transform: scale(1.2);
+        transform: scale(1.15);
     }
     .footer-text {
         text-align: center;
@@ -165,15 +163,15 @@ if st.session_state.role is None:
                         else: st.error("كلمة المرور غير صحيحة")
                     else: st.error("المستخدم غير موجود")
 
-    # قنوات التواصل المحدثة
+    # قنوات التواصل الأربعة (مكتملة الآن)
     st.markdown("""
         <div class="contact-section">
             <p style="font-weight: 700; color: #1e40af; margin-bottom: 10px;">قنوات التواصل المباشرة</p>
             <div class="contact-icons">
-                <a href="mailto:YourEmail@example.com" title="بريد إلكتروني"><i class="bi bi-envelope-at-fill"></i></a>
+                <a href="mailto:info@example.com" title="البريد الإلكتروني"><i class="bi bi-envelope-at-fill"></i></a>
                 <a href="https://wa.me/966XXXXXXXXX" target="_blank" title="واتساب"><i class="bi bi-whatsapp"></i></a>
-                <a href="https://t.me/YourUsername" target="_blank" title="تليجرام"><i class="bi bi-telegram"></i></a>
-                <a href="https://www.snapchat.com/add/YourUsername" target="_blank" title="سناب شات"><i class="bi bi-snapchat"></i></a>
+                <a href="https://t.me/YourUser" target="_blank" title="تليجرام"><i class="bi bi-telegram"></i></a>
+                <a href="https://www.snapchat.com/add/YourUser" target="_blank" title="سناب شات"><i class="bi bi-snapchat"></i></a>
             </div>
         </div>
         <div class="footer-text">© منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد</div>
