@@ -202,16 +202,26 @@ if st.session_state.role == "teacher":
         st.session_state.role = None
         st.rerun()
 
-   # --- القسم الأول: إدارة الطلاب (مع ميزة تصحيح الجوال تلقائياً) ---
+  # --- القسم الأول: إدارة الطلاب (النسخة الكاملة والمصححة) ---
 if menu == "👥 إدارة الطلاب":
     st.markdown("""
         <div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:25px; border-radius:20px; color:white; text-align:center; margin-bottom:25px;">
             <h1 style="margin:0; font-size:24px;">👥 إدارة سجلات الطلاب</h1>
+            <p style="margin:5px 0 0 0; opacity:0.9;">إضافة، عرض، وتطهير سجلات الطلاب نهائياً</p>
         </div>
     """, unsafe_allow_html=True)
     
+    # جلب البيانات
     df_st = fetch_safe("students")
     
+    # 1. عرض السجل الحالي
+    with st.expander("📋 السجل الحالي للطلاب", expanded=True):
+        if not df_st.empty:
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا يوجد طلاب مسجلين حالياً.")
+
+    # 2. نموذج إضافة طالب جديد (مع معالجة الجوال)
     with st.container(border=True):
         st.markdown("#### ➕ تأسيس ملف طالب جديد")
         with st.form("add_student_pro_v3", clear_on_submit=True):
@@ -227,30 +237,68 @@ if menu == "👥 إدارة الطلاب":
             
             c7, c8 = st.columns(2)
             nmail = c7.text_input("📧 البريد الإلكتروني")
-            nphone = c8.text_input("📱 جوال ولي الأمر (مثال: 050xxxxxxx)")
-            st.caption("💡 لا تقلق، النظام سيضيف مفتاح الدولة 966 تلقائياً.")
+            nphone = c8.text_input("📱 جوال ولي الأمر")
+            st.caption("💡 سيتم إضافة 966 تلقائياً للرقم.")
             
-            submit = st.form_submit_button("✅ اعتماد وإضافة الطالب")
+            submit = st.form_submit_button("✅ اعتماد التأسيس")
             
             if submit:
                 if nid and nname and nphone:
-                    # --- 🛠️ منطق معالجة رقم الجوال ذكياً (هنا يوضع الكود) ---
+                    # منطق معالجة رقم الجوال
                     clean_phone = nphone.strip()
-                    # 1. إزالة الصفر من البداية إذا وجد (مثلاً 055 يصبح 55)
                     if clean_phone.startswith('0'):
                         clean_phone = clean_phone[1:]
-                    # 2. إضافة 966 إذا لم تكن موجودة
                     if not clean_phone.startswith('966'):
                         clean_phone = '966' + clean_phone
                     
-                    # تجهيز الصف للإرسال بالرقم الجديد
+                    # الترتيب الصحيح للأعمدة في شيت Students
                     row_to_add = [nid, nname, nclass, nyear, nstage, nsub, nmail, clean_phone, "0"]
                     
                     try:
                         sh.worksheet("students").append_row(row_to_add)
-                        st.success(f"✅ تم إضافة {nname} بنجاح بالرقم الدولي {clean_phone}")
+                        st.success(f"✅ تم إضافة {nname} بنجاح")
                         time.sleep(1); st.rerun()
                     except Exception as e:
-                        st.error(f"خطأ: {e}")
+                        st.error(f"خطأ في الإضافة: {e}")
                 else:
-                    st.warning("يرجى التأكد من كتابة الرقم الأكاديمي، الاسم، ورقم الجوال.")
+                    st.warning("يرجى إكمال البيانات الأساسية (الرقم، الاسم، الجوال)")
+
+    # 3. ميزة الحذف النهائي الشامل (كودك الأصلي الرائع)
+    st.divider()
+    with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
+        st.error("⚠️ تحذير: سيتم حذف الطالب نهائياً من كافة السجلات (الطلاب، الدرجات، السلوك).")
+        
+        # قائمة الأسماء للحذف
+        student_list = [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""]
+        del_name = st.selectbox("🎯 اختر الطالب المراد حذفه نهائياً:", student_list, key="delete_list")
+        
+        if st.button("🚨 تنفيذ الحذف النهائي الآن"):
+            if del_name and del_name != "":
+                try:
+                    with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
+                        # أ. الحذف من شيت الطلاب
+                        ws_st = sh.worksheet("students")
+                        c_st = ws_st.find(del_name)
+                        if c_st: ws_st.delete_rows(c_st.row)
+                        
+                        # ب. الحذف من شيت الدرجات
+                        try:
+                            ws_gr = sh.worksheet("grades")
+                            c_gr = ws_gr.find(del_name)
+                            if c_gr: ws_gr.delete_rows(c_gr.row)
+                        except: pass
+                        
+                        # ج. الحذف من شيت السلوك
+                        try:
+                            ws_bh = sh.worksheet("behavior")
+                            matches = ws_bh.findall(del_name)
+                            for m in reversed(matches):
+                                if m.col == 1: ws_bh.delete_rows(m.row)
+                        except: pass
+                        
+                        st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته بنجاح")
+                        time.sleep(1); st.rerun()
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء الحذف: {e}")
+            else:
+                st.warning("يرجى اختيار اسم الطالب أولاً")
