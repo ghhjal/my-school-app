@@ -696,40 +696,44 @@ with tab6:
 
 # --- نهاية واجهة المعلم ---
 # تأكد أن السطر التالي يبدأ من بداية السطر تماماً بدون أي مسافات قبله
-# تأكد أن هذا السطر يقع مباشرة بعد نهاية كود "قسم المعلم"
-# إذا كان قسم المعلم ينتهي بـ if، استخدم elif هنا
-# إذا كنت غير متأكد، يمكنك تغيير elif إلى if مستقلة كحل سريع
+# ==========================================
+# واجهة الطالب (تم تعديلها لتجنب أخطاء الربط)
+# ==========================================
 
+# قمنا بتغيير elif إلى if مستقلة لضمان عدم حدوث خطأ بسبب الفواصل أو التعليقات
 if st.session_state.role == "student":
-    # 1. سحب البيانات الأساسية
+    # 1. سحب البيانات الأساسية من الجداول
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades")
     df_beh = fetch_safe("behavior")
     df_ex = fetch_safe("exams")
     
     try:
-        # البحث عن بيانات الطالب باستخدام المعرف
+        # البحث عن بيانات الطالب باستخدام المعرف (SID) المخزن عند تسجيل الدخول
         student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         
         if not student_data.empty:
             s_row = student_data.iloc[0]
-            s_name, s_class = s_row[1], s_row[2]
+            s_name = s_row[1]
+            s_class = s_row[2]
             
-            # معالجة النقاط للتأكد من أنها رقم صحيح
+            # معالجة النقاط بشكل آمن (العمود التاسع)
             val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            # تحويل آمن للنصوص إلى أرقام
-            try:
+            if val and val != "None" and val.replace('.','',1).isdigit():
                 s_points = int(float(val))
-            except:
+            else:
                 s_points = 0
                 
-            # هنا يكمل باقي كود واجهة الطالب الخاصة بك...
-            st.success(f"مرحباً بك يا {s_name}") 
+            # عرض الترحيب والبيانات الأساسية
+            st.success(f"مرحباً بك يا {s_name} (فصل: {s_class})")
+            
+            # عرض إحصائيات الطالب (النقاط)
+            st.metric("رصيد نقاطك الحالي", f"{s_points} نقطة")
             
         else:
             st.error("⚠️ بيانات الطالب غير موجودة في السجلات.")
             st.stop()
             
     except Exception as e:
-        st.error(f"❌ حدث خطأ أثناء تحميل بياناتك: {e}")
+        st.error(f"❌ حدث خطأ في تحميل البيانات: {e}")
         st.stop()
