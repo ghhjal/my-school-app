@@ -28,6 +28,7 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
+# التصميم بدون تعليقات جانبية لمنع رسائل الخطأ العلوية
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -45,11 +46,11 @@ st.markdown("""
         text-align: center;
         margin: -80px -20px 30px -20px;
     }
-    .modern-logo {
+    .logo-box {
         background: rgba(255, 255, 255, 0.1);
-        width: 70px;
-        height: 70px;
-        border-radius: 20px;
+        width: 75px;
+        height: 75px;
+        border-radius: 18px;
         margin: 0 auto 15px auto;
         display: flex;
         justify-content: center;
@@ -57,31 +58,32 @@ st.markdown("""
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    .modern-logo i { font-size: 35px; color: #60a5fa; }
+    .logo-box i { font-size: 38px; color: white; }
     div[data-testid="stForm"] {
         background-color: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 20px !important;
-        padding: 25px !important;
+        border-radius: 25px !important;
+        padding: 30px !important;
     }
     .stTextInput input {
-        background-color: rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.1) !important;
         color: white !important;
         border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
     .stButton>button {
         background: #2563eb !important;
         color: white !important;
-        border-radius: 12px !important;
+        border-radius: 15px !important;
         font-weight: bold !important;
-        width: 100% !important;
+        height: 3.5em !important;
     }
     [data-testid="stSidebar"] { display: none !important; }
     </style>
     <div class="hero-container">
-        <div class="modern-logo"><i class="bi bi-rocket-takeoff-fill"></i></div>
-        <h1 style="font-weight: 700; color: white !important; margin:0;">منصة زياد الذكية</h1>
-        <p style="opacity: 0.8; color: white !important;">بوابة الدخول الآمنة</p>
+        <div class="logo-box"><i class="bi bi-graph-up-arrow"></i></div>
+        <h1 style="font-weight: 700; color: white !important; margin:0;">منصة الأستاذ زياد</h1>
+        <p style="opacity: 0.9; color: white !important;">نظام الإدارة المدرسية المتكامل</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -90,46 +92,46 @@ if "role" not in st.session_state:
 
 if st.session_state.role is None:
     hour = datetime.datetime.now().hour
-    greeting = "صباح التميز ☀️" if 5 <= hour < 12 else "مساء الإبداع ✨"
-    st.markdown(f"<h3 style='text-align:center;'>{greeting}</h3>", unsafe_allow_html=True)
+    greet = "صباح الخير والتميز ☀️" if 5 <= hour < 12 else "مساء الطموح والنجاح ✨"
+    st.markdown(f"<h3 style='text-align:center;'>{greet}</h3>", unsafe_allow_html=True)
     
     _, col, _ = st.columns([0.05, 0.9, 0.05])
     
     with col:
-        tab1, tab2 = st.tabs(["👨‍🎓 دخول الطالب", "🔐 الإدارة"])
+        tab1, tab2 = st.tabs(["🎓 دخول الطلاب", "🔐 بوابة الإدارة"])
         
         with tab1:
-            with st.form("st_login"):
-                sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقمك")
-                if st.form_submit_button("دخول 🚀"):
+            with st.form("st_log"):
+                sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم هويتك")
+                if st.form_submit_button("دخول للمنصة 🚀"):
                     df = fetch_safe("students")
                     if not df.empty and sid:
                         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
                         if sid.strip() in df.iloc[:, 0].values:
-                            st.session_state.role = "student"
-                            st.session_state.sid = sid.strip()
-                            st.rerun()
-                        else: st.error("الرقم غير مسجل")
+                            st.session_state.role = "student"; st.session_state.sid = sid.strip()
+                            st.balloons(); time.sleep(1); st.rerun()
+                        else: st.error("عذراً، الرقم غير مسجل")
 
         with tab2:
-            with st.form("te_login"):
-                user = st.text_input("👤 المستخدم")
+            with st.form("te_log"):
+                user = st.text_input("👤 اسم المستخدم")
                 pwd = st.text_input("🔑 كلمة المرور", type="password")
-                if st.form_submit_button("دخول 🔐"):
+                if st.form_submit_button("تسجيل الدخول الآمن 🔒"):
                     u_df = fetch_safe("users")
                     if not u_df.empty:
                         row = u_df[u_df['username'] == user.strip()]
                         if not row.empty:
+                            # مطابقة الهاش الموجود في جدولك
                             hashed = hashlib.sha256(str.encode(pwd)).hexdigest()
                             if hashed == row.iloc[0]['password_hash']:
-                                st.session_state.role = "teacher"
-                                st.rerun()
-                            else: st.error("خطأ في كلمة المرور")
+                                st.session_state.role = "teacher"; st.rerun()
+                            else: st.error("كلمة المرور غير صحيحة")
                         else: st.error("المستخدم غير موجود")
+
+    st.markdown("<p style='text-align:center; opacity:0.5; font-size:12px; margin-top:30px;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد © 2026</p>", unsafe_allow_html=True)
     st.stop()
 
 if st.session_state.role:
-    st.success("تم الدخول!")
-    if st.button("خروج"):
-        st.session_state.role = None
-        st.rerun()
+    st.success("تم الدخول بنجاح!")
+    if st.button("تسجيل الخروج"):
+        st.session_state.role = None; st.rerun()
