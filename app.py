@@ -361,7 +361,7 @@ if st.session_state.role == "teacher":
         else:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
-# --- التبويب الرابع: رصد السلوك (النسخة النهائية المعدلة حسب طلبك) ---
+# --- التبويب الرابع: رصد السلوك (النسخة الاحترافية النهائية) ---
     with tab4:
         import smtplib
         import time
@@ -369,17 +369,35 @@ if st.session_state.role == "teacher":
         from email.mime.multipart import MIMEMultipart
         import urllib.parse 
 
-        # 1. كود CSS لتحسين واجهة الجوال
+        # 1. كود CSS لتحسين واجهة الجوال وتمييز زر الإيميل
         st.markdown("""
             <style>
                 .block-container { padding-top: 1rem; padding-bottom: 0rem; }
                 .stButton button { border-radius: 8px; height: 3em; font-weight: bold; }
+                /* تمييز زر الإيميل التلقائي بلون أرجواني مميز */
+                div[data-testid="stColumn"]:nth-of-type(2) button:nth-of-type(1) {
+                    background-color: #7c3aed !important;
+                    color: white !important;
+                    border: none !important;
+                }
                 @media (max-width: 768px) {
                     [data-testid="stSidebarNav"] { display: none; }
                     .stMarkdown h3 { font-size: 1.2rem !important; }
                 }
             </style>
         """, unsafe_allow_html=True)
+
+        # دالة تنسيق الرسالة الموحدة (لضمان نفس التنسيق في كل مكان)
+        def get_formatted_msg(name, b_type, b_note, b_date, prefix=""):
+            return (
+                f"{prefix}تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
+                f"----------------------------------------\n"
+                f"🏷️ نوع السلوك: {b_type}\n"
+                f"📝 الملاحظة: {b_note}\n"
+                f"📅 التاريخ: {b_date}\n"
+                f"----------------------------------------\n"
+                f"🏛️ منصة الأستاذ زياد الذكية"
+            )
 
         # دالة الإرسال التلقائي الصامت
         def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
@@ -389,15 +407,7 @@ if st.session_state.role == "teacher":
                 msg['From'] = email_set["sender_email"]
                 msg['To'] = to_email
                 msg['Subject'] = f"🔔 إشعار سلوكي فوري: {student_name}"
-                body = (
-                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {student_name}\n"
-                    f"----------------------------------------\n"
-                    f"🏷️ نوع السلوك: {b_type}\n"
-                    f"📝 الملاحظة: {b_note}\n"
-                    f"📅 التاريخ: {b_date}\n"
-                    f"----------------------------------------\n"
-                    f"🏛️ منصة الأستاذ زياد الذكية"
-                )
+                body = get_formatted_msg(student_name, b_type, b_note, b_date)
                 msg.attach(MIMEText(body, 'plain', 'utf-8'))
                 server = smtplib.SMTP('smtp.gmail.com', 587)
                 server.starttls()
@@ -434,23 +444,15 @@ if st.session_state.role == "teacher":
                 
                 # توزيع الأزرار الأربعة
                 col1, col2 = st.columns(2)
-                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True) # الزر الوحيد للحفظ
-                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True)
+                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
+                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) # هذا الزر الآن بلون أرجواني
                 btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
                 btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)
 
-                # تنسيق الرسالة
-                full_msg = (
-                    f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
-                    f"----------------------------------------\n"
-                    f"🏷️ نوع السلوك: {b_type}\n"
-                    f"📝 الملاحظة: {b_note}\n"
-                    f"📅 التاريخ: {b_date}\n"
-                    f"----------------------------------------\n"
-                    f"🏛️ منصة الأستاذ زياد الذكية"
-                )
+                # تجهيز الرسالة الحالية
+                current_full_msg = get_formatted_msg(b_name, b_type, b_note, b_date)
 
-                # 1. منطق الزر الأول: الحفظ وتحديث النقاط فقط
+                # 1. منطق الحفظ فقط
                 if btn_save:
                     if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
@@ -461,36 +463,34 @@ if st.session_state.role == "teacher":
                             current_p = int(ws_st.cell(cell.row, 9).value or 0)
                             ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                         except: pass
-                        st.success("✅ تم الحفظ وتحديث النقاط بنجاح")
-                        time.sleep(1); st.rerun()
-                    else:
-                        st.error("⚠️ يرجى كتابة نص الملاحظة أولاً ليتم حفظها")
+                        st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
+                    else: st.error("⚠️ يرجى كتابة الملاحظة")
 
-                # 2. منطق بقية الأزرار: إرسال فقط دون حفظ (تعتمد على ما كتبته في الحقول)
+                # 2. منطق الإرسال (واتساب الرئيسي - تم إصلاحه ليعمل فوراً)
+                if btn_wa:
+                    if b_note:
+                        wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(current_full_msg)}"
+                        st.markdown(f'<a href="{wa_url}" id="wa_link" target="_blank"></a><script>document.getElementById("wa_link").click();</script>', unsafe_allow_html=True)
+                        st.info("🔄 جاري فتح واتساب...")
+                    else: st.warning("⚠️ اكتب الملاحظة أولاً")
+
+                # إشعار الإيميل التلقائي
                 if btn_auto:
                     if b_note and s_email:
                         if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
-                            st.success(f"✅ تم إرسال الإشعار التلقائي إلى {s_email}")
+                            st.success(f"✅ تم الإرسال إلى {s_email}")
                         else: st.error("❌ فشل الإرسال")
-                    elif not b_note: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
 
-                if btn_mail:
-                    if b_note and s_email:
-                        mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
-                        st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
-                    elif not b_note: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
-                
-                if btn_wa:
-                    if b_note:
-                        wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
-                        st.markdown(f'<meta http-equiv="refresh" content="0;url={wa_url}">', unsafe_allow_html=True)
-                    else: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
+                # الإيميل اليدوي
+                if btn_mail and b_note and s_email:
+                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(current_full_msg)}"
+                    st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
 
-            # --- سجل الملاحظات السابقة (واتساب وحذف) ---
+            # --- سجل الملاحظات السابقة (تنسيق الواتساب الموحد + حذف) ---
             df_b = fetch_safe("behavior")
             if not df_b.empty and b_name:
                 st.markdown("---")
-                st.markdown(f"🗓️ **سجل ملاحظات: {b_name}**")
+                st.markdown(f"🗓️ **سجل ملاحظات الطالب: {b_name}**")
                 student_notes = df_b[df_b.iloc[:, 0] == b_name].iloc[::-1]
                 
                 for index, row in student_notes.iterrows():
@@ -499,9 +499,11 @@ if st.session_state.role == "teacher":
                         st.info(f"📝 {row[3]}")
                         
                         bc1, bc2 = st.columns(2)
-                        old_msg = f"تذكير بملاحظة سلوكية للطالب: {b_name}\nالتاريخ: {row[1]}\nالملاحظة: {row[3]}"
-                        wa_old_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_msg)}"
-                        bc1.markdown(f'<a href="{wa_old_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
+                        # زر واتساب للملاحظة السابقة بنفس التنسيق الاحترافي
+                        old_formatted_msg = get_formatted_msg(b_name, row[2], row[3], row[1], prefix="📢 تذكير بملاحظة سابقة\n")
+                        wa_old_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_formatted_msg)}"
+                        
+                        bc1.markdown(f'<a href="{wa_old_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 إرسال واتساب</div></a>', unsafe_allow_html=True)
                         
                         if bc2.button(f"🗑️ حذف", key=f"del_note_{index}"):
                             ws_b = sh.worksheet("behavior")
