@@ -30,7 +30,7 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
-# 3. واجهة المستخدم المحدثة بالعناوين المقترحة
+# 3. واجهة المستخدم والتنسيق
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -60,24 +60,30 @@ st.markdown("""
         backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* وضوح الخط الأسود داخل الحقول */
+    .welcome-card {
+        background: rgba(30, 64, 175, 0.05);
+        border-right: 5px solid #1e40af;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        text-align: justify;
+        line-height: 1.6;
+    }
+
     .stTextInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
         font-weight: bold !important;
         border: 2px solid #3b82f6 !important;
         border-radius: 12px !important;
-        font-size: 16px !important;
     }
 
-    /* إخفاء الإرشادات التلقائية */
     div[data-testid="InputInstructions"] { display: none !important; }
 
     div[data-testid="stForm"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border-radius: 25px !important;
         border: 1px solid rgba(128, 128, 128, 0.2) !important;
-        padding: 30px !important;
     }
 
     .stButton>button {
@@ -85,12 +91,19 @@ st.markdown("""
         color: white !important;
         border-radius: 15px !important;
         font-weight: bold !important;
-        height: 3.8em !important;
+        height: 3.5em !important;
         width: 100% !important;
-        border: none !important;
     }
     
     [data-testid="stSidebar"] { display: none !important; }
+    
+    .footer-text {
+        text-align: center;
+        opacity: 0.8;
+        font-size: 13px;
+        margin-top: 50px;
+        padding: 20px;
+    }
     </style>
     
     <div class="header-section">
@@ -100,22 +113,27 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 4. منطق الدخول والترحيب
+# 4. منطق الدخول
 if "role" not in st.session_state:
     st.session_state.role = None
 
 if st.session_state.role is None:
-    h = datetime.datetime.now().hour
-    msg = "مرحباً بكم في بوابتنا التعليمية ☀️" if 5 <= h < 12 else "نسعد بخدمتكم دائماً ✨"
-    st.markdown(f"<h4 style='text-align:center; color:#1e40af;'>{msg}</h4>", unsafe_allow_html=True)
+    # رسالة الترحيب الجديدة
+    st.markdown("""
+        <div class="welcome-card">
+            <h4 style="color: #1e40af; margin-top: 0;">أهلًا بكم في منصة زياد الذكية</h4>
+            <p style="color: inherit; font-size: 15px;">
+                مبادرة تعليمية تهدف إلى تسهيل متابعة مستوى الطلاب أكاديمياً وسلوكياً، وتعزيز التواصل السريع والفعّال مع أولياء الأمور.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
     tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 الإدارة"])
     
     with tab1:
         with st.form("st_form"):
-            st.markdown("<p style='text-align:center;'>ادخل الرقم الأكاديمي للمتابعة</p>", unsafe_allow_html=True)
-            sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية هنا")
-            if st.form_submit_button("دخول المنصة 🚀"):
+            sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية للمتابعة")
+            if st.form_submit_button("دخول للمنصة 🚀"):
                 df = fetch_safe("students")
                 if not df.empty and sid:
                     df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
@@ -126,7 +144,6 @@ if st.session_state.role is None:
 
     with tab2:
         with st.form("te_form"):
-            st.markdown("<p style='text-align:center;'>نظام الدخول الآمن للمعلمين</p>", unsafe_allow_html=True)
             u = st.text_input("👤 اسم المستخدم")
             p = st.text_input("🔑 كلمة المرور", type="password")
             if st.form_submit_button("تسجيل الدخول"):
@@ -140,11 +157,15 @@ if st.session_state.role is None:
                         else: st.error("كلمة المرور غير صحيحة")
                     else: st.error("المستخدم غير موجود")
     
-    st.markdown("<p style='text-align:center; opacity:0.6; font-size:12px; margin-top:40px;'>جميع الحقوق محفوظة لمنصة زياد الذكية © 2026</p>", unsafe_allow_html=True)
+    st.markdown("""
+        <div class="footer-text">
+            © منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد
+        </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 # 5. بعد الدخول
 if st.session_state.role:
-    st.success("أهلاً بك في منصة زياد الذكية")
-    if st.button("تسجيل الخروج"):
+    st.success("تم تسجيل الدخول!")
+    if st.button("خروج"):
         st.session_state.role = None; st.rerun()
