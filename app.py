@@ -302,3 +302,53 @@ if menu == "👥 إدارة الطلاب":
                     st.error(f"حدث خطأ أثناء الحذف: {e}")
             else:
                 st.warning("يرجى اختيار اسم الطالب أولاً")
+
+# --- القسم الثاني: شاشة الدرجات (رصد وتعديل الدرجات) ---
+if menu == "📝 شاشة الدرجات":
+    st.markdown("""
+        <div style="background:linear-gradient(135deg,#059669,#10b981); padding:25px; border-radius:20px; color:white; text-align:center; margin-bottom:25px;">
+            <h1 style="margin:0; font-size:24px;">📝 رصد وتعديل الدرجات</h1>
+            <p style="margin:5px 0 0 0; opacity:0.9;">إدارة درجات الاختبارات الشهرية والنهائية</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    df_st = fetch_safe("students")
+    
+    if df_st.empty:
+        st.warning("⚠️ يرجى إضافة طلاب أولاً من قائمة 'إدارة الطلاب'")
+    else:
+        # 1. نموذج رصد درجة جديدة
+        with st.container(border=True):
+            st.markdown("#### 🎯 رصد درجة لطالب")
+            with st.form("add_grade_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                # اختيار الطالب بناءً على الاسم من القائمة
+                student_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
+                exam_type = col2.selectbox("📝 نوع الاختبار:", ["اختبار فترتي", "اختبار شهري", "اختبار نهائي", "مشاركة"])
+                
+                col3, col4 = st.columns(2)
+                grade_value = col3.number_input("💯 الدرجة:", min_value=0.0, max_value=100.0, step=0.5)
+                teacher_note = col4.text_input("💬 ملاحظة المعلم:", placeholder="مثال: مستوى ممتاز")
+
+                if st.form_submit_button("✅ حفظ الدرجة في النظام"):
+                    # البحث عن الرقم الأكاديمي للطالب المختار
+                    student_id = df_st[df_st.iloc[:, 1] == student_name].iloc[0, 0]
+                    date_now = datetime.datetime.now().strftime("%Y-%m-%d")
+                    
+                    row_grade = [student_id, student_name, exam_type, grade_value, date_now, teacher_note]
+                    try:
+                        sh.worksheet("grades").append_row(row_grade)
+                        st.success(f"✅ تم رصد درجة {student_name} بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"خطأ: {e}")
+
+        # 2. عرض جدول الدرجات الحالي
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("📊 سجل الدرجات المرصودة", expanded=True):
+            df_grades = fetch_safe("grades")
+            if not df_grades.empty:
+                st.dataframe(df_grades, use_container_width=True, hide_index=True)
+            else:
+                st.info("لم يتم رصد أي درجات بعد.")
