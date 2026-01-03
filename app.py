@@ -470,5 +470,5 @@ with t_set:
                 ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
                 st.cache_data.clear(); st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
     
-    if st.button("🚗 تسجيل الخروج", use_container_width=True):
+ if st.button("🚗 تسجيل الخروج", use_container_width=True):
         st.session_state.role = None; st.rerun()
