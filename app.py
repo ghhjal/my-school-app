@@ -805,64 +805,64 @@ with tab6:
 # الحل الجوهري: واجهة الطالب المعزولة والمحمية
 # =========================================================
 
+# --- بداية واجهة الطالب المدمجة والاحترافية ---
+# تأكد أن السطر التالي يبدأ من أقصى اليسار تماماً
 if st.session_state.get('role') == "student":
-    # 1. تصميم عصري لواجهة الطالب (CSS)
+    # 1. تصميم الواجهة بهوية بصرية حديثة
     st.markdown("""
         <style>
-        .student-dashboard {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            padding: 30px; border-radius: 20px; border-right: 12px solid #38bdf8;
+        .student-portal {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 25px; border-radius: 15px; border-right: 10px solid #3b82f6;
             color: white; margin-bottom: 25px; box-shadow: 0 10px 15px rgba(0,0,0,0.3);
             text-align: right;
         }
-        .stMetric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
         </style>
+        <div class="student-portal">
+            <h1 style='margin:0; font-family:Cairo; font-size:26px;'>لوحة المتابعة الذكية 🎓</h1>
+            <p style='opacity:0.8;'>مرحباً بك في بوابتك التعليمية المتكاملة</p>
+        </div>
     """, unsafe_allow_html=True)
 
     try:
-        # 2. جلب البيانات الأساسية للطالب الحالي فقط
+        # 2. جلب البيانات بشكل معزول وآمن
         df_students = fetch_safe("students")
-        current_student = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        student_info = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         
-        if not current_student.empty:
-            s_data = current_student.iloc[0]
-            s_name, s_class = s_data[1], s_data[2]
+        if not student_info.empty:
+            s_row = student_info.iloc[0]
+            s_name, s_class = s_row[1], s_row[2]
             
-            # 3. عرض الترويسة الأنيقة
-            st.markdown(f"""<div class="student-dashboard">
-                <h1 style='margin:0; font-family:Cairo;'>مرحباً بطلنا، {s_name} ✨</h1>
-                <p style='opacity:0.8;'>الصف: {s_class} | بوابة الطالب الذكية</p>
-            </div>""", unsafe_allow_html=True)
-
-            # 4. لوحة الإحصائيات (Metrics) بشكل أفقي
-            raw_val = str(s_data[8]).strip() if len(s_data) >= 9 else "0"
+            # معالجة النقاط (العمود التاسع)
+            raw_val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
             pts = int(float(raw_val)) if raw_val.replace('.','',1).isdigit() else 0
             
+            # 3. عرض كروت الإحصائيات (Metrics)
             c1, c2, c3 = st.columns(3)
-            with c1: st.metric("🎯 رصيد نقاطك", f"{pts} نقطة")
-            with c2: st.metric("🏆 المستوى الأكاديمي", "متميز")
-            with c3: st.metric("📅 حالة الحضور", "منتظم")
+            with c1: st.metric("🎯 مجموع نقاطك", f"{pts} نقطة")
+            with c2: st.metric("🏆 رتبة الطالب", "متميز")
+            with c3: st.metric("👤 الطالب", s_name)
 
             st.divider()
-
-            # 5. التبويبات المستقلة (لحل مشكلة NameError: tab2 نهائياً)
-            # هذه التبويبات تظهر فقط للطالب ولها أسماء فريدة
-            st_tabs = st.tabs(["📊 كشف الدرجات", "🛡️ سجل السلوك", "🔗 الاختبارات المتاحة"])
+            
+            # 4. حل مشكلة NameError: ننشئ تبويبات (Tabs) خاصة للطالب فقط
+            # هذه التبويبات مستقلة تماماً عن متغير tab2 المسبب للخطأ
+            st_tabs = st.tabs(["📊 سجل الدرجات", "🛡️ سجل السلوك", "📝 الاختبارات"])
             
             with st_tabs[0]:
-                st.subheader("نتائج المواد المعتمدة")
+                st.subheader("كشف الدرجات الأكاديمي")
                 st.dataframe(fetch_safe("grades"), use_container_width=True)
             
             with st_tabs[1]:
-                st.info("سجلك السلوكي نظيف وحافل بالتميز، استمر!")
-            
+                st.info("سجلك الدراسي حافل بالإنجازات، استمر في تميزك!")
+                
             with st_tabs[2]:
-                st.success("جميع روابط الاختبارات القادمة ستظهر هنا")
+                st.success("سيتم عرض روابط الاختبارات القادمة هنا فور جدولتها")
         else:
-            st.error("⚠️ لم نتمكن من العثور على بياناتك في السجلات.")
+            st.error("⚠️ لم نتمكن من العثور على بياناتك، يرجى مراجعة إدارة المدرسة.")
             
     except Exception as e:
-        st.error(f"❌ حدث خطأ فني أثناء تحميل واجهة الطالب: {e}")
+        st.error(f"حدث خطأ تقني أثناء تحميل الواجهة: {e}")
 
-    # 6. الأمر السحري الذي يحمي الكود من أخطاء الإزاحة (Indentation) بالأسفل
+    # 5. الأمر السحري الذي يحمي تطبيقك من أي أخطاء متبقية في أسفل الملف
     st.stop()
