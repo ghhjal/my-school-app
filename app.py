@@ -183,44 +183,42 @@ if st.session_state.role:
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
 # ==========================================
-# 👨‍🏫 واجهة المعلم (الإدارة + الدرجات + البحث)
+# 👨‍🏫 واجهة المعلم (الترتيب النهائي المعتمد)
 # ==========================================
 if st.session_state.role == "teacher":
-    # 1. إعداد القائمة الجانبية (Sidebar) أولاً لتعريف المتغير menu
+    
+    # 1. تعريف القائمة الجانبية بالترتيب المطلوب
     with st.sidebar:
-        st.markdown("""
+        st.markdown(f"""
             <div style="text-align:center; padding:10px;">
-                <i class="bi bi-person-badge" style="font-size:50px; color:#1e40af;"></i>
+                <i class="bi bi-person-workspace" style="font-size:50px; color:#1e40af;"></i>
                 <h3 style="margin-top:10px; font-family:'Cairo';">الأستاذ زياد</h3>
             </div>
         """, unsafe_allow_html=True)
         
-        # تعريف خيارات القائمة لضمان عدم حدوث NameError
-        menu = st.selectbox("🏠 القائمة الرئيسية", 
-                            ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🔍 البحث المطور", "🎭 رصد السلوك"])
-        
-        st.divider()
-        if st.button("🚗 تسجيل الخروج", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
+        # ترتيب التبويبات كما طلبت حرفياً
+        menu = st.radio("📋 القائمة الرئيسية", [
+            "👥 إدارة الطلاب", 
+            "📝 شاشة الدرجات", 
+            "🔍 البحث المطور", 
+            "🎭 رصد السلوك", 
+            "📢 شاشة الاختبارات والإعلانات",
+            "🚗 خروج"
+        ])
 
-    # --- القسم الأول: إدارة الطلاب (كامل الحقول والحذف) ---
+    # --- 1. إدارة الطلاب (كاملة الحقول + الحذف النهائي) ---
     if menu == "👥 إدارة الطلاب":
-        st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
-        
+        st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         
-        # أ. السجل الحالي
+        # عرض السجل الحالي
         with st.expander("📋 السجل الحالي للطلاب", expanded=True):
-            if not df_st.empty:
-                st.dataframe(df_st, use_container_width=True, hide_index=True)
-            else:
-                st.info("لا يوجد طلاب مسجلين حالياً.")
-
-        # ب. نموذج الإضافة الكامل (مع ميزة 966)
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        
+        # نموذج الإضافة (مع ميزة 966)
         with st.container(border=True):
             st.markdown("#### ➕ تأسيس طالب جديد")
-            with st.form("add_student_final", clear_on_submit=True):
+            with st.form("add_student_form", clear_on_submit=True):
                 c1, c2, c3 = st.columns(3)
                 nid = c1.text_input("🔢 الرقم الأكاديمي")
                 nname = c2.text_input("👤 الاسم الثلاثي")
@@ -233,60 +231,63 @@ if st.session_state.role == "teacher":
                 
                 if st.form_submit_button("✅ اعتماد التأسيس"):
                     if nid and nname and nphone:
-                        # معالجة الرقم تلقائياً
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
-                        
-                        row = [nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"]
-                        sh.worksheet("students").append_row(row)
-                        st.success(f"✅ تم إضافة {nname} بنجاح")
-                        time.sleep(1); st.rerun()
+                        sh.worksheet("students").append_row([nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"])
+                        st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
 
-        # ج. زر الحذف النهائي الشامل (من كافة الجداول)
+        # زر الحذف النهائي الشامل (كما في كودك الأصلي)
         st.divider()
-        with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
-            st.error("⚠️ تحذير: سيتم حذف الطالب نهائياً من كافة السجلات.")
-            del_name = st.selectbox("🎯 اختر الطالب للمسح الشامل:", [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""])
-            if st.button("🚨 تنفيذ الحذف النهائي"):
+        with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
+            del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""])
+            if st.button("🚨 تنفيذ الحذف من كافة الجداول"):
                 if del_name:
-                    with st.spinner('جاري المسح...'):
-                        # الحذف من الشيتات الثلاثة
-                        for sheet_name in ["students", "grades", "behavior"]:
-                            try:
-                                ws = sh.worksheet(sheet_name)
-                                cell = ws.find(del_name)
-                                if cell: ws.delete_rows(cell.row)
-                            except: pass
-                        st.success("💥 تم المسح الشامل بنجاح")
-                        time.sleep(1); st.rerun()
+                    for s in ["students", "grades", "behavior"]:
+                        try:
+                            ws = sh.worksheet(s)
+                            cell = ws.find(del_name)
+                            if cell: ws.delete_rows(cell.row)
+                        except: pass
+                    st.success("💥 تم الحذف النهائي بنجاح"); time.sleep(1); st.rerun()
 
-    # --- القسم الثاني: شاشة الدرجات (الآن تظهر بشكل صحيح) ---
+    # --- 2. شاشة الدرجات ---
     elif menu == "📝 شاشة الدرجات":
-        st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
+        st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>📝 شاشة الدرجات</h1></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         if not df_st.empty:
             with st.form("grades_entry"):
                 col1, col2 = st.columns(2)
-                s_name = col1.selectbox("🎯 الطالب:", df_st.iloc[:, 1].tolist())
+                s_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
                 exam = col2.selectbox("📝 نوع التقييم:", ["شهري", "فترتي", "نهائي", "مشاركة"])
                 col3, col4 = st.columns(2)
                 grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
                 note = col4.text_input("💬 ملاحظة")
-                if st.form_submit_button("✅ حفظ الدرجة"):
-                    # جلب الرقم الأكاديمي والمادة تلقائياً
+                if st.form_submit_button("✅ رصد الدرجة"):
                     s_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
                     sh.worksheet("grades").append_row([s_data[0], s_name, s_data[5], exam, grade, datetime.datetime.now().strftime("%Y-%m-%d"), note])
-                    st.success("✅ تم الحفظ")
-                    time.sleep(1); st.rerun()
+                    st.success("✅ تم الرصد بنجاح"); time.sleep(1); st.rerun()
             st.divider()
             st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    # --- القسم الثالث: البحث المطور ---
+    # --- 3. البحث المطور ---
     elif menu == "🔍 البحث المطور":
-        st.markdown('<div style="background:linear-gradient(135deg,#6366f1,#a855f7); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>🔍 نظام البحث المطور</h1></div>', unsafe_allow_html=True)
+        st.markdown('<div style="background:linear-gradient(135deg,#6366f1,#a855f7); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>🔍 البحث المطور</h1></div>', unsafe_allow_html=True)
         df_st = fetch_safe("students")
         query = st.text_input("🔎 ابحث بالاسم أو الرقم الأكاديمي:")
         if query:
             res = df_st[df_st.iloc[:, 0].str.contains(query) | df_st.iloc[:, 1].str.contains(query)]
             st.dataframe(res, use_container_width=True, hide_index=True)
+
+    # --- 4. رصد السلوك ---
+    elif menu == "🎭 رصد السلوك":
+        st.info("سيتم هنا ربط نظام النقاط السلوكية والملاحظات")
+
+    # --- 5. شاشة الاختبارات والإعلانات ---
+    elif menu == "📢 شاشة الاختبارات والإعلانات":
+        st.info("سيتم هنا برمجة قسم المواعيد والتعاميم")
+
+    # --- 6. خروج ---
+    elif menu == "🚗 خروج":
+        st.session_state.role = None
+        st.rerun()
