@@ -198,37 +198,13 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🚗 خروج"
 ])
 
-with tab1:
-    st.subheader("إدارة الطلاب")
-    # ضع كود التبويب الأول هنا
-
-with tab2:
-    st.subheader("شاشة الدرجات")
-    # ضع كود التبويب الثاني هنا
-
-with tab3:
-    st.subheader("البحث المطور")
-    # ضع كود التبويب الثالث هنا
-
-with tab4:
-    st.subheader("رصد السلوك")
-    # ضع كود التبويب الرابع هنا
-
-with tab5:
-    # كود الاختبارات (الذي يعمل بنجاح مع الرابط)
-    pass 
-
-with tab6:
-    # كود الإعدادات (الذي أضفناه مؤخراً)
-    pass
-
 with tab7:
     if st.button("تأكيد تسجيل الخروج"):
         st.session_state["authenticated"] = False
         st.rerun()
 # --- نهاية منطقة التبويبات ---    # --- التبويب الأول: إدارة الطلاب (تعديل الحقول لتطابق الجدول) ---
-    with tab1:
-        st.markdown("### 👥 إدارة سجلات الطلاب")
+with tab1:
+    st.markdown("### 👥 إدارة سجلات الطلاب")
         df_st = fetch_safe("students")
         
         with st.container(border=True):
@@ -283,8 +259,8 @@ with tab7:
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
-    with tab2:
-        st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
+with tab2:
+    st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
         df_st = fetch_safe("students")
         
         if not df_st.empty:
@@ -339,8 +315,8 @@ with tab7:
                 st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
    # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
-    with tab3:
-        st.markdown("### 🔍 محرك البحث الذكي")
+with tab3:
+    st.markdown("### 🔍 محرك البحث الذكي")
         df_st = fetch_safe("students")
         
         # حقل البحث
@@ -391,8 +367,8 @@ with tab7:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
 # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-    with tab4:
-        import smtplib
+with tab4:
+    import smtplib
         import time
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
@@ -535,8 +511,8 @@ with tab7:
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
 # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
-    with tab5:
-        import urllib.parse
+with tab5:
+    import urllib.parse
         import time
 
         # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
@@ -639,8 +615,8 @@ with tab7:
                 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- التبويب السادس: الإعدادات وإدارة البيانات ---
-    with tab6:
-        import pandas as pd
+with tab6:
+    import pandas as pd
         import io
 
         st.markdown("""
