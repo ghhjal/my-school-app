@@ -183,78 +183,93 @@ if st.session_state.role:
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
 # ==========================================
-# 🏠 لوحة التحكم: إدارة الطلاب والدرجات (النسخة المتكاملة)
+# 👨‍🏫 واجهة المعلم الكاملة (إصلاح خطأ Line 190)
 # ==========================================
+if st.session_state.role == "teacher":
+    # 1. تعريف القائمة الجانبية (Sidebar) أولاً لتعريف متغير menu
+    with st.sidebar:
+        st.markdown(f"""
+            <div style="text-align:center; padding:10px;">
+                <i class="bi bi-person-badge" style="font-size:50px; color:#1e40af;"></i>
+                <h3 style="margin-top:10px; font-family:'Cairo';">الأستاذ زياد</h3>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # هذا السطر هو الأهم لحل مشكلة NameError
+        menu = st.selectbox("🏠 القائمة الرئيسية", 
+                            ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🔍 البحث المطور", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
+        
+        st.divider()
+        if st.button("🚗 تسجيل الخروج", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
 
-# --- 1. قسم إدارة الطلاب ---
-if menu == "👥 إدارة الطلاب":
-    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
-    
-    df_st = fetch_safe("students")
-    
-    with st.container(border=True):
-        st.markdown("#### ➕ تأسيس طالب جديد")
-        with st.form("add_student_final", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            nid = c1.text_input("🔢 الرقم الأكاديمي")
-            nname = c2.text_input("👤 الاسم الثلاثي")
-            nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            
-            c4, c5, c6 = st.columns(3)
-            nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-            nsub = c5.text_input("📚 المادة", value="لغة إنجليزية")
-            nyear = c6.text_input("🗓️ العام", value="1447هـ")
-            
-            c7, c8 = st.columns(2)
-            nmail = c7.text_input("📧 البريد الإلكتروني")
-            nphone = c8.text_input("📱 جوال ولي الأمر")
-            
-            if st.form_submit_button("✅ اعتماد"):
-                if nid and nname and nphone:
-                    # التحقق من عدم تكرار الرقم الأكاديمي
-                    if not df_st.empty and nid in df_st.iloc[:, 0].values:
-                        st.error("⚠️ هذا الرقم الأكاديمي مسجل مسبقاً!")
-                    else:
-                        # معالجة الرقم الدولي 966
+    # --- القسم الأول: إدارة الطلاب ---
+    if menu == "👥 إدارة الطلاب":
+        st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
+        df_st = fetch_safe("students")
+        
+        # عرض الجدول الحالي
+        with st.expander("📋 السجل الحالي للطلاب", expanded=True):
+            if not df_st.empty:
+                st.dataframe(df_st, use_container_width=True, hide_index=True)
+        
+        # نموذج إضافة طالب (مع معالجة 966)
+        with st.container(border=True):
+            st.markdown("#### ➕ تأسيس طالب جديد")
+            with st.form("add_student_final", clear_on_submit=True):
+                c1, c2, c3 = st.columns(3)
+                nid = c1.text_input("🔢 الرقم الأكاديمي")
+                nname = c2.text_input("👤 الاسم الثلاثي")
+                nphone = c3.text_input("📱 جوال ولي الأمر")
+                
+                c4, c5, c6 = st.columns(3)
+                nclass = c4.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
+                
+                if st.form_submit_button("✅ اعتماد التأسيس"):
+                    if nid and nname and nphone:
+                        # تصحيح رقم الجوال تلقائياً
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
                         
-                        # الترتيب: ID, Name, Class, Year, Stage, Subject, Email, Phone, Points(0)
-                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
+                        row = [nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"]
                         sh.worksheet("students").append_row(row)
-                        st.success(f"تم إضافة {nname} بنجاح")
+                        st.success("✅ تم الحفظ بنجاح")
                         time.sleep(1); st.rerun()
 
-# --- 2. قسم شاشة الدرجات ---
-elif menu == "📝 شاشة الدرجات":
-    st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
-    
-    df_st = fetch_safe("students")
-    if not df_st.empty:
-        with st.form("grades_entry"):
-            col1, col2 = st.columns(2)
-            s_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
-            exam = col2.selectbox("📝 النوع:", ["شهري", "فترتي", "نهائي", "واجبات"])
-            
-            col3, col4 = st.columns(2)
-            grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
-            note = col4.text_input("💬 ملاحظة المعلم")
-            
-            if st.form_submit_button("✅ حفظ"):
-                # جلب البيانات المرتبطة بالطالب تلقائياً
-                student_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
-                sid = student_data[0]
-                sub = student_data[5] # جلب المادة المسجلة للطالب
-                date = datetime.datetime.now().strftime("%Y-%m-%d")
+    # --- القسم الثاني: شاشة الدرجات ---
+    elif menu == "📝 شاشة الدرجات":
+        st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
+        df_st = fetch_safe("students")
+        if not df_st.empty:
+            with st.form("grades_entry"):
+                col1, col2 = st.columns(2)
+                s_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
+                exam = col2.selectbox("📝 النوع:", ["شهري", "فترتي", "نهائي", "واجبات"])
+                col3, col4 = st.columns(2)
+                grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
+                note = col4.text_input("💬 ملاحظة المعلم")
                 
-                # إرسال البيانات (رقم، اسم، مادة، نوع، درجة، تاريخ، ملاحظة)
-                sh.worksheet("grades").append_row([sid, s_name, sub, exam, grade, date, note])
-                st.success(f"تم رصد درجة {s_name} في مادة {sub}")
-                time.sleep(1); st.rerun()
+                if st.form_submit_button("✅ حفظ الدرجة"):
+                    student_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
+                    sid, sub = student_data[0], student_data[5]
+                    date = datetime.datetime.now().strftime("%Y-%m-%d")
+                    sh.worksheet("grades").append_row([sid, s_name, sub, exam, grade, date, note])
+                    st.success(f"✅ تم رصد الدرجة للطالب {s_name}")
+                    time.sleep(1); st.rerun()
+            
+            st.divider()
+            df_gr = fetch_safe("grades")
+            st.dataframe(df_gr, use_container_width=True, hide_index=True)
 
-    # عرض جدول الدرجات مع زر الفلترة
-    df_gr = fetch_safe("grades")
-    if not df_gr.empty:
-        st.subheader("📊 سجل الدرجات")
-        st.dataframe(df_gr, use_container_width=True, hide_index=True)
+    # --- القسم الثالث: البحث المطور ---
+    elif menu == "🔍 البحث المطور":
+        st.markdown('<div style="background:linear-gradient(135deg,#6366f1,#a855f7); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>🔍 نظام البحث المطور</h1></div>', unsafe_allow_html=True)
+        df_st = fetch_safe("students")
+        query = st.text_input("🔎 ابحث بالاسم أو الرقم الأكاديمي:")
+        if query:
+            results = df_st[df_st.iloc[:, 0].str.contains(query) | df_st.iloc[:, 1].str.contains(query)]
+            st.dataframe(results, use_container_width=True, hide_index=True)
