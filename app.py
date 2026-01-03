@@ -6,7 +6,7 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 
-# 1. إعدادات الصفحة والتنسيق الجمالي (CSS) ليتناسب مع الجوال
+# 1. إعدادات التصميم المتجاوب مع الجوال
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 st.markdown("""
@@ -15,64 +15,44 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
     
     html, body, [data-testid="stAppViewContainer"] { 
-        font-family: 'Cairo', sans-serif; 
-        direction: RTL; 
-        text-align: right; 
-        background-color: #f8fafc;
+        font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc;
     }
     
-    /* تصميم الهيدر العلوي */
+    /* تصميم الهيدر العلوي المتطور */
     .header-box { 
         background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); 
-        padding: 50px 20px; 
-        border-radius: 0 0 40px 40px; 
-        color: white; 
-        text-align: center; 
-        margin: -75px -20px 30px -20px; 
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+        padding: 50px 20px; border-radius: 0 0 40px 40px; color: white; text-align: center; 
+        margin: -75px -20px 30px -20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
     }
     
-    /* تصميم الحاويات والأزرار */
+    /* أزرار الدخول العريضة والمريحة للنقر */
     .stButton>button { 
-        border-radius: 12px !important; 
-        height: 3.5em; 
-        font-weight: bold;
-        background: linear-gradient(90deg, #2563eb, #1d4ed8) !important; 
-        color: white !important; 
-        width: 100%;
-        border: none !important;
-        transition: 0.3s;
+        border-radius: 15px !important; height: 3.8em; font-weight: bold;
+        background: linear-gradient(90deg, #2563eb, #1d4ed8) !important; color: white !important; 
+        width: 100%; border: none !important; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
-    }
+    .stButton>button:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
 
+    /* حاوية النموذج (Login Card) */
     div[data-testid="stForm"] { 
-        border-radius: 25px !important; 
-        border: 1px solid #e2e8f0 !important; 
-        background-color: white !important;
-        padding: 30px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+        border-radius: 25px !important; border: 1px solid #e2e8f0 !important; 
+        background-color: white !important; padding: 35px !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.05) !important;
     }
 
-    .stTextInput input {
-        border-radius: 12px !important;
-        padding: 12px !important;
-    }
+    .stTextInput input { border-radius: 12px !important; border: 1px solid #cbd5e1 !important; padding: 12px !important; }
     
-    /* إخفاء القائمة الجانبية في شاشة الدخول */
-    [data-testid="stSidebar"] {display: none !important;}
+    [data-testid="stSidebar"] { display: none !important; }
     </style>
     
     <div class="header-box">
-        <h1 style="margin:0; font-size: 28px; font-weight: 700;">🏛️ منصة زياد الذكية</h1>
-        <p style="opacity: 0.9; font-size: 15px; margin-top: 10px;">نظام الإدارة التعليمية المتطور</p>
+        <h1 style="margin:0; font-size: 30px; font-weight: 700;">🏛️ منصة زياد الذكية</h1>
+        <p style="opacity: 0.9; font-size: 16px; margin-top: 10px;">بوابتك الرقمية للتميز الأكاديمي</p>
     </div>
     """, unsafe_allow_html=True)
 
-# 2. وظائف الاتصال والبيانات (يجب أن تكون في البداية)
+# 2. الدوال الأساسية (يجب تعريفها قبل الاستدعاء لتجنب NameError)
 @st.cache_resource
 def get_client():
     try:
@@ -81,9 +61,7 @@ def get_client():
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
-    except Exception as e:
-        st.error("فشل الاتصال بقاعدة البيانات")
-        return None
+    except: return None
 
 sh = get_client()
 
@@ -91,77 +69,56 @@ def fetch_safe(worksheet_name):
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
-        if not data: return pd.DataFrame()
-        df = pd.DataFrame(data[1:], columns=data[0])
-        return df
-    except:
-        return pd.DataFrame()
+        return pd.DataFrame(data[1:], columns=data[0]) if data else pd.DataFrame()
+    except: return pd.DataFrame()
 
-# 3. منطق الجلسة ورسالة الترحيب الذكية
+# 3. إدارة الجلسة والواجهة الرئيسية
 if "role" not in st.session_state:
     st.session_state.role = None
-    st.session_state.sid = None
 
 if st.session_state.role is None:
-    # رسالة ترحيب حسب الوقت
+    # رسالة الترحيب الديناميكية
     hour = datetime.datetime.now().hour
-    greeting = "صباح التميز ☀️" if 5 <= hour < 12 else "مساء الإبداع ✨"
-    st.markdown(f"<h3 style='text-align:center; color:#1e3a8a; margin-bottom:20px;'>{greeting}</h3>", unsafe_allow_html=True)
+    greeting = "صباح التميز والإبداع ☀️" if 5 <= hour < 12 else "مساء الطموح والنجاح ✨"
+    st.markdown(f"<h3 style='text-align:center; color:#1e3a8a; margin-bottom:25px;'>{greeting}</h3>", unsafe_allow_html=True)
 
-    # توسيط نموذج الدخول للجوال
-    _, col_login, _ = st.columns([0.05, 0.9, 0.05])
+    # محاذاة شاشة الدخول في المنتصف
+    _, login_col, _ = st.columns([0.05, 0.9, 0.05])
     
-    with col_login:
-        tab_student, tab_teacher = st.tabs(["👨‍🎓 دخول الطلاب", "👨‍🏫 بوابة الإدارة"])
+    with login_col:
+        tab_st, tab_te = st.tabs(["🎓 دخول الطلاب", "👨‍🏫 بوابة الإدارة"])
         
-        with tab_student:
-            with st.form("student_form"):
-                st.markdown("<div style='text-align:center; margin-bottom:15px;'>ادخل بياناتك الأكاديمية للوصول لخدماتك</div>", unsafe_allow_html=True)
-                s_id = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية")
-                
+        with tab_st:
+            with st.form("student_login_form"):
+                st.markdown("<p style='text-align:center;'>ادخل هويتك للوصول لخدمات الطالب</p>", unsafe_allow_html=True)
+                s_id = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية هنا")
                 if st.form_submit_button("دخول المنصة 🚀"):
                     with st.spinner("جاري التحقق..."):
                         df_st = fetch_safe("students")
-                        if not df_st.empty:
-                            # البحث في العمود الأول (ID)
+                        if not df_st.empty and s_id:
                             df_st.iloc[:, 0] = df_st.iloc[:, 0].astype(str).str.strip()
                             if s_id.strip() in df_st.iloc[:, 0].values:
-                                st.session_state.role = "student"
-                                st.session_state.sid = s_id.strip()
-                                st.balloons()
-                                time.sleep(0.5)
-                                st.rerun()
-                            else:
-                                st.error("❌ الرقم الأكاديمي غير مسجل")
+                                st.session_state.role = "student"; st.session_state.sid = s_id.strip()
+                                st.balloons(); time.sleep(0.5); st.rerun()
+                            else: st.error("عذراً، الرقم الأكاديمي غير مسجل")
 
-        with tab_teacher:
-            with st.form("teacher_form"):
-                st.markdown("<div style='text-align:center; margin-bottom:15px;'>لوحة تحكم المعلم المؤمنة</div>", unsafe_allow_html=True)
-                u_name = st.text_input("👤 اسم المستخدم", placeholder="username")
+        with tab_te:
+            with st.form("teacher_login_form"):
+                st.markdown("<p style='text-align:center;'>نظام الدخول الآمن للمعلمين والإدارة</p>", unsafe_allow_html=True)
+                u_name = st.text_input("👤 اسم المستخدم", placeholder="ادخل اليوزر نيم")
                 u_pass = st.text_input("🔑 كلمة المرور", type="password", placeholder="••••••••")
-                
                 if st.form_submit_button("تسجيل الدخول الآمن 🔐"):
-                    with st.spinner("جاري فحص الصلاحيات..."):
-                        u_df = fetch_safe("users")
-                        if not u_df.empty:
-                            user_row = u_df[u_df['username'] == u_name.strip()]
-                            if not user_row.empty:
-                                # التشفير والمقارنة مع الـ Hash في الجدول
-                                hashed = hashlib.sha256(str.encode(u_pass)).hexdigest()
-                                if hashed == user_row.iloc[0]['password_hash']:
-                                    st.session_state.role = "teacher"
-                                    st.rerun()
-                                else:
-                                    st.error("❌ كلمة المرور غير صحيحة")
-                            else:
-                                st.error("❌ اسم المستخدم غير موجود")
+                    u_df = fetch_safe("users")
+                    if not u_df.empty:
+                        user_row = u_df[u_df['username'] == u_name.strip()]
+                        if not user_row.empty:
+                            hashed = hashlib.sha256(str.encode(u_pass)).hexdigest()
+                            if hashed == user_row.iloc[0]['password_hash']:
+                                st.session_state.role = "teacher"; st.rerun()
+                            else: st.error("خطأ في كلمة المرور")
+                        else: st.error("المستخدم غير موجود")
     
-    # تذييل الصفحة
-    st.markdown("""
-        <div style="text-align:center; margin-top:30px; opacity:0.6; font-size:12px;">
-            جميع الحقوق محفوظة لمنصة زياد الذكية © 2024
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; margin-top:40px; opacity:0.5; font-size:13px;'>منصة زياد الذكية التعليمية © 2026</div>", unsafe_allow_html=True)
     st.stop()
 # ==========================================
 # 🛠️ واجهة المعلم - النسخة الشاملة (البحث + الإدارة + التنسيقات)
