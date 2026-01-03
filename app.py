@@ -68,7 +68,6 @@ st.markdown("""
         font-weight: bold !important;
         border: 2px solid #3b82f6 !important;
         border-radius: 12px !important;
-        font-size: 16px !important;
     }
     div[data-testid="InputInstructions"] { display: none !important; }
     div[data-testid="stForm"] {
@@ -86,12 +85,36 @@ st.markdown("""
         width: 100% !important;
     }
     [data-testid="stSidebar"] { display: none !important; }
+    
+    .contact-section {
+        margin-top: 30px;
+        text-align: center;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 15px;
+    }
+    .contact-icons {
+        display: flex;
+        justify-content: center;
+        gap: 25px;
+        margin-top: 15px;
+    }
+    .contact-icons a {
+        text-decoration: none;
+        color: #1e40af;
+        font-size: 28px;
+        transition: 0.3s;
+    }
+    .contact-icons a:hover {
+        color: #3b82f6;
+        transform: scale(1.2);
+    }
     .footer-text {
         text-align: center;
         opacity: 0.8;
         font-size: 13px;
-        margin-top: 50px;
-        padding: 20px;
+        margin-top: 30px;
+        padding: 15px;
         border-top: 1px solid rgba(128, 128, 128, 0.1);
     }
     </style>
@@ -114,6 +137,7 @@ if st.session_state.role is None:
             </p>
         </div>
     """, unsafe_allow_html=True)
+    
     tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
     with tab1:
         with st.form("st_form"):
@@ -140,7 +164,20 @@ if st.session_state.role is None:
                             st.session_state.role = "teacher"; st.rerun()
                         else: st.error("كلمة المرور غير صحيحة")
                     else: st.error("المستخدم غير موجود")
-    st.markdown("""<div class="footer-text">© منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد</div>""", unsafe_allow_html=True)
+
+    # قنوات التواصل المحدثة
+    st.markdown("""
+        <div class="contact-section">
+            <p style="font-weight: 700; color: #1e40af; margin-bottom: 10px;">قنوات التواصل المباشرة</p>
+            <div class="contact-icons">
+                <a href="mailto:YourEmail@example.com" title="بريد إلكتروني"><i class="bi bi-envelope-at-fill"></i></a>
+                <a href="https://wa.me/966XXXXXXXXX" target="_blank" title="واتساب"><i class="bi bi-whatsapp"></i></a>
+                <a href="https://t.me/YourUsername" target="_blank" title="تليجرام"><i class="bi bi-telegram"></i></a>
+                <a href="https://www.snapchat.com/add/YourUsername" target="_blank" title="سناب شات"><i class="bi bi-snapchat"></i></a>
+            </div>
+        </div>
+        <div class="footer-text">© منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد</div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 if st.session_state.role:
