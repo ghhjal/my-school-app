@@ -2,58 +2,44 @@ import streamlit as st
 import gspread
 import pandas as pd
 def draw_professional_student_ui():
-    # تصميم واجهة الطالب - الهوية البصرية
+def run_student_interface():
+    # تصميم واجهة احترافية (CSS)
     st.markdown("""
         <style>
-        .main-header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            padding: 2rem;
-            border-radius: 1rem;
-            border-right: 8px solid #38bdf8;
-            color: white;
-            margin-bottom: 2rem;
-            text-align: right;
+        .student-portal {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            padding: 2rem; border-radius: 1rem; border-right: 10px solid #3b82f6;
+            color: white; margin-bottom: 2rem; text-align: right;
         }
         </style>
-        <div class="main-header">
-            <h1 style='margin:0; font-size: 2rem;'>بوابة الطالب المتميزة 🌟</h1>
-            <p style='opacity:0.8;'>مرحباً بك في نظامك الأكاديمي المتكامل</p>
-        </div>
     """, unsafe_allow_html=True)
+
+    st.markdown('<div class="student-portal"><h1>منصة الطالب الذكية 🎓</h1><p>مرحباً بك في لوحة المتابعة</p></div>', unsafe_allow_html=True)
 
     try:
         # جلب البيانات
-        df_st = fetch_safe("students")
-        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        df_students = fetch_safe("students")
+        s_info = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         
-        if not student_data.empty:
-            s_row = student_data.iloc[0]
-            # عرض الإحصائيات في كروت جذابة
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-                points = int(float(val)) if val.replace('.','',1).isdigit() else 0
-                st.metric("🎯 رصيد النقاط", points)
-            with c2:
-                st.metric("🏅 المستوى", "متفوق")
-            with c3:
-                st.metric("👤 الطالب", s_row[1])
+        if not s_info.empty:
+            s_row = s_info.iloc[0]
+            # عرض البيانات
+            c1, c2 = st.columns(2)
+            c1.metric("🎯 نقاطك", str(s_row[8]) if len(s_row) > 8 else "0")
+            c2.metric("👤 الطالب", s_row[1])
 
-            st.divider()
-            
-            # حل مشكلة NameError: ننشئ تبويبات جديدة تماماً للطالب هنا
-            st_tabs = st.tabs(["📊 كشف الدرجات", "📜 سجل السلوك", "📝 الاختبارات"])
-            
+            # الحل الجوهري: تبويبات فريدة للطالب تنهي NameError: tab2
+            st_tabs = st.tabs(["📊 الدرجات", "🛡️ السلوك", "📝 الاختبارات"])
             with st_tabs[0]:
                 st.dataframe(fetch_safe("grades"), use_container_width=True)
             with st_tabs[1]:
-                st.info("سجلك الدراسي حافل بالإنجازات، استمر!")
+                st.info("سجلك حافل بالتميز!")
             with st_tabs[2]:
-                st.success("جميع اختباراتك ستظهر هنا فور جدولتها")
+                st.success("الاختبارات ستظهر هنا قريباً")
         else:
-            st.error("بياناتك غير موجودة، يرجى مراجعة الإدارة")
+            st.error("لم نجد بياناتك.")
     except Exception as e:
-        st.error(f"عذراً، حدث خطأ: {e}")
+        st.error(f"خطأ: {e}")
 import hashlib
 import time
 import datetime
@@ -804,65 +790,3 @@ with tab6:
 # =========================================================
 # الحل الجوهري: واجهة الطالب المعزولة والمحمية
 # =========================================================
-
-# --- بداية واجهة الطالب المدمجة والاحترافية ---
-# تأكد أن السطر التالي يبدأ من أقصى اليسار تماماً
-if st.session_state.get('role') == "student":
-    # 1. تصميم الواجهة بهوية بصرية حديثة
-    st.markdown("""
-        <style>
-        .student-portal {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            padding: 25px; border-radius: 15px; border-right: 10px solid #3b82f6;
-            color: white; margin-bottom: 25px; box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-            text-align: right;
-        }
-        </style>
-        <div class="student-portal">
-            <h1 style='margin:0; font-family:Cairo; font-size:26px;'>لوحة المتابعة الذكية 🎓</h1>
-            <p style='opacity:0.8;'>مرحباً بك في بوابتك التعليمية المتكاملة</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    try:
-        # 2. جلب البيانات بشكل معزول وآمن
-        df_students = fetch_safe("students")
-        student_info = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-        
-        if not student_info.empty:
-            s_row = student_info.iloc[0]
-            s_name, s_class = s_row[1], s_row[2]
-            
-            # معالجة النقاط (العمود التاسع)
-            raw_val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            pts = int(float(raw_val)) if raw_val.replace('.','',1).isdigit() else 0
-            
-            # 3. عرض كروت الإحصائيات (Metrics)
-            c1, c2, c3 = st.columns(3)
-            with c1: st.metric("🎯 مجموع نقاطك", f"{pts} نقطة")
-            with c2: st.metric("🏆 رتبة الطالب", "متميز")
-            with c3: st.metric("👤 الطالب", s_name)
-
-            st.divider()
-            
-            # 4. حل مشكلة NameError: ننشئ تبويبات (Tabs) خاصة للطالب فقط
-            # هذه التبويبات مستقلة تماماً عن متغير tab2 المسبب للخطأ
-            st_tabs = st.tabs(["📊 سجل الدرجات", "🛡️ سجل السلوك", "📝 الاختبارات"])
-            
-            with st_tabs[0]:
-                st.subheader("كشف الدرجات الأكاديمي")
-                st.dataframe(fetch_safe("grades"), use_container_width=True)
-            
-            with st_tabs[1]:
-                st.info("سجلك الدراسي حافل بالإنجازات، استمر في تميزك!")
-                
-            with st_tabs[2]:
-                st.success("سيتم عرض روابط الاختبارات القادمة هنا فور جدولتها")
-        else:
-            st.error("⚠️ لم نتمكن من العثور على بياناتك، يرجى مراجعة إدارة المدرسة.")
-            
-    except Exception as e:
-        st.error(f"حدث خطأ تقني أثناء تحميل الواجهة: {e}")
-
-    # 5. الأمر السحري الذي يحمي تطبيقك من أي أخطاء متبقية في أسفل الملف
-    st.stop()
