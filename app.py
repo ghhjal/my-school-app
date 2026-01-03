@@ -505,11 +505,12 @@ if st.session_state.role == "teacher":
                             ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
-elif menu == "📢 الاختبارات":
+# --- التبويب الخامس: شاشة الاختبارات والإعلانات (نظام التبويبات) ---
+    with tab5:
         import urllib.parse
         import time
 
-        # 1. الهيدر المطور
+        # 1. الهيدر المطور (متناسق مع المنصة)
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
@@ -517,16 +518,16 @@ elif menu == "📢 الاختبارات":
             </div>
         """, unsafe_allow_html=True)
 
-        # 2. كود CSS للألوان (أحمر للحذف، أخضر للواتساب)
+        # 2. كود CSS لإجبار الألوان (الأحمر للحذف والأخضر للواتساب)
         st.markdown("""
             <style>
-                /* زر الحذف الأحمر */
+                /* جعل زر الحذف باللون الأحمر الفاقع */
                 div.stButton > button[key*="del_ex_"] {
                     background-color: #FF0000 !important;
                     color: white !important;
                     border: none !important;
                 }
-                /* بطاقة الإعلان */
+                /* تنسيق بطاقات الإعلانات */
                 .ann-card {
                     padding: 20px;
                     border-radius: 12px;
@@ -539,7 +540,7 @@ elif menu == "📢 الاختبارات":
 
         # 3. نموذج إضافة التنبيهات
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("ann_form_v9", clear_on_submit=True):
+            with st.form("ann_form_final_v1", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
@@ -547,17 +548,20 @@ elif menu == "📢 الاختبارات":
                 
                 btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
                 
-                if btn_post and a_title:
-                    try:
-                        sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
-                        st.balloons()
-                        st.success("✅ تم النشر بنجاح")
-                        time.sleep(1)
-                        st.rerun()
-                    except:
-                        st.error("❌ فشل الحفظ في جوجل شيت")
+                if btn_post:
+                    if a_title:
+                        try:
+                            sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
+                            st.balloons()
+                            st.success("✅ تم النشر بنجاح")
+                            time.sleep(1)
+                            st.rerun()
+                        except:
+                            st.error("❌ فشل الحفظ، تأكد من وجود ورقة 'exams' في الملف")
+                    else:
+                        st.warning("⚠️ يرجى كتابة العنوان")
 
-        # 4. عرض التنبيهات المنشورة
+        # 4. عرض التنبيهات المنشورة (الأحدث أولاً)
         st.markdown("### 📋 التنبيهات المنشورة")
         df_ann = fetch_safe("exams")
         
@@ -587,21 +591,23 @@ elif menu == "📢 الاختبارات":
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # أزرار التحكم
+                # أزرار الواتساب والحذف
                 col1, col2, col3 = st.columns([2, 1, 2])
                 with col1:
                     st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
                 
                 with col2:
+                    # زر الحذف الأحمر
                     if st.button("🗑️", key=f"del_ex_{index}"):
                         try:
-                            ws_exam = sh.worksheet("exams")
-                            # حذف الصف بناءً على المحتوى لضمان الدقة
-                            cell = ws_exam.find(row[1])
+                            ws_ex = sh.worksheet("exams")
+                            cell = ws_ex.find(row[1])
                             if cell:
-                                ws_exam.delete_rows(cell.row)
+                                ws_ex.delete_rows(cell.row)
+                                st.success("تم الحذف")
+                                time.sleep(0.5)
                                 st.rerun()
                         except: pass
                 st.markdown("---")
         else:
-            st.info("📭 لا توجد تنبيهات حالياً")
+            st.info("📭 لا توجد تنبيهات منشورة حالياً")
