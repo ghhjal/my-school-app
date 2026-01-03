@@ -95,4 +95,56 @@ st.markdown("""
     
     <div class="header-section">
         <div class="logo-container"><i class="bi bi-graph-up-arrow" style="font-size:38px; color:white;"></i></div>
-        <h1 style="font-size:26px;
+        <h1 style="font-size:26px; font-weight:700; margin:0; color:white;">منصة زياد الذكية</h1>
+        <p style="opacity:0.9; font-size:15px; margin-top:8px; color:white;">نظام متابعة الطلاب والتواصل مع أولياء الأمور</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# 4. منطق الدخول والترحيب
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+if st.session_state.role is None:
+    h = datetime.datetime.now().hour
+    msg = "مرحباً بكم في بوابتنا التعليمية ☀️" if 5 <= h < 12 else "نسعد بخدمتكم دائماً ✨"
+    st.markdown(f"<h4 style='text-align:center; color:#1e40af;'>{msg}</h4>", unsafe_allow_html=True)
+
+    tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 الإدارة"])
+    
+    with tab1:
+        with st.form("st_form"):
+            st.markdown("<p style='text-align:center;'>ادخل الرقم الأكاديمي للمتابعة</p>", unsafe_allow_html=True)
+            sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية هنا")
+            if st.form_submit_button("دخول المنصة 🚀"):
+                df = fetch_safe("students")
+                if not df.empty and sid:
+                    df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+                    if sid.strip() in df.iloc[:, 0].values:
+                        st.session_state.role = "student"; st.session_state.sid = sid.strip()
+                        st.balloons(); time.sleep(1); st.rerun()
+                    else: st.error("عذراً، الرقم غير مسجل في النظام")
+
+    with tab2:
+        with st.form("te_form"):
+            st.markdown("<p style='text-align:center;'>نظام الدخول الآمن للمعلمين</p>", unsafe_allow_html=True)
+            u = st.text_input("👤 اسم المستخدم")
+            p = st.text_input("🔑 كلمة المرور", type="password")
+            if st.form_submit_button("تسجيل الدخول"):
+                df = fetch_safe("users")
+                if not df.empty:
+                    row = df[df['username'] == u.strip()]
+                    if not row.empty:
+                        hashed = hashlib.sha256(str.encode(p)).hexdigest()
+                        if hashed == row.iloc[0]['password_hash']:
+                            st.session_state.role = "teacher"; st.rerun()
+                        else: st.error("كلمة المرور غير صحيحة")
+                    else: st.error("المستخدم غير موجود")
+    
+    st.markdown("<p style='text-align:center; opacity:0.6; font-size:12px; margin-top:40px;'>جميع الحقوق محفوظة لمنصة زياد الذكية © 2026</p>", unsafe_allow_html=True)
+    st.stop()
+
+# 5. بعد الدخول
+if st.session_state.role:
+    st.success("أهلاً بك في منصة زياد الذكية")
+    if st.button("تسجيل الخروج"):
+        st.session_state.role = None; st.rerun()
