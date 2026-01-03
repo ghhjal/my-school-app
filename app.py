@@ -183,14 +183,14 @@ if st.session_state.role:
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
 # ==========================================
-# 👨‍🏫 واجهة المعلم بنظام علامات التبويب (Tabs) للجوال
+# 👨‍🏫 واجهة المعلم (تصميم الجوال المعتمد)
 # ==========================================
 if st.session_state.role == "teacher":
     
-    # عنوان الواجهة
-    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👨‍🏫 لوحة تحكم المعلم</h1></div>', unsafe_allow_html=True)
+    # عنوان المنصة الرئيسي
+    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:10px;"><h1>👨‍🏫 لوحة تحكم المعلم</h1></div>', unsafe_allow_html=True)
     
-    # 1. إنشاء علامات التبويب العلوية بالترتيب المطلوب
+    # 1. إنشاء علامات التبويب (تم حذف زر الخروج العلوي بناءً على طلبك)
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "👥 إدارة الطلاب", 
         "📝 شاشة الدرجات", 
@@ -200,55 +200,65 @@ if st.session_state.role == "teacher":
         "🚗 خروج"
     ])
 
-    # --- التبويب الأول: إدارة الطلاب ---
+    # --- التبويب الأول: إدارة الطلاب (تعديل الحقول لتطابق الجدول) ---
     with tab1:
-        st.subheader("👥 إدارة سجلات الطلاب")
+        st.markdown("### 👥 إدارة سجلات الطلاب")
         df_st = fetch_safe("students")
         
-        # نموذج الإضافة (6 حقول كاملة مرتبة كما في الجدول)
         with st.container(border=True):
             st.markdown("#### ➕ تأسيس ملف طالب جديد")
-            with st.form("add_student_tabs", clear_on_submit=True):
+            with st.form("add_student_final_form", clear_on_submit=True):
+                # السطر الأول: مطابق لأعمدة الجدول A, B, C
                 c1, c2, c3 = st.columns(3)
                 nid = c1.text_input("🔢 الرقم الأكاديمي")
                 nname = c2.text_input("👤 الاسم الثلاثي")
-                nphone = c3.text_input("📱 جوال ولي الأمر")
+                nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 
+                # السطر الثاني: مطابق لأعمدة الجدول D, E, F
                 c4, c5, c6 = st.columns(3)
-                nclass = c4.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                nyear = c4.text_input("🗓️ العام الدراسي", value="1447هـ")
                 nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
                 nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
                 
-                if st.form_submit_button("✅ اعتماد وإضافة للطالب", use_container_width=True):
+                # السطر الثالث: مطابق لأعمدة الجدول G, H
+                c7, c8 = st.columns(2)
+                nmail = c7.text_input("📧 البريد الإلكتروني")
+                nphone = c8.text_input("📱 جوال ولي الأمر (بدون 966)")
+                
+                if st.form_submit_button("✅ اعتماد وإضافة الطالب", use_container_width=True):
                     if nid and nname and nphone:
+                        # معالجة الرقم 966
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
-                        row = [nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"]
+                        
+                        # إرسال البيانات بالترتيب الدقيق لأعمدة الجدول
+                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
                         sh.worksheet("students").append_row(row)
-                        st.success("✅ تم الحفظ بنجاح"); time.sleep(1); st.rerun()
+                        st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
 
-        # عرض الجدول
+        # عرض السجل الحالي
         with st.expander("📋 السجل الحالي للطلاب", expanded=False):
             st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-        # منطقة الحذف النهائي
+        # منطقة الحذف النهائي (صمام الأمان)
         st.markdown("---")
         with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
-            st.error("⚠️ سيتم مسح الطالب من كافة السجلات")
-            del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""])
-            if st.button("🚨 تنفيذ الحذف النهائي الآن", use_container_width=True):
-                if del_name:
-                    for s in ["students", "grades", "behavior"]:
-                        try:
-                            ws = sh.worksheet(s); cell = ws.find(del_name)
-                            if cell: ws.delete_rows(cell.row)
-                        except: pass
-                    st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
+            st.error("⚠️ سيتم حذف كافة بيانات الطالب من جميع الجداول")
+            if not df_st.empty:
+                del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist())
+                if st.button("🚨 تنفيذ الحذف النهائي الآن", use_container_width=True):
+                    if del_name:
+                        for s in ["students", "grades", "behavior"]:
+                            try:
+                                ws = sh.worksheet(s); cell = ws.find(del_name)
+                                if cell: ws.delete_rows(cell.row)
+                            except: pass
+                        st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات ---
     with tab2:
-        st.subheader("📝 رصد درجات الطلاب")
+        st.markdown("### 📝 رصد درجات الطلاب")
         df_st = fetch_safe("students")
         if not df_st.empty:
             with st.form("grades_tabs_form"):
@@ -257,24 +267,61 @@ if st.session_state.role == "teacher":
                 exam = col2.selectbox("📝 النوع:", ["شهري", "فترتي", "نهائي"])
                 col3, col4 = st.columns(2)
                 grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
-                note = col4.text_input("💬 ملاحظة")
+                note = col4.text_input("💬 ملاحظة المعلم")
                 if st.form_submit_button("✅ حفظ الدرجة", use_container_width=True):
                     s_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
                     sh.worksheet("grades").append_row([s_data[0], s_name, s_data[5], exam, grade, datetime.datetime.now().strftime("%Y-%m-%d"), note])
                     st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
             st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    # --- التبويب الثالث: البحث المطور ---
+   # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
     with tab3:
-        st.subheader("🔍 محرك البحث السريع")
+        st.markdown("### 🔍 محرك البحث الذكي")
         df_st = fetch_safe("students")
-        query = st.text_input("🔎 ابحث بالاسم أو الرقم الأكاديمي:")
-        if query:
-            res = df_st[df_st.iloc[:, 0].astype(str).str.contains(query) | df_st.iloc[:, 1].str.contains(query)]
-            st.dataframe(res, use_container_width=True, hide_index=True)
-
-    # --- التبويب السادس: خروج ---
-    with tab6:
-        if st.button("🚗 تأكيد تسجيل الخروج", use_container_width=True):
-            st.session_state.role = None
-            st.rerun()
+        
+        # حقل البحث
+        search_query = st.text_input("🔎 ابحث باسم الطالب أو الرقم الأكاديمي:", placeholder="اكتب هنا للبحث...")
+        
+        if search_query:
+            # البحث في عمود الرقم الأكاديمي (A) وعمود الاسم (B)
+            results = df_st[
+                df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
+                df_st.iloc[:, 1].str.contains(search_query)
+            ]
+            
+            if not results.empty:
+                st.success(f"✅ تم العثور على {len(results)} طالب")
+                
+                # عرض النتائج في بطاقات بدلاً من جدول
+                for i in range(len(results)):
+                    with st.container(border=True):
+                        # سطر الاسم والرقم
+                        c1, c2 = st.columns([2, 1])
+                        c1.markdown(f"**👤 الاسم:** {results.iloc[i, 1]}")
+                        c2.markdown(f"**🔢 الرقم:** {results.iloc[i, 0]}")
+                        
+                        # سطر الصف والمادة
+                        c3, c4 = st.columns(2)
+                        c3.markdown(f"**🏫 الصف:** {results.iloc[i, 2]}")
+                        c4.markdown(f"**📚 المادة:** {results.iloc[i, 5]}")
+                        
+                        # أزرار التواصل السريع (تستفيد من مفتاح 966)
+                        phone = results.iloc[i, 7]
+                        st.markdown(f'''
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <a href="https://wa.me/{phone}" target="_blank" style="flex: 1; text-decoration: none;">
+                                    <div style="background-color: #25D366; color: white; padding: 10px; border-radius: 8px; text-align: center;">
+                                        <i class="bi bi-whatsapp"></i> واتساب ولي الأمر
+                                    </div>
+                                </a>
+                                <a href="tel:{phone}" style="flex: 1; text-decoration: none;">
+                                    <div style="background-color: #1e40af; color: white; padding: 10px; border-radius: 8px; text-align: center;">
+                                        📱 اتصال هاتفي
+                                    </div>
+                                </a>
+                            </div>
+                        ''', unsafe_allow_html=True)
+            else:
+                st.error("❌ لا توجد نتائج مطابقة.")
+        else:
+            st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
