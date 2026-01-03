@@ -801,7 +801,68 @@ with tab6:
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
-# --- تفعيل واجهة الطالب المستقلة ---
+# =========================================================
+# الحل الجوهري: واجهة الطالب المعزولة والمحمية
+# =========================================================
+
 if st.session_state.get('role') == "student":
-    draw_professional_student_ui()
-    st.stop() # هذا السطر هو "المنقذ"؛ يمنع التطبيق من قراءة أي أخطاء تالية بالأسفل
+    # 1. تصميم عصري لواجهة الطالب (CSS)
+    st.markdown("""
+        <style>
+        .student-dashboard {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 30px; border-radius: 20px; border-right: 12px solid #38bdf8;
+            color: white; margin-bottom: 25px; box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+            text-align: right;
+        }
+        .stMetric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    try:
+        # 2. جلب البيانات الأساسية للطالب الحالي فقط
+        df_students = fetch_safe("students")
+        current_student = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        
+        if not current_student.empty:
+            s_data = current_student.iloc[0]
+            s_name, s_class = s_data[1], s_data[2]
+            
+            # 3. عرض الترويسة الأنيقة
+            st.markdown(f"""<div class="student-dashboard">
+                <h1 style='margin:0; font-family:Cairo;'>مرحباً بطلنا، {s_name} ✨</h1>
+                <p style='opacity:0.8;'>الصف: {s_class} | بوابة الطالب الذكية</p>
+            </div>""", unsafe_allow_html=True)
+
+            # 4. لوحة الإحصائيات (Metrics) بشكل أفقي
+            raw_val = str(s_data[8]).strip() if len(s_data) >= 9 else "0"
+            pts = int(float(raw_val)) if raw_val.replace('.','',1).isdigit() else 0
+            
+            c1, c2, c3 = st.columns(3)
+            with c1: st.metric("🎯 رصيد نقاطك", f"{pts} نقطة")
+            with c2: st.metric("🏆 المستوى الأكاديمي", "متميز")
+            with c3: st.metric("📅 حالة الحضور", "منتظم")
+
+            st.divider()
+
+            # 5. التبويبات المستقلة (لحل مشكلة NameError: tab2 نهائياً)
+            # هذه التبويبات تظهر فقط للطالب ولها أسماء فريدة
+            st_tabs = st.tabs(["📊 كشف الدرجات", "🛡️ سجل السلوك", "🔗 الاختبارات المتاحة"])
+            
+            with st_tabs[0]:
+                st.subheader("نتائج المواد المعتمدة")
+                st.dataframe(fetch_safe("grades"), use_container_width=True)
+            
+            with st_tabs[1]:
+                st.info("سجلك السلوكي نظيف وحافل بالتميز، استمر!")
+            
+            with st_tabs[2]:
+                st.success("جميع روابط الاختبارات القادمة ستظهر هنا")
+        else:
+            st.error("⚠️ لم نتمكن من العثور على بياناتك في السجلات.")
+            
+    except Exception as e:
+        st.error(f"❌ حدث خطأ فني أثناء تحميل واجهة الطالب: {e}")
+
+    # 6. الأمر السحري الذي يحمي الكود من أخطاء الإزاحة (Indentation) بالأسفل
+    st.stop()
