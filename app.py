@@ -571,24 +571,93 @@ with tab5:
             
             st.markdown("<br>", unsafe_allow_html=True)
 
-    with tab6:
-        st.markdown("### ⚙️ الإعدادات")
-        with st.expander("🔐 تغيير بيانات الحساب"):
-            with st.form("update_auth"):
-                new_user = st.text_input("المستخدم الجديد")
-                new_pass = st.text_input("السر الجديد", type="password")
-                if st.form_submit_button("💾 حفظ"):
+    # --- التبويب السادس: الإعدادات وإدارة البيانات ---
+with tab6:
+    import pandas as pd
+    import io
+
+    st.markdown("""
+        <div style="background: linear-gradient(90deg, #1e293b 0%, #334155 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+            <h2 style="margin:0;">⚙️ إعدادات المنصة المتقدمة</h2>
+            <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة الحساب ورفع بيانات الطلاب - الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 1. قسم تغيير بيانات الدخول
+    with st.expander("🔐 تغيير بيانات الحساب"):
+        st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
+        with st.form("update_auth_v1"):
+            new_user = st.text_input("اسم المستخدم الجديد")
+            new_pass = st.text_input("كلمة المرور الجديدة", type="password")
+            if st.form_submit_button("💾 حفظ البيانات الجديدة"):
+                try:
                     ws_u = sh.worksheet("users")
                     ws_u.update_cell(2, 1, new_user)
-                    ws_u.update_cell(2, 2, hashlib.sha256(str.encode(new_pass)).hexdigest())
-                    st.success("✅ تم التحديث")
-        
-        st.markdown("#### 📥 تحميل البيانات")
-        df_all = fetch_safe("students")
+                    ws_u.update_cell(2, 2, new_pass)
+                    st.success("✅ تم تحديث بيانات الدخول. سيتم العمل بها في الدخول القادم.")
+                except:
+                    st.error("❌ فشل التحديث، تأكد من وجود شيت 'users'")
+
+    # 2. قسم رفع بيانات الطلاب
+    st.markdown("### 📥 إدارة بيانات الطلاب")
+    col_down, col_up = st.columns(2)
+    
+    with col_down:
+        st.markdown("#### الخطوة 1: تحميل القالب")
+        st.write("حمل القالب لتعبئة بيانات الطلاب بنفس تنسيق المنصة.")
+        # إنشاء قالب Excel في الذاكرة
+        template_df = pd.DataFrame(columns=["الاسم", "الصف", "رقم ولي الأمر", "ملاحظات", "النقاط"])
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            df_all.to_excel(writer, index=False)
-        st.download_button(label="📥 تحميل سجل الطلاب Excel", data=buffer.getvalue(), file_name="students_report.xlsx")
+            template_df.to_excel(writer, index=False, sheet_name='Sheet1')
+        
+        st.download_button(
+            label="📥 تحميل قالب Excel فارغ",
+            data=buffer.getvalue(),
+            file_name="students_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    with col_up:
+        st.markdown("#### الخطوة 2: رفع البيانات")
+        st.write("ارفع ملف Excel بعد تعبئته لاستبدال قائمة الطلاب الحالية.")
+        up_file = st.file_uploader("اختر ملف الطلاب", type=["xlsx"])
+        
+        if up_file:
+            try:
+                new_st_df = pd.read_excel(up_file)
+                st.write("📊 معاينة أول 5 طلاب:")
+                st.dataframe(new_st_df.head())
+                
+                if st.button("🚀 تأكيد الرفع والاستبدال"):
+                    with st.spinner("جاري التحديث..."):
+                        ws_st = sh.worksheet("students")
+                        ws_st.clear()
+                        # رفع البيانات الجديدة مع العناوين
+                        ws_st.update([new_st_df.columns.values.tolist()] + new_st_df.values.tolist())
+                        st.balloons()
+                        st.success(f"✅ تم رفع {len(new_st_df)} طالب بنجاح!")
+                        time.sleep(2)
+                        st.rerun()
+            except Exception as e:
+                st.error(f"❌ خطأ في تنسيق الملف: {e}")
+
+    # 3. مساحة الإجراءات السريعة
+    st.markdown("---")
+    with st.expander("🗑️ منطقة التحكم السريع"):
+        c1, c2 = st.columns(2)
+        if c1.button("🧹 مسح سجل الإعلانات"):
+            sh.worksheet("exams").clear()
+            sh.worksheet("exams").append_row(["الصف", "العنوان", "التاريخ", "الرابط"])
+            st.success("تم تصفير شيت الإعلانات")
+        
+        if c2.button("🎯 تصفير نقاط جميع الطلاب"):
+            # هذا الزر يحتاج حذر، سيقوم بجعل العمود التاسع (I) صفراً لكل الطلاب
+            ws_st = sh.worksheet("students")
+            all_data = ws_st.get_all_values()
+            for i in range(2, len(all_data) + 1):
+                ws_st.update_cell(i, 9, "0")
+            st.warning("تم تصفير جميع النقاط")
 
 # --- واجهة الطالب ---
 if st.session_state.role == "student":
