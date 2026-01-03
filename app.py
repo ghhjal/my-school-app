@@ -459,7 +459,7 @@ elif st.session_state.role == "student":
                 st.markdown(f'<div style="background: {"#eff6ff" if is_me else "white"}; padding: 12px; border-radius: 12px; border: {"3px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div style="display: flex; align-items: center;"><b style="width: 40px; font-size: 1.3rem; color: {col}; text-align: center;">{icon}</b><b style="font-size: 1.1rem; color: #1e293b;">{l_row[1]} {" (أنت)" if is_me else ""}</b></div><b style="background: {col}; color: white; padding: 5px 15px; border-radius: 10px; font-size: 1.1rem; font-weight: bold;">{get_p(l_row)}</b></div>', unsafe_allow_html=True)
         except: st.info("جاري التحديث...")
 
- with t_set:
+with t_set:
         with st.form("set_f"):
             st.markdown("<b>⚙️ تحديث البيانات</b>", unsafe_allow_html=True)
             m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
