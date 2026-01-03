@@ -182,3 +182,116 @@ if st.session_state.role:
     st.success("تم تسجيل الدخول بنجاح!")
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
+# ==========================================
+# 🛠️ واجهة المعلم (بعد الدمج الاحترافي)
+# ==========================================
+if st.session_state.role == "teacher":
+    # 1. التنسيق الجمالي للقائمة الجانبية
+    st.sidebar.markdown(f"""
+        <div style="text-align:center; padding:10px;">
+            <i class="bi bi-person-badge" style="font-size:50px; color:#1e40af;"></i>
+            <h3 style="margin-top:10px;">الأستاذ زياد</h3>
+            <p style="font-size:12px; opacity:0.7;">مدير المنصة</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    menu = st.sidebar.selectbox("🏠 القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
+    
+    st.sidebar.divider()
+    if st.sidebar.button("🚗 تسجيل الخروج", use_container_width=True):
+        st.session_state.role = None
+        st.rerun()
+
+    # --- القسم الأول: إدارة الطلاب (كودك الأصلي مع لمسات جمالية) ---
+    if menu == "👥 إدارة الطلاب":
+        st.markdown("""
+            <div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:25px; border-radius:20px; color:white; text-align:center; margin-bottom:25px;">
+                <h1 style="margin:0; font-size:24px;">👥 إدارة سجلات الطلاب</h1>
+                <p style="margin:5px 0 0 0; opacity:0.9;">إضافة، تعديل، وحذف بيانات الطلاب من النظام</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        df_st = fetch_safe("students")
+        
+        # عرض البيانات بشكل أنيق
+        with st.expander("📋 عرض السجل الحالي للطلاب", expanded=True):
+            if not df_st.empty:
+                st.dataframe(df_st, use_container_width=True, hide_index=True)
+            else:
+                st.info("لا يوجد طلاب مسجلين حالياً")
+
+        # 1. نموذج إضافة طالب جديد
+        with st.container(border=True):
+            st.markdown("#### ➕ تأسيس ملف طالب جديد")
+            with st.form("add_student_pro_v3", clear_on_submit=True):
+                c1, c2, c3 = st.columns(3)
+                nid = c1.text_input("🔢 الرقم الأكاديمي")
+                nname = c2.text_input("👤 الاسم الثلاثي")
+                nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                
+                c4, c5, c6 = st.columns(3)
+                nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                nsub = c5.text_input("📚 المادة", value="لغة إنجليزية")
+                nyear = c6.text_input("🗓️ العام الدراسي", value="1447هـ")
+                
+                c7, c8 = st.columns(2)
+                nmail = c7.text_input("📧 البريد الإلكتروني")
+                nphone = c8.text_input("📱 جوال ولي الأمر")
+                
+                submit = st.form_submit_button("✅ اعتماد وإضافة الطالب")
+                if submit:
+                    if nid and nname:
+                        row_to_add = [nid, nname, nclass, nyear, nstage, nsub, nmail, nphone, "0"]
+                        try:
+                            sh.worksheet("students").append_row(row_to_add)
+                            st.success(f"✅ تم إضافة الطالب {nname} بنجاح")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"خطأ في الاتصال: {e}")
+                    else:
+                        st.warning("يرجى ملء البيانات الأساسية (الرقم والاسم)")
+
+        # 2. زر الحذف النهائي (الميزة الاحترافية التي أضفتها أنت)
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("🗑️ منطقة الحذف النهائي والمخاطر", expanded=False):
+            st.markdown("""
+                <div style="background-color:#fee2e2; padding:15px; border-radius:10px; border-right:5px solid #ef4444; color:#991b1b;">
+                    <strong>⚠️ تنبيه أمني:</strong> سيتم حذف الطالب نهائياً من كافة السجلات (الطلاب، الدرجات، السلوك). هذا الإجراء لا يمكن التراجع عنه.
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.write("")
+            del_name = st.selectbox("🎯 اختر الطالب المراد حذفه نهائياً:", [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""])
+            
+            if st.button("🚨 تنفيذ الحذف الشامل الآن", use_container_width=True):
+                if del_name and del_name != "":
+                    try:
+                        with st.spinner(f'جاري تنظيف كافة السجلات المرتبطة بـ {del_name}...'):
+                            # أ. الحذف من شيت الطلاب
+                            ws_st = sh.worksheet("students")
+                            c_st = ws_st.find(del_name)
+                            if c_st: ws_st.delete_rows(c_st.row)
+                            
+                            # ب. الحذف من شيت الدرجات
+                            try:
+                                ws_gr = sh.worksheet("grades")
+                                c_gr = ws_gr.find(del_name)
+                                if c_gr: ws_gr.delete_rows(c_gr.row)
+                            except: pass
+                            
+                            # ج. الحذف من شيت السلوك
+                            try:
+                                ws_bh = sh.worksheet("behavior")
+                                matches = ws_bh.findall(del_name)
+                                for m in reversed(matches):
+                                    if m.col == 1: ws_bh.delete_rows(m.row)
+                            except: pass
+                            
+                            st.success(f"💥 تم مسح سجلات {del_name} بنجاح من جميع الجداول")
+                            time.sleep(1)
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء الحذف: {e}")
+                else:
+                    st.warning("يرجى اختيار اسم الطالب أولاً")        
