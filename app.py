@@ -1,70 +1,59 @@
 import streamlit as st
 import gspread
 import pandas as pd
-# --- كبسولة واجهة الطالب الاحترافية ---
-def build_student_ui():
-    # تصميم عصري للبطاقة التعريفية
+def draw_professional_student_ui():
+    # تصميم واجهة الطالب - الهوية البصرية
     st.markdown("""
         <style>
-        .student-header {
-            background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
-            padding: 30px;
-            border-radius: 15px;
-            border-right: 10px solid #00d4ff;
+        .main-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border-right: 8px solid #38bdf8;
             color: white;
+            margin-bottom: 2rem;
             text-align: right;
-            margin-bottom: 20px;
         }
         </style>
-        <div class="student-header">
-            <h1 style='margin:0; font-family:Cairo;'>لوحة الطالب الذكية 🎓</h1>
-            <p style='opacity:0.8;'>مرحباً بك في بوابتك التعليمية الخاصة</p>
+        <div class="main-header">
+            <h1 style='margin:0; font-size: 2rem;'>بوابة الطالب المتميزة 🌟</h1>
+            <p style='opacity:0.8;'>مرحباً بك في نظامك الأكاديمي المتكامل</p>
         </div>
     """, unsafe_allow_html=True)
 
     try:
-        # جلب البيانات بشكل معزول
+        # جلب البيانات
         df_st = fetch_safe("students")
-        # البحث عن الطالب بواسطة SID المخزن في الجلسة
-        student_record = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
         
-        if not student_record.empty:
-            s_row = student_record.iloc[0]
-            name, grade = s_row[1], s_row[2]
-            
-            # عرض البيانات الأساسية بشكل بطاقات (Metrics)
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                # معالجة النقاط بشكل آمن
+        if not student_data.empty:
+            s_row = student_data.iloc[0]
+            # عرض الإحصائيات في كروت جذابة
+            c1, c2, c3 = st.columns(3)
+            with c1:
                 val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
                 points = int(float(val)) if val.replace('.','',1).isdigit() else 0
-                st.metric("🎯 نقاطك", f"{points} نقطة")
-            with col2:
-                st.metric("🏆 رتبتك", "متميز")
-            with col3:
-                st.metric("👤 الطالب", name)
+                st.metric("🎯 رصيد النقاط", points)
+            with c2:
+                st.metric("🏅 المستوى", "متفوق")
+            with c3:
+                st.metric("👤 الطالب", s_row[1])
 
             st.divider()
             
-            # إنشاء تبويبات خاصة لواجهة الطالب (تجنباً لخطأ NameError: tab2)
-            st_tab1, st_tab2, st_tab3 = st.tabs(["📊 درجاتي", "🛡️ سجل السلوك", "📝 الاختبارات"])
+            # حل مشكلة NameError: ننشئ تبويبات جديدة تماماً للطالب هنا
+            st_tabs = st.tabs(["📊 كشف الدرجات", "📜 سجل السلوك", "📝 الاختبارات"])
             
-            with st_tab1:
-                st.info("كشف الدرجات الأكاديمي")
+            with st_tabs[0]:
                 st.dataframe(fetch_safe("grades"), use_container_width=True)
-            
-            with st_tab2:
-                st.success("سجل الانضباط والتميز")
-                st.write("استمر في تميزك الأكاديمي!")
-                
-            with st_tab3:
-                st.warning("الاختبارات المتاحة حالياً")
-                st.write("لا توجد اختبارات مجدولة لهذا اليوم.")
+            with st_tabs[1]:
+                st.info("سجلك الدراسي حافل بالإنجازات، استمر!")
+            with st_tabs[2]:
+                st.success("جميع اختباراتك ستظهر هنا فور جدولتها")
         else:
-            st.error("⚠️ لم نتمكن من العثور على بياناتك، يرجى مراجعة إدارة المدرسة.")
-            
+            st.error("بياناتك غير موجودة، يرجى مراجعة الإدارة")
     except Exception as e:
-        st.error(f"حدث خطأ فني أثناء تحميل الواجهة: {e}")
+        st.error(f"عذراً، حدث خطأ: {e}")
 import hashlib
 import time
 import datetime
@@ -812,8 +801,7 @@ with tab6:
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
-# --- تفعيل واجهة الطالب ---
-# تأكد أن هذا الكود يبدأ من بداية السطر تماماً (بدون مسافات قبله)
+# --- تفعيل واجهة الطالب المستقلة ---
 if st.session_state.get('role') == "student":
-    build_student_ui()
-    st.stop() # هذا الأمر سيوقف تنفيذ أي كود خاطئ موجود في أسفل الملف
+    draw_professional_student_ui()
+    st.stop() # هذا السطر هو "المنقذ"؛ يمنع التطبيق من قراءة أي أخطاء تالية بالأسفل
