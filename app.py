@@ -204,40 +204,48 @@ if st.session_state.role == "teacher":
             st.session_state.role = None
             st.rerun()
 
-    # --- القسم الأول: إدارة الطلاب ---
-    if menu == "👥 إدارة الطلاب":
-        st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
-        df_st = fetch_safe("students")
-        
-        # عرض الجدول الحالي
-        with st.expander("📋 السجل الحالي للطلاب", expanded=True):
-            if not df_st.empty:
-                st.dataframe(df_st, use_container_width=True, hide_index=True)
-        
-        # نموذج إضافة طالب (مع معالجة 966)
-        with st.container(border=True):
-            st.markdown("#### ➕ تأسيس طالب جديد")
-            with st.form("add_student_final", clear_on_submit=True):
-                c1, c2, c3 = st.columns(3)
-                nid = c1.text_input("🔢 الرقم الأكاديمي")
-                nname = c2.text_input("👤 الاسم الثلاثي")
-                nphone = c3.text_input("📱 جوال ولي الأمر")
-                
-                c4, c5, c6 = st.columns(3)
-                nclass = c4.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
-                
-                if st.form_submit_button("✅ اعتماد التأسيس"):
-                    if nid and nname and nphone:
-                        # تصحيح رقم الجوال تلقائياً
+    # ==========================================
+# 🏠 لوحة التحكم: إدارة الطلاب والدرجات (النسخة المتكاملة)
+# ==========================================
+
+# --- 1. قسم إدارة الطلاب ---
+if menu == "👥 إدارة الطلاب":
+    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
+    
+    df_st = fetch_safe("students")
+    
+    with st.container(border=True):
+        st.markdown("#### ➕ تأسيس طالب جديد")
+        with st.form("add_student_final", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+            nid = c1.text_input("🔢 الرقم الأكاديمي")
+            nname = c2.text_input("👤 الاسم الثلاثي")
+            nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            
+            c4, c5, c6 = st.columns(3)
+            nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+            nsub = c5.text_input("📚 المادة", value="لغة إنجليزية")
+            nyear = c6.text_input("🗓️ العام", value="1447هـ")
+            
+            c7, c8 = st.columns(2)
+            nmail = c7.text_input("📧 البريد الإلكتروني")
+            nphone = c8.text_input("📱 جوال ولي الأمر")
+            
+            if st.form_submit_button("✅ اعتماد"):
+                if nid and nname and nphone:
+                    # التحقق من عدم تكرار الرقم الأكاديمي
+                    if not df_st.empty and nid in df_st.iloc[:, 0].values:
+                        st.error("⚠️ هذا الرقم الأكاديمي مسجل مسبقاً!")
+                    else:
+                        # معالجة الرقم الدولي 966
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
                         
-                        row = [nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"]
+                        # الترتيب: ID, Name, Class, Year, Stage, Subject, Email, Phone, Points(0)
+                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
                         sh.worksheet("students").append_row(row)
-                        st.success("✅ تم الحفظ بنجاح")
+                        st.success(f"تم إضافة {nname} بنجاح")
                         time.sleep(1); st.rerun()
 
     # --- القسم الثاني: شاشة الدرجات ---
