@@ -183,137 +183,98 @@ if st.session_state.role:
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
 # ==========================================
-# 👨‍🏫 واجهة المعلم الكاملة والمصححة (الترتيب الذهبي)
+# 👨‍🏫 واجهة المعلم بنظام علامات التبويب (Tabs) للجوال
 # ==========================================
 if st.session_state.role == "teacher":
     
-    # 1. القائمة الجانبية بالترتيب المطلوب
-    with st.sidebar:
-        st.markdown(f'<div style="text-align:center;"><i class="bi bi-person-badge" style="font-size:50px; color:#1e40af;"></i><h3>الأستاذ زياد</h3></div>', unsafe_allow_html=True)
-        
-        # تعريف المنيو لضمان عدم حدوث NameError
-        menu = st.radio("📋 القائمة الرئيسية", [
-            "👥 إدارة الطلاب", 
-            "📝 شاشة الدرجات", 
-            "🔍 البحث المطور", 
-            "🎭 رصد السلوك", 
-            "📢 شاشة الاختبارات والإعلانات",
-            "🚗 خروج"
-        ])
+    # عنوان الواجهة
+    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👨‍🏫 لوحة تحكم المعلم</h1></div>', unsafe_allow_html=True)
+    
+    # 1. إنشاء علامات التبويب العلوية بالترتيب المطلوب
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "👥 إدارة الطلاب", 
+        "📝 شاشة الدرجات", 
+        "🔍 البحث المطور", 
+        "🎭 رصد السلوك", 
+        "📢 الاختبارات",
+        "🚗 خروج"
+    ])
 
-# --- 1. قسم إدارة الطلاب (النسخة الكاملة والمثالية) ---
-    if menu == "👥 إدارة الطلاب":
-        st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
-        
+    # --- التبويب الأول: إدارة الطلاب ---
+    with tab1:
+        st.subheader("👥 إدارة سجلات الطلاب")
         df_st = fetch_safe("students")
         
-        # أولاً: نموذج إضافة طالب جديد (مرتب حسب أعمدة الجدول)
+        # نموذج الإضافة (6 حقول كاملة مرتبة كما في الجدول)
         with st.container(border=True):
-            st.markdown("### ➕ إضافة طالب جديد")
-            with st.form("add_student_form_final", clear_on_submit=True):
+            st.markdown("#### ➕ تأسيس ملف طالب جديد")
+            with st.form("add_student_tabs", clear_on_submit=True):
                 c1, c2, c3 = st.columns(3)
                 nid = c1.text_input("🔢 الرقم الأكاديمي")
                 nname = c2.text_input("👤 الاسم الثلاثي")
-                nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                nphone = c3.text_input("📱 جوال ولي الأمر")
                 
                 c4, c5, c6 = st.columns(3)
-                nyear = c4.text_input("🗓️ العام الدراسي", value="1447هـ")
+                nclass = c4.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
                 nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
                 
-                c7, c8 = st.columns(2)
-                nmail = c7.text_input("📧 البريد الإلكتروني")
-                nphone = c8.text_input("📱 جوال ولي الأمر")
-                
-                if st.form_submit_button("✅ اعتماد وإضافة للطالب"):
+                if st.form_submit_button("✅ اعتماد وإضافة للطالب", use_container_width=True):
                     if nid and nname and nphone:
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
-                        
-                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
+                        row = [nid, nname, nclass, "1447هـ", nstage, nsub, "", cp, "0"]
                         sh.worksheet("students").append_row(row)
-                        st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
+                        st.success("✅ تم الحفظ بنجاح"); time.sleep(1); st.rerun()
 
-        st.divider()
-
-        # ثانياً: عرض السجل الحالي
-        st.subheader("📋 السجل الحالي للطلاب")
-        if not df_st.empty:
+        # عرض الجدول
+        with st.expander("📋 السجل الحالي للطلاب", expanded=False):
             st.dataframe(df_st, use_container_width=True, hide_index=True)
-        else:
-            st.info("لا توجد بيانات طلاب حالياً.")
 
-        st.divider()
-
-        # ثالثاً: منطقة الحذف النهائي (التي سألت عنها)
-        st.markdown("### 🗑️ منطقة الحذف النهائي (إجراء خطير)")
-        with st.expander("🚨 اضغط هنا لفتح خيارات الحذف النهائي الشامل", expanded=False):
-            st.warning("⚠️ تحذير: الحذف من هنا سيمسح الطالب من (الطلاب، الدرجات، السلوك) نهائياً.")
-            
-            if not df_st.empty:
-                # قائمة الأسماء للحذف
-                names_list = [""] + df_st.iloc[:, 1].tolist()
-                del_name = st.selectbox("🎯 اختر اسم الطالب المراد حذفه نهائياً:", names_list, key="del_select")
-                
-                if st.button("🚨 تنفيذ الحذف الشامل الآن", use_container_width=True):
-                    if del_name != "":
+        # منطقة الحذف النهائي
+        st.markdown("---")
+        with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
+            st.error("⚠️ سيتم مسح الطالب من كافة السجلات")
+            del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""])
+            if st.button("🚨 تنفيذ الحذف النهائي الآن", use_container_width=True):
+                if del_name:
+                    for s in ["students", "grades", "behavior"]:
                         try:
-                            with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
-                                # حذف من كافة الشيتات
-                                for sheet_name in ["students", "grades", "behavior"]:
-                                    try:
-                                        ws = sh.worksheet(sheet_name)
-                                        cell = ws.find(del_name)
-                                        if cell:
-                                            ws.delete_rows(cell.row)
-                                    except:
-                                        pass # في حال لم يوجد سجل في أحد الشيتات
-                                
-                                st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته بنجاح")
-                                time.sleep(1)
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"حدث خطأ أثناء الحذف: {e}")
-                    else:
-                        st.warning("يرجى اختيار اسم الطالب أولاً.")
-            else:
-                st.write("لا يوجد طلاب مسجلين للحذف.")
+                            ws = sh.worksheet(s); cell = ws.find(del_name)
+                            if cell: ws.delete_rows(cell.row)
+                        except: pass
+                    st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
-    # --- 2. شاشة الدرجات ---
-    elif menu == "📝 شاشة الدرجات":
-        st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>📝 شاشة رصد الدرجات</h1></div>', unsafe_allow_html=True)
+    # --- التبويب الثاني: شاشة الدرجات ---
+    with tab2:
+        st.subheader("📝 رصد درجات الطلاب")
         df_st = fetch_safe("students")
         if not df_st.empty:
-            with st.form("grades_entry_form"):
+            with st.form("grades_tabs_form"):
                 col1, col2 = st.columns(2)
                 s_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
-                exam_type = col2.selectbox("📝 نوع التقييم:", ["شهري", "فترتي", "نهائي", "مشاركة"])
-                
+                exam = col2.selectbox("📝 النوع:", ["شهري", "فترتي", "نهائي"])
                 col3, col4 = st.columns(2)
-                grade_val = col3.number_input("💯 الدرجة:", 0.0, 100.0)
-                teacher_note = col4.text_input("💬 ملاحظة المعلم")
-                
-                if st.form_submit_button("✅ رصد الدرجة"):
+                grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
+                note = col4.text_input("💬 ملاحظة")
+                if st.form_submit_button("✅ حفظ الدرجة", use_container_width=True):
                     s_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
-                    # حفظ: الرقم، الاسم، المادة، النوع، الدرجة، التاريخ، الملاحظة
-                    sh.worksheet("grades").append_row([
-                        s_data[0], s_name, s_data[5], exam_type, grade_val, 
-                        datetime.datetime.now().strftime("%Y-%m-%d"), teacher_note
-                    ])
-                    st.success("✅ تم الرصد بنجاح"); time.sleep(1); st.rerun()
-            
-            st.divider()
-            df_gr = fetch_safe("grades")
-            st.dataframe(df_gr, use_container_width=True, hide_index=True)
+                    sh.worksheet("grades").append_row([s_data[0], s_name, s_data[5], exam, grade, datetime.datetime.now().strftime("%Y-%m-%d"), note])
+                    st.success("✅ تم الرصد"); time.sleep(1); st.rerun()
+            st.dataframe(fetch_safe("grades"), use_container_width=True, hide_index=True)
 
-    # --- باقي التبويبات (البحث، السلوك، الاختبارات) ---
-    elif menu == "🔍 البحث المطور":
-        st.info("قسم البحث المطور قيد العمل..")
-    elif menu == "🎭 رصد السلوك":
-        st.info("قسم رصد السلوك قيد العمل..")
-    elif menu == "📢 شاشة الاختبارات والإعلانات":
-        st.info("قسم الإعلانات قيد العمل..")
-    elif menu == "🚗 خروج":
-        st.session_state.role = None
-        st.rerun()
+    # --- التبويب الثالث: البحث المطور ---
+    with tab3:
+        st.subheader("🔍 محرك البحث السريع")
+        df_st = fetch_safe("students")
+        query = st.text_input("🔎 ابحث بالاسم أو الرقم الأكاديمي:")
+        if query:
+            res = df_st[df_st.iloc[:, 0].astype(str).str.contains(query) | df_st.iloc[:, 1].str.contains(query)]
+            st.dataframe(res, use_container_width=True, hide_index=True)
+
+    # --- التبويب السادس: خروج ---
+    with tab6:
+        if st.button("🚗 تأكيد تسجيل الخروج", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
