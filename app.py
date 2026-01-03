@@ -28,7 +28,6 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
-# التصميم بدون تعليقات جانبية لمنع رسائل الخطأ العلوية
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -59,17 +58,21 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .logo-box i { font-size: 38px; color: white; }
+    
+    /* تحسين الحقول: لون خط داكن وواضح جداً */
     div[data-testid="stForm"] {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-radius: 25px !important;
         padding: 30px !important;
     }
     .stTextInput input {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important; /* لون كحلي داكن جداً للخط لضمان الوضوح */
         border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border: 2px solid #3b82f6 !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
     }
     .stButton>button {
         background: #2563eb !important;
@@ -102,7 +105,7 @@ if st.session_state.role is None:
         
         with tab1:
             with st.form("st_log"):
-                sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم هويتك")
+                sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="اكتب رقم الهوية هنا")
                 if st.form_submit_button("دخول للمنصة 🚀"):
                     df = fetch_safe("students")
                     if not df.empty and sid:
@@ -121,7 +124,6 @@ if st.session_state.role is None:
                     if not u_df.empty:
                         row = u_df[u_df['username'] == user.strip()]
                         if not row.empty:
-                            # مطابقة الهاش الموجود في جدولك
                             hashed = hashlib.sha256(str.encode(pwd)).hexdigest()
                             if hashed == row.iloc[0]['password_hash']:
                                 st.session_state.role = "teacher"; st.rerun()
@@ -130,8 +132,3 @@ if st.session_state.role is None:
 
     st.markdown("<p style='text-align:center; opacity:0.5; font-size:12px; margin-top:30px;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد © 2026</p>", unsafe_allow_html=True)
     st.stop()
-
-if st.session_state.role:
-    st.success("تم الدخول بنجاح!")
-    if st.button("تسجيل الخروج"):
-        st.session_state.role = None; st.rerun()
