@@ -361,7 +361,7 @@ if st.session_state.role == "teacher":
         else:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
-# --- التبويب الرابع: رصد السلوك (النسخة المتكاملة والمصححة) ---
+# --- التبويب الرابع: رصد السلوك (النسخة النهائية المعدلة حسب طلبك) ---
     with tab4:
         import smtplib
         import time
@@ -369,7 +369,7 @@ if st.session_state.role == "teacher":
         from email.mime.multipart import MIMEMultipart
         import urllib.parse 
 
-        # 1. كود CSS الخاص بك لتحسين واجهة الجوال
+        # 1. كود CSS لتحسين واجهة الجوال
         st.markdown("""
             <style>
                 .block-container { padding-top: 1rem; padding-bottom: 0rem; }
@@ -381,7 +381,7 @@ if st.session_state.role == "teacher":
             </style>
         """, unsafe_allow_html=True)
 
-        # دالة الإرسال التلقائي الصامت (كما هي في كودك)
+        # دالة الإرسال التلقائي الصامت
         def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
             try:
                 email_set = st.secrets["email_settings"]
@@ -412,10 +412,9 @@ if st.session_state.role == "teacher":
         df_st = fetch_safe("students")
         all_names = df_st.iloc[:, 1].tolist() if not df_st.empty else []
 
-        # البحث الفوري (كما في كودك)
+        # البحث والاختيار
         search_term = st.text_input("🔍 ابحث عن اسم الطالب (للفلترة السريعة)", placeholder="اكتب اسم الطالب هنا...")
         filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
-        
         b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + filtered_names, key="behavior_select")
 
         if b_name:
@@ -433,14 +432,14 @@ if st.session_state.role == "teacher":
                 st.markdown("---")
                 st.write("✨ **خيارات الحفظ والتواصل الاحترافية:**")
                 
-                # توزيع الأزرار (أربعة أزرار في صفين كما في كودك الأصلي)
+                # توزيع الأزرار الأربعة
                 col1, col2 = st.columns(2)
-                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
+                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True) # الزر الوحيد للحفظ
                 btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True)
                 btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
                 btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)
 
-                # تنسيق الرسالة الاحترافي (مطابق لكودك)
+                # تنسيق الرسالة
                 full_msg = (
                     f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {b_name}\n"
                     f"----------------------------------------\n"
@@ -451,8 +450,8 @@ if st.session_state.role == "teacher":
                     f"🏛️ منصة الأستاذ زياد الذكية"
                 )
 
-                # منطق التنفيذ
-                if btn_save or btn_wa:
+                # 1. منطق الزر الأول: الحفظ وتحديث النقاط فقط
+                if btn_save:
                     if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
                         try:
@@ -462,26 +461,32 @@ if st.session_state.role == "teacher":
                             current_p = int(ws_st.cell(cell.row, 9).value or 0)
                             ws_st.update_cell(cell.row, 9, str(current_p + p_map.get(b_type, 0)))
                         except: pass
-                        
-                        if btn_save:
-                            st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
-                        
-                        if btn_wa:
-                            wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
-                            st.markdown(f'<meta http-equiv="refresh" content="0;url={wa_url}">', unsafe_allow_html=True)
+                        st.success("✅ تم الحفظ وتحديث النقاط بنجاح")
+                        time.sleep(1); st.rerun()
                     else:
-                        st.error("⚠️ يرجى كتابة نص الملاحظة")
+                        st.error("⚠️ يرجى كتابة نص الملاحظة أولاً ليتم حفظها")
 
-                if btn_auto and s_email:
-                    if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
-                        st.success(f"✅ تم الإرسال إلى {s_email}")
-                    else: st.error("❌ فشل الإرسال")
+                # 2. منطق بقية الأزرار: إرسال فقط دون حفظ (تعتمد على ما كتبته في الحقول)
+                if btn_auto:
+                    if b_note and s_email:
+                        if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
+                            st.success(f"✅ تم إرسال الإشعار التلقائي إلى {s_email}")
+                        else: st.error("❌ فشل الإرسال")
+                    elif not b_note: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
 
-                if btn_mail and s_email:
-                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
+                if btn_mail:
+                    if b_note and s_email:
+                        mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(full_msg)}"
+                        st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
+                    elif not b_note: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
+                
+                if btn_wa:
+                    if b_note:
+                        wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(full_msg)}"
+                        st.markdown(f'<meta http-equiv="refresh" content="0;url={wa_url}">', unsafe_allow_html=True)
+                    else: st.warning("⚠️ اكتب الملاحظة قبل الإرسال")
 
-            # --- سجل الملاحظات السابقة مع أزرار التحكم (واتساب وحذف) ---
+            # --- سجل الملاحظات السابقة (واتساب وحذف) ---
             df_b = fetch_safe("behavior")
             if not df_b.empty and b_name:
                 st.markdown("---")
@@ -494,12 +499,10 @@ if st.session_state.role == "teacher":
                         st.info(f"📝 {row[3]}")
                         
                         bc1, bc2 = st.columns(2)
-                        # زر واتساب للملاحظة السابقة
                         old_msg = f"تذكير بملاحظة سلوكية للطالب: {b_name}\nالتاريخ: {row[1]}\nالملاحظة: {row[3]}"
                         wa_old_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_msg)}"
                         bc1.markdown(f'<a href="{wa_old_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
                         
-                        # زر الحذف الفردي للملاحظة
                         if bc2.button(f"🗑️ حذف", key=f"del_note_{index}"):
                             ws_b = sh.worksheet("behavior")
                             cell = ws_b.find(row[3])
