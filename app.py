@@ -699,102 +699,49 @@ with tab6:
 # ==============================================================================
 
 if st.session_state.role == "student":
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 20px; color: white; text-align: center; margin-bottom: 25px;">
-            <h1 style="margin:0;">🎓 لوحة تحكم الطالب</h1>
-            <p style="opacity: 0.9;">مرحباً بك في منصتك التعليمية الذكية</p>
+    # 1. ترويسة الصفحة بتصميم جذاب
+    st.markdown(f"""
+        <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-right: 5px solid #4CAF50; text-align: right;">
+            <h2 style="margin: 0;">مرحباً بك، {s_name} 👋</h2>
+            <p style="color: #666;">الصف: {s_class} | رقم الطالب: {st.session_state.sid}</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. سحب البيانات الخاصة بالطالب
-    df_st = fetch_safe("students")
-    df_grades = fetch_safe("grades")
-    df_beh = fetch_safe("behavior")
-    df_ex = fetch_safe("exams")
-    
-    try:
-        # البحث عن بيانات الطالب باستخدام SID
-        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-        
-        if not student_data.empty:
-            s_row = student_data.iloc[0]
-            s_name = s_row[1]
-            s_class = s_row[2]
-            
-            # معالجة النقاط (العمود التاسع I)
-            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            s_points = int(float(val)) if val.replace('.','',1).isdigit() else 0
-            
-            # عرض البطاقة التعريفية
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([2, 1, 1])
-                c1.markdown(f"### 👤 {s_name}")
-                c2.metric("🏫 الصف", s_class)
-                c3.metric("⭐ رصيد النقاط", s_points)
+    # 2. عرض النقاط بأسلوب "عداد" (Metrics)
+    st.write("---")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(label="🎯 نقاطك الحالية", value=f"{s_points} نقطة", delta="مستوى ممتاز")
+    with col2:
+        # حساب الترتيب (يفضل أن يكون لديك عمود للترتيب في شيت البيانات)
+        st.metric(label="🏆 ترتيبك في الفصل", value="الثالث") 
+    with col3:
+        # عدد الاختبارات المنجزة
+        st.metric(label="📚 اختبارات مكتملة", value=len(df_ex) if not df_ex.empty else 0)
 
-            st.divider()
+    # 3. تنظيم البيانات في تبويبات (Tabs)
+    tab_grades, tab_behavior, tab_exams = st.tabs(["📊 درجاتي", "⭐ السلوك", "📝 الاختبارات القادمة"])
 
-            # إنشاء التبويبات الخاصة بالطالب
-            tab_g, tab_e, tab_b = st.tabs(["📊 درجاتي", "🗓️ المواعيد والتنبيهات", "📜 السجل السلوكي"])
-
-            with tab_g:
-                st.subheader("📝 سجل الدرجات والتقييم")
-                # تصفية الدرجات (العمود الأول في شيت الدرجات هو SID)
-                my_grades = df_grades[df_grades.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-                if not my_grades.empty:
-                    # إعادة تسمية الأعمدة للعرض فقط
-                    display_grades = my_grades.copy()
-                    display_grades.columns = ["الرقم", "المشاركة (p1)", "الواجبات (p2)", "الاختبارات (perf)", "التاريخ", "ملاحظة المعلم"]
-                    st.dataframe(display_grades.drop(columns=["الرقم"]), use_container_width=True, hide_index=True)
-                else:
-                    st.info("لا توجد درجات مرصودة حالياً.")
-
-            with tab_e:
-                st.subheader("📢 جدول الاختبارات والتنبيهات")
-                # عرض التنبيهات الخاصة بصف الطالب أو العامة (الكل)
-                my_exams = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
-                if not my_exams.empty:
-                    for _, row in my_exams.iterrows():
-                        with st.chat_message("user"):
-                            st.write(f"📌 **{row[1]}**")
-                            st.caption(f"📅 التاريخ: {row[2]}")
-                            if len(row) > 3 and str(row[3]) != 'nan' and str(row[3]).strip():
-                                st.link_button("🔗 فتح الرابط المرفق", row[3])
-                else:
-                    st.info("لا توجد مواعيد قادمة لفصلك حالياً.")
-
-            with tab_b:
-                st.subheader("📈 تقرير السلوك والتميز")
-                my_behavior = df_beh[df_beh.iloc[:, 0].astype(str) == s_name] # البحث بالاسم كما في كود المعلم
-                if not my_behavior.empty:
-                    for _, row in my_behavior.iterrows():
-                        color = "green" if "+" in str(row[2]) else "red"
-                        st.markdown(f"""
-                            <div style="padding:15px; border-right:5px solid {color}; background:#f8fafc; border-radius:10px; margin-bottom:10px;">
-                                <strong>📅 {row[1]} | {row[2]}</strong><br>
-                                <p style="margin:5px 0 0 0;">{row[3]}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.success("سجلك السلوكي نظيف ومتميز! استمر على هذا المنوال.")
-
+    with tab_grades:
+        st.subheader("نتائج المواد")
+        if not df_grades.empty:
+            st.dataframe(df_grades, use_container_width=True)
         else:
-            st.error("⚠️ عذراً، لم نتمكن من العثور على بياناتك. يرجى مراجعة المعلم.")
+            st.info("لا توجد درجات مرصودة حالياً.")
 
-    except Exception as e:
-        st.error(f"❌ حدث خطأ أثناء تحميل البيانات: {e}")
+    with tab_behavior:
+        st.subheader("سجل الانضباط والتميز")
+        # عرض السلوك كبطاقات صغيرة
+        if not df_beh.empty:
+            for _, row in df_beh.iterrows():
+                st.success(f"✅ {row['الملاحظة']}") if row['النوع'] == 'إيجابي' else st.error(f"⚠️ {row['الملاحظة']}")
+        else:
+            st.write("سجلك نظيف، استمر في التميز!")
 
-    # زر تسجيل الخروج للطالب
-    st.sidebar.markdown("---")
-    if st.button("🚗 تسجيل الخروج من حساب الطالب", use_container_width=True):
-        st.session_state.role = None
-        st.session_state.sid = None
-        st.rerun()
-
-# --- تذييل الصفحة ---
-st.markdown("""
-    <div style="text-align: center; color: #666; font-size: 12px; margin-top: 50px; padding: 20px; border-top: 1px solid #eee;">
-        منصة زياد الذكية © 2025 | جميع الحقوق محفوظة
-    </div>
-""", unsafe_allow_html=True)
-    st.rerun()
+    with tab_exams:
+        st.subheader("روابط الاختبارات المتاحة")
+        if not df_ex.empty:
+            for _, row in df_ex.iterrows():
+                with st.expander(f"📖 اختبار: {row['المادة']}"):
+                    st.write(f"التاريخ: {row['التاريخ']}")
+                    st.link_button("اضغط هنا لبدء الاختبار", row['الرابط'])
