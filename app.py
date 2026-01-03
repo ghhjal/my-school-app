@@ -10,6 +10,48 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+# --- قسم الدوال المستقلة ---
+def student_dashboard_ui(name, s_class, points, df_grades, df_beh, df_ex):
+    """دالة لتصميم واجهة الطالب بشكل احترافي"""
+    # ترويسة الواجهة بتصميم حديث
+    st.markdown(f"""
+        <div style="background-color: #0E1117; padding: 20px; border-radius: 15px; border: 1px solid #30363d; text-align: right; margin-bottom: 25px;">
+            <h1 style="color: #00FFAA; margin: 0; font-size: 24px;">مرحباً بك، {name} 👋</h1>
+            <p style="color: #8b949e; margin: 5px 0;">الصف: {s_class} | حالة الحساب: نشط ✅</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # عرض البطاقات الرقمية (Metrics)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric(label="🎯 مجموع نقاطك", value=points)
+    with c2:
+        st.metric(label="🏆 الترتيب الحالي", value="يتم الحساب...")
+    with c3:
+        st.metric(label="⭐ الأوسمة", value="🥇")
+
+    st.divider()
+
+    # التبويبات لتنظيم المحتوى
+    tab1, tab2, tab3 = st.tabs(["📊 درجاتي المعتمدة", "🛡️ سجل السلوك", "🔗 الاختبارات"])
+    
+    with tab1:
+        if not df_grades.empty:
+            st.dataframe(df_grades, use_container_width=True)
+        else:
+            st.info("لا توجد درجات مرصودة حالياً.")
+
+    with tab2:
+        if not df_beh.empty:
+            for i, row in df_beh.iterrows():
+                st.warning(f"📝 {row['الملاحظة']}")
+        else:
+            st.success("سجلك السلوكي ممتاز!")
+
+    with tab3:
+        if not df_ex.empty:
+            for i, row in df_ex.iterrows():
+                st.link_button(f"📝 اختبار: {row.get('العنوان', 'رابط')}", row.get('الرابط', '#'))
 
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
