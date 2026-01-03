@@ -178,10 +178,7 @@ if st.session_state.role is None:
     """, unsafe_allow_html=True)
     st.stop()
 
-if st.session_state.role:
-    st.success("تم تسجيل الدخول بنجاح!")
-    if st.button("تسجيل الخروج"):
-        st.session_state.role = None; st.rerun()
+
 # ==========================================
 # 👨‍🏫 واجهة المعلم (تصميم الجوال المعتمد)
 # ==========================================
