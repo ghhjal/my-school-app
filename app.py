@@ -361,7 +361,7 @@ if st.session_state.role == "teacher":
         else:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
-# --- التبويب الرابع: رصد السلوك (النسخة الاحترافية النهائية) ---
+# --- التبويب الرابع: رصد السلوك (الإصدار النهائي والكامل) ---
     with tab4:
         import smtplib
         import time
@@ -374,8 +374,8 @@ if st.session_state.role == "teacher":
             <style>
                 .block-container { padding-top: 1rem; padding-bottom: 0rem; }
                 .stButton button { border-radius: 8px; height: 3em; font-weight: bold; }
-                /* تمييز زر الإيميل التلقائي بلون أرجواني مميز */
-                div[data-testid="stColumn"]:nth-of-type(2) button:nth-of-type(1) {
+                /* تمييز زر الإشعار التلقائي باللون البنفسجي */
+                div[data-testid="stColumn"]:nth-of-type(2) button:first-of-type {
                     background-color: #7c3aed !important;
                     color: white !important;
                     border: none !important;
@@ -387,7 +387,7 @@ if st.session_state.role == "teacher":
             </style>
         """, unsafe_allow_html=True)
 
-        # دالة تنسيق الرسالة الموحدة (لضمان نفس التنسيق في كل مكان)
+        # دالة تنسيق الرسالة الموحدة
         def get_formatted_msg(name, b_type, b_note, b_date, prefix=""):
             return (
                 f"{prefix}تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
@@ -418,11 +418,9 @@ if st.session_state.role == "teacher":
 
         st.subheader("🎭 رصد السلوك والتواصل الفوري")
 
-        # جلب البيانات
         df_st = fetch_safe("students")
         all_names = df_st.iloc[:, 1].tolist() if not df_st.empty else []
 
-        # البحث والاختيار
         search_term = st.text_input("🔍 ابحث عن اسم الطالب (للفلترة السريعة)", placeholder="اكتب اسم الطالب هنا...")
         filtered_names = [name for name in all_names if search_term in name] if search_term else all_names
         b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + filtered_names, key="behavior_select")
@@ -442,17 +440,15 @@ if st.session_state.role == "teacher":
                 st.markdown("---")
                 st.write("✨ **خيارات الحفظ والتواصل الاحترافية:**")
                 
-                # توزيع الأزرار الأربعة
                 col1, col2 = st.columns(2)
                 btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
-                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) # هذا الزر الآن بلون أرجواني
+                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) # اللون البنفسجي مطبق هنا
                 btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
                 btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)
 
-                # تجهيز الرسالة الحالية
                 current_full_msg = get_formatted_msg(b_name, b_type, b_note, b_date)
 
-                # 1. منطق الحفظ فقط
+                # منطق الحفظ فقط
                 if btn_save:
                     if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
@@ -466,27 +462,30 @@ if st.session_state.role == "teacher":
                         st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
                     else: st.error("⚠️ يرجى كتابة الملاحظة")
 
-                # 2. منطق الإرسال (واتساب الرئيسي - تم إصلاحه ليعمل فوراً)
+                # حل مشكلة زر الواتساب الرئيسي (فتح مباشر وتجاوز رسالة الانتظار)
                 if btn_wa:
                     if b_note:
                         wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(current_full_msg)}"
-                        st.markdown(f'<a href="{wa_url}" id="wa_link" target="_blank"></a><script>document.getElementById("wa_link").click();</script>', unsafe_allow_html=True)
-                        st.info("🔄 جاري فتح واتساب...")
+                        # استخدام JS للفتح الفوري وتوفير زر احتياطي
+                        st.markdown(f"""
+                            <a id="wa_auto_btn" href="{wa_url}" target="_blank" style="display:none;"></a>
+                            <script>document.getElementById("wa_auto_btn").click();</script>
+                        """, unsafe_allow_html=True)
+                        st.success("✅ تم تجهيز الرابط؛ إذا لم يفتح تلقائياً اضغط على الزر أدناه:")
+                        st.link_button("🚀 اضغط هنا لفتح واتساب يدوياً", wa_url, use_container_width=True)
                     else: st.warning("⚠️ اكتب الملاحظة أولاً")
 
-                # إشعار الإيميل التلقائي
                 if btn_auto:
                     if b_note and s_email:
                         if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date):
                             st.success(f"✅ تم الإرسال إلى {s_email}")
                         else: st.error("❌ فشل الإرسال")
 
-                # الإيميل اليدوي
                 if btn_mail and b_note and s_email:
                     mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(current_full_msg)}"
                     st.markdown(f'<meta http-equiv="refresh" content="0;url={mail_url}">', unsafe_allow_html=True)
 
-            # --- سجل الملاحظات السابقة (تنسيق الواتساب الموحد + حذف) ---
+            # --- سجل الملاحظات السابقة مع أزرار التحكم ---
             df_b = fetch_safe("behavior")
             if not df_b.empty and b_name:
                 st.markdown("---")
@@ -499,7 +498,6 @@ if st.session_state.role == "teacher":
                         st.info(f"📝 {row[3]}")
                         
                         bc1, bc2 = st.columns(2)
-                        # زر واتساب للملاحظة السابقة بنفس التنسيق الاحترافي
                         old_formatted_msg = get_formatted_msg(b_name, row[2], row[3], row[1], prefix="📢 تذكير بملاحظة سابقة\n")
                         wa_old_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_formatted_msg)}"
                         
