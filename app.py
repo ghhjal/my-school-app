@@ -6,10 +6,8 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 
-# 1. الإعدادات الأساسية
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# 2. الدوال البرمجية (حل مشكلة NameError)
 @st.cache_resource
 def get_client():
     try:
@@ -30,7 +28,7 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
-# 3. واجهة المستخدم (التصميم المتكيف والواضح)
+# التصميم المطور لإخفاء الرسائل المزعجة وتوضيح الخط
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -40,7 +38,6 @@ st.markdown("""
         direction: RTL;
         text-align: right;
     }
-    /* الهيدر واللوجو المفضل */
     .header-section {
         background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
         padding: 40px 20px;
@@ -56,13 +53,16 @@ st.markdown("""
         justify-content: center; align-items: center;
         backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    /* وضوح الخط الداكن داخل الحقول */
     .stTextInput input {
-        color: #111827 !important;
+        color: #000000 !important;
         background-color: #ffffff !important;
         font-weight: bold !important;
         border: 2px solid #3b82f6 !important;
         border-radius: 10px !important;
+    }
+    /* إخفاء رسالة Press Enter to submit */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
     }
     div[data-testid="stForm"] {
         background: rgba(255, 255, 255, 0.05) !important;
@@ -79,12 +79,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 4. منطق الدخول
 if "role" not in st.session_state:
     st.session_state.role = None
 
 if st.session_state.role is None:
-    # ترحيب ذكي
     h = datetime.datetime.now().hour
     msg = "صباح التميز ☀️" if 5 <= h < 12 else "مساء النجاح ✨"
     st.markdown(f"<h3 style='text-align:center;'>{msg}</h3>", unsafe_allow_html=True)
@@ -119,7 +117,7 @@ if st.session_state.role is None:
                     else: st.error("المستخدم غير موجود")
     st.stop()
 
-# 5. بعد الدخول
-st.success("أهلاً بك في المنصة!")
-if st.button("خروج"):
-    st.session_state.role = None; st.rerun()
+if st.session_state.role:
+    st.success("أهلاً بك في المنصة!")
+    if st.button("خروج"):
+        st.session_state.role = None; st.rerun()
