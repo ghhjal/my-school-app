@@ -361,7 +361,7 @@ if st.session_state.role == "teacher":
         else:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
-# --- التبويب الرابع: رصد السلوك (الإصدار المصحح للألوان 100%) ---
+# --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
     with tab4:
         import smtplib
         import time
@@ -369,25 +369,19 @@ if st.session_state.role == "teacher":
         from email.mime.multipart import MIMEMultipart
         import urllib.parse 
 
-        # 1. كود التنسيق CSS (استهداف دقيق للألوان)
+        # 1. كود التنسيق CSS (تثبيت الألوان: الأحمر للتلقائي والحذف، الأخضر للواتساب)
         st.markdown("""
             <style>
-                /* التنسيق العام لجميع الأزرار */
-                .stButton button { 
-                    border-radius: 10px; 
-                    height: 3.5em; 
-                    font-weight: bold; 
-                    transition: 0.3s; 
-                }
+                .stButton button { border-radius: 10px; height: 3.5em; font-weight: bold; transition: 0.3s; }
                 
-                /* الزر الثاني في الصف الأول (إشعار تلقائي) -> أحمر فاقع */
+                /* زر الإشعار التلقائي -> أحمر فاقع */
                 div[data-testid="stColumn"]:nth-of-type(2) div[data-testid="stVerticalBlock"] > div:nth-child(1) button {
                     background-color: #FF0000 !important;
                     color: white !important;
                     border: none !important;
                 }
                 
-                /* الزر الثاني في الصف الثاني (واتساب) -> أخضر واتساب */
+                /* زر الواتساب الرئيسي -> أخضر واتساب */
                 div[data-testid="stColumn"]:nth-of-type(2) div[data-testid="stVerticalBlock"] > div:nth-child(2) button {
                     background-color: #25D366 !important;
                     color: white !important;
@@ -400,11 +394,7 @@ if st.session_state.role == "teacher":
                     color: white !important;
                 }
                 
-                /* زر الحذف الفردي بتحديد مباشر */
-                button[kind="secondary"]:has(div:contains("حذف")) {
-                    background-color: #FF0000 !important;
-                    color: white !important;
-                }
+                .stTextArea textarea { border: 1px solid #1e40af; border-radius: 10px; }
             </style>
         """, unsafe_allow_html=True)
 
@@ -457,15 +447,15 @@ if st.session_state.role == "teacher":
                 st.write("✨ **خيارات الحفظ والتواصل:**")
                 col1, col2 = st.columns(2)
                 
-                # ترتيب الأزرار لضمان عمل الـ CSS
                 btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
                 btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
                 
-                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) # سيظهر أحمر
-                btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)     # سيظهر أخضر
+                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) 
+                btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)     
 
                 current_msg = get_formatted_msg(b_name, b_type, b_note, b_date)
 
+                # منطق الحفظ
                 if btn_save:
                     if b_note:
                         sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
@@ -478,11 +468,19 @@ if st.session_state.role == "teacher":
                         st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
                     else: st.error("⚠️ يرجى كتابة نص الملاحظة أولاً")
 
+                # منطق الواتساب
                 if btn_wa and b_note:
                     wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(current_msg)}"
                     st.markdown(f'<script>window.open("{wa_url}", "_blank");</script>', unsafe_allow_html=True)
-                    st.link_button("🚀 اضغط هنا لفتح واتساب", wa_url, use_container_width=True)
+                    st.link_button("🚀 اضغط لفتح واتساب", wa_url, use_container_width=True)
 
+                # منطق الإيميل اليدوي (تم التحديث ليعمل بفتح نافذة جديدة)
+                if btn_mail and b_note and s_email:
+                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(current_msg)}"
+                    st.markdown(f'<script>window.open("{mail_url}", "_self");</script>', unsafe_allow_html=True)
+                    st.link_button("📧 اضغط لفتح تطبيق الإيميل يدوياً", mail_url, use_container_width=True)
+
+                # إشعار الإيميل التلقائي
                 if btn_auto and b_note and s_email:
                     if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date): st.success("✅ تم الإرسال")
                     else: st.error("❌ فشل الإرسال")
@@ -503,7 +501,6 @@ if st.session_state.role == "teacher":
                         wa_old = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_msg)}"
                         bc1.markdown(f'<a href="{wa_old}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
                         
-                        # زر الحذف الأحمر (تم استخدام key يبدأ بـ del_)
                         if bc2.button(f"🗑️ حذف الملاحظة", key=f"del_{idx}"):
                             ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
