@@ -311,7 +311,7 @@ with tab2:
                 st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
    # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
-    with tab3:
+with tab3:
         st.markdown("### 🔍 محرك البحث الذكي")
         df_st = fetch_safe("students")
         
@@ -363,7 +363,7 @@ with tab2:
             st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
 # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-    with tab4:
+with tab4:
         import smtplib
         import time
         from email.mime.text import MIMEText
@@ -507,7 +507,7 @@ with tab2:
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
 # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
-    with tab5:
+with tab5:
         import urllib.parse
         import time
 
@@ -611,7 +611,7 @@ with tab2:
                 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- التبويب السادس: الإعدادات وإدارة البيانات ---
-    with tab6:
+with tab6:
         import pandas as pd
         import io
 
