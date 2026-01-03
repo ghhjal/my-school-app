@@ -505,27 +505,24 @@ if st.session_state.role == "teacher":
                             ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
-# --- التبويب الخامس: شاشة الاختبارات (النسخة المتكاملة مع حقل الرابط) ---
+# --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
     with tab5:
         import urllib.parse
         import time
 
-        # 1. تنسيق CSS للألوان وتصميم الأزرار
+        # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
         st.markdown("""
             <style>
-                /* زر الحذف الأحمر */
                 div.stButton > button[key*="del_ex_"] {
                     background-color: #FF0000 !important;
                     color: white !important;
                     border: none !important;
                 }
-                /* زر الواتساب الأخضر */
                 .wa-btn {
                     background-color: #25D366; color: white; padding: 10px;
                     border-radius: 8px; text-align: center; font-weight: bold;
                     text-decoration: none; display: block; width: 100%;
                 }
-                /* زر الرابط البنفسجي */
                 .link-btn {
                     background-color: #4F46E5; color: white; padding: 10px;
                     border-radius: 8px; text-align: center; font-weight: bold;
@@ -534,63 +531,57 @@ if st.session_state.role == "teacher":
                 .ann-card {
                     padding: 15px; border-radius: 10px; margin-bottom: 5px;
                     border-right: 5px solid #4F46E5; background-color: #F8FAFC;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 }
             </style>
         """, unsafe_allow_html=True)
 
-        # 2. نموذج الإضافة مع حقل الرابط الاختياري
+        # 2. نموذج الإضافة مع معالجة محسنة للرابط
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("ann_form_v13", clear_on_submit=True):
+            with st.form("ann_form_final_fixed", clear_on_submit=True):
                 c1, c2 = st.columns([1, 2])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
                 
                 c3, c4 = st.columns([1, 2])
-                a_date = c3.date_input("📅 التاريخ") # متوافق مع اسم العمود في الشيت
+                a_date = c3.date_input("📅 التاريخ")
                 a_link = c4.text_input("🔗 رابط إضافي (اختياري)", placeholder="https://example.com")
                 
                 btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
                 
                 if btn_post and a_title:
                     try:
-                        # الحفظ في شيت exams (الصف، العنوان، التاريخ، الرابط)
-                        sh.worksheet("exams").append_row([a_class, a_title, str(a_date), a_link])
+                        # إرسال البيانات كقائمة صريحة لضمان تعبئة الأعمدة الأربعة A, B, C, D
+                        row_to_add = [str(a_class), str(a_title), str(a_date), str(a_link)]
+                        sh.worksheet("exams").append_row(row_to_add)
+                        
                         st.balloons()
                         st.success("✅ تم النشر بنجاح")
                         time.sleep(1)
                         st.rerun()
-                    except:
-                        st.error("⚠️ فشل الحفظ، تأكد من وجود عمود رابع للروابط في شيت exams")
+                    except Exception as e:
+                        st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
 
         # 3. عرض التنبيهات المنشورة
-        st.markdown("### 📋 التنبيهات المنشورة")
         df_ann = fetch_safe("exams")
-        
         if df_ann is not None and not df_ann.empty:
+            # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
+            df_ann = df_ann.astype(str)
             reversed_df = df_ann.iloc[::-1]
-            color_map = {
-                "الكل": "#E0F2FE", "الأول": "#F0FDF4", "الثاني": "#FFF7ED", 
-                "الثالث": "#FAF5FF", "الرابع": "#FEF2F2", "الخامس": "#F5F3FF", "السادس": "#ECFEFF"
-            }
 
             for index, row in reversed_df.iterrows():
-                # استخراج البيانات والتأكد من وجود الرابط (العمود الرابع D)
                 r_class, r_title, r_date = row[0], row[1], row[2]
-                r_link = row[3] if len(row) > 3 else ""
+                # التحقق من وجود العمود الرابع للرابط
+                r_link = row[3] if len(row) > 3 and row[3] != 'nan' else ""
                 
-                bg_card = color_map.get(r_class, "#FFFFFF")
-                
-                # تنسيق رسالة الواتساب
+                # رسالة الواتساب
                 link_wa = f"\n🔗 *الرابط:* {r_link}" if r_link else ""
                 wa_msg = f"📢 *تنبيه من الأستاذ زياد*\n---\n🏫 *الصف:* {r_class}\n📝 *الموضوع:* {r_title}\n📅 *التاريخ:* {r_date}{link_wa}\n---\nبالتوفيق 🌟"
                 encoded_msg = urllib.parse.quote(wa_msg)
                 wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
 
-                # عرض البطاقة
                 st.markdown(f"""
-                    <div class="ann-card" style="background-color: {bg_card};">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: #555;">
+                    <div class="ann-card">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: #666;">
                             <span>📅 {r_date}</span>
                             <span><b>{r_class}</b></span>
                         </div>
@@ -598,9 +589,7 @@ if st.session_state.role == "teacher":
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # أزرار التحكم (حذف، رابط، واتساب)
                 col_del, col_link, col_wa = st.columns([1, 2, 3])
-                
                 with col_del:
                     if st.button("🗑️", key=f"del_ex_{index}"):
                         ws_ex = sh.worksheet("exams")
@@ -610,7 +599,7 @@ if st.session_state.role == "teacher":
                             st.rerun()
                 
                 with col_link:
-                    if r_link:
+                    if r_link and r_link.strip():
                         st.markdown(f'<a href="{r_link}" target="_blank" class="link-btn">🔗 فتح الرابط</a>', unsafe_allow_html=True)
                     else:
                         st.button("🔗 لا يوجد", disabled=True, key=f"no_lnk_{index}")
@@ -619,5 +608,3 @@ if st.session_state.role == "teacher":
                     st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn">💬 واتساب</a>', unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
-        else:
-            st.info("📭 لا توجد تنبيهات منشورة حالياً")
