@@ -460,31 +460,15 @@ elif st.session_state.role == "student":
         except: st.info("جاري التحديث...")
 
   with t_set:
-        with st.form("set_f"):
-            st.markdown("<b>⚙️ تحديث البيانات</b>", unsafe_allow_html=True)
-            m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
-            p = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]), help="يجب أن يبدأ بـ 9665 ويتكون من 12 رقماً")
-            
-            if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
-                # 🛡️ التحقق من صحة رقم الجوال
-                if not p.startswith("9665"):
-                    st.error("⚠️ خطأ: يجب أن يبدأ رقم الجوال بـ 9665")
-                elif len(p) != 12:
-                    st.error(f"⚠️ خطأ: الرقم ناقص أو زائد، يجب أن يكون 12 رقماً (أدخلت {len(p)} رقم)")
-                elif not p.isdigit():
-                    st.error("⚠️ خطأ: يجب أن يحتوي حقل الجوال على أرقام فقط")
-                else:
-                    # ✅ إذا اجتاز التحقق يتم الحفظ
-                    ws = sh.worksheet("students")
-                    cell = ws.find(st.session_state.sid)
-                    ws.update_cell(cell.row, 7, m) # تحديث البريد
-                    ws.update_cell(cell.row, 8, p) # تحديث الجوال
-                    st.cache_data.clear()
-                    st.success("✅ تم تحديث بياناتك بنجاح")
-                    time.sleep(1)
-                    st.rerun()
-    
-    # زر تسجيل الخروج للطالب
-    if st.button("🚗 تسجيل الخروج", use_container_width=True):
-        st.session_state.role = None
-        st.rerun()
+        with st.form("set_f"):
+            st.markdown("<b>⚙️ تحديث البيانات</b>", unsafe_allow_html=True)
+            m = st.text_input("📧 البريد الإلكتروني", value=str(s_row[6]))
+            p = st.text_input("📱 جوال ولي الأمر", value=str(s_row[7]))
+            if st.form_submit_button("✅ حفظ التعديلات", use_container_width=True):
+                ws = sh.worksheet("students")
+                cell = ws.find(st.session_state.sid)
+                ws.update_cell(cell.row, 7, m); ws.update_cell(cell.row, 8, p)
+                st.cache_data.clear(); st.success("✅ تم الحفظ"); time.sleep(1); st.rerun()
+    
+    if st.button("🚗 تسجيل الخروج", use_container_width=True):
+        st.session_state.role = None; st.rerun()
