@@ -6,10 +6,8 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 
-# 1. إعدادات الصفحة الأساسية
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# 2. الدوال البرمجية الأساسية
 @st.cache_resource
 def get_client():
     try:
@@ -30,19 +28,15 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
-# 3. واجهة المستخدم المتقدمة (حل مشكلات ظهور الكود في الأعلى)
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Cairo', sans-serif;
         direction: RTL;
         text-align: right;
     }
-
-    /* الهيدر المتطور مع اللوجو المفضل */
     .header-section {
         background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
         padding: 45px 20px;
@@ -52,7 +46,6 @@ st.markdown("""
         margin: -80px -20px 30px -20px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
-
     .logo-container {
         background: rgba(255, 255, 255, 0.1);
         width: 75px; height: 75px; border-radius: 20px;
@@ -60,8 +53,6 @@ st.markdown("""
         justify-content: center; align-items: center;
         backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
     }
-
-    /* بطاقة الترحيب التعريفية */
     .welcome-card {
         background: rgba(30, 64, 175, 0.05);
         border-right: 5px solid #1e40af;
@@ -71,8 +62,6 @@ st.markdown("""
         text-align: justify;
         line-height: 1.8;
     }
-
-    /* تحسين وضوح الحقول (خط أسود داكن جداً) */
     .stTextInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
@@ -81,17 +70,13 @@ st.markdown("""
         border-radius: 12px !important;
         font-size: 16px !important;
     }
-
-    /* إخفاء رسائل التعليمات البرمجية التلقائية */
     div[data-testid="InputInstructions"] { display: none !important; }
-
     div[data-testid="stForm"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border-radius: 25px !important;
         border: 1px solid rgba(128, 128, 128, 0.2) !important;
         padding: 30px !important;
     }
-
     .stButton>button {
         background: #2563eb !important;
         color: white !important;
@@ -100,9 +85,7 @@ st.markdown("""
         height: 3.5em !important;
         width: 100% !important;
     }
-    
     [data-testid="stSidebar"] { display: none !important; }
-    
     .footer-text {
         text-align: center;
         opacity: 0.8;
@@ -112,7 +95,6 @@ st.markdown("""
         border-top: 1px solid rgba(128, 128, 128, 0.1);
     }
     </style>
-    
     <div class="header-section">
         <div class="logo-container"><i class="bi bi-graph-up-arrow" style="font-size:38px; color:white;"></i></div>
         <h1 style="font-size:26px; font-weight:700; margin:0; color:white;">منصة زياد الذكية</h1>
@@ -120,12 +102,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 4. منطق الدخول
 if "role" not in st.session_state:
     st.session_state.role = None
 
 if st.session_state.role is None:
-    # عرض رسالة الترحيب الرسمية
     st.markdown("""
         <div class="welcome-card">
             <h4 style="color: #1e40af; margin-top: 0; font-weight: 700;">أهلًا بكم في منصة زياد الذكية</h4>
@@ -134,9 +114,7 @@ if st.session_state.role is None:
             </p>
         </div>
     """, unsafe_allow_html=True)
-
     tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
-    
     with tab1:
         with st.form("st_form"):
             sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية للمتابعة")
@@ -148,7 +126,6 @@ if st.session_state.role is None:
                         st.session_state.role = "student"; st.session_state.sid = sid.strip()
                         st.balloons(); time.sleep(1); st.rerun()
                     else: st.error("عذراً، الرقم غير مسجل في النظام")
-
     with tab2:
         with st.form("te_form"):
             u = st.text_input("👤 اسم المستخدم")
@@ -163,16 +140,9 @@ if st.session_state.role is None:
                             st.session_state.role = "teacher"; st.rerun()
                         else: st.error("كلمة المرور غير صحيحة")
                     else: st.error("المستخدم غير موجود")
-    
-    # تذييل الحقوق الرسمي
-    st.markdown("""
-        <div class="footer-text">
-            © منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="footer-text">© منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد</div>""", unsafe_allow_html=True)
     st.stop()
 
-# 5. الواجهة بعد الدخول بنجاح
 if st.session_state.role:
     st.success("تم تسجيل الدخول بنجاح!")
     if st.button("تسجيل الخروج"):
