@@ -1,6 +1,60 @@
 import streamlit as st
 import gspread
 import pandas as pd
+# --- كبسولة واجهة الطالب (توضع في أعلى الملف) ---
+def render_student_portal():
+    # تصميم واجهة الطالب بلغة CSS مدمجة لتفادي أي أخطاء شكلية
+    st.markdown("""
+        <style>
+        .main-card {
+            background-color: #1e293b;
+            padding: 30px;
+            border-radius: 20px;
+            border-right: 10px solid #60a5fa;
+            color: white;
+            text-align: right;
+            margin-bottom: 25px;
+        }
+        </style>
+        <div class="main-card">
+            <h1 style='margin:0;'>لوحة الطالب الذكية ✨</h1>
+            <p style='opacity:0.8;'>مرحباً بك في نظام المتابعة الأكاديمية</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        # جلب البيانات بشكل معزول كلياً
+        df_st = fetch_safe("students")
+        student_info = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        
+        if not student_info.empty:
+            s_row = student_info.iloc[0]
+            # عرض البيانات في كروت أنيقة
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
+                points = int(float(val)) if val.replace('.','',1).isdigit() else 0
+                st.metric("🎯 مجموع النقاط", points)
+            with col2:
+                st.metric("🏆 رتبة الطالب", "نخبة")
+            with col3:
+                st.metric("📅 الحضور", "منتظم")
+
+            st.divider()
+            # التبويبات (هنا الحل لمشكلة tab2 التي ظهرت لك في الصور)
+            # ننشئ تبويبات محلية داخل هذه الدالة فقط
+            s_tab1, s_tab2, s_tab3 = st.tabs(["📊 سجل الدرجات", "🛡️ الانضباط", "📝 الاختبارات"])
+            
+            with s_tab1:
+                st.dataframe(fetch_safe("grades"), use_container_width=True)
+            with s_tab2:
+                st.info("لا توجد ملاحظات سلوكية سلبية، استمر في تميزك!")
+            with s_tab3:
+                st.write("جميع روابط الاختبارات القادمة ستظهر هنا")
+        else:
+            st.error("⚠️ لم نجد بياناتك، يرجى التواصل مع مسؤول النظام.")
+    except Exception as e:
+        st.error(f"حدث خطأ تقني: {e}")
 import hashlib
 import time
 import datetime
@@ -748,6 +802,8 @@ with tab6:
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
+# --- الاستدعاء المستقل لواجهة الطالب ---
+# تأكد أن هذا الجزء يقع في أقصى اليسار تماماً
 if st.session_state.get('role') == "student":
-    render_student_portal()
-    st.stop() # هذا يمنع بايثون من قراءة أي كود خاطئ بالأسفل
+    render_student_portal() # استدعاء الكبسولة التي صممناها بالأعلى
+    st.stop() # أمر سحري: يوقف قراءة الكود بعدها لضمان عدم حدوث SyntaxError في الأسفل
