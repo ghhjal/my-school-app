@@ -201,82 +201,84 @@ if st.session_state.role == "teacher":
             "🚗 خروج"
         ])
 
-    # --- 1. قسم إدارة الطلاب (الحقول الكاملة + الحذف النهائي) ---
+# --- 1. قسم إدارة الطلاب (النسخة الكاملة والمثالية) ---
     if menu == "👥 إدارة الطلاب":
         st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:20px;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
         
         df_st = fetch_safe("students")
         
-        # أ. السجل الحالي
-        with st.expander("📋 السجل الحالي للطلاب", expanded=True):
-            if not df_st.empty:
-                st.dataframe(df_st, use_container_width=True, hide_index=True)
-            else:
-                st.info("لا يوجد طلاب مسجلين حالياً.")
-
-        # ب. نموذج الإضافة الكامل (الذي كان ينقصك)
+        # أولاً: نموذج إضافة طالب جديد (مرتب حسب أعمدة الجدول)
         with st.container(border=True):
-            st.markdown("### ➕ تأسيس ملف طالب جديد")
+            st.markdown("### ➕ إضافة طالب جديد")
             with st.form("add_student_form_final", clear_on_submit=True):
-                # السطر الأول
                 c1, c2, c3 = st.columns(3)
-                nid = c1.text_input("🔢 الرقم الأكاديمي", placeholder="مثال: 11022...")
-                nname = c2.text_input("👤 الاسم الثلاثي", placeholder="اسم الطالب بالكامل")
-                nphone = c3.text_input("📱 جوال ولي الأمر", placeholder="05xxxxxxxx")
+                nid = c1.text_input("🔢 الرقم الأكاديمي")
+                nname = c2.text_input("👤 الاسم الثلاثي")
+                nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 
-                # السطر الثاني
                 c4, c5, c6 = st.columns(3)
-                nclass = c4.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                nyear = c4.text_input("🗓️ العام الدراسي", value="1447هـ")
                 nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
                 nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
                 
-                # السطر الثالث (إضافي)
                 c7, c8 = st.columns(2)
-                nyear = c7.text_input("🗓️ العام الدراسي", value="1447هـ")
-                nmail = c8.text_input("📧 البريد الإلكتروني (اختياري)")
+                nmail = c7.text_input("📧 البريد الإلكتروني")
+                nphone = c8.text_input("📱 جوال ولي الأمر")
                 
-                st.info("💡 سيقوم النظام بإضافة مفتاح الدولة 966 تلقائياً لرقم الجوال.")
-                
-                # زر الاعتماد
-                submit_btn = st.form_submit_button("✅ اعتماد التأسيس وإضافة الطالب")
-                
-                if submit_btn:
+                if st.form_submit_button("✅ اعتماد وإضافة للطالب"):
                     if nid and nname and nphone:
-                        # معالجة الرقم 966
                         cp = nphone.strip()
                         if cp.startswith('0'): cp = cp[1:]
                         if not cp.startswith('966'): cp = '966' + cp
                         
-                        try:
-                            # الترتيب: الرقم، الاسم، الصف، العام، المرحلة، المادة، الإيميل، الجوال، النقاط
-                            row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
-                            sh.worksheet("students").append_row(row)
-                            st.success(f"✅ تم إضافة الطالب {nname} بنجاح")
-                            time.sleep(1); st.rerun()
-                        except Exception as e:
-                            st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
-                    else:
-                        st.warning("⚠️ يرجى تعبئة الحقول الأساسية: الرقم، الاسم، والجوال.")
+                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
+                        sh.worksheet("students").append_row(row)
+                        st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
 
-        # ج. زر الحذف النهائي الشامل (الميزة المهمة)
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
-            st.error("🚨 تنبيه: سيتم مسح الطالب وكافة درجاته وسجله السلوكي نهائياً!")
+        st.divider()
+
+        # ثانياً: عرض السجل الحالي
+        st.subheader("📋 السجل الحالي للطلاب")
+        if not df_st.empty:
+            st.dataframe(df_st, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد بيانات طلاب حالياً.")
+
+        st.divider()
+
+        # ثالثاً: منطقة الحذف النهائي (التي سألت عنها)
+        st.markdown("### 🗑️ منطقة الحذف النهائي (إجراء خطير)")
+        with st.expander("🚨 اضغط هنا لفتح خيارات الحذف النهائي الشامل", expanded=False):
+            st.warning("⚠️ تحذير: الحذف من هنا سيمسح الطالب من (الطلاب، الدرجات، السلوك) نهائياً.")
+            
             if not df_st.empty:
-                del_name = st.selectbox("🎯 اختر الطالب للمسح النهائي:", [""] + df_st.iloc[:, 1].tolist())
+                # قائمة الأسماء للحذف
+                names_list = [""] + df_st.iloc[:, 1].tolist()
+                del_name = st.selectbox("🎯 اختر اسم الطالب المراد حذفه نهائياً:", names_list, key="del_select")
+                
                 if st.button("🚨 تنفيذ الحذف الشامل الآن", use_container_width=True):
-                    if del_name:
-                        with st.spinner('جاري تنظيف كافة الجداول...'):
-                            for s_name in ["students", "grades", "behavior"]:
-                                try:
-                                    ws = sh.worksheet(s_name)
-                                    cell = ws.find(del_name)
-                                    if cell: ws.delete_rows(cell.row)
-                                except: pass
-                            st.success(f"💥 تم حذف الطالب {del_name} بنجاح")
-                            time.sleep(1); st.rerun()
+                    if del_name != "":
+                        try:
+                            with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
+                                # حذف من كافة الشيتات
+                                for sheet_name in ["students", "grades", "behavior"]:
+                                    try:
+                                        ws = sh.worksheet(sheet_name)
+                                        cell = ws.find(del_name)
+                                        if cell:
+                                            ws.delete_rows(cell.row)
+                                    except:
+                                        pass # في حال لم يوجد سجل في أحد الشيتات
+                                
+                                st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته بنجاح")
+                                time.sleep(1)
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"حدث خطأ أثناء الحذف: {e}")
+                    else:
+                        st.warning("يرجى اختيار اسم الطالب أولاً.")
             else:
-                st.write("لا يوجد طلاب لحذفهم.")
+                st.write("لا يوجد طلاب مسجلين للحذف.")
 
     # --- 2. شاشة الدرجات ---
     elif menu == "📝 شاشة الدرجات":
