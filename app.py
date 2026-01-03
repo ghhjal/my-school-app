@@ -6,10 +6,10 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 
-# 1. الإعدادات الأساسية
+# 1. إعدادات الصفحة الأساسية
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# 2. الدوال البرمجية
+# 2. الدوال البرمجية الأساسية
 @st.cache_resource
 def get_client():
     try:
@@ -30,7 +30,7 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame(data[1:], columns=data[0])
     except: return pd.DataFrame()
 
-# 3. واجهة المستخدم والتنسيق
+# 3. واجهة المستخدم المتقدمة (حل مشكلات ظهور الكود في الأعلى)
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -42,6 +42,7 @@ st.markdown("""
         text-align: right;
     }
 
+    /* الهيدر المتطور مع اللوجو المفضل */
     .header-section {
         background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
         padding: 45px 20px;
@@ -60,30 +61,35 @@ st.markdown("""
         backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
+    /* بطاقة الترحيب التعريفية */
     .welcome-card {
         background: rgba(30, 64, 175, 0.05);
         border-right: 5px solid #1e40af;
         padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
+        border-radius: 12px;
+        margin: 25px 0;
         text-align: justify;
-        line-height: 1.6;
+        line-height: 1.8;
     }
 
+    /* تحسين وضوح الحقول (خط أسود داكن جداً) */
     .stTextInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
         font-weight: bold !important;
         border: 2px solid #3b82f6 !important;
         border-radius: 12px !important;
+        font-size: 16px !important;
     }
 
+    /* إخفاء رسائل التعليمات البرمجية التلقائية */
     div[data-testid="InputInstructions"] { display: none !important; }
 
     div[data-testid="stForm"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border-radius: 25px !important;
         border: 1px solid rgba(128, 128, 128, 0.2) !important;
+        padding: 30px !important;
     }
 
     .stButton>button {
@@ -103,6 +109,7 @@ st.markdown("""
         font-size: 13px;
         margin-top: 50px;
         padding: 20px;
+        border-top: 1px solid rgba(128, 128, 128, 0.1);
     }
     </style>
     
@@ -118,17 +125,17 @@ if "role" not in st.session_state:
     st.session_state.role = None
 
 if st.session_state.role is None:
-    # رسالة الترحيب الجديدة
+    # عرض رسالة الترحيب الرسمية
     st.markdown("""
         <div class="welcome-card">
-            <h4 style="color: #1e40af; margin-top: 0;">أهلًا بكم في منصة زياد الذكية</h4>
-            <p style="color: inherit; font-size: 15px;">
+            <h4 style="color: #1e40af; margin-top: 0; font-weight: 700;">أهلًا بكم في منصة زياد الذكية</h4>
+            <p style="color: inherit; font-size: 15px; margin-bottom: 0;">
                 مبادرة تعليمية تهدف إلى تسهيل متابعة مستوى الطلاب أكاديمياً وسلوكياً، وتعزيز التواصل السريع والفعّال مع أولياء الأمور.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-    tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 الإدارة"])
+    tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
     
     with tab1:
         with st.form("st_form"):
@@ -157,6 +164,7 @@ if st.session_state.role is None:
                         else: st.error("كلمة المرور غير صحيحة")
                     else: st.error("المستخدم غير موجود")
     
+    # تذييل الحقوق الرسمي
     st.markdown("""
         <div class="footer-text">
             © منصة زياد الذكية – مبادرة تعليمية بإشراف الأستاذ زياد
@@ -164,8 +172,8 @@ if st.session_state.role is None:
     """, unsafe_allow_html=True)
     st.stop()
 
-# 5. بعد الدخول
+# 5. الواجهة بعد الدخول بنجاح
 if st.session_state.role:
-    st.success("تم تسجيل الدخول!")
-    if st.button("خروج"):
+    st.success("تم تسجيل الدخول بنجاح!")
+    if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
