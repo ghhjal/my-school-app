@@ -509,7 +509,7 @@ elif menu == "📢 شاشة الاختبارات":
         import urllib.parse
         import time
 
-        # 1. الهيدر الاحترافي (نفس نمط المنصة)
+        # 1. الهيدر المطور
         st.markdown("""
             <div style="background: linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
                 <h1 style="margin:0;">📢 مركز التنبيهات والإعلانات</h1>
@@ -517,33 +517,35 @@ elif menu == "📢 شاشة الاختبارات":
             </div>
         """, unsafe_allow_html=True)
 
-        # 2. كود CSS لتنسيق الأزرار (أحمر للحذف، وأخضر للواتساب)
+        # 2. كود CSS القوي لإجبار الألوان على الظهور
         st.markdown("""
             <style>
-                .stButton button { border-radius: 8px; font-weight: bold; transition: 0.3s; }
-                
-                /* تنسيق زر الحذف باللون الأحمر */
-                button[key^="del_exam_"] {
+                /* تنسيق زر الحذف ليظهر باللون الأحمر */
+                div.stButton > button:first-child[key*="del_exam_"] {
                     background-color: #dc3545 !important;
                     color: white !important;
                     border: none !important;
-                    height: 2.5em !important;
+                    width: 100%;
                 }
-                
-                /* تحسين شكل بطاقة التنبيه */
-                .announcement-card {
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    border-right: 5px solid #4F46E5; 
-                    margin-bottom: 5px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                /* تأثير عند تمرير الماوس على زر الحذف */
+                div.stButton > button:first-child[key*="del_exam_"]:hover {
+                    background-color: #a71d2a !important;
+                    border: none !important;
+                }
+                /* تنسيق بطاقة الإعلان */
+                .ann-card {
+                    padding: 20px;
+                    border-radius: 12px;
+                    margin-bottom: 10px;
+                    border-right: 6px solid #4F46E5;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
             </style>
         """, unsafe_allow_html=True)
 
-        # 3. نموذج الإضافة
+        # 3. نموذج إضافة التنبيهات
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("announcement_form_v7", clear_on_submit=True):
+            with st.form("ann_form_v8", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
@@ -551,27 +553,22 @@ elif menu == "📢 شاشة الاختبارات":
                 
                 btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
                 
-                if btn_post:
-                    if a_title:
-                        try:
-                            sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
-                            st.balloons()
-                            st.success("✅ تم نشر التنبيه بنجاح")
-                            time.sleep(1)
-                            st.rerun()
-                        except:
-                            st.error("❌ فشل الاتصال بقاعدة البيانات")
-                    else:
-                        st.warning("⚠️ يرجى كتابة عنوان التنبيه")
+                if btn_post and a_title:
+                    try:
+                        sh.worksheet("exams").append_row([a_class, a_title, str(a_date)])
+                        st.balloons()
+                        st.success("✅ تم النشر بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+                    except:
+                        st.error("❌ حدث خطأ في الاتصال")
 
-        st.markdown("### 📋 التنبيهات المنشورة (الأحدث أولاً)")
+        # 4. عرض التنبيهات المنشورة
+        st.markdown("### 📋 التنبيهات المنشورة")
         df_ann = fetch_safe("exams")
         
         if df_ann is not None and not df_ann.empty:
-            # ترتيب التنبيهات: الأحدث يظهر فوق
             reversed_df = df_ann.iloc[::-1]
-            
-            # خريطة الألوان الهادئة حسب الصف
             color_map = {
                 "الكل": "#E0F2FE", "الأول": "#F0FDF4", "الثاني": "#FFF7ED", 
                 "الثالث": "#FAF5FF", "الرابع": "#FEF2F2", "الخامس": "#F5F3FF", "السادس": "#ECFEFF"
@@ -580,59 +577,60 @@ elif menu == "📢 شاشة الاختبارات":
             for index, row in reversed_df.iterrows():
                 bg_color = color_map.get(row[0], "#FFFFFF")
                 
-                # نص الرسالة المنسق للواتساب (نفس جودة تنسيق شاشة السلوك)
+                # الرسالة المنسقة للواتساب
                 wa_msg = (
-                    f"📢 *تنبيه هام من منصة الأستاذ زياد الذكية*\n"
+                    f"📢 *تنبيه من منصة الأستاذ زياد*\n"
                     f"----------------------------------\n"
-                    f"🏫 *المستهدف:* {row[0]}\n"
+                    f"🏫 *الصف:* {row[0]}\n"
                     f"📝 *الموضوع:* {row[1]}\n"
                     f"📅 *الموعد:* {row[2]}\n"
                     f"----------------------------------\n"
-                    f"يرجى العلم والاستعداد. مع تمنياتي لكم بالتوفيق 🌟"
+                    f"يرجى الاستعداد. بالتوفيق للجميع 🌟"
                 )
                 encoded_msg = urllib.parse.quote(wa_msg)
-                # رابط واتساب عام (للمجموعات أو الحالة)
                 wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
 
-                # عرض البطاقة الملونة
+                # عرض بطاقة التنبيه
                 st.markdown(f"""
-                    <div class="announcement-card" style="background-color: {bg_color};">
-                        <span style="color: #4F46E5; font-weight: bold;">[{row[0]}]</span> 
-                        <span style="font-size: 1.1em; margin-right: 10px; font-weight: 500;">{row[1]}</span>
-                        <div style="font-size: 0.9em; color: #555; margin-top: 8px;">
-                            📅 تاريخ الموعد: <b>{row[2]}</b>
+                    <div class="ann-card" style="background-color: {bg_color};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #4F46E5; font-weight: bold; font-size: 1.1em;">{row[0]}</span>
+                            <span style="color: #666; font-size: 0.9em;">📅 {row[2]}</span>
                         </div>
+                        <h4 style="margin: 10px 0; color: #1e293b;">{row[1]}</h4>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # أزرار التحكم
-                col1, col2, col_empty = st.columns([1.5, 1, 3])
+                # أزرار التحكم (واتساب وحذف)
+                col1, col2, col3 = st.columns([2, 1, 2])
                 
                 with col1:
-                    # زر واتساب أخضر
+                    # زر واتساب بتصميم HTML لضمان اللون الأخضر والعمل الفوري
                     st.markdown(f'''
                         <a href="{wa_url}" target="_blank" style="text-decoration:none;">
-                            <div style="background-color:#25D366; color:white; padding:8px 12px; border-radius:8px; text-align:center; font-size:14px; font-weight:bold;">
-                                💬 مشاركة عبر الواتساب
+                            <div style="background-color:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:bold; font-size:14px;">
+                                💬 مشاركة واتساب
                             </div>
                         </a>
                     ''', unsafe_allow_html=True)
                 
                 with col2:
-                    # زر الحذف الأحمر (تم استخدام key فريد لربطه بالـ CSS)
-                    if st.button(f"🗑️ حذف", key=f"del_exam_{index}"):
+                    # زر الحذف - تم استخدام مفتاح (key) فريد جداً لضمان استهدافه بالـ CSS
+                    if st.button("🗑️ حذف", key=f"del_exam_{index}_{row[1][:5]}"):
                         try:
                             ws_exam = sh.worksheet("exams")
-                            # البحث عن الصف الصحيح وحذفه
-                            cell = ws_exam.find(row[1])
-                            if cell:
-                                ws_exam.delete_rows(cell.row)
-                                st.success("💥 تم الحذف")
-                                time.sleep(0.5)
-                                st.rerun()
+                            # البحث عن الصف بالاعتماد على العنوان والتاريخ لضمان الدقة
+                            all_data = ws_exam.get_all_values()
+                            for i, r in enumerate(all_data):
+                                if r[1] == row[1] and r[2] == str(row[2]):
+                                    ws_exam.delete_rows(i + 1)
+                                    break
+                            st.success("تم الحذف")
+                            time.sleep(0.5)
+                            st.rerun()
                         except:
-                            st.error("❌ تعذر الحذف")
+                            st.error("فشل الحذف")
                 
-                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+                st.markdown("---")
         else:
-            st.info("📭 لا توجد تنبيهات أو مواعيد مجدولة حالياً")
+            st.info("📭 لا توجد تنبيهات حالياً")
