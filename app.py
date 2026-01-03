@@ -7,7 +7,7 @@ import urllib.parse
 from google.oauth2.service_account import Credentials
 
 # 1. إعدادات الصفحة والتصميم العام (Logo & Header)
-st.set_page_config(page_title="منصة الأستاذ زياد التعليمية", layout="wide")
+st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 st.markdown("""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -31,7 +31,7 @@ st.markdown("""
     </style>
     <div class="header-box">
         <div class="logo-box"><i class="bi bi-graph-up-arrow"></i></div>
-        <h1 style="margin:0; font-size: 24px;">منصة الأستاذ زياد</h1>
+        <h1 style="margin:0; font-size: 24px;">منصة زياد الذكية</h1>
         <p style="opacity: 0.8; font-size: 14px;">نظام الإدارة المدرسية المتكامل</p>
     </div>
     """, unsafe_allow_html=True)
