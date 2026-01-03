@@ -505,7 +505,7 @@ if st.session_state.role == "teacher":
                             ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
                             if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
-elif menu == "📢 شاشة الاختبارات":
+elif menu == "📢 الاختبارات":
         import urllib.parse
         import time
 
@@ -517,26 +517,20 @@ elif menu == "📢 شاشة الاختبارات":
             </div>
         """, unsafe_allow_html=True)
 
-        # 2. كود CSS القوي لإجبار الألوان على الظهور
+        # 2. كود CSS للألوان (أحمر للحذف، أخضر للواتساب)
         st.markdown("""
             <style>
-                /* تنسيق زر الحذف ليظهر باللون الأحمر */
-                div.stButton > button:first-child[key*="del_exam_"] {
-                    background-color: #dc3545 !important;
+                /* زر الحذف الأحمر */
+                div.stButton > button[key*="del_ex_"] {
+                    background-color: #FF0000 !important;
                     color: white !important;
                     border: none !important;
-                    width: 100%;
                 }
-                /* تأثير عند تمرير الماوس على زر الحذف */
-                div.stButton > button:first-child[key*="del_exam_"]:hover {
-                    background-color: #a71d2a !important;
-                    border: none !important;
-                }
-                /* تنسيق بطاقة الإعلان */
+                /* بطاقة الإعلان */
                 .ann-card {
                     padding: 20px;
                     border-radius: 12px;
-                    margin-bottom: 10px;
+                    margin-bottom: 15px;
                     border-right: 6px solid #4F46E5;
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
@@ -545,7 +539,7 @@ elif menu == "📢 شاشة الاختبارات":
 
         # 3. نموذج إضافة التنبيهات
         with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
-            with st.form("ann_form_v8", clear_on_submit=True):
+            with st.form("ann_form_v9", clear_on_submit=True):
                 c1, c2, c3 = st.columns([1, 2, 1])
                 a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
@@ -561,7 +555,7 @@ elif menu == "📢 شاشة الاختبارات":
                         time.sleep(1)
                         st.rerun()
                     except:
-                        st.error("❌ حدث خطأ في الاتصال")
+                        st.error("❌ فشل الحفظ في جوجل شيت")
 
         # 4. عرض التنبيهات المنشورة
         st.markdown("### 📋 التنبيهات المنشورة")
@@ -578,15 +572,7 @@ elif menu == "📢 شاشة الاختبارات":
                 bg_color = color_map.get(row[0], "#FFFFFF")
                 
                 # الرسالة المنسقة للواتساب
-                wa_msg = (
-                    f"📢 *تنبيه من منصة الأستاذ زياد*\n"
-                    f"----------------------------------\n"
-                    f"🏫 *الصف:* {row[0]}\n"
-                    f"📝 *الموضوع:* {row[1]}\n"
-                    f"📅 *الموعد:* {row[2]}\n"
-                    f"----------------------------------\n"
-                    f"يرجى الاستعداد. بالتوفيق للجميع 🌟"
-                )
+                wa_msg = f"📢 *تنبيه من منصة الأستاذ زياد*\n---\n🏫 *الصف:* {row[0]}\n📝 *الموضوع:* {row[1]}\n📅 *الموعد:* {row[2]}\n---\nبالتوفيق للجميع 🌟"
                 encoded_msg = urllib.parse.quote(wa_msg)
                 wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
 
@@ -594,43 +580,28 @@ elif menu == "📢 شاشة الاختبارات":
                 st.markdown(f"""
                     <div class="ann-card" style="background-color: {bg_color};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #4F46E5; font-weight: bold; font-size: 1.1em;">{row[0]}</span>
+                            <span style="color: #4F46E5; font-weight: bold;">{row[0]}</span>
                             <span style="color: #666; font-size: 0.9em;">📅 {row[2]}</span>
                         </div>
-                        <h4 style="margin: 10px 0; color: #1e293b;">{row[1]}</h4>
+                        <h4 style="margin: 10px 0;">{row[1]}</h4>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # أزرار التحكم (واتساب وحذف)
+                # أزرار التحكم
                 col1, col2, col3 = st.columns([2, 1, 2])
-                
                 with col1:
-                    # زر واتساب بتصميم HTML لضمان اللون الأخضر والعمل الفوري
-                    st.markdown(f'''
-                        <a href="{wa_url}" target="_blank" style="text-decoration:none;">
-                            <div style="background-color:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:bold; font-size:14px;">
-                                💬 مشاركة واتساب
-                            </div>
-                        </a>
-                    ''', unsafe_allow_html=True)
+                    st.markdown(f'<a href="{wa_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
                 
                 with col2:
-                    # زر الحذف - تم استخدام مفتاح (key) فريد جداً لضمان استهدافه بالـ CSS
-                    if st.button("🗑️ حذف", key=f"del_exam_{index}_{row[1][:5]}"):
+                    if st.button("🗑️", key=f"del_ex_{index}"):
                         try:
                             ws_exam = sh.worksheet("exams")
-                            # البحث عن الصف بالاعتماد على العنوان والتاريخ لضمان الدقة
-                            all_data = ws_exam.get_all_values()
-                            for i, r in enumerate(all_data):
-                                if r[1] == row[1] and r[2] == str(row[2]):
-                                    ws_exam.delete_rows(i + 1)
-                                    break
-                            st.success("تم الحذف")
-                            time.sleep(0.5)
-                            st.rerun()
-                        except:
-                            st.error("فشل الحذف")
-                
+                            # حذف الصف بناءً على المحتوى لضمان الدقة
+                            cell = ws_exam.find(row[1])
+                            if cell:
+                                ws_exam.delete_rows(cell.row)
+                                st.rerun()
+                        except: pass
                 st.markdown("---")
         else:
             st.info("📭 لا توجد تنبيهات حالياً")
