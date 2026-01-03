@@ -183,48 +183,18 @@ if st.session_state.role:
     if st.button("تسجيل الخروج"):
         st.session_state.role = None; st.rerun()
 # ==========================================
-# 🛠️ واجهة المعلم (بعد الدمج الاحترافي)
+# 🏠 لوحة التحكم: إدارة الطلاب والدرجات (النسخة المتكاملة)
 # ==========================================
-if st.session_state.role == "teacher":
-    # 1. التنسيق الجمالي للقائمة الجانبية
-    st.sidebar.markdown(f"""
-        <div style="text-align:center; padding:10px;">
-            <i class="bi bi-person-badge" style="font-size:50px; color:#1e40af;"></i>
-            <h3 style="margin-top:10px;">الأستاذ زياد</h3>
-            <p style="font-size:12px; opacity:0.7;">مدير المنصة</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    menu = st.sidebar.selectbox("🏠 القائمة الرئيسية", ["👥 إدارة الطلاب", "📝 شاشة الدرجات", "🎭 رصد السلوك", "📢 شاشة الاختبارات"])
-    
-    st.sidebar.divider()
-    if st.sidebar.button("🚗 تسجيل الخروج", use_container_width=True):
-        st.session_state.role = None
-        st.rerun()
 
-  # --- القسم الأول: إدارة الطلاب (النسخة الكاملة والمصححة) ---
+# --- 1. قسم إدارة الطلاب ---
 if menu == "👥 إدارة الطلاب":
-    st.markdown("""
-        <div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:25px; border-radius:20px; color:white; text-align:center; margin-bottom:25px;">
-            <h1 style="margin:0; font-size:24px;">👥 إدارة سجلات الطلاب</h1>
-            <p style="margin:5px 0 0 0; opacity:0.9;">إضافة، عرض، وتطهير سجلات الطلاب نهائياً</p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>👥 إدارة الطلاب</h1></div>', unsafe_allow_html=True)
     
-    # جلب البيانات
     df_st = fetch_safe("students")
     
-    # 1. عرض السجل الحالي
-    with st.expander("📋 السجل الحالي للطلاب", expanded=True):
-        if not df_st.empty:
-            st.dataframe(df_st, use_container_width=True, hide_index=True)
-        else:
-            st.info("لا يوجد طلاب مسجلين حالياً.")
-
-    # 2. نموذج إضافة طالب جديد (مع معالجة الجوال)
     with st.container(border=True):
-        st.markdown("#### ➕ تأسيس ملف طالب جديد")
-        with st.form("add_student_pro_v3", clear_on_submit=True):
+        st.markdown("#### ➕ تأسيس طالب جديد")
+        with st.form("add_student_final", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
             nid = c1.text_input("🔢 الرقم الأكاديمي")
             nname = c2.text_input("👤 الاسم الثلاثي")
@@ -233,122 +203,58 @@ if menu == "👥 إدارة الطلاب":
             c4, c5, c6 = st.columns(3)
             nstage = c4.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
             nsub = c5.text_input("📚 المادة", value="لغة إنجليزية")
-            nyear = c6.text_input("🗓️ العام الدراسي", value="1447هـ")
+            nyear = c6.text_input("🗓️ العام", value="1447هـ")
             
             c7, c8 = st.columns(2)
             nmail = c7.text_input("📧 البريد الإلكتروني")
             nphone = c8.text_input("📱 جوال ولي الأمر")
-            st.caption("💡 سيتم إضافة 966 تلقائياً للرقم.")
             
-            submit = st.form_submit_button("✅ اعتماد التأسيس")
-            
-            if submit:
+            if st.form_submit_button("✅ اعتماد"):
                 if nid and nname and nphone:
-                    # منطق معالجة رقم الجوال
-                    clean_phone = nphone.strip()
-                    if clean_phone.startswith('0'):
-                        clean_phone = clean_phone[1:]
-                    if not clean_phone.startswith('966'):
-                        clean_phone = '966' + clean_phone
-                    
-                    # الترتيب الصحيح للأعمدة في شيت Students
-                    row_to_add = [nid, nname, nclass, nyear, nstage, nsub, nmail, clean_phone, "0"]
-                    
-                    try:
-                        sh.worksheet("students").append_row(row_to_add)
-                        st.success(f"✅ تم إضافة {nname} بنجاح")
+                    # التحقق من عدم تكرار الرقم الأكاديمي
+                    if not df_st.empty and nid in df_st.iloc[:, 0].values:
+                        st.error("⚠️ هذا الرقم الأكاديمي مسجل مسبقاً!")
+                    else:
+                        # معالجة الرقم الدولي 966
+                        cp = nphone.strip()
+                        if cp.startswith('0'): cp = cp[1:]
+                        if not cp.startswith('966'): cp = '966' + cp
+                        
+                        # الترتيب: ID, Name, Class, Year, Stage, Subject, Email, Phone, Points(0)
+                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
+                        sh.worksheet("students").append_row(row)
+                        st.success(f"تم إضافة {nname} بنجاح")
                         time.sleep(1); st.rerun()
-                    except Exception as e:
-                        st.error(f"خطأ في الإضافة: {e}")
-                else:
-                    st.warning("يرجى إكمال البيانات الأساسية (الرقم، الاسم، الجوال)")
 
-    # 3. ميزة الحذف النهائي الشامل (كودك الأصلي الرائع)
-    st.divider()
-    with st.expander("🗑️ منطقة الحذف النهائي (حذف من كافة السجلات)", expanded=False):
-        st.error("⚠️ تحذير: سيتم حذف الطالب نهائياً من كافة السجلات (الطلاب، الدرجات، السلوك).")
-        
-        # قائمة الأسماء للحذف
-        student_list = [""] + df_st.iloc[:, 1].tolist() if not df_st.empty else [""]
-        del_name = st.selectbox("🎯 اختر الطالب المراد حذفه نهائياً:", student_list, key="delete_list")
-        
-        if st.button("🚨 تنفيذ الحذف النهائي الآن"):
-            if del_name and del_name != "":
-                try:
-                    with st.spinner(f'جاري مسح كافة سجلات {del_name}...'):
-                        # أ. الحذف من شيت الطلاب
-                        ws_st = sh.worksheet("students")
-                        c_st = ws_st.find(del_name)
-                        if c_st: ws_st.delete_rows(c_st.row)
-                        
-                        # ب. الحذف من شيت الدرجات
-                        try:
-                            ws_gr = sh.worksheet("grades")
-                            c_gr = ws_gr.find(del_name)
-                            if c_gr: ws_gr.delete_rows(c_gr.row)
-                        except: pass
-                        
-                        # ج. الحذف من شيت السلوك
-                        try:
-                            ws_bh = sh.worksheet("behavior")
-                            matches = ws_bh.findall(del_name)
-                            for m in reversed(matches):
-                                if m.col == 1: ws_bh.delete_rows(m.row)
-                        except: pass
-                        
-                        st.success(f"💥 تم حذف الطالب {del_name} وكافة بياناته بنجاح")
-                        time.sleep(1); st.rerun()
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء الحذف: {e}")
-            else:
-                st.warning("يرجى اختيار اسم الطالب أولاً")
-
-# --- القسم الثاني: شاشة الدرجات (رصد وتعديل الدرجات) ---
-if menu == "📝 شاشة الدرجات":
-    st.markdown("""
-        <div style="background:linear-gradient(135deg,#059669,#10b981); padding:25px; border-radius:20px; color:white; text-align:center; margin-bottom:25px;">
-            <h1 style="margin:0; font-size:24px;">📝 رصد وتعديل الدرجات</h1>
-            <p style="margin:5px 0 0 0; opacity:0.9;">إدارة درجات الاختبارات الشهرية والنهائية</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    df_st = fetch_safe("students")
+# --- 2. قسم شاشة الدرجات ---
+elif menu == "📝 شاشة الدرجات":
+    st.markdown('<div style="background:linear-gradient(135deg,#059669,#10b981); padding:20px; border-radius:15px; color:white; text-align:center;"><h1>📝 رصد الدرجات</h1></div>', unsafe_allow_html=True)
     
-    if df_st.empty:
-        st.warning("⚠️ يرجى إضافة طلاب أولاً من قائمة 'إدارة الطلاب'")
-    else:
-        # 1. نموذج رصد درجة جديدة
-        with st.container(border=True):
-            st.markdown("#### 🎯 رصد درجة لطالب")
-            with st.form("add_grade_form", clear_on_submit=True):
-                col1, col2 = st.columns(2)
-                # اختيار الطالب بناءً على الاسم من القائمة
-                student_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
-                exam_type = col2.selectbox("📝 نوع الاختبار:", ["اختبار فترتي", "اختبار شهري", "اختبار نهائي", "مشاركة"])
+    df_st = fetch_safe("students")
+    if not df_st.empty:
+        with st.form("grades_entry"):
+            col1, col2 = st.columns(2)
+            s_name = col1.selectbox("🎯 اختر الطالب:", df_st.iloc[:, 1].tolist())
+            exam = col2.selectbox("📝 النوع:", ["شهري", "فترتي", "نهائي", "واجبات"])
+            
+            col3, col4 = st.columns(2)
+            grade = col3.number_input("💯 الدرجة:", 0.0, 100.0)
+            note = col4.text_input("💬 ملاحظة المعلم")
+            
+            if st.form_submit_button("✅ حفظ"):
+                # جلب البيانات المرتبطة بالطالب تلقائياً
+                student_data = df_st[df_st.iloc[:, 1] == s_name].iloc[0]
+                sid = student_data[0]
+                sub = student_data[5] # جلب المادة المسجلة للطالب
+                date = datetime.datetime.now().strftime("%Y-%m-%d")
                 
-                col3, col4 = st.columns(2)
-                grade_value = col3.number_input("💯 الدرجة:", min_value=0.0, max_value=100.0, step=0.5)
-                teacher_note = col4.text_input("💬 ملاحظة المعلم:", placeholder="مثال: مستوى ممتاز")
+                # إرسال البيانات (رقم، اسم، مادة، نوع، درجة، تاريخ، ملاحظة)
+                sh.worksheet("grades").append_row([sid, s_name, sub, exam, grade, date, note])
+                st.success(f"تم رصد درجة {s_name} في مادة {sub}")
+                time.sleep(1); st.rerun()
 
-                if st.form_submit_button("✅ حفظ الدرجة في النظام"):
-                    # البحث عن الرقم الأكاديمي للطالب المختار
-                    student_id = df_st[df_st.iloc[:, 1] == student_name].iloc[0, 0]
-                    date_now = datetime.datetime.now().strftime("%Y-%m-%d")
-                    
-                    row_grade = [student_id, student_name, exam_type, grade_value, date_now, teacher_note]
-                    try:
-                        sh.worksheet("grades").append_row(row_grade)
-                        st.success(f"✅ تم رصد درجة {student_name} بنجاح")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"خطأ: {e}")
-
-        # 2. عرض جدول الدرجات الحالي
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("📊 سجل الدرجات المرصودة", expanded=True):
-            df_grades = fetch_safe("grades")
-            if not df_grades.empty:
-                st.dataframe(df_grades, use_container_width=True, hide_index=True)
-            else:
-                st.info("لم يتم رصد أي درجات بعد.")
+    # عرض جدول الدرجات مع زر الفلترة
+    df_gr = fetch_safe("grades")
+    if not df_gr.empty:
+        st.subheader("📊 سجل الدرجات")
+        st.dataframe(df_gr, use_container_width=True, hide_index=True)
