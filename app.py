@@ -740,14 +740,37 @@ with tab6:
 # 👨‍🎓 واجهة الطالب (النسخة المصلحة والمتكاملة)
 # ==============================================================================
 
-if st.session_state.role == "student":
-    # 1. ترويسة الصفحة بتصميم جذاب
-    st.markdown(f"""
-        <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-right: 5px solid #4CAF50; text-align: right;">
-            <h2 style="margin: 0;">مرحباً بك، {s_name} 👋</h2>
-            <p style="color: #666;">الصف: {s_class} | رقم الطالب: {st.session_state.sid}</p>
-        </div>
-    """, unsafe_allow_html=True)
+# --- منطقة التنفيذ (واجهة الطالب) ---
+if st.session_state.get('role') == "student":
+    try:
+        # جلب البيانات لمرة واحدة
+        df_st = fetch_safe("students")
+        # البحث عن الطالب بواسطة SID
+        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
+        
+        if not student_data.empty:
+            # استخراج البيانات الأساسية
+            s_row = student_data.iloc[0]
+            s_name = s_row[1]
+            s_class = s_row[2]
+            
+            # تنظيف ومعالجة النقاط (العمود التاسع)
+            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
+            s_points = int(float(val)) if val.replace('.','',1).isdigit() else 0
+            
+            # جلب الجداول الأخرى للعرض
+            df_grades = fetch_safe("grades")
+            df_beh = fetch_safe("behavior")
+            df_ex = fetch_safe("exams")
+            
+            # 🔥 استدعاء الدالة التي عرفناها في الأعلى 🔥
+            student_dashboard_ui(s_name, s_class, s_points, df_grades, df_beh, df_ex)
+            
+        else:
+            st.error("لم يتم العثور على بيانات الطالب. يرجى مراجعة الإدارة.")
+            
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء تحميل واجهتك: {e}")
 
     # 2. عرض النقاط بأسلوب "عداد" (Metrics)
     st.write("---")
