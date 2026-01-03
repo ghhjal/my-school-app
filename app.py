@@ -694,11 +694,12 @@ with tab6:
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
-# تأكد أن هذا الجزء ينهي واجهة المعلم تماماً
+# --- نهاية واجهة المعلم (تأكد من إغلاق كل الأقواس والمسافات قبل هذا السطر) ---
+
 # ==========================================
-# 👨‍🎓 واجهة الطالب (تصحيح المسافات بالكامل)
+# 👨‍🎓 واجهة الطالب (تصحيح المسافات)
 # ==========================================
-# يجب أن تكون محاذاة elif في أقصى اليسار تماماً مثل الـ if الأولى في التطبيق
+# ملاحظة: يجب أن تبدأ كلمة elif من بداية السطر (أو بمحاذاة الـ if الأولى في ملفك)
 elif st.session_state.role == "student":
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades") 
@@ -711,7 +712,7 @@ elif st.session_state.role == "student":
         if not student_data.empty:
             s_row = student_data.iloc[0]
             s_name, s_class = s_row[1], s_row[2]
-            # معالجة النقاط للتأكد من أنها رقم صحيح (عمود I هو رقم 8)
+            # معالجة النقاط (عمود I هو رقم 8)
             val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
             s_points = int(float(val)) if val and val != "None" and val.replace('.','',1).isdigit() else 0
         else:
@@ -721,7 +722,7 @@ elif st.session_state.role == "student":
         st.error(f"❌ حدث خطأ أثناء تحميل بياناتك: {e}")
         st.stop()
 
-    # حساب التقدم للأوسمة (نفس منطق التصميم الجميل)
+    # حساب التقدم للأوسمة (جوهر التصميم الجمالي)
     next_badge, points_to_next = "", 0
     if s_points < 10: 
         next_badge, points_to_next = "البرونزي", 10 - s_points
@@ -730,10 +731,10 @@ elif st.session_state.role == "student":
     elif s_points < 100: 
         next_badge, points_to_next = "الذهبي", 100 - s_points
 
-    # --- عرض الهيدر والأوسمة (التصميم الذي أحبه الطلاب) ---
+    # --- الجزء المرئي (تصميم الأوسمة) ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; border-radius: 0 0 15px 15px; text-align: center; margin-bottom: 20px;">
-            <h2 style="color: white; margin: 0;">🎯 إنجاز الطالب: <span style="color: #ffd700;">{s_name}</span></h2>
+            <h2 style="color: white; margin: 0; font-family: 'Cairo', sans-serif;">🎯 إنجاز الطالب: <span style="color: #ffd700;">{s_name}</span></h2>
             <div style="background: rgba(0,0,0,0.2); display: inline-block; padding: 5px 20px; border-radius: 10px; margin-top: 10px;">
                 <b style="color: white; font-size: 1.1rem;">🏫 {s_class}</b>
             </div>
@@ -741,25 +742,22 @@ elif st.session_state.role == "student":
         
         <div style="background: white; border-radius: 15px; padding: 20px; border: 2px solid #e2e8f0; text-align: center; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 10 else '0.15'}; transform: {'scale(1.1)' if 10 <= s_points < 50 else 'scale(1)'};">
-                    <div style="font-size: 2rem;">🥉</div><b style="color: #cd7f32;">برونزي</b>
+                <div style="border: 2px solid #cd7f32; padding: 10px; border-radius: 15px; width: 30%; background: #fffcf9; opacity: {'1' if s_points >= 10 else '0.15'}; transform: {'scale(1.1)' if 10 <= s_points < 50 else 'scale(1)'}; border-width: {'3px' if 10 <= s_points < 50 else '1px'};">
+                    <div style="font-size: 2rem;">🥉</div><b style="color: #cd7f32; font-size: 0.8rem;">برونزي</b>
                 </div>
-                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 50 else '0.15'}; transform: {'scale(1.1)' if 50 <= s_points < 100 else 'scale(1)'};">
-                    <div style="font-size: 2rem;">🥈</div><b style="color: #7f8c8d;">فضي</b>
+                <div style="border: 2px solid #c0c0c0; padding: 10px; border-radius: 15px; width: 30%; background: #f8f9fa; opacity: {'1' if s_points >= 50 else '0.15'}; transform: {'scale(1.1)' if 50 <= s_points < 100 else 'scale(1)'}; border-width: {'3px' if 50 <= s_points < 100 else '1px'};">
+                    <div style="font-size: 2rem;">🥈</div><b style="color: #7f8c8d; font-size: 0.8rem;">فضي</b>
                 </div>
-                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; opacity: {'1' if s_points >= 100 else '0.15'}; transform: {'scale(1.1)' if s_points >= 100 else 'scale(1)'};">
-                    <div style="font-size: 2rem;">🥇</div><b style="color: #d4af37;">ذهبي</b>
+                <div style="border: 2px solid #ffd700; padding: 10px; border-radius: 15px; width: 30%; background: #fffdf0; opacity: {'1' if s_points >= 100 else '0.15'}; transform: {'scale(1.1)' if s_points >= 100 else 'scale(1)'}; border-width: {'3px' if s_points >= 100 else '1px'};">
+                    <div style="font-size: 2rem;">🥇</div><b style="color: #d4af37; font-size: 0.8rem;">ذهبي</b>
                 </div>
             </div>
             <div style="background: linear-gradient(90deg, #f59e0b, #d97706); color: white; padding: 15px; border-radius: 15px;">
-                <b style="font-size: 1.1rem;">رصيد النقاط السلوكية</b>
-                <b style="font-size: 3.5rem; display: block;">{s_points}</b>
-                {f'<div style="font-size: 0.9rem; margin-top:8px; background: rgba(255,255,255,0.2); border-radius: 10px; padding: 5px;">🚀 بقي لك {points_to_next} نقطة للوسام {next_badge}</div>' if points_to_next > 0 else ''}
+                <b style="font-size: 1.1rem; display: block;">رصيد النقاط السلوكية</b>
+                <b style="font-size: 3.5rem; line-height: 1.1;">{s_points}</b>
+                {f'<div style="font-size: 0.9rem; margin-top:8px; background: rgba(255,255,255,0.2); border-radius: 10px; padding: 5px; font-weight: bold;">🚀 بقي لك {points_to_next} نقطة للوسام {next_badge}</div>' if points_to_next > 0 else ''}
             </div>
         </div>
     """, unsafe_allow_html=True)
-
-    # التبويبات (📢 التنبيهات، 📊 درجاتي، 🎭 السلوك، 🏆 المتصدرون، ⚙️ الإعدادات)
-    tabs = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🎭 السلوك", "🏆 المتصدرون", "⚙️ الإعدادات"])
     
-    # (هنا تكمل محتوى التبويبات بنفس الكود السابق مع الحفاظ على محاذاته داخل elif)
+    # استمرار باقي التبويبات (📢، 📊، 🎭، 🏆) بنفس المحاذاة...
