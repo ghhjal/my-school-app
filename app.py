@@ -11,7 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 # --- قسم لوحة الشرف (يُوضع في التبويب الرئيسي أو تبويب مستقل) ---
-with tab1: # أو أي تبويب تختاره للعرض العام
+with tab10: # أو أي تبويب تختاره للعرض العام
     st.markdown('<div style="background-color:#fff3cd; padding:20px; border-radius:15px; text-align:center; border: 2px solid #ffc107;">', unsafe_allow_html=True)
     st.markdown("<h1 style='color: #856404; margin:0;'>🏆 لوحة الشرف للمتميزين 🏆</h1>", unsafe_allow_html=True)
     st.markdown("<p style='color: #856404;'>أبطال منصة الأستاذ زياد لهذا الأسبوع</p>", unsafe_allow_html=True)
