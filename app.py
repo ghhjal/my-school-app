@@ -3,6 +3,16 @@ import gspread
 import pandas as pd
 import hashlib
 import time
+# --- دالة جلب البيانات (تأكد من وجودها في ملفك) ---
+def fetch_safe(sheet_name):
+    # ضع هنا كود الاتصال بجوجل شيت الخاص بك
+    return st.session_state.get(f"df_{sheet_name}") # مثال
+
+# --- تهيئة الجلسة ---
+if 'role' not in st.session_state:
+    st.session_state.role = None
+if 'sid' not in st.session_state:
+    st.session_state.sid = None
 import datetime
 from google.oauth2.service_account import Credentials
 import urllib.parse
