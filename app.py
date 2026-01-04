@@ -247,8 +247,8 @@ if st.session_state.role == "teacher":
                             try:
                                 ws = sh.worksheet(s); cell = ws.find(del_name)
                                 if cell: ws.delete_rows(cell.row)
-                                except: pass
-                                    st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
+                            except: pass
+                                st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
     with tab2:
