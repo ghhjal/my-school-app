@@ -298,7 +298,58 @@ if st.session_state.role == "teacher":
             # تجميل العرض ليطابق student_id, p1, p2, perf
             st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
-    with tab3:
+    # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
+with tab3:
+    st.markdown("### 🔍 محرك البحث الذكي")
+    df_st = fetch_safe("students")
+    
+    # حقل البحث
+    search_query = st.text_input("🔎 ابحث باسم الطالب أو الرقم الأكاديمي:", placeholder="اكتب هنا للبحث...")
+    
+    if search_query:
+        # البحث في عمود الرقم الأكاديمي (A) وعمود الاسم (B)
+        results = df_st[
+            df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
+            df_st.iloc[:, 1].str.contains(search_query)
+        ]
+        
+        if not results.empty:
+            st.success(f"✅ تم العثور على {len(results)} طالب")
+            
+            # عرض النتائج في بطاقات بدلاً من جدول
+            for i in range(len(results)):
+                with st.container(border=True):
+                    # سطر الاسم والرقم
+                    c1, c2 = st.columns([2, 1])
+                    c1.markdown(f"**👤 الاسم:** {results.iloc[i, 1]}")
+                    c2.markdown(f"**🔢 الرقم:** {results.iloc[i, 0]}")
+                    
+                    # سطر الصف والمادة
+                    c3, c4 = st.columns(2)
+                    c3.markdown(f"**🏫 الصف:** {results.iloc[i, 2]}")
+                    c4.markdown(f"**📚 المادة:** {results.iloc[i, 5]}")
+                    
+                    # أزرار التواصل السريع (تستفيد من مفتاح 966)
+                    phone = results.iloc[i, 7]
+                    st.markdown(f'''
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <a href="https://wa.me/{phone}" target="_blank" style="flex: 1; text-decoration: none;">
+                                <div style="background-color: #25D366; color: white; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <i class="bi bi-whatsapp"></i> واتساب ولي الأمر
+                                </div>
+                            </a>
+                            <a href="tel:{phone}" style="flex: 1; text-decoration: none;">
+                                <div style="background-color: #1e40af; color: white; padding: 10px; border-radius: 8px; text-align: center;">
+                                    📱 اتصال هاتفي
+                                </div>
+                            </a>
+                        </div>
+                    ''', unsafe_allow_html=True)
+        else:
+            st.error("❌ لا توجد نتائج مطابقة.")
+    else:
+        st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
+
         ...
 
     with tab4:
