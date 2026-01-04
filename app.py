@@ -185,7 +185,8 @@ if st.session_state.role is None:
     """, unsafe_allow_html=True)
     st.stop()
 
-
+if st.session_state.role == "teacher":
+    st.markdown('<div style="...">لوحة تحكم المعلم</div>', unsafe_allow_html=True)
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "👥 إدارة الطلاب",
         "📈 شاشة الدرجات",
