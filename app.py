@@ -357,12 +357,12 @@ if st.session_state.role == "teacher":
         ...
 
     # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-with tab4:
-    import smtplib
-    import time
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    import urllib.parse 
+    with tab4:
+        import smtplib
+        import time
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import urllib.parse 
 
     # 1. كود التنسيق CSS (تثبيت الألوان: الأحمر للتلقائي والحذف، الأخضر للواتساب)
     st.markdown("""
@@ -500,11 +500,138 @@ with tab4:
                         ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
                         if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
+    # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
     with tab5:
+        import urllib.parse
+        import time
+
+    # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
+    st.markdown("""
+        <style>
+            div.stButton > button[key*="del_ex_"] {
+                background-color: #FF0000 !important;
+                color: white !important;
+                border: none !important;
+            }
+            .wa-btn {
+                background-color: #25D366; color: white; padding: 10px;
+                border-radius: 8px; text-align: center; font-weight: bold;
+                text-decoration: none; display: block; width: 100%;
+            }
+            .link-btn {
+                background-color: #4F46E5; color: white; padding: 10px;
+                border-radius: 8px; text-align: center; font-weight: bold;
+                text-decoration: none; display: block; width: 100%;
+            }
+            .ann-card {
+                padding: 15px; border-radius: 10px; margin-bottom: 5px;
+                border-right: 5px solid #4F46E5; background-color: #F8FAFC;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 2. نموذج الإضافة مع معالجة محسنة للرابط
+    with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
+        with st.form("ann_form_final_fixed", clear_on_submit=True):
+            c1, c2 = st.columns([1, 2])
+            a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+            a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
+            
+            c3, c4 = st.columns([1, 2])
+            a_date = c3.date_input("📅 التاريخ")
+            a_link = c4.text_input("🔗 رابط إضافي (اختياري)", placeholder="https://example.com")
+            
+            btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
+            
+            if btn_post and a_title:
+                try:
+                    # إرسال البيانات كقائمة صريحة لضمان تعبئة الأعمدة الأربعة A, B, C, D
+                    row_to_add = [str(a_class), str(a_title), str(a_date), str(a_link)]
+                    sh.worksheet("exams").append_row(row_to_add)
+                    
+                    st.balloons()
+                    st.success("✅ تم النشر بنجاح")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
+
+    # 3. عرض التنبيهات المنشورة
+    df_ann = fetch_safe("exams")
+    if df_ann is not None and not df_ann.empty:
+        # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
+        df_ann = df_ann.astype(str)
+        reversed_df = df_ann.iloc[::-1]
+
+        for index, row in reversed_df.iterrows():
+            r_class, r_title, r_date = row[0], row[1], row[2]
+            # التحقق من وجود العمود الرابع للرابط
+            r_link = row[3] if len(row) > 3 and row[3] != 'nan' else ""
+            
+            # رسالة الواتساب
+            link_wa = f"\n🔗 *الرابط:* {r_link}" if r_link else ""
+            wa_msg = f"📢 *تنبيه من الأستاذ زياد*\n---\n🏫 *الصف:* {r_class}\n📝 *الموضوع:* {r_title}\n📅 *التاريخ:* {r_date}{link_wa}\n---\nبالتوفيق 🌟"
+            encoded_msg = urllib.parse.quote(wa_msg)
+            wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+
+            st.markdown(f"""
+                <div class="ann-card">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: #666;">
+                        <span>📅 {r_date}</span>
+                        <span><b>{r_class}</b></span>
+                    </div>
+                    <h4 style="margin: 10px 0;">{r_title}</h4>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            col_del, col_link, col_wa = st.columns([1, 2, 3])
+            with col_del:
+                if st.button("🗑️", key=f"del_ex_{index}"):
+                    ws_ex = sh.worksheet("exams")
+                    cell = ws_ex.find(r_title)
+                    if cell:
+                        ws_ex.delete_rows(cell.row)
+                        st.rerun()
+            
+            with col_link:
+                if r_link and r_link.strip():
+                    st.markdown(f'<a href="{r_link}" target="_blank" class="link-btn">🔗 فتح الرابط</a>', unsafe_allow_html=True)
+                else:
+                    st.button("🔗 لا يوجد", disabled=True, key=f"no_lnk_{index}")
+            
+            with col_wa:
+                st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn">💬 واتساب</a>', unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True):
         ...
 
+    # --- التبويب السادس: الإعدادات وإدارة البيانات ---
     with tab6:
-        ...
+        import pandas as pd
+        import io
+
+    st.markdown("""
+        <div style="background: linear-gradient(90deg, #1e293b 0%, #334155 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+            <h2 style="margin:0;">⚙️ إعدادات المنصة المتقدمة</h2>
+            <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة الحساب ورفع بيانات الطلاب - الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 1. قسم تغيير بيانات الدخول
+    with st.expander("🔐 تغيير بيانات الحساب"):
+        st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
+        with st.form("update_auth_v1"):
+            new_user = st.text_input("اسم المستخدم الجديد")
+            new_pass = st.text_input("كلمة المرور الجديدة", type="password")
+            if st.form_submit_button("💾 حفظ البيانات الجديدة"):
+                try:
+                    ws_u = sh.worksheet("users")
+                    ws_u.update_cell(2, 1, new_user)
+                    ws_u.update_cell(2, 2, new_pass)
+                    st.success("✅ تم تحديث بيانات الدخول. سيتم العمل بها في الدخول القادم.")
+                except:
+                    st.error("❌ فشل التحديث، تأكد من وجود شيت 'users'")
+
 
     with tab7:
         ...
