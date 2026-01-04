@@ -3,16 +3,6 @@ import gspread
 import pandas as pd
 import hashlib
 import time
-# --- دالة جلب البيانات (تأكد من وجودها في ملفك) ---
-def fetch_safe(sheet_name):
-    # ضع هنا كود الاتصال بجوجل شيت الخاص بك
-    return st.session_state.get(f"df_{sheet_name}") # مثال
-
-# --- تهيئة الجلسة ---
-if 'role' not in st.session_state:
-    st.session_state.role = None
-if 'sid' not in st.session_state:
-    st.session_state.sid = None
 import datetime
 from google.oauth2.service_account import Credentials
 import urllib.parse
@@ -154,45 +144,32 @@ if st.session_state.role is None:
         </div>
     """, unsafe_allow_html=True)
     
-    # استخدام أسماء فريدة لتبويبات الدخول لمنع تداخل المتغيرات
-auth_tab1, auth_tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
-
-with auth_tab1:
-    with st.form("st_form"):
-        sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية للمتابعة")
-        if st.form_submit_button("دخول للمنصة 🚀"):
-            df = fetch_safe("students")
-            if not df.empty and sid:
-                df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
-                if sid.strip() in df.iloc[:, 0].values:
-                    # تعيين الجلسة وإعادة التشغيل فوراً
-                    st.session_state.role = "student"
-                    st.session_state.sid = sid.strip()
-                    st.balloons()
-                    time.sleep(1)
-                    st.rerun()
-                else: 
-                    st.error("عذراً، الرقم غير مسجل في النظام")
-
-with auth_tab2:
-    with st.form("te_form"):
-        u = st.text_input("👤 اسم المستخدم")
-        p = st.text_input("🔑 كلمة المرور", type="password")
-        if st.form_submit_button("تسجيل الدخول"):
-            df = fetch_safe("users")
-            if not df.empty:
-                # التأكد من مطابقة اسم المستخدم
-                row = df[df['username'] == u.strip()]
-                if not row.empty:
-                    hashed = hashlib.sha256(str.encode(p)).hexdigest()
-                    if hashed == row.iloc[0]['password_hash']:
-                        # تعيين الجلسة وإعادة التشغيل فوراً
-                        st.session_state.role = "teacher"
-                        st.rerun()
-                    else: 
-                        st.error("كلمة المرور غير صحيحة")
-                else: 
-                    st.error("المستخدم غير موجود")
+    tab1, tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
+    with tab1:
+        with st.form("st_form"):
+            sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية للمتابعة")
+            if st.form_submit_button("دخول للمنصة 🚀"):
+                df = fetch_safe("students")
+                if not df.empty and sid:
+                    df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+                    if sid.strip() in df.iloc[:, 0].values:
+                        st.session_state.role = "student"; st.session_state.sid = sid.strip()
+                        st.balloons(); time.sleep(1); st.rerun()
+                    else: st.error("عذراً، الرقم غير مسجل في النظام")
+    with tab2:
+        with st.form("te_form"):
+            u = st.text_input("👤 اسم المستخدم")
+            p = st.text_input("🔑 كلمة المرور", type="password")
+            if st.form_submit_button("تسجيل الدخول"):
+                df = fetch_safe("users")
+                if not df.empty:
+                    row = df[df['username'] == u.strip()]
+                    if not row.empty:
+                        hashed = hashlib.sha256(str.encode(p)).hexdigest()
+                        if hashed == row.iloc[0]['password_hash']:
+                            st.session_state.role = "teacher"; st.rerun()
+                        else: st.error("كلمة المرور غير صحيحة")
+                    else: st.error("المستخدم غير موجود")
 
     st.markdown("""
         <div class="contact-section">
@@ -208,6 +185,37 @@ with auth_tab2:
     """, unsafe_allow_html=True)
     st.stop()
 
+
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "👥 إدارة الطلاب",
+        "📈 شاشة الدرجات",
+        "🔍 البحث",
+        "🥇 السلوك",
+        "📢 الاختبارات",
+        "⚙️ الإعدادات",
+        "🚪 خروج"
+    ])
+
+    with tab1:
+        ...
+
+    with tab2:
+        ...
+
+    with tab3:
+        ...
+
+    with tab4:
+        ...
+
+    with tab5:
+        ...
+
+    with tab6:
+        ...
+
+    with tab7:
+        ...
 
 # ==========================================
 # 🛑 قسم الطالب (معزول 100٪)
