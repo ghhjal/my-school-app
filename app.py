@@ -636,22 +636,22 @@ if st.session_state.role == "teacher":
 
         # 1. قسم تغيير بيانات الدخول
         with st.form("te_form"):
-        u = st.text_input("👤 اسم المستخدم")
-        p = st.text_input("🔑 كلمة المرور", type="password")
+            u = st.text_input("👤 اسم المستخدم")
+            p = st.text_input("🔑 كلمة المرور", type="password")
         
-        if st.form_submit_button("تسجيل الدخول"):
-            # جلب بيانات المستخدمين من الشيت
-            df_users = fetch_safe("users")
+            if st.form_submit_button("تسجيل الدخول"):
+                # جلب بيانات المستخدمين من الشيت
+                df_users = fetch_safe("users")
             
-            if df_users is not None and not df_users.empty:
-                # البحث عن المستخدم مع تنظيف النص من الفراغات
-                user_row = df_users[df_users['username'].astype(str).str.strip() == u.strip()]
+                if df_users is not None and not df_users.empty:
+                    # البحث عن المستخدم مع تنظيف النص من الفراغات
+                    user_row = df_users[df_users['username'].astype(str).str.strip() == u.strip()]
                 
-                if not user_row.empty:
-                    # تشفير كلمة المرور المدخلة للمقارنة
-                    input_hashed = hashlib.sha256(str.encode(p)).hexdigest()
-                    # الحصول على القيمة المشفرة المخزنة في الشيت
-                    stored_hashed = str(user_row.iloc[0]['password_hash']).strip()
+                    if not user_row.empty:
+                        # تشفير كلمة المرور المدخلة للمقارنة
+                        input_hashed = hashlib.sha256(str.encode(p)).hexdigest()
+                        # الحصول على القيمة المشفرة المخزنة في الشيت
+                        stored_hashed = str(user_row.iloc[0]['password_hash']).strip()
                     
                     if input_hashed == stored_hashed:
                         # نجاح الدخول: تعيين الدور وإعادة التشغيل
