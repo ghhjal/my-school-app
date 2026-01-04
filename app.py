@@ -435,7 +435,7 @@ if st.session_state.role == "teacher":
                 server = smtplib.SMTP('smtp.gmail.com', 587); server.starttls()
                 server.login(email_set["sender_email"], email_set["sender_password"])
                 server.send_message(msg); server.quit()
-            return True
+                return True
             except: return False
 
         st.subheader("🎭 رصد السلوك والتواصل الفوري")
