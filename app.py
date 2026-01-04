@@ -335,10 +335,10 @@ if st.session_state.role == "teacher":
             results = df_st[
                 df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
                 df_st.iloc[:, 1].str.contains(search_query)
-        ]
+            ]
         
-        if not results.empty:
-            st.success(f"✅ تم العثور على {len(results)} طالب")
+            if not results.empty:
+                st.success(f"✅ تم العثور على {len(results)} طالب")
             
             # عرض النتائج في بطاقات بدلاً من جدول
             for i in range(len(results)):
