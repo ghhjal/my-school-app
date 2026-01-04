@@ -635,19 +635,36 @@ if st.session_state.role == "teacher":
     """, unsafe_allow_html=True)
 
         # 1. قسم تغيير بيانات الدخول
-        with st.expander("🔐 تغيير بيانات الحساب"):
-            st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
-        with st.form("update_auth_v1"):
-            new_user = st.text_input("اسم المستخدم الجديد")
-            new_pass = st.text_input("كلمة المرور الجديدة", type="password")
-            if st.form_submit_button("💾 حفظ البيانات الجديدة"):
-                try:
-                    ws_u = sh.worksheet("users")
-                    ws_u.update_cell(2, 1, new_user)
-                    ws_u.update_cell(2, 2, new_pass)
-                    st.success("✅ تم تحديث بيانات الدخول. سيتم العمل بها في الدخول القادم.")
-                except:
-                    st.error("❌ فشل التحديث، تأكد من وجود شيت 'users'")
+        with st.form("te_form"):
+        u = st.text_input("👤 اسم المستخدم")
+        p = st.text_input("🔑 كلمة المرور", type="password")
+        
+        if st.form_submit_button("تسجيل الدخول"):
+            # جلب بيانات المستخدمين من الشيت
+            df_users = fetch_safe("users")
+            
+            if df_users is not None and not df_users.empty:
+                # البحث عن المستخدم مع تنظيف النص من الفراغات
+                user_row = df_users[df_users['username'].astype(str).str.strip() == u.strip()]
+                
+                if not user_row.empty:
+                    # تشفير كلمة المرور المدخلة للمقارنة
+                    input_hashed = hashlib.sha256(str.encode(p)).hexdigest()
+                    # الحصول على القيمة المشفرة المخزنة في الشيت
+                    stored_hashed = str(user_row.iloc[0]['password_hash']).strip()
+                    
+                    if input_hashed == stored_hashed:
+                        # نجاح الدخول: تعيين الدور وإعادة التشغيل
+                        st.session_state.role = "teacher"
+                        st.success("✅ تم التحقق بنجاح.. جاري التحميل")
+                        time.sleep(1)
+                        st.rerun() # هذا يضمن الانتقال لواجهة المعلم فوراً
+                    else:
+                        st.error("❌ كلمة المرور غير صحيحة")
+                else:
+                    st.error("❓ المستخدم غير موجود")
+            else:
+                st.error("⚠️ فشل الاتصال بقاعدة بيانات المستخدمين")
 
         # 2. قسم رفع بيانات الطلاب
         st.markdown("### 📥 إدارة بيانات الطلاب")
