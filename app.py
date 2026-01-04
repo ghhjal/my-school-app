@@ -1,45 +1,6 @@
 import streamlit as st
 import gspread
 import pandas as pd
-def draw_professional_student_ui():
-def run_student_interface():
-    # تصميم واجهة احترافية (CSS)
-    st.markdown("""
-        <style>
-        .student-portal {
-            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-            padding: 2rem; border-radius: 1rem; border-right: 10px solid #3b82f6;
-            color: white; margin-bottom: 2rem; text-align: right;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="student-portal"><h1>منصة الطالب الذكية 🎓</h1><p>مرحباً بك في لوحة المتابعة</p></div>', unsafe_allow_html=True)
-
-    try:
-        # جلب البيانات
-        df_students = fetch_safe("students")
-        s_info = df_students[df_students.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-        
-        if not s_info.empty:
-            s_row = s_info.iloc[0]
-            # عرض البيانات
-            c1, c2 = st.columns(2)
-            c1.metric("🎯 نقاطك", str(s_row[8]) if len(s_row) > 8 else "0")
-            c2.metric("👤 الطالب", s_row[1])
-
-            # الحل الجوهري: تبويبات فريدة للطالب تنهي NameError: tab2
-            st_tabs = st.tabs(["📊 الدرجات", "🛡️ السلوك", "📝 الاختبارات"])
-            with st_tabs[0]:
-                st.dataframe(fetch_safe("grades"), use_container_width=True)
-            with st_tabs[1]:
-                st.info("سجلك حافل بالتميز!")
-            with st_tabs[2]:
-                st.success("الاختبارات ستظهر هنا قريباً")
-        else:
-            st.error("لم نجد بياناتك.")
-    except Exception as e:
-        st.error(f"خطأ: {e}")
 import hashlib
 import time
 import datetime
@@ -49,60 +10,6 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-def render_student_portal():
-    # تصميم الواجهة الاحترافية (Dark Mode Friendly)
-    st.markdown("""
-        <style>
-        .student-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            padding: 25px;
-            border-radius: 15px;
-            border-left: 10px solid #3b82f6;
-            color: white;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    try:
-        # جلب البيانات بشكل معزول
-        df_st = fetch_safe("students")
-        student_data = df_st[df_st.iloc[:, 0].astype(str) == str(st.session_state.sid)]
-        
-        if not student_data.empty:
-            s_row = student_data.iloc[0]
-            s_name, s_class = s_row[1], s_row[2]
-            
-            # عرض الترويسة
-            st.markdown(f"""<div class="student-card">
-                <h1 style='margin:0;'>مرحباً، {s_name} ✨</h1>
-                <p style='opacity:0.8;'>الصف: {s_class} | لوحة متابعة الطالب الذكية</p>
-            </div>""", unsafe_allow_html=True)
-
-            # عرض الإحصائيات (Metrics)
-            val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            s_points = int(float(val)) if val.replace('.','',1).isdigit() else 0
-            
-            c1, c2, c3 = st.columns(3)
-            c1.metric("🎯 نقاطك", s_points, delta="مستوى ممتاز")
-            c2.metric("🏆 الأوسمة", "🥇 ذهبي")
-            c3.metric("📅 الحضور", "100%")
-
-            # التبويبات (بديلة لـ tab2 التي تسبب خطأ NameError)
-            st.divider()
-            t1, t2, t3 = st.tabs(["📊 كشف الدرجات", "🌟 سجل التميز", "📝 الاختبارات"])
-            
-            with t1:
-                st.dataframe(fetch_safe("grades"), use_container_width=True)
-            with t2:
-                st.info("سيتم عرض ملاحظات المعلمين هنا قريباً")
-            with t3:
-                st.success("لا توجد اختبارات مجدولة لليوم")
-        else:
-            st.error("لم يتم العثور على بياناتك. راجع الإدارة.")
-    except Exception as e:
-        st.error(f"عذراً، حدث خطأ فني: {e}")
 
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
@@ -787,9 +694,22 @@ with tab6:
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
-# =========================================================
-# الحل الجوهري: واجهة الطالب المعزولة والمحمية
-# =========================================================
-if st.session_state.get('role') == "student":
-    run_student_interface()
-    st.stop() # هذا السطر يمنع بايثون من رؤية الخطأ في سطر 800
+# --- واجهة الطالب ---
+if st.session_state.role == "student":
+    df_st = fetch_safe("students")
+    me = df_st[df_st.iloc[:, 0] == st.session_state.sid].iloc[0]
+    st.markdown(f"## أهلاً بك يا {me[1]} 👋")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.info("📊 درجاتك")
+        df_g = fetch_safe("grades")
+        if not df_g.empty:
+            st.dataframe(df_g[df_g.iloc[:, 0] == st.session_state.sid], hide_index=True)
+    with c2:
+        st.success("🥇 السلوك")
+        df_b = fetch_safe("behavior")
+        if not df_b.empty:
+            st.dataframe(df_b[df_b.iloc[:, 0] == me[1]], hide_index=True)
+    if st.button("خروج"):
+        st.session_state.role = None
+        st.rerun()
