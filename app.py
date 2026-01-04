@@ -333,8 +333,8 @@ if st.session_state.role == "teacher":
         if search_query:
             # البحث في عمود الرقم الأكاديمي (A) وعمود الاسم (B)
             results = df_st[
-            df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
-            df_st.iloc[:, 1].str.contains(search_query)
+                df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
+                df_st.iloc[:, 1].str.contains(search_query)
         ]
         
         if not results.empty:
