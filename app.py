@@ -251,9 +251,9 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
-with tab2:
-    st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
-    df_st = fetch_safe("students")
+    with tab2:
+        st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
+        df_st = fetch_safe("students")
     
     if not df_st.empty:
         with st.container(border=True):
