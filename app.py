@@ -236,7 +236,7 @@ if st.session_state.role == "teacher":
         with st.expander("📋 السجل الحالي للطلاب"):
             st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-        st.markdown("---")
+            st.markdown("---")
         with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
             st.error("⚠️ سيتم حذف كافة بيانات الطالب من جميع الجداول")
             if not df_st.empty:
@@ -611,7 +611,7 @@ if st.session_state.role == "teacher":
         import pandas as pd
         import io
 
-    st.markdown("""
+        st.markdown("""
         <div style="background: linear-gradient(90deg, #1e293b 0%, #334155 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
             <h2 style="margin:0;">⚙️ إعدادات المنصة المتقدمة</h2>
             <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة الحساب ورفع بيانات الطلاب - الأستاذ زياد</p>
