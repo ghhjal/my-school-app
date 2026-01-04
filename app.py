@@ -145,9 +145,9 @@ if st.session_state.role is None:
     """, unsafe_allow_html=True)
     
     # استخدام أسماء فريدة لتبويبات الدخول لمنع تداخل المتغيرات
-login_tab1, login_tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
+auth_tab1, auth_tab2 = st.tabs(["🎓 الطلاب وأولياء الأمور", "🔐 بوابة الإدارة"])
 
-with login_tab1:
+with auth_tab1:
     with st.form("st_form"):
         sid = st.text_input("🆔 الرقم الأكاديمي", placeholder="أدخل رقم الهوية للمتابعة")
         if st.form_submit_button("دخول للمنصة 🚀"):
@@ -164,7 +164,7 @@ with login_tab1:
                 else: 
                     st.error("عذراً، الرقم غير مسجل في النظام")
 
-with login_tab2:
+with auth_tab2:
     with st.form("te_form"):
         u = st.text_input("👤 اسم المستخدم")
         p = st.text_input("🔑 كلمة المرور", type="password")
@@ -202,7 +202,7 @@ with login_tab2:
 if st.session_state.role == "teacher":
     st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:10px;"><h1>👨‍🏫 لوحة تحكم المعلم</h1></div>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    t1, t2, t3, t4, t5, t6, t7 = st.tabs([
         "👥 إدارة الطلاب", 
         "📈 شاشة الدرجات", 
         "🔍 البحث المطور", 
@@ -212,12 +212,12 @@ if st.session_state.role == "teacher":
         "🚗 خروج"
     ])
 
-    with tab7:
+    with t7:
         if st.button("تأكيد تسجيل الخروج"):
             st.session_state.role = None
             st.rerun()
 
-    with tab1:
+    with t1:
         st.markdown("### 👥 إدارة سجلات الطلاب")
         df_st = fetch_safe("students")
         with st.container(border=True):
@@ -264,7 +264,7 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
-with tab2:
+with t2:
     st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
     df_st = fetch_safe("students")
     
@@ -320,7 +320,7 @@ with tab2:
             st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
     # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
-with tab3:
+with t3:
     st.markdown("### 🔍 محرك البحث الذكي")
     df_st = fetch_safe("students")
     
@@ -372,7 +372,7 @@ with tab3:
         st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
     # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-with tab4:
+with t4:
     import smtplib
     import time
     from email.mime.text import MIMEText
@@ -516,7 +516,7 @@ with tab4:
                         if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
     # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
-with tab5:
+with t5:
     import urllib.parse
     import time
 
@@ -620,7 +620,7 @@ with tab5:
             st.markdown("<br>", unsafe_allow_html=True)
 
     # --- التبويب السادس: الإعدادات وإدارة البيانات ---
-with tab6:
+with t6:
     import pandas as pd
     import io
 
