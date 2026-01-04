@@ -589,7 +589,7 @@ if st.session_state.role == "teacher":
             for index, row in reversed_df.iterrows():
                 r_class, r_title, r_date = row[0], row[1], row[2]
                 # التحقق من وجود العمود الرابع للرابط
-                r_link = row[3] if len(row) > 3 and row[3] != 'nan' else ""
+                r_link = row[3].strip()
             
                 # رسالة الواتساب
                 link_wa = f"\n🔗 *الرابط:* {r_link}" if r_link else ""
