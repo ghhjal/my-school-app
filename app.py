@@ -563,14 +563,14 @@ if st.session_state.role == "teacher":
             
                 if btn_post and a_title:
                     try:
-                    # إرسال البيانات كقائمة صريحة لضمان تعبئة الأعمدة الأربعة A, B, C, D
-                    row_to_add = [str(a_class), str(a_title), str(a_date), str(a_link)]
-                    sh.worksheet("exams").append_row(row_to_add)
+                        # إرسال البيانات كقائمة صريحة لضمان تعبئة الأعمدة الأربعة A, B, C, D
+                        row_to_add = [str(a_class), str(a_title), str(a_date), str(a_link)]
+                        sh.worksheet("exams").append_row(row_to_add)
                     
-                    st.balloons()
-                    st.success("✅ تم النشر بنجاح")
-                    time.sleep(1)
-                    st.rerun()
+                        st.balloons()
+                        st.success("✅ تم النشر بنجاح")
+                        time.sleep(1)
+                        st.rerun()
                 except Exception as e:
                     st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
 
