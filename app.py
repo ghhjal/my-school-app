@@ -822,4 +822,3 @@ if st.session_state.role == "student":
 
     # حماية نهائية لعدم تنفيذ أي كود بالأسفل
     st.stop()
-        st.session_state.role = None; st.rerun()
