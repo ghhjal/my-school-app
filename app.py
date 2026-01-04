@@ -10,7 +10,34 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+# --- قسم لوحة الشرف (يُوضع في التبويب الرئيسي أو تبويب مستقل) ---
+with tab1: # أو أي تبويب تختاره للعرض العام
+    st.markdown('<div style="background-color:#fff3cd; padding:20px; border-radius:15px; text-align:center; border: 2px solid #ffc107;">', unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #856404; margin:0;'>🏆 لوحة الشرف للمتميزين 🏆</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #856404;'>أبطال منصة الأستاذ زياد لهذا الأسبوع</p>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    # جلب بيانات الطلاب وترتيبهم حسب النقاط (العمود التاسع I)
+    df_honor = fetch_safe("students")
+    if not df_honor.empty:
+        # تحويل عمود النقاط إلى أرقام للفرز
+        df_honor.iloc[:, 8] = pd.to_numeric(df_honor.iloc[:, 8], errors='coerce').fillna(0)
+        # اختيار أعلى 5 طلاب
+        top_students = df_honor.nlargest(5, df_honor.columns[8])
+        
+        cols = st.columns(len(top_students))
+        for i, (idx, row) in enumerate(top_students.iterrows()):
+            with cols[i]:
+                # تصميم وسام لكل طالب
+                st.markdown(f"""
+                    <div style="text-align:center; padding:10px; border-radius:10px; background-color:#f8f9fa; border:1px solid #dee2e6;">
+                        <span style="font-size:30px;">{'🥇' if i==0 else '🥈' if i==1 else '🥉' if i==2 else '⭐'}</span>
+                        <h4 style="margin:5px 0; color:#1e40af;">{row[1]}</h4>
+                        <p style="font-weight:bold; color:#198754; font-size:1.2rem;">{int(row[8])} نقطة</p>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("سيتم عرض المتميزين هنا فور رصد النقاط!")
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 @st.cache_resource
@@ -739,34 +766,7 @@ if st.session_state.role == "teacher":
 # ==========================================
 # 👨‍🎓 واجهة الطالب - النسخة المصححة والمؤمنة
 # ==========================================
-# --- قسم لوحة الشرف (يُوضع في التبويب الرئيسي أو تبويب مستقل) ---
-with tab1: # أو أي تبويب تختاره للعرض العام
-    st.markdown('<div style="background-color:#fff3cd; padding:20px; border-radius:15px; text-align:center; border: 2px solid #ffc107;">', unsafe_allow_html=True)
-    st.markdown("<h1 style='color: #856404; margin:0;'>🏆 لوحة الشرف للمتميزين 🏆</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #856404;'>أبطال منصة الأستاذ زياد لهذا الأسبوع</p>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    # جلب بيانات الطلاب وترتيبهم حسب النقاط (العمود التاسع I)
-    df_honor = fetch_safe("students")
-    if not df_honor.empty:
-        # تحويل عمود النقاط إلى أرقام للفرز
-        df_honor.iloc[:, 8] = pd.to_numeric(df_honor.iloc[:, 8], errors='coerce').fillna(0)
-        # اختيار أعلى 5 طلاب
-        top_students = df_honor.nlargest(5, df_honor.columns[8])
-        
-        cols = st.columns(len(top_students))
-        for i, (idx, row) in enumerate(top_students.iterrows()):
-            with cols[i]:
-                # تصميم وسام لكل طالب
-                st.markdown(f"""
-                    <div style="text-align:center; padding:10px; border-radius:10px; background-color:#f8f9fa; border:1px solid #dee2e6;">
-                        <span style="font-size:30px;">{'🥇' if i==0 else '🥈' if i==1 else '🥉' if i==2 else '⭐'}</span>
-                        <h4 style="margin:5px 0; color:#1e40af;">{row[1]}</h4>
-                        <p style="font-weight:bold; color:#198754; font-size:1.2rem;">{int(row[8])} نقطة</p>
-                    </div>
-                """, unsafe_allow_html=True)
-    else:
-        st.info("سيتم عرض المتميزين هنا فور رصد النقاط!")
 #لوحة الشرف
 if st.session_state.role == "student":
     # تصميم رأس الصفحة
