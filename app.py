@@ -693,23 +693,3 @@ with tab6:
             for i in range(2, len(all_data) + 1):
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
-
-# --- واجهة الطالب ---
-if st.session_state.role == "student":
-    df_st = fetch_safe("students")
-    me = df_st[df_st.iloc[:, 0] == st.session_state.sid].iloc[0]
-    st.markdown(f"## أهلاً بك يا {me[1]} 👋")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.info("📊 درجاتك")
-        df_g = fetch_safe("grades")
-        if not df_g.empty:
-            st.dataframe(df_g[df_g.iloc[:, 0] == st.session_state.sid], hide_index=True)
-    with c2:
-        st.success("🥇 السلوك")
-        df_b = fetch_safe("behavior")
-        if not df_b.empty:
-            st.dataframe(df_b[df_b.iloc[:, 0] == me[1]], hide_index=True)
-    if st.button("خروج"):
-        st.session_state.role = None
-        st.rerun()
