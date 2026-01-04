@@ -583,7 +583,7 @@ if st.session_state.role == "teacher":
             df_ann = fetch_safe("exams")
             if df_ann is not None and not df_ann.empty:
                 # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
-                df_ann = df_ann.astype(str)
+                df_ann = df_ann.fillna("").astype(str)
                 reversed_df = df_ann.iloc[::-1]
 
             for index, row in reversed_df.iterrows():
