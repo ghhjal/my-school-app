@@ -251,7 +251,8 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
-with tab2:
+if st.session_state.role == "teacher":
+    with tab2:
     st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
     df_st = fetch_safe("students")
     
@@ -307,7 +308,8 @@ with tab2:
             st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
     # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
-with tab3:
+if st.session_state.role == "teacher":
+    with tab3:
     st.markdown("### 🔍 محرك البحث الذكي")
     df_st = fetch_safe("students")
     
@@ -359,7 +361,8 @@ with tab3:
         st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
     # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-with tab4:
+if st.session_state.role == "teacher":
+    with tab4:
     import smtplib
     import time
     from email.mime.text import MIMEText
@@ -503,7 +506,8 @@ with tab4:
                         if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
     # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
-with tab5:
+if st.session_state.role == "teacher":
+    with tab5:
     import urllib.parse
     import time
 
@@ -607,7 +611,8 @@ with tab5:
             st.markdown("<br>", unsafe_allow_html=True)
 
     # --- التبويب السادس: الإعدادات وإدارة البيانات ---
-with tab6:
+if st.session_state.role == "teacher":
+    with tab6:
     import pandas as pd
     import io
 
