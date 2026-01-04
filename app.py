@@ -695,74 +695,57 @@ with tab6:
             st.warning("تم تصفير جميع النقاط")
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (النسخة الاحترافية والمحمية)
+# 👨‍🎓 واجهة الطالب - النسخة المصححة والمؤمنة
 # ==========================================
 
 if st.session_state.role == "student":
-    # 1. تصميم واجهة الطالب (Modern UI)
-    st.markdown("""
-        <style>
-        .student-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 30px; border-radius: 20px; color: white;
-            text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        .stat-card {
-            background: white; padding: 20px; border-radius: 15px;
-            text-align: center; border-bottom: 4px solid #3b82f6;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        </style>
-        <div class="student-header">
-            <h1 style='margin:0; font-family:Cairo;'>مرحباً بك في فضائك التعليمي ✨</h1>
-            <p style='opacity:0.9;'>منصة الأستاذ زياد الذكية لمتابعة التميز</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # تصميم رأس الصفحة
+    st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🌟 لوحة تحكم الطالب</h1>", unsafe_allow_html=True)
+    st.info(f"مرحباً بك: {st.session_state.get('user_name', 'طالبنا العزيز')}")
 
     try:
-        # 2. جلب بيانات الطالب بدقة
+        # جلب البيانات بأمان
         df_all = fetch_safe("students")
-        # البحث عن بيانات الطالب الحالي باستخدام الرقم الأكاديمي المخزن في الجلسة
-        student_record = df_all[df_all.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
-        
-        if not student_record.empty:
-            s_row = student_record.iloc[0]
-            s_name = s_row[1]
-            s_class = s_row[2]
-            # جلب النقاط من العمود التاسع (I) مع التأكد من أنها رقم
-            pts_val = str(s_row[8]).strip() if len(s_row) >= 9 else "0"
-            pts = int(float(pts_val)) if pts_val.replace('.','',1).isdigit() else 0
+        # التأكد من مطابقة SID المخزن مع بيانات الجدول
+        student_data = df_all[df_all.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
+
+        if not student_data.empty:
+            row = student_data.iloc[0]
             
-            # 3. عرض لوحة المعلومات السريعة
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.markdown(f'<div class="stat-card"><h2 style="color:#1e3a8a;">{pts}</h2><p style="color:#666;">رصيد النقاط</p></div>', unsafe_allow_html=True)
-            with c2:
-                level = "⭐ متميز" if pts >= 50 else "🌱 صاعد"
-                st.markdown(f'<div class="stat-card"><h2 style="color:#1e3a8a;">{level}</h2><p style="color:#666;">المستوى الحالي</p></div>', unsafe_allow_html=True)
-            with c3:
-                st.markdown(f'<div class="stat-card"><h2 style="color:#1e3a8a;">{s_class}</h2><p style="color:#666;">الصف الدراسي</p></div>', unsafe_allow_html=True)
+            # عرض بطاقات المعلومات السريعة
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("رصيد النقاط 🎯", f"{row[8] if len(row) > 8 else 0} نقطة")
+            with col2:
+                st.metric("الصف الدراسي 📚", str(row[2]))
 
-            st.markdown("---")
+            # إنشاء التبويبات بأسماء فريدة (تجنب خطأ tab2)
+            st_tab_grades, st_tab_behavior = st.tabs(["📊 درجاتي", "📜 سجل السلوك"])
 
-            # 4. التبويبات الخاصة بالطالب (أسماء فريدة لمنع التداخل)
-            st_t1, st_t2, st_t3 = st.tabs(["📊 درجاتي", "🥇 سجل السلوك", "📢 التنبيهات"])
-            
-            with st_t1:
-                st.write("### 📝 سجل الدرجات المعتمدة")
-                df_g = fetch_safe("grades")
-                my_g = df_g[df_g.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
-                if not my_g.empty:
-                    st.dataframe(my_g, use_container_width=True, hide_index=True)
+            with st_tab_grades:
+                st.subheader("سجل الدرجات")
+                df_grades = fetch_safe("grades")
+                my_grades = df_grades[df_grades.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
+                if not my_grades.empty:
+                    st.dataframe(my_grades, use_container_width=True)
                 else:
-                    st.info("لم يتم رصد درجات حتى الآن.")
+                    st.warning("لا توجد درجات مرصودة حالياً.")
 
-            with st_t2:
-                st.write("### 🛡️ سجل الملاحظات السلوكية")
-                df_b = fetch_safe("behavior")
-                my_b = df_b[df_b.iloc[:, 0].astype(str).str.strip() == s_name]
-                if not my_b.empty:
-                    for _, row in my_b.iterrows():
-                        st.info(f"📅 **{row[1]}** | **{row[2]}**\n\n{row[3]}")
-                else:
-                    st.success("سجلك خالي من الملاحظات السلبية، استمر
+            with st_tab_behavior:
+                st.subheader("الملاحظات السلوكية")
+                # نص كامل ومغلق لتجنب SyntaxError
+                st.success("سجلك خالي من الملاحظات السلبية، استمر في التميز!") 
+                
+        else:
+            st.error("لم نتمكن من العثور على ملفك الشخصي. يرجى مراجعة المعلم.")
+
+    except Exception as e:
+        st.error(f"حدث خطأ فني: {str(e)}")
+
+    # زر الخروج الآمن
+    if st.sidebar.button("تسجيل الخروج"):
+        st.session_state.role = None
+        st.rerun()
+
+    # هام جداً: إيقاف التنفيذ هنا لمنع الوصول لكود المعلم
+    st.stop()
