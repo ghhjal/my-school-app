@@ -205,51 +205,66 @@ if st.session_state.role == "teacher":
             st.rerun()
 
     with tab1:
-        st.markdown("### 👥 إدارة سجلات الطلاب")
-        df_st = fetch_safe("students")
-        with st.container(border=True):
-            st.markdown("#### ➕ تأسيس ملف طالب جديد")
-            with st.form("add_student_final_form", clear_on_submit=True):
-                c1, c2, c3 = st.columns(3)
-                nid = c1.text_input("🔢 الرقم الأكاديمي")
-                nname = c2.text_input("👤 الاسم الثلاثي")
-                nclass = c3.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                
-                c4, c5, c6 = st.columns(3)
-                nyear = c4.text_input("🗓️ العام الدراسي", value="1447هـ")
-                nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
-                
-                c7, c8 = st.columns(2)
-                nmail = c7.text_input("📧 البريد الإلكتروني")
-                nphone = c8.text_input("📱 جوال ولي الأمر (بدون 966)")
-                
-                if st.form_submit_button("✅ اعتماد وإضافة الطالب", use_container_width=True):
-                    if nid and nname and nphone:
-                        cp = nphone.strip()
-                        if cp.startswith('0'): cp = cp[1:]
-                        if not cp.startswith('966'): cp = '966' + cp
-                        row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
-                        sh.worksheet("students").append_row(row)
-                        st.success(f"✅ تم إضافة {nname} بنجاح"); time.sleep(1); st.rerun()
+    st.markdown("### 👥 إدارة سجلات الطلاب")
+    df_st = fetch_safe("students")
+    with st.container(border=True):
+        st.markdown("#### ➕ تأسيس ملف طالب جديد")
+        with st.form("add_student_final_form", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+            nid = c1.text_input("🔢 الرقم الأكاديمي")
+            nname = c2.text_input("👤 الاسم الثلاثي")
+            nclass = c3.selectbox(
+                "🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
+            )
 
-        with st.expander("📋 السجل الحالي للطلاب"):
-            st.dataframe(df_st, use_container_width=True, hide_index=True)
+            c4, c5, c6 = st.columns(3)
+            nyear = c4.text_input("🗓️ العام الدراسي", value="1447هـ")
+            nstage = c5.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+            nsub = c6.text_input("📚 المادة", value="لغة إنجليزية")
 
-        st.markdown("---")
-        with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
-            st.error("⚠️ سيتم حذف كافة بيانات الطالب من جميع الجداول")
-            if not df_st.empty:
-                del_name = st.selectbox("🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist())
-                if st.button("🚨 تنفيذ الحذف النهائي الآن", use_container_width=True):
-                    if del_name:
-                        for s in ["students", "grades", "behavior"]:
-                            try:
-                                ws = sh.worksheet(s); cell = ws.find(del_name)
-                                if cell: ws.delete_rows(cell.row)
-                            except:
-                                pass
-                        st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
+            c7, c8 = st.columns(2)
+            nmail = c7.text_input("📧 البريد الإلكتروني")
+            nphone = c8.text_input("📱 جوال ولي الأمر (بدون 966)")
+
+            if st.form_submit_button(
+                "✅ اعتماد وإضافة الطالب", use_container_width=True
+            ):
+                if nid and nname and nphone:
+                    cp = nphone.strip()
+                    if cp.startswith("0"):
+                        cp = cp[1:]
+                    if not cp.startswith("966"):
+                        cp = "966" + cp
+                    row = [nid, nname, nclass, nyear, nstage, nsub, nmail, cp, "0"]
+                    sh.worksheet("students").append_row(row)
+                    st.success(f"✅ تم إضافة {nname} بنجاح")
+                    time.sleep(1)
+                    st.rerun()
+
+    with st.expander("📋 السجل الحالي للطلاب"):
+        st.dataframe(df_st, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
+        st.error("⚠️ سيتم حذف كافة بيانات الطالب من جميع الجداول")
+        if not df_st.empty:
+            del_name = st.selectbox(
+                "🎯 اختر الطالب للحذف:", [""] + df_st.iloc[:, 1].tolist()
+            )
+            if st.button("🚨 تنفيذ الحذف النهائي الآن", use_container_width=True):
+                if del_name:
+                    for s in ["students", "grades", "behavior"]:
+                        try:
+                            ws = sh.worksheet(s)
+                            cell = ws.find(del_name)
+                            if cell:
+                                ws.delete_rows(cell.row)
+                        except:
+                            pass
+                    st.success("💥 تم المسح بنجاح")
+                    time.sleep(1)
+                    st.rerun()
+
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
     with tab2:
