@@ -244,59 +244,63 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     with tab2:
-        st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
-        df_st = fetch_safe("students")
+    st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
+    df_st = fetch_safe("students")
     
     if not df_st.empty:
         with st.container(border=True):
             st.markdown("#### 🎯 إدخال درجات الطالب")
             with st.form("grades_integrated_form", clear_on_submit=True):
-                # 1. حقل اختيار الطالب مع خاصية البحث
-                # استخراج الأسماء من عمود الاسم (B) في شيت الطلاب
+
                 student_list = df_st.iloc[:, 1].tolist()
-                selected_student = st.selectbox("👤 اختر الطالب (يمكنك كتابة الاسم للبحث):", 
-                                               options=student_list, 
-                                               index=None, 
-                                               placeholder="ابحث عن اسم الطالب هنا...")
-                
-                # 2. الحقول الثلاثة متطابقة مع أعمدة الجدول (p1, p2, perf)
+                selected_student = st.selectbox(
+                    "👤 اختر الطالب (يمكنك كتابة الاسم للبحث):",
+                    options=student_list,
+                    index=None,
+                    placeholder="ابحث عن اسم الطالب هنا..."
+                )
+
                 st.markdown("---")
                 col_p1, col_p2, col_perf = st.columns(3)
-                
-                val_p1 = col_p1.number_input("⭐ المشاركة التفاعلية (p1)", min_value=0.0, max_value=20.0, step=0.5)
-                val_p2 = col_p2.number_input("📚 إنجاز الواجبات (p2)", min_value=0.0, max_value=20.0, step=0.5)
-                val_perf = col_perf.number_input("📝 اختبارات قصيرة (perf)", min_value=0.0, max_value=20.0, step=0.5)
-                
-                # حقل الملاحظة الإضافي
+
+                val_p1 = col_p1.number_input(
+                    "⭐ المشاركة التفاعلية (p1)", 0.0, 20.0, step=0.5
+                )
+                val_p2 = col_p2.number_input(
+                    "📚 إنجاز الواجبات (p2)", 0.0, 20.0, step=0.5
+                )
+                val_perf = col_perf.number_input(
+                    "📝 اختبارات قصيرة (perf)", 0.0, 20.0, step=0.5
+                )
+
                 teacher_note = st.text_input("💬 ملاحظة المعلم (اختياري)")
-                
+
                 if st.form_submit_button("✅ حفظ الدرجات في الجدول", use_container_width=True):
                     if selected_student:
                         try:
-                            # البحث عن الرقم الأكاديمي للطالب المختار
                             student_row = df_st[df_st.iloc[:, 1] == selected_student].iloc[0]
-                            s_id = student_row[0] # student_id من عمود A
-                            
-                            # ترتيب الأعمدة للمطابقة مع شيت grades:
-                            # A: student_id, B: p1, C: p2, D: perf, E: date, F: notes
+                            s_id = student_row[0]
+
                             current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                            grade_row = [s_id, val_p1, val_p2, val_perf, current_date, teacher_note]
-                            
+                            grade_row = [
+                                s_id, val_p1, val_p2, val_perf, current_date, teacher_note
+                            ]
+
                             sh.worksheet("grades").append_row(grade_row)
                             st.success(f"✅ تم رصد درجات الطالب {selected_student} بنجاح")
-                            time.sleep(1); st.rerun()
+                            time.sleep(1)
+                            st.rerun()
                         except Exception as e:
                             st.error(f"خطأ في التوصيل: {e}")
                     else:
                         st.warning("⚠️ يرجى اختيار اسم الطالب أولاً.")
 
-        # عرض جدول الدرجات الحالي للمراجعة (مطابق لصورة الجدول المرفقة)
         st.markdown("---")
         st.markdown("##### 📊 مراجعة سجل الدرجات الحالي (grades)")
         df_grades = fetch_safe("grades")
         if not df_grades.empty:
-            # تجميل العرض ليطابق student_id, p1, p2, perf
             st.dataframe(df_grades, use_container_width=True, hide_index=True)
+
 
     # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
     with tab3:
