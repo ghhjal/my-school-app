@@ -251,8 +251,7 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
-if st.session_state.role == "teacher":
-    with tab2:
+with tab2:
     st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
     df_st = fetch_safe("students")
     
@@ -308,8 +307,7 @@ if st.session_state.role == "teacher":
             st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
     # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
-if st.session_state.role == "teacher":
-    with tab3:
+with tab3:
     st.markdown("### 🔍 محرك البحث الذكي")
     df_st = fetch_safe("students")
     
@@ -361,8 +359,7 @@ if st.session_state.role == "teacher":
         st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
     # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
-if st.session_state.role == "teacher":
-    with tab4:
+with tab4:
     import smtplib
     import time
     from email.mime.text import MIMEText
@@ -506,8 +503,7 @@ if st.session_state.role == "teacher":
                         if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
     # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
-if st.session_state.role == "teacher":
-    with tab5:
+with tab5:
     import urllib.parse
     import time
 
@@ -611,8 +607,7 @@ if st.session_state.role == "teacher":
             st.markdown("<br>", unsafe_allow_html=True)
 
     # --- التبويب السادس: الإعدادات وإدارة البيانات ---
-if st.session_state.role == "teacher":
-    with tab6:
+with tab6:
     import pandas as pd
     import io
 
@@ -699,50 +694,22 @@ if st.session_state.role == "teacher":
                 ws_st.update_cell(i, 9, "0")
             st.warning("تم تصفير جميع النقاط")
 
-# ==========================================
-# 🛑 بداية قسم الطالب - النسخة المعزولة تماماً
-# ==========================================
-
-# ==========================================
-# 🛑 قسم الطالب (معزول 100٪)
-# ==========================================
-
+# --- واجهة الطالب ---
 if st.session_state.role == "student":
-    st.title("👨‍🎓 بوابة الطالب الذكية")
-
-    try:
-        df_students = fetch_safe("students")
-        student_row = df_students[
-            df_students.iloc[:, 0].astype(str).str.strip()
-            == str(st.session_state.sid)
-        ]
-
-        if not student_row.empty:
-            s_data = student_row.iloc[0]
-            st.success(f"مرحباً بك يا {s_data[1]}")
-
-            t_grades, t_behavior = st.tabs(["📊 درجاتي", "🌟 نقاطي وسلوكي"])
-
-            with t_grades:
-                df_g = fetch_safe("grades")
-                my_g = df_g[
-                    df_g.iloc[:, 0].astype(str).str.strip()
-                    == str(st.session_state.sid)
-                ]
-                st.dataframe(my_g, use_container_width=True)
-
-            with t_behavior:
-                st.info(f"رصيد نقاطك الحالي هو: {s_data[8]}")
-                st.write("استمر في الاجتهاد للوصول إلى قائمة الشرف! 🏆")
-
-        else:
-            st.error("لم يتم العثور على بياناتك.")
-
-    except Exception as e:
-        st.error(f"خطأ تقني: {e}")
-
-    if st.button("تسجيل الخروج"):
+    df_st = fetch_safe("students")
+    me = df_st[df_st.iloc[:, 0] == st.session_state.sid].iloc[0]
+    st.markdown(f"## أهلاً بك يا {me[1]} 👋")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.info("📊 درجاتك")
+        df_g = fetch_safe("grades")
+        if not df_g.empty:
+            st.dataframe(df_g[df_g.iloc[:, 0] == st.session_state.sid], hide_index=True)
+    with c2:
+        st.success("🥇 السلوك")
+        df_b = fetch_safe("behavior")
+        if not df_b.empty:
+            st.dataframe(df_b[df_b.iloc[:, 0] == me[1]], hide_index=True)
+    if st.button("خروج"):
         st.session_state.role = None
         st.rerun()
-
-    st.stop()
