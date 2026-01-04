@@ -267,65 +267,65 @@ if st.session_state.role == "teacher":
 
 
     # --- التبويب الثاني: شاشة الدرجات (تعديل التسجيل بالاسم) ---
-with tab2:
-    st.markdown("### 📝 رصد درجات الطلاب (نظام الأسماء المباشر)")
-    df_st = fetch_safe("students")
+    with tab2:
+        st.markdown("### 📝 رصد درجات الطلاب (نظام الأسماء المباشر)")
+        df_st = fetch_safe("students")
 
-    if not df_st.empty:
-        with st.container(border=True):
-            st.markdown("#### 🎯 إدخال درجات الطالب")
+        if not df_st.empty:
+            with st.container(border=True):
+                st.markdown("#### 🎯 إدخال درجات الطالب")
         
-        with st.form("grades_integrated_form", clear_on_submit=True):
-            # 1. قائمة الأسماء (كما هي في كودك)
-            student_list = df_st.iloc[:, 1].tolist()
-            selected_student = st.selectbox("👤 اختر الطالب:", 
-                                           options=student_list, 
-                                           index=None, 
-                                           placeholder="ابحث عن اسم الطالب هنا...")
+            with st.form("grades_integrated_form", clear_on_submit=True):
+                # 1. قائمة الأسماء (كما هي في كودك)
+                student_list = df_st.iloc[:, 1].tolist()
+                selected_student = st.selectbox("👤 اختر الطالب:", 
+                                               options=student_list, 
+                                               index=None, 
+                                               placeholder="ابحث عن اسم الطالب هنا...")
             
-            st.markdown("---")
-            col_p1, col_p2, col_perf = st.columns(3)
-            val_p1 = col_p1.number_input("⭐ المشاركة (p1)", min_value=0.0, max_value=20.0, step=0.5)
-            val_p2 = col_p2.number_input("📚 الواجبات (p2)", min_value=0.0, max_value=20.0, step=0.5)
-            val_perf = col_perf.number_input("📝 اختبارات (perf)", min_value=0.0, max_value=20.0, step=0.5)
-            teacher_note = st.text_input("💬 ملاحظة المعلم")
+                st.markdown("---")
+                col_p1, col_p2, col_perf = st.columns(3)
+                val_p1 = col_p1.number_input("⭐ المشاركة (p1)", min_value=0.0, max_value=20.0, step=0.5)
+                val_p2 = col_p2.number_input("📚 الواجبات (p2)", min_value=0.0, max_value=20.0, step=0.5)
+                val_perf = col_perf.number_input("📝 اختبارات (perf)", min_value=0.0, max_value=20.0, step=0.5)
+                teacher_note = st.text_input("💬 ملاحظة المعلم")
 
-            if st.form_submit_button("✅ حفظ الدرجات في الجدول", use_container_width=True):
-                if selected_student:
-                    try:
-                        # --- التعديل الأول: جعل الاسم هو المعرف الأساسي في شيت الدرجات ---
-                        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                        # وضعنا selected_student في الخانة الأولى بدلاً من s_id
-                        grade_row = [selected_student, val_p1, val_p2, val_perf, current_date, teacher_note]
+                if st.form_submit_button("✅ حفظ الدرجات في الجدول", use_container_width=True):
+                    if selected_student:
+                        try:
+                            # --- التعديل الأول: جعل الاسم هو المعرف الأساسي في شيت الدرجات ---
+                            current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                            # وضعنا selected_student في الخانة الأولى بدلاً من s_id
+                            grade_row = [selected_student, val_p1, val_p2, val_perf, current_date, teacher_note]
                         
-                        ws_g = sh.worksheet("grades")
+                            ws_g = sh.worksheet("grades")
 
-                        # --- التعديل الثاني: البحث في الشيت عن "الاسم" مباشرة ---
-                        # سيبحث النظام في العمود A عن اسم الطالب الذي اخترته
-                        cell = ws_g.find(selected_student)
+                            # --- التعديل الثاني: البحث في الشيت عن "الاسم" مباشرة ---
+                            # سيبحث النظام في العمود A عن اسم الطالب الذي اخترته
+                            cell = ws_g.find(selected_student)
 
-                        if cell:
-                            # تحديث السطر الموجود (تعديل الدرجات فقط وترك الاسم ثابت)
-                            ws_g.update(f"B{cell.row}:F{cell.row}", [[val_p1, val_p2, val_perf, current_date, teacher_note]])
-                            st.success(f"✅ تم تحديث درجات الطالب: {selected_student}")
-                        else:
-                            # إضافة صف جديد يبدأ بالاسم
-                            ws_g.append_row(grade_row)
-                            st.success(f"✅ تم إضافة درجات جديدة للطالب: {selected_student}")
+                            if cell:
+                                # تحديث السطر الموجود (تعديل الدرجات فقط وترك الاسم ثابت)
+                                ws_g.update(f"B{cell.row}:F{cell.row}", [[val_p1, val_p2, val_perf, current_date, teacher_note]])
+                                st.success(f"✅ تم تحديث درجات الطالب: {selected_student}")
+                            else:
+                                # إضافة صف جديد يبدأ بالاسم
+                                ws_g.append_row(grade_row)
+                                st.success(f"✅ تم إضافة درجات جديدة للطالب: {selected_student}")
 
-                        time.sleep(1); st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ خطأ في الاتصال: {e}")
-                else:
-                    st.warning("⚠️ يرجى اختيار اسم الطالب أولاً.")
+                            time.sleep(1); st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ خطأ في الاتصال: {e}")
+                    else:
+                        st.warning("⚠️ يرجى اختيار اسم الطالب أولاً.")
 
-    # مراجعة سجل الدرجات
-    st.markdown("---")
-    st.markdown("##### 📊 مراجعة سجل الدرجات الحالي")
-    df_grades = fetch_safe("grades")
-    if not df_grades.empty:
-        # عرض الجدول كما هو مخزن بالأسماء الآن
-        st.dataframe(df_grades, use_container_width=True, hide_index=True)
+        # مراجعة سجل الدرجات
+        st.markdown("---")
+        st.markdown("##### 📊 مراجعة سجل الدرجات الحالي")
+        df_grades = fetch_safe("grades")
+        if not df_grades.empty:
+            # عرض الجدول كما هو مخزن بالأسماء الآن
+            st.dataframe(df_grades, use_container_width=True, hide_index=True)
 
     # --- التبويب الثالث: البحث المطور (تصميم ذكي للجوال) ---
     with tab3:
