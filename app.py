@@ -449,7 +449,7 @@ if st.session_state.role == "teacher":
         if b_name:
             st_row = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
             s_email, s_phone = st_row[6], str(st_row[7]).split('.')[0]
-        if not s_phone.startswith('966'): s_phone = '966' + s_phone
+            if not s_phone.startswith('966'): s_phone = '966' + s_phone
         
         with st.container(border=True):
             c1, c2 = st.columns(2)
