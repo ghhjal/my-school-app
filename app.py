@@ -601,9 +601,7 @@ if st.session_state.role == "teacher":
             
             with col_wa:
                 st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn">💬 واتساب</a>', unsafe_allow_html=True)
-            
                 st.markdown("<br>", unsafe_allow_html=True):
-        ...
 
     # --- التبويب السادس: الإعدادات وإدارة البيانات ---
     with tab6:
