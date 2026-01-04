@@ -580,7 +580,7 @@ if st.session_state.role == "teacher":
                         st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
 
                 # 3. عرض التنبيهات المنشورة
-                df_ann = fetch_safe("exams")
+            df_ann = fetch_safe("exams")
             if df_ann is not None and not df_ann.empty:
                 # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
                 df_ann = df_ann.astype(str)
