@@ -244,8 +244,8 @@ if st.session_state.role == "teacher":
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     with tab2:
-    st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
-    df_st = fetch_safe("students")
+        st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
+        df_st = fetch_safe("students")
     
     if not df_st.empty:
         with st.container(border=True):
