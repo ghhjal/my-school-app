@@ -635,23 +635,32 @@ if st.session_state.role == "teacher":
     """, unsafe_allow_html=True)
 
         # 1. قسم تغيير بيانات الدخول
-        with st.form("te_form"):
-            u = st.text_input("👤 اسم المستخدم")
-            p = st.text_input("🔑 كلمة المرور", type="password")
+        with st.expander("🔐 تغيير بيانات الحساب"):
+    st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
+    
+    with st.form("update_auth_v1"):
+        new_user = st.text_input("اسم المستخدم الجديد")
+        new_pass = st.text_input("كلمة المرور الجديدة", type="password")
         
-            if st.form_submit_button("تسجيل الدخول"):
-                # جلب بيانات المستخدمين من الشيت
-                df_users = fetch_safe("users")
-            
-                if df_users is not None and not df_users.empty:
-                    # البحث عن المستخدم مع تنظيف النص من الفراغات
-                    user_row = df_users[df_users['username'].astype(str).str.strip() == u.strip()]
-                
-                    if not user_row.empty:
-                        # تشفير كلمة المرور المدخلة للمقارنة
-                        input_hashed = hashlib.sha256(str.encode(p)).hexdigest()
-                        # الحصول على القيمة المشفرة المخزنة في الشيت
-                        stored_hashed = str(user_row.iloc[0]['password_hash']).strip()
+        if st.form_submit_button("💾 حفظ البيانات الجديدة"):
+            if new_user and new_pass: # التأكد من أن الحقول ليست فارغة
+                try:
+                    # --- السطر السحري: تشفير كلمة المرور الجديدة قبل حفظها ---
+                    hashed_new_pass = hashlib.sha256(str.encode(new_pass)).hexdigest()
+                    
+                    ws_u = sh.worksheet("users")
+                    
+                    # تحديث اسم المستخدم في العمود الأول (الخلية A2)
+                    ws_u.update_cell(2, 1, new_user)
+                    
+                    # تحديث كلمة المرور المشفرة في العمود الثاني (الخلية B2)
+                    ws_u.update_cell(2, 2, hashed_new_pass)
+                    
+                    st.success("✅ تم تحديث بيانات الدخول وتشفيرها بنجاح!")
+                except Exception as e:
+                    st.error(f"❌ فشل التحديث: {e}")
+            else:
+                st.warning("⚠️ يرجى ملء جميع الحقول")
                     
                     if input_hashed == stored_hashed:
                         # نجاح الدخول: تعيين الدور وإعادة التشغيل
