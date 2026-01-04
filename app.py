@@ -187,7 +187,7 @@ if st.session_state.role is None:
 
 if st.session_state.role == "teacher":
     st.markdown('<div style="...">لوحة تحكم المعلم</div>', unsafe_allow_html=True)
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tb2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "👥 إدارة الطلاب",
         "📈 شاشة الدرجات",
         "🔍 البحث",
@@ -243,7 +243,7 @@ if st.session_state.role == "teacher":
                             except: pass
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
-with tab2:
+with tb2:
     st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
     df_st = fetch_safe("students")
     
