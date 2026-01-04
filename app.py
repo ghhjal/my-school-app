@@ -243,7 +243,7 @@ if st.session_state.role == "teacher":
                             except: pass
                         st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
-    with tba2:
+    with tab2:
     st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
     df_st = fetch_safe("students")
     
