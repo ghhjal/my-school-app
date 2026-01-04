@@ -199,7 +199,7 @@ with auth_tab2:
     st.stop()
 
 # --- واجهة المعلم ---
-if st.session_state.role == "teacher":
+elif st.session_state.role == "teacher":
     st.markdown('<div style="background:linear-gradient(135deg,#1e40af,#3b82f6); padding:20px; border-radius:15px; color:white; text-align:center; margin-bottom:10px;"><h1>👨‍🏫 لوحة تحكم المعلم</h1></div>', unsafe_allow_html=True)
     
     t1, t2, t3, t4, t5, t6, t7 = st.tabs([
