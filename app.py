@@ -624,21 +624,21 @@ if st.session_state.role == "teacher":
 
     # --- التبويب السادس: الإعدادات وإدارة البيانات ---
     with tab6:
-    import pandas as pd
-    import io
-    import hashlib  # مكتبة التشفير الضرورية
+        import pandas as pd
+        import io
+        import hashlib  # مكتبة التشفير الضرورية
 
-    # التنسيق الجمالي لرأس الصفحة
-    st.markdown("""
-        <div style="background: linear-gradient(90deg, #1e293b 0%, #334155 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
-            <h2 style="margin:0;">⚙️ إعدادات المنصة المتقدمة</h2>
-            <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة الحساب ورفع بيانات الطلاب - الأستاذ زياد</p>
-        </div>
-    """, unsafe_allow_html=True)
+        # التنسيق الجمالي لرأس الصفحة
+        st.markdown("""
+            <div style="background: linear-gradient(90deg, #1e293b 0%, #334155 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px;">
+                <h2 style="margin:0;">⚙️ إعدادات المنصة المتقدمة</h2>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">إدارة الحساب ورفع بيانات الطلاب - الأستاذ زياد</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-    # 1. قسم تغيير بيانات الدخول
-    with st.expander("🔐 تغيير بيانات الحساب"):
-        st.info("سيتم تحديث هذه البيانات وتشفيرها تلقائياً في شيت 'users'.")
+        # 1. قسم تغيير بيانات الدخول
+        with st.expander("🔐 تغيير بيانات الحساب"):
+            st.info("سيتم تحديث هذه البيانات وتشفيرها تلقائياً في شيت 'users'.")
         
         with st.form("update_auth_v1"):
             new_user = st.text_input("اسم المستخدم الجديد")
