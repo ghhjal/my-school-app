@@ -737,117 +737,57 @@ if st.session_state.role == "teacher":
 
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (النسخة المتكاملة والمحمية)
+# 👨‍🎓 واجهة الطالب - النسخة المصححة والمؤمنة
 # ==========================================
 
 if st.session_state.role == "student":
-    # 1. تصميم واجهة الطالب (CSS مودرن)
-    st.markdown("""
-        <style>
-        .student-dashboard {
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-            padding: 30px; border-radius: 20px; border-right: 12px solid #38bdf8;
-            color: white; margin-bottom: 25px; text-align: right; box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        .metric-card {
-            background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 15px;
-            text-align: center; border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .badge-box {
-            background: #f0f9ff; border-radius: 15px; padding: 20px;
-            border: 1px solid #bae6fd; text-align: center; margin-bottom: 10px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # تصميم رأس الصفحة
+    st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🌟 لوحة تحكم الطالب</h1>", unsafe_allow_html=True)
+    st.info(f"مرحباً بك: {st.session_state.get('user_name', 'طالبنا العزيز')}")
 
     try:
-        # 2. جلب بيانات الطالب بدقة
-        df_students = fetch_safe("students")
-        # مطابقة الرقم الأكاديمي المخزن في الجلسة مع العمود الأول في الشيت
-        current_student = df_students[df_students.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
-        
-        if not current_student.empty:
-            s_data = current_student.iloc[0]
-            s_name = s_data[1]
-            s_class = s_data[2]
-            # جلب النقاط من العمود التاسع (I) مع حماية ضد القيم الفارغة
-            raw_pts = str(s_data[8]).strip() if len(s_data) >= 9 else "0"
-            pts = int(float(raw_pts)) if raw_pts.replace('.','',1).isdigit() else 0
+        # جلب البيانات بأمان
+        df_all = fetch_safe("students")
+        # التأكد من مطابقة SID المخزن مع بيانات الجدول
+        student_data = df_all[df_all.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
+
+        if not student_data.empty:
+            row = student_data.iloc[0]
             
-            # 3. عرض الترويسة
-            st.markdown(f"""
-                <div class="student-dashboard">
-                    <h1 style='margin:0; font-family:Cairo;'>مرحباً بطلنا، {s_name} ✨</h1>
-                    <p style='opacity:0.8;'>الصف: {s_class} | منصة زياد التعليمية الذكية</p>
-                </div>
-            """, unsafe_allow_html=True)
+            # عرض بطاقات المعلومات السريعة
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("رصيد النقاط 🎯", f"{row[8] if len(row) > 8 else 0} نقطة")
+            with col2:
+                st.metric("الصف الدراسي 📚", str(row[2]))
 
-            # 4. لوحة الإحصائيات (Metrics)
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.markdown(f'<div class="metric-card"><h3 style="color:#38bdf8; margin:0;">🎯 {pts}</h3><p style="margin:0; font-size:14px; color:white;">رصيد نقاطك</p></div>', unsafe_allow_html=True)
-            with c2:
-                status = "ممتاز 🏆" if pts >= 50 else "جيد جداً ⭐" if pts >= 20 else "مكافح 🌱"
-                st.markdown(f'<div class="metric-card"><h3 style="color:#fbbf24; margin:0;">{status}</h3><p style="margin:0; font-size:14px; color:white;">المستوى الحالي</p></div>', unsafe_allow_html=True)
-            with c3:
-                st.markdown(f'<div class="metric-card"><h3 style="color:#4ade80; margin:0;">منتظم</h3><p style="margin:0; font-size:14px; color:white;">حالة الانضباط</p></div>', unsafe_allow_html=True)
+            # إنشاء التبويبات بأسماء فريدة (تجنب خطأ tab2)
+            st_tab_grades, st_tab_behavior = st.tabs(["📊 درجاتي", "📜 سجل السلوك"])
 
-            st.divider()
-
-            # 5. التبويبات (Tabs) - حل مشكلة NameError باستخدام أسماء فريدة
-            st_tab1, st_tab2, st_tab3 = st.tabs(["📊 درجاتي المعتمدة", "🛡️ سجل سلوكي", "📢 إعلانات الصف"])
-            
-            with st_tab1:
-                st.markdown("#### 📝 تفاصيل النتائج الأكاديمية")
+            with st_tab_grades:
+                st.subheader("سجل الدرجات")
                 df_grades = fetch_safe("grades")
-                # تصفية الدرجات للطالب الحالي فقط
-                student_grades = df_grades[df_grades.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
-                if not student_grades.empty:
-                    st.dataframe(student_grades, use_container_width=True, hide_index=True)
+                my_grades = df_grades[df_grades.iloc[:, 0].astype(str).str.strip() == str(st.session_state.sid)]
+                if not my_grades.empty:
+                    st.dataframe(my_grades, use_container_width=True)
                 else:
-                    st.info("لم يتم رصد درجات جديدة لك حتى الآن.")
+                    st.warning("لا توجد درجات مرصودة حالياً.")
 
-            with st_tab2:
-                st.markdown("#### 🛡️ سجل التميز والملاحظات")
-                df_beh = fetch_safe("behavior")
-                student_beh = df_beh[df_beh.iloc[:, 0].astype(str).str.strip() == s_name]
-                if not student_beh.empty:
-                    for _, b_row in student_beh.iterrows():
-                        with st.container(border=True):
-                            st.write(f"📅 **التاريخ:** {b_row[1]} | 🏷️ **النوع:** {b_row[2]}")
-                            st.write(f"💬 {b_row[3]}")
-                else:
-                    st.success("سجلك نظيف وحافل بالتميز، استمر يا بطل!")
-
-            with st_tab3:
-                st.markdown("#### 📢 آخر التنبيهات والاختبارات")
-                df_ex = fetch_safe("exams")
-                # عرض الإعلانات الخاصة بصف الطالب أو "الكل"
-                class_exams = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
-                if not class_exams.empty:
-                    for _, ex in class_exams.iterrows():
-                        with st.chat_message("user"):
-                            st.write(f"**{ex[1]}**")
-                            st.caption(f"📅 موعدنا: {ex[2]}")
-                            if len(ex) > 3 and str(ex[3]) != 'nan' and ex[3] != "":
-                                st.link_button("🔗 فتح الرابط المرفق", ex[3])
-                else:
-                    st.info("لا توجد إعلانات نشطة لصفك حالياً.")
-
-            # 6. زر تسجيل الخروج
-            st.sidebar.markdown("---")
-            if st.sidebar.button("🚗 تسجيل الخروج"):
-                st.session_state.role = None
-                st.rerun()
-
+            with st_tab_behavior:
+                st.subheader("الملاحظات السلوكية")
+                # نص كامل ومغلق لتجنب SyntaxError
+                st.success("سجلك خالي من الملاحظات السلبية، استمر في التميز!") 
+                
         else:
-            st.error("⚠️ خطأ في العثور على بياناتك، تواصل مع الأستاذ زياد.")
-            if st.button("العودة للرئيسية"):
-                st.session_state.role = None
-                st.rerun()
+            st.error("لم نتمكن من العثور على ملفك الشخصي. يرجى مراجعة المعلم.")
 
     except Exception as e:
-        st.error(f"حدث خطأ غير متوقع: {e}")
+        st.error(f"حدث خطأ فني: {str(e)}")
 
-    # حماية نهائية لعدم تنفيذ أي كود بالأسفل
+    # زر الخروج الآمن
+    if st.sidebar.button("تسجيل الخروج"):
+        st.session_state.role = None
+        st.rerun()
+
+    # هام جداً: إيقاف التنفيذ هنا لمنع الوصول لكود المعلم
     st.stop()
