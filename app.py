@@ -255,9 +255,9 @@ if st.session_state.role == "teacher":
         st.markdown("### 📝 رصد درجات الطلاب (النظام المتكامل)")
         df_st = fetch_safe("students")
     
-    if not df_st.empty:
-        with st.container(border=True):
-            st.markdown("#### 🎯 إدخال درجات الطالب")
+        if not df_st.empty:
+            with st.container(border=True):
+                st.markdown("#### 🎯 إدخال درجات الطالب")
             with st.form("grades_integrated_form", clear_on_submit=True):
                 # 1. حقل اختيار الطالب مع خاصية البحث
                 # استخراج الأسماء من عمود الاسم (B) في شيت الطلاب
@@ -311,12 +311,12 @@ if st.session_state.role == "teacher":
         st.markdown("### 🔍 محرك البحث الذكي")
         df_st = fetch_safe("students")
     
-    # حقل البحث
-    search_query = st.text_input("🔎 ابحث باسم الطالب أو الرقم الأكاديمي:", placeholder="اكتب هنا للبحث...")
+        # حقل البحث
+        search_query = st.text_input("🔎 ابحث باسم الطالب أو الرقم الأكاديمي:", placeholder="اكتب هنا للبحث...")
     
-    if search_query:
-        # البحث في عمود الرقم الأكاديمي (A) وعمود الاسم (B)
-        results = df_st[
+        if search_query:
+            # البحث في عمود الرقم الأكاديمي (A) وعمود الاسم (B)
+            results = df_st[
             df_st.iloc[:, 0].astype(str).str.contains(search_query) | 
             df_st.iloc[:, 1].str.contains(search_query)
         ]
@@ -355,8 +355,8 @@ if st.session_state.role == "teacher":
                     ''', unsafe_allow_html=True)
         else:
             st.error("❌ لا توجد نتائج مطابقة.")
-    else:
-        st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
+        else:
+            st.info("💡 نصيحة: يمكنك البحث بجزء من الاسم (مثلاً: اكتب 'أحمد' فقط).")
 
     # --- التبويب الرابع: رصد السلوك (الإصدار النهائي المكتمل 100%) ---
     with tab4:
@@ -366,8 +366,8 @@ if st.session_state.role == "teacher":
         from email.mime.multipart import MIMEMultipart
         import urllib.parse 
 
-    # 1. كود التنسيق CSS (تثبيت الألوان: الأحمر للتلقائي والحذف، الأخضر للواتساب)
-    st.markdown("""
+        # 1. كود التنسيق CSS (تثبيت الألوان: الأحمر للتلقائي والحذف، الأخضر للواتساب)
+        st.markdown("""
         <style>
             .stButton button { border-radius: 10px; height: 3.5em; font-weight: bold; transition: 0.3s; }
             
@@ -395,9 +395,9 @@ if st.session_state.role == "teacher":
         </style>
     """, unsafe_allow_html=True)
 
-    # دالة الرسالة الموحدة
-    def get_formatted_msg(name, b_type, b_note, b_date, prefix=""):
-        return (
+        # دالة الرسالة الموحدة
+        def get_formatted_msg(name, b_type, b_note, b_date, prefix=""):
+            return (
             f"{prefix}تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
             f"----------------------------------------\n"
             f"🏷️ نوع السلوك: {b_type}\n"
@@ -408,31 +408,31 @@ if st.session_state.role == "teacher":
         )
 
     # دالة الإيميل الصامت
-    def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
-        try:
-            email_set = st.secrets["email_settings"]
-            msg = MIMEMultipart()
-            msg['From'] = email_set["sender_email"]; msg['To'] = to_email
-            msg['Subject'] = f"🔔 إشعار سلوكي: {student_name}"
-            body = get_formatted_msg(student_name, b_type, b_note, b_date)
-            msg.attach(MIMEText(body, 'plain', 'utf-8'))
-            server = smtplib.SMTP('smtp.gmail.com', 587); server.starttls()
-            server.login(email_set["sender_email"], email_set["sender_password"])
-            server.send_message(msg); server.quit()
+        def send_auto_email_silent(to_email, student_name, b_type, b_note, b_date):
+            try:
+                email_set = st.secrets["email_settings"]
+                msg = MIMEMultipart()
+                msg['From'] = email_set["sender_email"]; msg['To'] = to_email
+                msg['Subject'] = f"🔔 إشعار سلوكي: {student_name}"
+                body = get_formatted_msg(student_name, b_type, b_note, b_date)
+                msg.attach(MIMEText(body, 'plain', 'utf-8'))
+                server = smtplib.SMTP('smtp.gmail.com', 587); server.starttls()
+                server.login(email_set["sender_email"], email_set["sender_password"])
+                server.send_message(msg); server.quit()
             return True
-        except: return False
+            except: return False
 
-    st.subheader("🎭 رصد السلوك والتواصل الفوري")
+        st.subheader("🎭 رصد السلوك والتواصل الفوري")
 
-    df_st = fetch_safe("students")
-    all_names = df_st.iloc[:, 1].tolist() if not df_st.empty else []
-    search_term = st.text_input("🔍 ابحث عن اسم الطالب لفلترة القائمة:", placeholder="اكتب اسم الطالب هنا...")
-    f_names = [n for n in all_names if search_term in n] if search_term else all_names
-    b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + f_names, key="behavior_select")
+        df_st = fetch_safe("students")
+        all_names = df_st.iloc[:, 1].tolist() if not df_st.empty else []
+        search_term = st.text_input("🔍 ابحث عن اسم الطالب لفلترة القائمة:", placeholder="اكتب اسم الطالب هنا...")
+        f_names = [n for n in all_names if search_term in n] if search_term else all_names
+        b_name = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + f_names, key="behavior_select")
 
-    if b_name:
-        st_row = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
-        s_email, s_phone = st_row[6], str(st_row[7]).split('.')[0]
+        if b_name:
+            st_row = df_st[df_st.iloc[:, 1] == b_name].iloc[0]
+            s_email, s_phone = st_row[6], str(st_row[7]).split('.')[0]
         if not s_phone.startswith('966'): s_phone = '966' + s_phone
         
         with st.container(border=True):
@@ -507,8 +507,8 @@ if st.session_state.role == "teacher":
         import urllib.parse
         import time
 
-    # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
-    st.markdown("""
+        # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
+        st.markdown("""
         <style>
             div.stButton > button[key*="del_ex_"] {
                 background-color: #FF0000 !important;
@@ -558,12 +558,12 @@ if st.session_state.role == "teacher":
                 except Exception as e:
                     st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
 
-    # 3. عرض التنبيهات المنشورة
-    df_ann = fetch_safe("exams")
-    if df_ann is not None and not df_ann.empty:
-        # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
-        df_ann = df_ann.astype(str)
-        reversed_df = df_ann.iloc[::-1]
+        # 3. عرض التنبيهات المنشورة
+        df_ann = fetch_safe("exams")
+        if df_ann is not None and not df_ann.empty:
+            # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
+            df_ann = df_ann.astype(str)
+            reversed_df = df_ann.iloc[::-1]
 
         for index, row in reversed_df.iterrows():
             r_class, r_title, r_date = row[0], row[1], row[2]
@@ -618,9 +618,9 @@ if st.session_state.role == "teacher":
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. قسم تغيير بيانات الدخول
-    with st.expander("🔐 تغيير بيانات الحساب"):
-        st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
+        # 1. قسم تغيير بيانات الدخول
+        with st.expander("🔐 تغيير بيانات الحساب"):
+            st.info("سيتم تحديث هذه البيانات في شيت 'users' الخاص بالدخول.")
         with st.form("update_auth_v1"):
             new_user = st.text_input("اسم المستخدم الجديد")
             new_pass = st.text_input("كلمة المرور الجديدة", type="password")
@@ -633,16 +633,16 @@ if st.session_state.role == "teacher":
                 except:
                     st.error("❌ فشل التحديث، تأكد من وجود شيت 'users'")
 
-    # 2. قسم رفع بيانات الطلاب
-    st.markdown("### 📥 إدارة بيانات الطلاب")
-    col_down, col_up = st.columns(2)
+        # 2. قسم رفع بيانات الطلاب
+        st.markdown("### 📥 إدارة بيانات الطلاب")
+        col_down, col_up = st.columns(2)
     
-    with col_down:
-        st.markdown("#### الخطوة 1: تحميل القالب")
-        st.write("حمل القالب لتعبئة بيانات الطلاب بنفس تنسيق المنصة.")
-        # إنشاء قالب Excel في الذاكرة
-        template_df = pd.DataFrame(columns=["الاسم", "الصف", "رقم ولي الأمر", "ملاحظات", "النقاط"])
-        buffer = io.BytesIO()
+        with col_down:
+            st.markdown("#### الخطوة 1: تحميل القالب")
+            st.write("حمل القالب لتعبئة بيانات الطلاب بنفس تنسيق المنصة.")
+            # إنشاء قالب Excel في الذاكرة
+            template_df = pd.DataFrame(columns=["الاسم", "الصف", "رقم ولي الأمر", "ملاحظات", "النقاط"])
+            buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
             template_df.to_excel(writer, index=False, sheet_name='Sheet1')
         
@@ -677,10 +677,10 @@ if st.session_state.role == "teacher":
             except Exception as e:
                 st.error(f"❌ خطأ في تنسيق الملف: {e}")
 
-    # 3. مساحة الإجراءات السريعة
-    st.markdown("---")
-    with st.expander("🗑️ منطقة التحكم السريع"):
-        c1, c2 = st.columns(2)
+        # 3. مساحة الإجراءات السريعة
+        st.markdown("---")
+        with st.expander("🗑️ منطقة التحكم السريع"):
+            c1, c2 = st.columns(2)
         if c1.button("🧹 مسح سجل الإعلانات"):
             sh.worksheet("exams").clear()
             sh.worksheet("exams").append_row(["الصف", "العنوان", "التاريخ", "الرابط"])
