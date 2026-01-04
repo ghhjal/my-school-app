@@ -236,7 +236,7 @@ if st.session_state.role == "teacher":
         with st.expander("📋 السجل الحالي للطلاب"):
             st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-            st.markdown("---")
+        st.markdown("---")
         with st.expander("🗑️ منطقة الحذف النهائي الشامل"):
             st.error("⚠️ سيتم حذف كافة بيانات الطالب من جميع الجداول")
             if not df_st.empty:
@@ -247,8 +247,9 @@ if st.session_state.role == "teacher":
                             try:
                                 ws = sh.worksheet(s); cell = ws.find(del_name)
                                 if cell: ws.delete_rows(cell.row)
-            except: pass
-                st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
+                            except:
+                                pass
+                        st.success("💥 تم المسح بنجاح"); time.sleep(1); st.rerun()
 
     # --- التبويب الثاني: شاشة الدرجات (تطوير شامل لمطابقة الجدول) ---
     with tab2:
