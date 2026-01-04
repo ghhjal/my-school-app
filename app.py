@@ -306,7 +306,18 @@ if st.session_state.role == "teacher":
                             current_date = datetime.datetime.now().strftime("%Y-%m-%d")
                             grade_row = [s_id, val_p1, val_p2, val_perf, current_date, teacher_note]
                             
-                            sh.worksheet("grades").append_row(grade_row)
+                            ws_g = sh.worksheet("grades")
+
+                            # البحث عن الطالب في عمود student_id
+                            cell = ws_g.find(str(s_id))
+
+                            if cell:
+                                # تحديث الصف الموجود
+                                ws_g.update(f"B{cell.row}:F{cell.row}", [[val_p1, val_p2, val_perf, current_date, teacher_note]])
+                            else:
+                                # إضافة صف جديد إذا لم يكن موجود
+                                ws_g.append_row(grade_row)
+
                             st.success(f"✅ تم رصد درجات الطالب {selected_student} بنجاح")
                             time.sleep(1); st.rerun()
                         except Exception as e:
