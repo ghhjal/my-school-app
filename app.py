@@ -451,72 +451,72 @@ if st.session_state.role == "teacher":
             s_email, s_phone = st_row[6], str(st_row[7]).split('.')[0]
             if not s_phone.startswith('966'): s_phone = '966' + s_phone
         
-        with st.container(border=True):
-            c1, c2 = st.columns(2)
-            b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
-            b_date = c2.date_input("📅 التاريخ")
-            b_note = st.text_area("📝 نص الملاحظة السلوكية الجديدة")
+            with st.container(border=True):
+                c1, c2 = st.columns(2)
+                b_type = c1.selectbox("🏷️ نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)", "🚫 مخالفة (-10)"])
+                b_date = c2.date_input("📅 التاريخ")
+                b_note = st.text_area("📝 نص الملاحظة السلوكية الجديدة")
             
-            st.write("✨ **خيارات الحفظ والتواصل:**")
-            col1, col2 = st.columns(2)
+                st.write("✨ **خيارات الحفظ والتواصل:**")
+                col1, col2 = st.columns(2)
             
-            btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
-            btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
+                btn_save = col1.button("💾 رصد وحفظ فقط", use_container_width=True)
+                btn_mail = col1.button("📧 إيميل منظم (يدوي)", use_container_width=True)
             
-            btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) 
-            btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)     
+                btn_auto = col2.button("⚡ إشعار تلقائي (فوري)", use_container_width=True) 
+                btn_wa = col2.button("💬 رصد وواتساب", use_container_width=True)     
 
-            current_msg = get_formatted_msg(b_name, b_type, b_note, b_date)
+                current_msg = get_formatted_msg(b_name, b_type, b_note, b_date)
 
-            # منطق الحفظ
-            if btn_save:
-                if b_note:
-                    sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
-                    try:
-                        ws_st = sh.worksheet("students"); cell = ws_st.find(b_name)
-                        p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
-                        curr = int(ws_st.cell(cell.row, 9).value or 0)
-                        ws_st.update_cell(cell.row, 9, str(curr + p_map.get(b_type, 0)))
-                    except: pass
-                    st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
-                else: st.error("⚠️ يرجى كتابة نص الملاحظة أولاً")
+                # منطق الحفظ
+                if btn_save:
+                    if b_note:
+                        sh.worksheet("behavior").append_row([b_name, str(b_date), b_type, b_note])
+                        try:
+                            ws_st = sh.worksheet("students"); cell = ws_st.find(b_name)
+                            p_map = {"🌟 متميز (+10)": 10, "✅ إيجابي (+5)": 5, "⚠️ تنبيه (0)": 0, "❌ سلبي (-5)": -5, "🚫 مخالفة (-10)": -10}
+                            curr = int(ws_st.cell(cell.row, 9).value or 0)
+                            ws_st.update_cell(cell.row, 9, str(curr + p_map.get(b_type, 0)))
+                        except: pass
+                        st.success("✅ تم الحفظ وتحديث النقاط"); time.sleep(1); st.rerun()
+                    else: st.error("⚠️ يرجى كتابة نص الملاحظة أولاً")
 
-            # منطق الواتساب
-            if btn_wa and b_note:
-                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(current_msg)}"
-                st.markdown(f'<script>window.open("{wa_url}", "_blank");</script>', unsafe_allow_html=True)
-                st.link_button("🚀 اضغط لفتح واتساب", wa_url, use_container_width=True)
+                # منطق الواتساب
+                if btn_wa and b_note:
+                    wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(current_msg)}"
+                    st.markdown(f'<script>window.open("{wa_url}", "_blank");</script>', unsafe_allow_html=True)
+                    st.link_button("🚀 اضغط لفتح واتساب", wa_url, use_container_width=True)
 
-            # منطق الإيميل اليدوي
-            if btn_mail and b_note and s_email:
-                mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(current_msg)}"
-                st.markdown(f'<script>window.open("{mail_url}", "_self");</script>', unsafe_allow_html=True)
-                st.link_button("📧 اضغط لفتح تطبيق الإيميل يدوياً", mail_url, use_container_width=True)
+                # منطق الإيميل اليدوي
+                if btn_mail and b_note and s_email:
+                    mail_url = f"mailto:{s_email}?subject=تقرير سلوك&body={urllib.parse.quote(current_msg)}"
+                    st.markdown(f'<script>window.open("{mail_url}", "_self");</script>', unsafe_allow_html=True)
+                    st.link_button("📧 اضغط لفتح تطبيق الإيميل يدوياً", mail_url, use_container_width=True)
 
-            # إشعار الإيميل التلقائي
-            if btn_auto and b_note and s_email:
-                if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date): st.success("✅ تم الإرسال")
-                else: st.error("❌ فشل الإرسال")
+                # إشعار الإيميل التلقائي
+                if btn_auto and b_note and s_email:
+                    if send_auto_email_silent(s_email, b_name, b_type, b_note, b_date): st.success("✅ تم الإرسال")
+                    else: st.error("❌ فشل الإرسال")
 
-        # --- سجل الملاحظات السابقة ---
-        df_b = fetch_safe("behavior")
-        if not df_b.empty:
-            st.markdown("---")
-            st.markdown(f"🗓️ **سجل ملاحظات الطالب: {b_name}**")
-            s_notes = df_b[df_b.iloc[:, 0] == b_name].iloc[::-1]
-            for idx, row in s_notes.iterrows():
-                with st.container(border=True):
-                    st.markdown(f"**📅 {row[1]}** | **🏷️ {row[2]}**")
-                    st.info(f"📝 {row[3]}")
-                    bc1, bc2 = st.columns(2)
+            # --- سجل الملاحظات السابقة ---
+            df_b = fetch_safe("behavior")
+            if not df_b.empty:
+                st.markdown("---")
+                st.markdown(f"🗓️ **سجل ملاحظات الطالب: {b_name}**")
+                s_notes = df_b[df_b.iloc[:, 0] == b_name].iloc[::-1]
+                for idx, row in s_notes.iterrows():
+                    with st.container(border=True):
+                        st.markdown(f"**📅 {row[1]}** | **🏷️ {row[2]}**")
+                        st.info(f"📝 {row[3]}")
+                        bc1, bc2 = st.columns(2)
                     
-                    old_msg = get_formatted_msg(b_name, row[2], row[3], row[1], prefix="📢 تذكير بملاحظة سابقة\n")
-                    wa_old = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_msg)}"
-                    bc1.markdown(f'<a href="{wa_old}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
+                        old_msg = get_formatted_msg(b_name, row[2], row[3], row[1], prefix="📢 تذكير بملاحظة سابقة\n")
+                        wa_old = f"https://api.whatsapp.com/send?phone={s_phone}&text={urllib.parse.quote(old_msg)}"
+                        bc1.markdown(f'<a href="{wa_old}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">💬 واتساب</div></a>', unsafe_allow_html=True)
                     
-                    if bc2.button(f"🗑️ حذف الملاحظة", key=f"del_{idx}"):
-                        ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
-                        if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
+                        if bc2.button(f"🗑️ حذف الملاحظة", key=f"del_{idx}"):
+                            ws_b = sh.worksheet("behavior"); cell = ws_b.find(row[3])
+                            if cell: ws_b.delete_rows(cell.row); st.success("💥 تم الحذف"); time.sleep(0.5); st.rerun()
 
     # --- التبويب الخامس: شاشة الاختبارات (إصدار حل مشكلة العمود الرابع) ---
     with tab5:
