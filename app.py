@@ -209,30 +209,73 @@ if st.session_state.role == "teacher":
     # -------------------------------------------
     # 2. الدرجات (تمت إضافة عرض الجدول بعد التحديث)
     # -------------------------------------------
+    # -------------------------------------------
+    # 2. شاشة الدرجات (النسخة المعتمدة النهائية)
+    # -------------------------------------------
     with tabs[1]:
-        st.markdown("### 📝 رصد الدرجات")
+        st.markdown("### 📝 رصد الدرجات والتقييم")
         df_st = fetch_safe("students")
+        
         if not df_st.empty:
-            with st.form("grades_entry"):
-                sel_student = st.selectbox("اختر الطالب", df_st.iloc[:, 1].tolist())
-                c1, c2, c3 = st.columns(3)
-                p1 = c1.number_input("مشاركة", 0.0, 20.0, step=0.5)
-                p2 = c2.number_input("واجبات", 0.0, 20.0, step=0.5)
-                pf = c3.number_input("اختبارات", 0.0, 20.0, step=0.5)
-                note = st.text_input("ملاحظة")
-                
-                if st.form_submit_button("💾 حفظ الدرجات"):
-                    ws_g = sh.worksheet("grades")
-                    cell = ws_g.find(sel_student)
-                    data = [sel_student, p1, p2, pf, str(datetime.date.today()), note]
-                    if cell: ws_g.update(f"B{cell.row}:F{cell.row}", [data[1:]])
-                    else: ws_g.append_row(data)
-                    st.success("تم حفظ الدرجة"); time.sleep(0.5); st.rerun()
-            
-            # الجدول الناقص تمت إعادته
-            st.markdown("#### 📊 جدول الدرجات المحدث")
+            with st.container(border=True):
+                # نموذج الرصد
+                with st.form("grades_entry_final"):
+                    # 1. قائمة اختيار الطالب
+                    student_list = df_st.iloc[:, 1].tolist()
+                    sel_student = st.selectbox("👤 اختر الطالب:", options=student_list)
+                    
+                    st.markdown("---")
+                    
+                    # 2. حقول الدرجات (3 أعمدة)
+                    c1, c2, c3 = st.columns(3)
+                    
+                    # P1: المهام والمشاركات
+                    p1 = c1.number_input("📝 المهام والمشاركات (P1)", min_value=0.0, max_value=100.0, step=0.5, key="p1_input")
+                    
+                    # P2: اختبار الفترة
+                    p2 = c2.number_input("📄 اختبار الفترة (P2)", min_value=0.0, max_value=100.0, step=0.5, key="p2_input")
+                    
+                    # P3: المجموع (حساب تلقائي للعرض)
+                    total_score = p1 + p2
+                    c3.metric("∑ المجموع النهائي", f"{total_score}")
+
+                    # 3. ملاحظات
+                    note = st.text_input("💬 ملاحظة (اختياري)")
+                    
+                    # 4. زر الحفظ الذكي
+                    if st.form_submit_button("💾 حفظ واعتماد الدرجة", use_container_width=True):
+                        try:
+                            ws_g = sh.worksheet("grades")
+                            # البحث: هل للطالب درجة سابقة؟
+                            cell = ws_g.find(sel_student)
+                            
+                            # البيانات المراد حفظها: [الاسم, P1, P2, المجموع, التاريخ, الملاحظة]
+                            data_row = [sel_student, p1, p2, total_score, str(datetime.date.today()), note]
+                            
+                            if cell:
+                                # تحديث: نعدل فقط الأرقام والملاحظة في نفس السطر
+                                ws_g.update(f"B{cell.row}:F{cell.row}", [data_row[1:]])
+                                st.success(f"✅ تم تحديث درجة الطالب: {sel_student}")
+                            else:
+                                # جديد: نضيف سطراً جديداً
+                                ws_g.append_row(data_row)
+                                st.success(f"✅ تم رصد درجة جديدة للطالب: {sel_student}")
+                            
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ حدث خطأ أثناء الحفظ: {e}")
+
+            # 5. جدول عرض الدرجات (للتأكد)
+            st.markdown("---")
+            st.markdown("##### 📊 السجل الحالي للدرجات")
             df_grades = fetch_safe("grades")
-            st.dataframe(df_grades, use_container_width=True)
+            if not df_grades.empty:
+                st.dataframe(df_grades, use_container_width=True)
+            else:
+                st.info("لا توجد درجات مرصودة حتى الآن.")
+        else:
+            st.warning("⚠️ لا يوجد طلاب مسجلين في النظام. يرجى إضافة طلاب أولاً من شاشة 'إدارة الطلاب'.")
 
     # -------------------------------------------
     # 3. البحث (تمت إضافة كافة التفاصيل)
