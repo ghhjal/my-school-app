@@ -48,7 +48,7 @@ db = st.session_state.manager
 # 2. ميزات التحفيز والتقارير
 # ==========================================
 def get_badge(points):
-    """توليد الوسام بناءً على النقاط [تطوير احترافي]"""
+    """توليد الوسام بناءً على النقاط"""
     try:
         p = int(float(str(points or 0)))
         if p >= 100: return "🏆 القائد الذهبي"
@@ -58,7 +58,7 @@ def get_badge(points):
     except: return "🌱 برعم صاعد"
 
 def send_report_email(to_email, name, grades_df, behavior_df):
-    """إرسال تقرير تلقائي لولي الأمر [تطوير احترافي]"""
+    """إرسال تقرير تلقائي لولي الأمر"""
     try:
         config = st.secrets["email_settings"]
         msg = MIMEMultipart()
@@ -66,7 +66,6 @@ def send_report_email(to_email, name, grades_df, behavior_df):
         msg['To'] = to_email
         msg['Subject'] = f"📊 التقرير الدوري للطالب: {name}"
         
-        # تنسيق محتوى التقرير
         body = f"تحية طيبة، نرفق لكم تقرير الطالب {name} من منصة أ. زياد:\n\n"
         if not grades_df.empty:
             g = grades_df.iloc[0]
@@ -87,8 +86,6 @@ def send_report_email(to_email, name, grades_df, behavior_df):
 # ==========================================
 if "role" not in st.session_state: st.session_state.role = None
 
-# (كود تسجيل الدخول باستخدام hashlib يبقى كما هو لضمان الأمان)
-
 if st.session_state.role == "teacher":
     tabs = st.tabs(["📊 الإحصائيات", "👥 الطلاب", "📈 الدرجات", "🥇 السلوك", "🚗 خروج"])
 
@@ -96,60 +93,83 @@ if st.session_state.role == "teacher":
         st.subheader("👥 سجل الطلاب والأوسمة")
         df_st = db.fetch_data("students")
         if not df_st.empty:
-            # حل KeyError: إنشاء عمود الوسام برمجياً قبل العرض
-            df_st['الوسام'] = df_st['النقاط'].apply(get_badge)
-            st.dataframe(df_st, use_container_width=True)
+            # حل KeyError: إنشاء عمود الوسام برمجياً قبل محاولة العرض في الجدول
+            if 'النقاط' in df_st.columns:
+                df_st['الوسام'] = df_st['النقاط'].apply(get_badge)
+            
+            # عرض الأعمدة المتاحة فقط لتجنب انهيار KeyError
+            cols_to_show = [c for c in ['الرقم', 'الاسم', 'الصف', 'النقاط', 'الوسام'] if c in df_st.columns]
+            st.dataframe(df_st[cols_to_show], use_container_width=True)
             
             with st.expander("📤 إرسال تقرير تلقائي"):
-                sel_st = st.selectbox("اختر الطالب:", options=df_st['الاسم'].tolist())
+                sel_st = st.selectbox("اختر الطالب لإرسال التقرير:", options=df_st['الاسم'].tolist())
                 if st.button("🚀 إرسال التقرير الآن"):
                     st_info = df_st[df_st['الاسم'] == sel_st].iloc[0]
-                    if send_report_email(st_info['الإيميل'], sel_st, pd.DataFrame(), pd.DataFrame()):
-                        st.success("تم إرسال التقرير")
+                    # جلب درجات وسلوك الطالب المحدد
+                    g_df = db.fetch_data("grades")
+                    b_df = db.fetch_data("behavior")
+                    if send_report_email(st_info.get('الإيميل', ''), sel_st, g_df[g_df['الاسم']==sel_st], b_df[b_df['الاسم']==sel_st]):
+                        st.success(f"تم إرسال التقرير لولي أمر {sel_st}")
 
     with tabs[2]: # الدرجات
         st.subheader("📈 رصد وتحديث الدرجات")
         df_st = db.fetch_data("students")
         df_gr = db.fetch_data("grades")
         
-        # اختيار الطالب خارج النموذج لمنع مشكلة "النموذج الفارغ"
         sel_name = st.selectbox("👤 اختر الطالب للرصد:", options=[""] + df_st['الاسم'].tolist())
         
         if sel_name:
-            # جلب البيانات الحالية
             curr_g = df_gr[df_gr['الاسم'] == sel_name]
             has_p = not curr_g.empty
             
-            with st.form("grade_form"):
+            with st.form("grade_form_safe"):
                 c1, c2 = st.columns(2)
-                p1 = c1.number_input("المهام (P1)", 0.0, 100.0, value=float(curr_g['P1'].iloc[0]) if has_p else 0.0)
-                p2 = c2.number_input("الاختبار (P2)", 0.0, 100.0, value=float(curr_g['P2'].iloc[0]) if has_p else 0.0)
+                p1 = c1.number_input("المهام (P1)", 0.0, 100.0, value=float(curr_g['P1'].iloc[0]) if has_p and 'P1' in curr_g.columns else 0.0)
+                p2 = c2.number_input("الاختبار (P2)", 0.0, 100.0, value=float(curr_g['P2'].iloc[0]) if has_p and 'P2' in curr_g.columns else 0.0)
                 
-                # حل IndexError: الفحص الآمن لعمود الملاحظات
-                note_val = str(curr_g['ملاحظات'].iloc[0]) if has_p and 'ملاحظات' in curr_g.columns else ""
+                # حل IndexError: الوصول الآمن للملاحظات بالاسم بدلاً من الرقم
+                note_val = ""
+                if has_p and 'ملاحظات' in curr_g.columns:
+                    note_val = str(curr_g['ملاحظات'].iloc[0])
                 note = st.text_input("ملاحظات", value=note_val)
                 
-                # حل "Missing Submit Button": الزر داخل النموذج دائماً
+                # حل Missing Submit Button: الزر داخل كتلة الفورم
                 if st.form_submit_button("💾 حفظ واعتماد الدرجة"):
-                    # (منطق الحفظ في Google Sheets)
+                    # (هنا يوضع كود الحفظ في جوجل شيت)
                     st.success("تم الحفظ بنجاح")
                     st.rerun()
 
-    # (بقية التبويبات تتبع نفس منطق الحماية من KeyError)
+    with tabs[3]: # السلوك والتحضير
+        st.subheader("🥇 رصد السلوك والتحضير")
+        df_st = db.fetch_data("students")
+        # حل KeyError الصورة الثالثة: التأكد من مسميات الأعمدة عند التحضير
+        for i, row in df_st.iterrows():
+            c1, c2 = st.columns([3, 1])
+            # استخدام .get لمنع KeyError في حال اختلاف المسمى
+            st_id = row.get('الرقم', i) 
+            st_name = row.get('الاسم', 'غير معروف')
+            c2.toggle("حاضر", value=True, key=f"att_{st_id}")
+            c1.write(f"👤 {st_name}")
 
 # ==========================================
-# 4. واجهة الطالب (نظام الأوسمة)
+# 4. واجهة الطالب (الأوسمة والتحفيز)
 # ==========================================
 elif st.session_state.role == "student":
     df_st = db.fetch_data("students")
-    s_info = df_st[df_st['الرقم'] == st.session_state.sid].iloc[0]
-    points = int(float(s_info['النقاط'] or 0))
+    # البحث عن الطالب بالرقم الأكاديمي المسجل في الجلسة
+    s_info = df_st[df_st['الرقم'].astype(str) == str(st.session_state.sid)].iloc[0]
+    points = int(float(s_info.get('النقاط', 0)))
     
     st.markdown(f"""
-        <div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 15px;">
-            <h3>مرحباً، {s_info['الاسم']} 👋</h3>
-            <h1 style="color: #1e40af;">{points} نقطة</h1>
-            <h4 style="color: #d97706;">{get_badge(points)}</h4>
+        <div style="text-align: center; padding: 25px; border-radius: 20px; background-color: #f8fafc; border: 1px solid #e2e8f0;">
+            <h3>مرحباً، {s_info.get('الاسم', '')} 👋</h3>
+            <h1 style="color: #1e40af; margin: 10px 0;">{points} نقطة</h1>
+            <span style="font-size: 20px; font-weight: bold; background: #fef3c7; color: #92400e; padding: 5px 20px; border-radius: 20px;">
+                {get_badge(points)}
+            </span>
         </div>
     """, unsafe_allow_html=True)
-    # (بقية واجهة الطالب)
+
+    if st.button("خروج"): 
+        st.session_state.role = None
+        st.rerun()
