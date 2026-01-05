@@ -8,3 +8,9 @@ xlsxwriter
 oauth2client
 pip install fpdf2 arabic-reshaper python-bidi
 pip install fpdf2 arabic-reshaper python-bidi qrcode[pil]
+fpdf2
+arabic-reshaper
+python-bidi
+qrcode
+plotly
+google-api-python-client
