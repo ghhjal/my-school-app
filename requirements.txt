@@ -1,29 +1,14 @@
 streamlit
 gspread
 pandas
-hashlib
-time
-datetime
-plotly
-qrcode
-smtplib
-google.oauth2.service_account import Credentials
-googleapiclient.discovery import build
-googleapiclient.http import MediaIoBaseUpload
-arabic_reshaper import reshape
-bidi.algorithm import get_display
-email.mime.text import MIMEText
-email.mime.multipart import MIMEMultipart
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
 xlsxwriter
 oauth2client
-pip install fpdf2 arabic-reshaper python-bidi
-pip install fpdf2 arabic-reshaper python-bidi qrcode[pil]
-google-auth
-python-bidi
-Google API Client
 fpdf2
 arabic-reshaper
+python-bidi
+qrcode
+plotly
 google-api-python-client
