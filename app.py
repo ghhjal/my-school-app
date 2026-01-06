@@ -285,81 +285,81 @@ if st.session_state.role == "teacher":
     
     
     # ==========================================
-# 📢 تبويب: التواصل والتنبيهات (إدارة الإعلانات)
-# ==========================================
-with menu[2]:
-    st.subheader("📢 مركز التواصل وبث التنبيهات")
-    
-    # --- 1️⃣ قسم نشر تنبيه جديد ---
-    with st.expander("🚀 نشر إعلان أو موعد اختبار جديد", expanded=True):
-        with st.form("new_announcement_form", clear_on_submit=True):
-            c1, c2 = st.columns([2, 1])
-            ann_title = c1.text_input("📝 عنوان التنبيه (مثال: اختبار لغتي القصير)")
-            ann_target = c2.selectbox("🎯 الفئة المستهدفة", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-            
-            ann_details = st.text_area("📄 تفاصيل الإعلان أو التعليمات")
-            ann_date = st.date_input("🗓️ تاريخ النشر/الفعالية", datetime.date.today())
-            
-            if st.form_submit_button("📣 نشر الآن للمنصة"):
-                if ann_title:
-                    try:
-                        # النشر في جدول exams (الذي يظهر في واجهة الطالب)
-                        # الترتيب: [الصف، العنوان، التاريخ، التفاصيل]
-                        sh.worksheet("exams").append_row([
-                            ann_target, 
-                            ann_title, 
-                            str(ann_date), 
-                            ann_details
-                        ])
-                        st.success(f"✅ تم نشر التنبيه بنجاح لطلاب الصف: {ann_target}")
-                        st.cache_data.clear()
-                    except:
-                        st.error("⚠️ حدث خطأ أثناء النشر.")
-                else:
-                    st.warning("⚠️ يرجى كتابة عنوان للتنبيه أولاً.")
-
-    st.divider()
-
-    # --- 2️⃣ قسم إدارة التنبيهات السابقة (عرض وحذف) ---
-    st.markdown("##### 📜 سجل التنبيهات المنشورة")
-    df_ex = fetch_safe("exams")
-    
-    if not df_ex.empty:
-        # ترتيب التنبيهات من الأحدث للأقدم
-        for index, row in df_ex.iloc[::-1].iterrows():
-            with st.container(border=True):
-                col_text, col_action = st.columns([4, 1])
+    # 📢 تبويب: التواصل والتنبيهات (إدارة الإعلانات)
+    # ==========================================
+    with menu[2]:
+        st.subheader("📢 مركز التواصل وبث التنبيهات")
+        
+        # --- 1️⃣ قسم نشر تنبيه جديد ---
+        with st.expander("🚀 نشر إعلان أو موعد اختبار جديد", expanded=True):
+            with st.form("new_announcement_form", clear_on_submit=True):
+                c1, c2 = st.columns([2, 1])
+                ann_title = c1.text_input("📝 عنوان التنبيه (مثال: اختبار لغتي القصير)")
+                ann_target = c2.selectbox("🎯 الفئة المستهدفة", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 
-                with col_text:
-                    st.markdown(f"**[{row.iloc[0]}]** - **{row.iloc[1]}**")
-                    st.caption(f"📅 تاريخ النشر: {row.iloc[2]}")
-                    if len(row) > 3 and row.iloc[3]:
-                        st.write(f"💬 {row.iloc[3]}")
+                ann_details = st.text_area("📄 تفاصيل الإعلان أو التعليمات")
+                ann_date = st.date_input("🗓️ تاريخ النشر/الفعالية", datetime.date.today())
                 
-                with col_action:
-                    # زر الحذف الآمن للتنبيه
-                    if st.button("🗑️ حذف", key=f"del_ann_{index}"):
-                        ws_ex = sh.worksheet("exams")
-                        # الحذف بناءً على رقم السطر الفعلي (+2 لأن السطر 1 هو العنوان و index يبدأ من 0)
-                        ws_ex.delete_rows(int(index) + 2)
-                        st.success("تم الحذف")
-                        st.cache_data.clear()
-                        st.rerun()
-    else:
-        st.info("لا توجد تنبيهات منشورة حالياً.")
-
-    with menu[3]: # الإعدادات
-        st.subheader("⚙️ أدوات التحكم المتقدمة")
-        c_excel, c_auth = st.columns(2)
-        with c_excel:
-            st.info("📥 استيراد قاعدة بيانات الطلاب")
-            up = st.file_uploader("ارفع ملف Excel", type="xlsx")
-            if up and st.button("تأكيد الاستبدال النهائي"):
-                new_df = pd.read_excel(up)
-                sh.worksheet("students").update([new_df.columns.values.tolist()] + new_df.values.tolist())
-                st.success("تم تحديث البيانات"); st.cache_data.clear(); st.rerun()
-        with c_auth:
-            if st.button("🧹 تصفير الكاش (تحديث فوري للمنصة)"): st.cache_data.clear(); st.rerun()
+                if st.form_submit_button("📣 نشر الآن للمنصة"):
+                    if ann_title:
+                        try:
+                            # النشر في جدول exams (الذي يظهر في واجهة الطالب)
+                            # الترتيب: [الصف، العنوان، التاريخ، التفاصيل]
+                            sh.worksheet("exams").append_row([
+                                ann_target, 
+                                ann_title, 
+                                str(ann_date), 
+                                ann_details
+                            ])
+                            st.success(f"✅ تم نشر التنبيه بنجاح لطلاب الصف: {ann_target}")
+                            st.cache_data.clear()
+                        except:
+                            st.error("⚠️ حدث خطأ أثناء النشر.")
+                    else:
+                        st.warning("⚠️ يرجى كتابة عنوان للتنبيه أولاً.")
+    
+        st.divider()
+    
+        # --- 2️⃣ قسم إدارة التنبيهات السابقة (عرض وحذف) ---
+        st.markdown("##### 📜 سجل التنبيهات المنشورة")
+        df_ex = fetch_safe("exams")
+        
+        if not df_ex.empty:
+            # ترتيب التنبيهات من الأحدث للأقدم
+            for index, row in df_ex.iloc[::-1].iterrows():
+                with st.container(border=True):
+                    col_text, col_action = st.columns([4, 1])
+                    
+                    with col_text:
+                        st.markdown(f"**[{row.iloc[0]}]** - **{row.iloc[1]}**")
+                        st.caption(f"📅 تاريخ النشر: {row.iloc[2]}")
+                        if len(row) > 3 and row.iloc[3]:
+                            st.write(f"💬 {row.iloc[3]}")
+                    
+                    with col_action:
+                        # زر الحذف الآمن للتنبيه
+                        if st.button("🗑️ حذف", key=f"del_ann_{index}"):
+                            ws_ex = sh.worksheet("exams")
+                            # الحذف بناءً على رقم السطر الفعلي (+2 لأن السطر 1 هو العنوان و index يبدأ من 0)
+                            ws_ex.delete_rows(int(index) + 2)
+                            st.success("تم الحذف")
+                            st.cache_data.clear()
+                            st.rerun()
+        else:
+            st.info("لا توجد تنبيهات منشورة حالياً.")
+    
+        with menu[3]: # الإعدادات
+            st.subheader("⚙️ أدوات التحكم المتقدمة")
+            c_excel, c_auth = st.columns(2)
+            with c_excel:
+                st.info("📥 استيراد قاعدة بيانات الطلاب")
+                up = st.file_uploader("ارفع ملف Excel", type="xlsx")
+                if up and st.button("تأكيد الاستبدال النهائي"):
+                    new_df = pd.read_excel(up)
+                    sh.worksheet("students").update([new_df.columns.values.tolist()] + new_df.values.tolist())
+                    st.success("تم تحديث البيانات"); st.cache_data.clear(); st.rerun()
+            with c_auth:
+                if st.button("🧹 تصفير الكاش (تحديث فوري للمنصة)"): st.cache_data.clear(); st.rerun()
 
     with menu[4]:
         if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
