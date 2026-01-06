@@ -363,88 +363,88 @@ if st.session_state.role == "teacher":
                         st.session_state.active_tab = 2
                         st.cache_data.clear(); st.rerun()
     
-# ==========================================
-# ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة
-# ==========================================
-with menu[3]:
-    st.subheader("🛠️ مركز التحكم وإدارة النظام")
-    
-    # --- ⚖️ 1. إعدادات توزيع الدرجات (تغيير الوزارة السنوي) ---
-    st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
-    with st.expander("تعديل الحدود العليا للدرجات (توزيع الوزارة)", expanded=True):
-        col_g1, col_g2 = st.columns(2)
-        # حفظ القيم في session_state لتستخدم في كافة المنصة
-        if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-        if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+    # ==========================================
+    # ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة
+    # ==========================================
+    with menu[3]:
+        st.subheader("🛠️ مركز التحكم وإدارة النظام")
         
-        st.session_state.max_tasks = col_g1.number_input("الحد الأعلى للمشاركة والمهام", 1, 100, st.session_state.max_tasks)
-        st.session_state.max_quiz = col_g2.number_input("الحد الأعلى للاختبار القصير", 1, 100, st.session_state.max_quiz)
-        st.info(f"💡 التوزيع الحالي: {st.session_state.max_tasks} للمشاركة + {st.session_state.max_quiz} للاختبار = 100")
-
-    st.divider()
-
-    # --- 👥 2. إدارة الحساب والمستخدمين الجدد ---
-    t_acc, t_users = st.tabs(["🔐 تغيير كلمتي", "👥 إضافة معلم جديد"])
+        # --- ⚖️ 1. إعدادات توزيع الدرجات (تغيير الوزارة السنوي) ---
+        st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
+        with st.expander("تعديل الحدود العليا للدرجات (توزيع الوزارة)", expanded=True):
+            col_g1, col_g2 = st.columns(2)
+            # حفظ القيم في session_state لتستخدم في كافة المنصة
+            if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
+            if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+            
+            st.session_state.max_tasks = col_g1.number_input("الحد الأعلى للمشاركة والمهام", 1, 100, st.session_state.max_tasks)
+            st.session_state.max_quiz = col_g2.number_input("الحد الأعلى للاختبار القصير", 1, 100, st.session_state.max_quiz)
+            st.info(f"💡 التوزيع الحالي: {st.session_state.max_tasks} للمشاركة + {st.session_state.max_quiz} للاختبار = 100")
     
-    with t_acc:
-        with st.form("fix_pass_form"):
-            curr_p = st.text_input("🔑 كلمة المرور الحالية", type="password")
-            new_p = st.text_input("🆕 الكلمة الجديدة", type="password")
-            if st.form_submit_button("تحديث كلمتي"):
-                df_u = fetch_safe("users")
-                # البحث الذكي عن المستخدم الفعلي (z1 أو Ziyad1)
-                u_name = st.session_state.get('username', 'z1') 
-                user_row = df_u[df_u['username'] == u_name]
-                
-                if user_row.empty:
-                    st.error(f"❌ لم يتم العثور على المستخدم {u_name} في الجدول.")
-                else:
-                    curr_hash = hashlib.sha256(str.encode(curr_p)).hexdigest()
-                    if curr_hash != user_row.iloc[0]['password_hash']:
-                        st.error("❌ كلمة المرور الحالية غير صحيحة.")
+        st.divider()
+    
+        # --- 👥 2. إدارة الحساب والمستخدمين الجدد ---
+        t_acc, t_users = st.tabs(["🔐 تغيير كلمتي", "👥 إضافة معلم جديد"])
+        
+        with t_acc:
+            with st.form("fix_pass_form"):
+                curr_p = st.text_input("🔑 كلمة المرور الحالية", type="password")
+                new_p = st.text_input("🆕 الكلمة الجديدة", type="password")
+                if st.form_submit_button("تحديث كلمتي"):
+                    df_u = fetch_safe("users")
+                    # البحث الذكي عن المستخدم الفعلي (z1 أو Ziyad1)
+                    u_name = st.session_state.get('username', 'z1') 
+                    user_row = df_u[df_u['username'] == u_name]
+                    
+                    if user_row.empty:
+                        st.error(f"❌ لم يتم العثور على المستخدم {u_name} في الجدول.")
                     else:
-                        new_hash = hashlib.sha256(str.encode(new_p)).hexdigest()
-                        idx = user_row.index[0] + 2 # السطر الفعلي في الشيت
-                        sh.worksheet("users").update_cell(idx, 2, new_hash)
-                        st.success("✅ تم التشفير والتحديث بنجاح!")
-
-    with t_users:
-        st.markdown("##### ➕ إضافة معلم/مسؤول جديد للمنصة")
-        with st.form("add_new_teacher", clear_on_submit=True):
-            new_un = st.text_input("👤 اسم المستخدم الجديد")
-            new_pw = st.text_input("🔑 كلمة المرور")
-            new_role = st.selectbox("🎭 الصلاحية", ["teacher", "admin"])
-            if st.form_submit_button("اعتماد المعلم الجديد"):
-                if new_un and new_pw:
-                    u_hash = hashlib.sha256(str.encode(new_pw)).hexdigest()
-                    sh.worksheet("users").append_row([new_un, u_hash, new_role])
-                    st.success(f"✅ تمت إضافة {new_un} بنجاح كـ {new_role}")
-                else: st.warning("يرجى تعبئة كافة البيانات")
-
-    st.divider()
-
-    # --- 📥 3. استخراج قوالب إكسل فارغة (Templates) ---
-    st.markdown("#### 📥 تحميل قوالب الإدخال السريع")
-    st.info("قم بتحميل القوالب، تعبئتها، ثم رفعها لاحقاً لتحديث البيانات دفعة واحدة.")
-    col_t1, col_t2 = st.columns(2)
+                        curr_hash = hashlib.sha256(str.encode(curr_p)).hexdigest()
+                        if curr_hash != user_row.iloc[0]['password_hash']:
+                            st.error("❌ كلمة المرور الحالية غير صحيحة.")
+                        else:
+                            new_hash = hashlib.sha256(str.encode(new_p)).hexdigest()
+                            idx = user_row.index[0] + 2 # السطر الفعلي في الشيت
+                            sh.worksheet("users").update_cell(idx, 2, new_hash)
+                            st.success("✅ تم التشفير والتحديث بنجاح!")
     
-    import io
-    def create_excel_template(columns_list):
-        output = io.BytesIO()
-        df_temp = pd.DataFrame(columns=columns_list)
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_temp.to_excel(writer, index=False)
-        return output.getvalue()
-
-    with col_t1:
-        st.download_button("📥 قالب بيانات الطلاب فارغ", 
-                         create_excel_template(["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]),
-                         "Template_Students.xlsx", use_container_width=True)
+        with t_users:
+            st.markdown("##### ➕ إضافة معلم/مسؤول جديد للمنصة")
+            with st.form("add_new_teacher", clear_on_submit=True):
+                new_un = st.text_input("👤 اسم المستخدم الجديد")
+                new_pw = st.text_input("🔑 كلمة المرور")
+                new_role = st.selectbox("🎭 الصلاحية", ["teacher", "admin"])
+                if st.form_submit_button("اعتماد المعلم الجديد"):
+                    if new_un and new_pw:
+                        u_hash = hashlib.sha256(str.encode(new_pw)).hexdigest()
+                        sh.worksheet("users").append_row([new_un, u_hash, new_role])
+                        st.success(f"✅ تمت إضافة {new_un} بنجاح كـ {new_role}")
+                    else: st.warning("يرجى تعبئة كافة البيانات")
     
-    with col_t2:
-        st.download_button("📥 قالب رصد الدرجات فارغ", 
-                         create_excel_template(["id", "tasks", "quiz", "total", "date", "notes"]),
-                         "Template_Grades.xlsx", use_container_width=True)
+        st.divider()
+    
+        # --- 📥 3. استخراج قوالب إكسل فارغة (Templates) ---
+        st.markdown("#### 📥 تحميل قوالب الإدخال السريع")
+        st.info("قم بتحميل القوالب، تعبئتها، ثم رفعها لاحقاً لتحديث البيانات دفعة واحدة.")
+        col_t1, col_t2 = st.columns(2)
+        
+        import io
+        def create_excel_template(columns_list):
+            output = io.BytesIO()
+            df_temp = pd.DataFrame(columns=columns_list)
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_temp.to_excel(writer, index=False)
+            return output.getvalue()
+    
+        with col_t1:
+            st.download_button("📥 قالب بيانات الطلاب فارغ", 
+                             create_excel_template(["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]),
+                             "Template_Students.xlsx", use_container_width=True)
+        
+        with col_t2:
+            st.download_button("📥 قالب رصد الدرجات فارغ", 
+                             create_excel_template(["id", "tasks", "quiz", "total", "date", "notes"]),
+                             "Template_Grades.xlsx", use_container_width=True)
 
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة الذهبية المكتملة)
