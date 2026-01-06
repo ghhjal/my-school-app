@@ -239,30 +239,34 @@ if st.session_state.role == "teacher":
                 with col_grades:
                     st.markdown("##### 📝 رصد الدرجات")
                     with st.form("grade_form_dynamic"):
-                        # استخدام المتغيرات من الإعدادات كحد أقصى (Max Value)
-                        v_tasks = st.number_input(f"المشاركة والمهام (من {st.session_state.max_tasks})", 0, st.session_state.max_tasks)
-                        v_quiz = st.number_input(f"اختبار قصير (من {st.session_state.max_quiz})", 0, st.session_state.max_quiz)
+                        v_tasks = st.number_input(f"المشاركة والمهام (الحد: {st.session_state.max_tasks})", 0)
+                        v_quiz = st.number_input(f"اختبار قصير (الحد: {st.session_state.max_quiz})", 0)
                         
-                        # الحساب التلقائي للمجموع
                         total = v_tasks + v_quiz
                         st.write(f"📊 المجموع الكلي المحتسب: **{total} / 100**")
                         
                         if st.form_submit_button("💾 حفظ الدرجات"):
-                            try:
-                                ws_g = sh.worksheet("grades")
-                                df_g = fetch_safe("grades")
-                                # البحث عن السطر لتحديثه أو إضافة سطر جديد
-                                if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
-                                    idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
-                                    ws_g.update_cell(idx, 2, v_tasks)
-                                    ws_g.update_cell(idx, 3, v_quiz)
-                                    ws_g.update_cell(idx, 4, total)
-                                else:
-                                    ws_g.append_row([sid, v_tasks, v_quiz, total, str(datetime.date.today()), ""])
-                                st.success(f"✅ تم حفظ درجات الطالب {s_name} بنجاح")
-                                st.cache_data.clear()
-                            except Exception as e:
-                                st.error(f"⚠️ فشل الحفظ: {e}")
+                            # 🛑 صمام الأمان: منع الحفظ إذا تجاوزت الدرجة الحد المسموح به
+                            if v_tasks > st.session_state.max_tasks:
+                                st.error(f"⚠️ خطأ: درجة المشاركة ({v_tasks}) أكبر من الحد المسموح به ({st.session_state.max_tasks})")
+                            elif v_quiz > st.session_state.max_quiz:
+                                st.error(f"⚠️ خطأ: درجة الاختبار ({v_quiz}) أكبر من الحد المسموح به ({st.session_state.max_quiz})")
+                            else:
+                                # إذا كانت الدرجات سليمة، يتم الحفظ
+                                try:
+                                    ws_g = sh.worksheet("grades")
+                                    df_g = fetch_safe("grades")
+                                    if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
+                                        idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
+                                        ws_g.update_cell(idx, 2, v_tasks)
+                                        ws_g.update_cell(idx, 3, v_quiz)
+                                        ws_g.update_cell(idx, 4, total)
+                                    else:
+                                        ws_g.append_row([sid, v_tasks, v_quiz, total, str(datetime.date.today()), ""])
+                                    st.success(f"✅ تم الحفظ بنجاح للبدء بالتوزيع الجديد!")
+                                    st.cache_data.clear()
+                                except Exception as e:
+                                    st.error(f"⚠️ فشل الحفظ: {e}")
 
                 # --- 🎭 القسم الثاني: السلوك (القائمة الكاملة) ---
                 with col_behavior:
