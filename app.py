@@ -75,7 +75,7 @@ if st.session_state.role == "admin":
             
             target_cols = ['الرقم', 'الاسم', 'الصف', 'النقاط', 'الوسام']
             existing_cols = [c for c in target_cols if c in df_st.columns]
-            #st.dataframe(df_st[existing_cols], use_container_width=True)
+            # st.dataframe(df_st[existing_cols], use_container_width=True)
 
     with tabs[2]: # الدرجات (حل مشكلة الصورة 1 والزر المفقود)
         st.subheader("📈 رصد الدرجات")
