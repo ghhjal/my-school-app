@@ -527,30 +527,30 @@ if st.session_state.role == "student":
         else:
             st.info("📭 صندوق التنبيهات فارغ حالياً.")
 
-    with t_grade: # 📊 درجاتي (تطوير: عرض البطاقة العرضية)
-        st.markdown("##### 📚 ملخص النتائج الأكاديمية")
+    with t_grade: # 📊 درجاتي (إصدار العرض الديناميكي المستقر 2026)
+        st.markdown("##### 📊 المجموع الكلي لدرجاتي")
+        
+        # تصفية البيانات للوصول لدرجات الطالب الحالي
         my_g = df_grades[df_grades.iloc[:, 0].astype(str) == s_id]
+        
         if not my_g.empty:
-            # بطاقة الدرجات العرضية الأنيقة
-            st.markdown(f"""
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 15px; padding: 20px; display: flex; justify-content: space-around; align-items: center; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <div style="flex: 1; border-left: 1px solid #eee;">
-                        <span style="color: #64748b; font-size: 0.9rem; display: block;">المشاركة والمهام</span>
-                        <b style="font-size: 1.5rem; color: #1e3a8a;">{my_g.iloc[0, 1]} / 60</b>
-                    </div>
-                    <div style="flex: 1; border-left: 1px solid #eee;">
-                        <span style="color: #64748b; font-size: 0.9rem; display: block;">اختبار قصير</span>
-                        <b style="font-size: 1.5rem; color: #1e3a8a;">{my_g.iloc[0, 2]} / 40</b>
-                    </div>
-                    <div style="flex: 1;">
-                        <span style="color: #f59e0b; font-size: 0.9rem; display: block;">المجموع الكلي</span>
-                        <b style="font-size: 2rem; color: #f59e0b;">{my_g.iloc[0, 3]}%</b>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if len(my_g.columns) > 5 and my_g.iloc[0, 5]:
-                st.success(f"💬 ملاحظة المعلم: {my_g.iloc[0, 5]}")
-        else: st.info("لم يتم رصد درجاتك بعد.")
+            c1, c2, c3 = st.columns(3)
+            
+            # جلب الحدود القصوى ديناميكياً من الإعدادات
+            # استخدمنا .get لضمان عدم تعليق البرنامج في حال عدم وجود قيمة افتراضية
+            max_t = st.session_state.get('max_tasks', 60)
+            max_q = st.session_state.get('max_quiz', 40)
+            
+            # عرض الدرجات باستخدام نظام المقياس (Metric)
+            c1.metric("📚 المشاركة والمهام", f"{my_g.iloc[0, 1]} / {max_t}")
+            c2.metric("📝 اختبار قصير", f"{my_g.iloc[0, 2]} / {max_q}")
+            c3.metric("🏆 المجموع الكلي", f"{my_g.iloc[0, 3]} / 100")
+            
+            # إظهار ملاحظات المعلم المكتوبة في الإكسل إن وجدت
+            if len(my_g.columns) > 5 and pd.notna(my_g.iloc[0, 5]):
+                st.info(f"💬 ملاحظة المعلم: {my_g.iloc[0, 5]}")
+        else:
+            st.info("📢 لم يتم رصد درجاتك لهذا الفصل حتى الآن.")
 
     with t_beh: # سجل سلوكي
         my_b = df_beh[df_beh.iloc[:, 0].astype(str) == s_id]
