@@ -114,7 +114,19 @@ if st.session_state.role is None:
                         st.session_state.role = "teacher"; st.rerun()
                     else: st.error("كلمة المرور خاطئة")
     st.stop()
-
+# --- كود الإعلان البارز في الصفحة الرئيسية ---
+df_ex = fetch_safe("exams")
+if not df_ex.empty:
+    # جلب آخر إعلان موجه لـ "الكل"
+    latest_global = df_ex[df_ex.iloc[:, 0] == "الكل"].iloc[-1:]
+    if not latest_global.empty:
+        st.markdown(f"""
+            <div style="background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 15px; margin-bottom: 20px; border-right: 10px solid #f56565;">
+                <h4 style="color: #c53030; margin: 0;">📢 إعلان هام وعاجل: {latest_global.iloc[0, 1]}</h4>
+                <p style="color: #4a5568; margin: 10px 0 0 0;">{latest_global.iloc[0, 3] if len(latest_global.columns) > 3 else ''}</p>
+                <small style="color: #a0aec0;">📅 تاريخ النشر: {latest_global.iloc[0, 2]}</small>
+            </div>
+        """, unsafe_allow_html=True)
 # ==========================================
 # 👨‍🏫 واجهة المعلم (التقسيم المدمج المطور)
 # ==========================================
@@ -285,26 +297,24 @@ if st.session_state.role == "teacher":
     
     
     # ==========================================
-    # 📢 تبويب: التواصل والتنبيهات (إدارة الإعلانات)
+    # 📢 تبويب: التواصل والتنبيهات (إصدار الإرسال الجماعي)
     # ==========================================
     with menu[2]:
         st.subheader("📢 مركز التواصل وبث التنبيهات")
         
-        # --- 1️⃣ قسم نشر تنبيه جديد ---
+        # --- 1️⃣ قسم نشر تنبيه جديد (كودك المدمج) ---
         with st.expander("🚀 نشر إعلان أو موعد اختبار جديد", expanded=True):
             with st.form("new_announcement_form", clear_on_submit=True):
                 c1, c2 = st.columns([2, 1])
                 ann_title = c1.text_input("📝 عنوان التنبيه (مثال: اختبار لغتي القصير)")
                 ann_target = c2.selectbox("🎯 الفئة المستهدفة", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
                 
-                ann_details = st.text_area("📄 تفاصيل الإعلان أو التعليمات")
+                ann_details = st.text_area("📄 تفاصيل الإعلان أو التعليمات (يمكنك وضع روابط هنا)")
                 ann_date = st.date_input("🗓️ تاريخ النشر/الفعالية", datetime.date.today())
                 
                 if st.form_submit_button("📣 نشر الآن للمنصة"):
                     if ann_title:
                         try:
-                            # النشر في جدول exams (الذي يظهر في واجهة الطالب)
-                            # الترتيب: [الصف، العنوان، التاريخ، التفاصيل]
                             sh.worksheet("exams").append_row([
                                 ann_target, 
                                 ann_title, 
@@ -313,40 +323,45 @@ if st.session_state.role == "teacher":
                             ])
                             st.success(f"✅ تم نشر التنبيه بنجاح لطلاب الصف: {ann_target}")
                             st.cache_data.clear()
+                            st.rerun()
                         except:
-                            st.error("⚠️ حدث خطأ أثناء النشر.")
+                            st.error("⚠️ حدث خطأ أثناء الاتصال بقاعدة البيانات.")
                     else:
                         st.warning("⚠️ يرجى كتابة عنوان للتنبيه أولاً.")
-    
+        
         st.divider()
     
-        # --- 2️⃣ قسم إدارة التنبيهات السابقة (عرض وحذف) ---
-        st.markdown("##### 📜 سجل التنبيهات المنشورة")
-        df_ex = fetch_safe("exams")
-        
+        # --- 2️⃣ سجل التنبيهات مع ميزة إرسال المجموعات (احترافي) ---
+        st.markdown("##### 📜 إدارة التنبيهات المنشورة")
         if not df_ex.empty:
-            # ترتيب التنبيهات من الأحدث للأقدم
             for index, row in df_ex.iloc[::-1].iterrows():
                 with st.container(border=True):
-                    col_text, col_action = st.columns([4, 1])
+                    st.markdown(f"**[{row.iloc[0]}]** - **{row.iloc[1]}**")
                     
-                    with col_text:
-                        st.markdown(f"**[{row.iloc[0]}]** - **{row.iloc[1]}**")
-                        st.caption(f"📅 تاريخ النشر: {row.iloc[2]}")
-                        if len(row) > 3 and row.iloc[3]:
-                            st.write(f"💬 {row.iloc[3]}")
+                    # تجهيز رسالة احترافية لمجموعات الواتساب (ترميز آمن بدون ?)
+                    group_msg = (
+                        f"📢 *تنبيه جديد من منصة الأستاذ زياد*\n"
+                        f"----------------------------------\n"
+                        f"📝 *الموضوع:* {row.iloc[1]}\n"
+                        f"📄 *التفاصيل:* {row.iloc[3] if len(row) > 3 else 'لا يوجد'}\n"
+                        f"🗓️ *التاريخ:* {row.iloc[2]}\n"
+                        f"----------------------------------\n"
+                        f"🏛️ *تمنياتنا لكم بالتوفيق*"
+                    )
+                    encoded_group_msg = urllib.parse.quote(group_msg)
                     
-                    with col_action:
-                        # زر الحذف الآمن للتنبيه
-                        if st.button("🗑️ حذف", key=f"del_ann_{index}"):
-                            ws_ex = sh.worksheet("exams")
-                            # الحذف بناءً على رقم السطر الفعلي (+2 لأن السطر 1 هو العنوان و index يبدأ من 0)
-                            ws_ex.delete_rows(int(index) + 2)
-                            st.success("تم الحذف")
-                            st.cache_data.clear()
-                            st.rerun()
+                    c_wa, c_del = st.columns([2, 1])
+                    
+                    # زر الإرسال للمجموعات (يفتح الواتساب لتختار المجموعة)
+                    wa_url = f"https://api.whatsapp.com/send?text={encoded_group_msg}"
+                    c_wa.link_button("👥 إرسال لمجموعة واتساب", wa_url, use_container_width=True)
+                    
+                    # زر الحذف
+                    if c_del.button("🗑️ حذف", key=f"del_ann_{index}", use_container_width=True):
+                        sh.worksheet("exams").delete_rows(int(index) + 2)
+                        st.cache_data.clear(); st.rerun()
         else:
-            st.info("لا توجد تنبيهات منشورة حالياً.")
+            st.info("لا توجد تنبيهات سابقة.")
     
         with menu[3]: # الإعدادات
             st.subheader("⚙️ أدوات التحكم المتقدمة")
