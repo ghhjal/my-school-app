@@ -143,8 +143,6 @@ if st.session_state.role == "teacher":
     # --- تبويب الطلاب (0) ---
     with menu[0]:
         st.subheader("👥 إدارة الطلاب")
-    with menu[0]: # تبويب الطلاب
-            st.subheader("👥 إدارة قاعدة بيانات الطلاب")
             with st.expander("➕ إضافة طالب جديد (الحقول السبعة)", expanded=False):
                 with st.form("add_st_full", clear_on_submit=True):
                     c1, c2 = st.columns(2)
