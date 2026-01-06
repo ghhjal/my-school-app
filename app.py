@@ -356,21 +356,78 @@ if st.session_state.role == "teacher":
                         st.session_state.active_tab = 2
                         st.cache_data.clear(); st.rerun()
     
-        with menu[3]: # الإعدادات
-            st.subheader("⚙️ أدوات التحكم المتقدمة")
-            c_excel, c_auth = st.columns(2)
-            with c_excel:
-                st.info("📥 استيراد قاعدة بيانات الطلاب")
-                up = st.file_uploader("ارفع ملف Excel", type="xlsx")
-                if up and st.button("تأكيد الاستبدال النهائي"):
-                    new_df = pd.read_excel(up)
-                    sh.worksheet("students").update([new_df.columns.values.tolist()] + new_df.values.tolist())
-                    st.success("تم تحديث البيانات"); st.cache_data.clear(); st.rerun()
-            with c_auth:
-                if st.button("🧹 تصفير الكاش (تحديث فوري للمنصة)"): st.cache_data.clear(); st.rerun()
+# ==========================================
+# ⚙️ تبويب: الإعدادات والأدوات الإدارية
+# ==========================================
+with menu[3]:
+    st.subheader("⚙️ أدوات التحكم المتقدمة")
+    
+    col_acc, col_data = st.columns(2)
+    
+    # --- 🔐 1. إدارة الحساب وتغيير كلمة المرور ---
+    with col_acc:
+        st.markdown("##### 🔐 تأمين الحساب")
+        with st.form("change_password_form"):
+            current_p = st.text_input("🔑 كلمة المرور الحالية", type="password")
+            new_p = st.text_input("🆕 كلمة المرور الجديدة", type="password")
+            confirm_p = st.text_input("✅ تأكيد الكلمة الجديدة", type="password")
+            
+            if st.form_submit_button("تحديث كلمة المرور"):
+                df_u = fetch_safe("users")
+                # التحقق من الكلمة الحالية (بناءً على اليوزر المسجل)
+                user_row = df_u[df_u['username'] == "admin"] # أو اسم المستخدم النشط
+                current_hash = hashlib.sha256(str.encode(current_p)).hexdigest()
+                
+                if current_hash != user_row.iloc[0]['password_hash']:
+                    st.error("❌ كلمة المرور الحالية غير صحيحة.")
+                elif new_p != confirm_p:
+                    st.error("❌ الكلمتان الجديدتان غير متطابقتين.")
+                elif len(new_p) < 6:
+                    st.warning("⚠️ يرجى اختيار كلمة مرور قوية (6 خانات فأكثر).")
+                else:
+                    new_hash = hashlib.sha256(str.encode(new_p)).hexdigest()
+                    sh.worksheet("users").update_cell(2, 2, new_hash) # تحديث الهاش في الشيت
+                    st.success("✅ تم تغيير كلمة المرور بنجاح!")
+                    st.session_state.active_tab = 3
+                    st.rerun()
 
-    with menu[4]:
-        if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
+    # --- 📥 2. أدوات البيانات وتصدير Excel ---
+    with col_data:
+        st.markdown("##### 📥 تصدير نسخة احتياطية")
+        st.info("يمكنك تحميل كامل قاعدة البيانات الحالية بصيغة Excel لحفظها على جهازك.")
+        
+        # اختيار الجدول المراد تصديره
+        sheet_to_export = st.selectbox("اختر الجدول للتصدير:", ["students", "grades", "behavior", "exams"])
+        
+        if st.button(f"📥 استخراج بيانات {sheet_to_export}"):
+            df_to_save = fetch_safe(sheet_to_export)
+            if not df_to_save.empty:
+                # تحويل البيانات لملف Excel في الذاكرة
+                import io
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    df_to_save.to_excel(writer, index=False, sheet_name='Data')
+                
+                processed_data = output.getvalue()
+                
+                st.download_button(
+                    label=f"💾 اضغط هنا لتحميل ملف {sheet_to_export}.xlsx",
+                    data=processed_data,
+                    file_name=f"Ziad_Platform_{sheet_to_export}_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.warning("الجدول فارغ حالياً.")
+
+    st.divider()
+
+    # --- 🧹 3. صيانة النظام ---
+    st.markdown("##### 🧹 صيانة المنصة")
+    if st.button("🔄 تصفير الذاكرة المؤقتة (Cache Clear)"):
+        st.cache_data.clear()
+        st.session_state.active_tab = 3
+        st.success("تم تحديث كافة البيانات من Google Sheets بنجاح.")
+        st.rerun()
 
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة الذهبية المكتملة)
