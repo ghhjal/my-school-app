@@ -15,15 +15,17 @@ st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 # إعدادات التسجيل
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
 
-# --- تهيئة القيم الافتراضية وذاكرة التبويبات (إصلاح IndentationError) ---
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = 0
-
-if "max_tasks" not in st.session_state:
-    st.session_state.max_tasks = 60
-
-if "max_quiz" not in st.session_state:
-    st.session_state.max_quiz = 40
+# --- تحميل الإعدادات الدائمة من Google Sheets عند بدء التشغيل ---
+try:
+    df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
+    if "max_tasks" not in st.session_state:
+        st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
+    if "max_quiz" not in st.session_state:
+        st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
+except:
+    # في حال فشل الاتصال، نستخدم القيم الافتراضية
+    if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
+    if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
 # الاتصال بـ Google Sheets
 @st.cache_resource
 def get_gspread_client():
@@ -380,19 +382,29 @@ if st.session_state.role == "teacher":
     with menu[3]:
         st.subheader("⚙️ مركز التحكم وإدارة النظام")
     
-        # --- ⚖️ 1. إعدادات توزيع الدرجات (الجزء الذي اختفى) ---
+            # --- ⚖️ 1. إعدادات توزيع الدرجات (الإصدار الدائم) ---
         st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
-        with st.expander("تعديل الحدود العليا للدرجات (توزيع الوزارة)", expanded=True):
+        with st.expander("تعديل الحدود العليا للدرجات (حفظ دائم)", expanded=True):
             col_g1, col_g2 = st.columns(2)
-            # ضمان وجود القيم في الذاكرة لتجنب الأخطاء
-            if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-            if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
             
-            st.session_state.max_tasks = col_g1.number_input("الحد الأعلى للمشاركة والمهام", 1, 100, st.session_state.max_tasks)
-            st.session_state.max_quiz = col_g2.number_input("الحد الأعلى للاختبار القصير", 1, 100, st.session_state.max_quiz)
-            st.info(f"💡 التوزيع الحالي: {st.session_state.max_tasks} للمشاركة + {st.session_state.max_quiz} للاختبار = 100")
-    
-        st.divider()
+            new_max_t = col_g1.number_input("الحد الأعلى للمشاركة", 1, 100, st.session_state.max_tasks)
+            new_max_q = col_g2.number_input("الحد الأعلى للاختبار", 1, 100, st.session_state.max_quiz)
+            
+            if st.button("💾 اعتماد وحفظ التوزيع الجديد"):
+                try:
+                    ws_s = sh.worksheet("settings")
+                    # تحديث القيم في الإكسل (السطر 2 للمشاركة، والسطر 3 للاختبار)
+                    ws_s.update_cell(2, 2, new_max_t)
+                    ws_s.update_cell(3, 2, new_max_q)
+                    
+                    # تحديث الذاكرة الحالية
+                    st.session_state.max_tasks = new_max_t
+                    st.session_state.max_quiz = new_max_q
+                    
+                    st.success("✅ تم حفظ التوزيع الجديد في قاعدة البيانات بنجاح!")
+                    st.cache_data.clear(); st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ فشل الحفظ الدائم: {e}")
     
         # --- 🔐 2. إدارة الحساب وكلمات المرور ---
         with st.expander("🔐 إدارة كلمات المرور وتأمين الحساب", expanded=False):
