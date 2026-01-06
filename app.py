@@ -330,7 +330,7 @@ if st.session_state.role == "teacher":
                         ])
                         st.success("✅ تم النشر بنجاح وفق خياراتك.")
                         st.cache_data.clear(); st.rerun()
-            except:
+                    except:
                             st.error("⚠️ حدث خطأ أثناء الاتصال بقاعدة البيانات.")
                     else:
                         st.warning("⚠️ يرجى كتابة عنوان للتنبيه أولاً.")
