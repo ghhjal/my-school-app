@@ -170,107 +170,107 @@ if st.session_state.role == "teacher":
             if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
     #
-# ==========================================
+    # ==========================================
 # 📊 تبويب: التقييم والمتابعة (الإصدار الذكي 2.0)
 # ==========================================
-with menu[1]:
-    st.subheader("📈 التقييم والمتابعة الشاملة")
-    
-    df_st = fetch_safe("students")
-    
-    if not df_st.empty:
-        # 1. اختيار الطالب
-        st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
-        selected_label = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_list.keys()))
+    with menu[1]:
+        st.subheader("📈 التقييم والمتابعة الشاملة")
         
-        if selected_label:
-            sid = st_list[selected_label]
-            student_info = df_st[df_st.iloc[:, 0] == sid].iloc[0]
-            s_name = student_info['name'] if 'name' in student_info else student_info.iloc[1]
-            s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
-            s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
-
-            # --- 📝 القسم الأول: الرصد الأكاديمي (المعادلة الحسابية) ---
-            st.markdown("#### 📝 الرصد الأكاديمي")
-            with st.form("grade_calc_form"):
-                col1, col2, col3 = st.columns(3)
-                # الحقول الجديدة المطلوبة
-                v_tasks = col1.number_input("المشاركة والمهام", 0, 60, help="من 60 درجة")
-                v_quiz = col2.number_input("اختبار قصير", 0, 40, help="من 40 درجة")
-                
-                # العملية الحسابية التلقائية
-                total_sum = v_tasks + v_quiz
-                col3.metric("المجموع الكلي", f"{total_sum} / 100")
-                
-                if st.form_submit_button("💾 حفظ الدرجات النهائية"):
-                    ws_g = sh.worksheet("grades")
-                    df_g = fetch_safe("grades")
-                    if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
-                        idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
-                        ws_g.update_cell(idx, 2, v_tasks) # عمود المشاركة والمهام
-                        ws_g.update_cell(idx, 3, v_quiz)  # عمود الاختبار القصير
-                        ws_g.update_cell(idx, 4, total_sum) # عمود المجموع
-                    else:
-                        ws_g.append_row([sid, v_tasks, v_quiz, total_sum, str(datetime.date.today()), ""])
-                    st.success(f"✅ تم رصد الدرجة الكلية ({total_sum}) للطالب {s_name}")
-                    st.cache_data.clear()
-
-            st.divider()
-
-            # --- 🎭 القسم الثاني: السلوك والتواصل ---
-            st.markdown("#### 🎭 سجل السلوك والتواصل الفوري")
+        df_st = fetch_safe("students")
+        
+        if not df_st.empty:
+            # 1. اختيار الطالب
+            st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
+            selected_label = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_list.keys()))
             
-            # أ. نموذج رصد سلوك جديد
-            with st.expander("🆕 رصد ملاحظة سلوكية جديدة", expanded=True):
-                with st.form("behavior_comm_form", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    b_date = c1.date_input("تاريخ تسجيل الملاحظة", datetime.date.today())
-                    b_type = c2.selectbox("نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)"])
-                    b_desc = st.text_area("تفاصيل الملاحظة")
+            if selected_label:
+                sid = st_list[selected_label]
+                student_info = df_st[df_st.iloc[:, 0] == sid].iloc[0]
+                s_name = student_info['name'] if 'name' in student_info else student_info.iloc[1]
+                s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
+                s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
+    
+                # --- 📝 القسم الأول: الرصد الأكاديمي (المعادلة الحسابية) ---
+                st.markdown("#### 📝 الرصد الأكاديمي")
+                with st.form("grade_calc_form"):
+                    col1, col2, col3 = st.columns(3)
+                    # الحقول الجديدة المطلوبة
+                    v_tasks = col1.number_input("المشاركة والمهام", 0, 60, help="من 60 درجة")
+                    v_quiz = col2.number_input("اختبار قصير", 0, 40, help="من 40 درجة")
                     
-                    if st.form_submit_button("💾 حفظ وإرسال الملاحظة"):
-                        # حفظ في الشيت
-                        sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
-                        
-                        # تحديث النقاط في جدول الطلاب
-                        p_idx = get_col_idx(df_st, "النقاط")
-                        row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
-                        points = 10 if "متميز" in b_type else (5 if "إيجابي" in b_type else -5 if "سلبي" in b_type else 0)
-                        old_p = int(student_info["النقاط"] or 0)
-                        sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + points))
-                        
-                        st.success("✅ تم حفظ الملاحظة وتحديث النقاط")
+                    # العملية الحسابية التلقائية
+                    total_sum = v_tasks + v_quiz
+                    col3.metric("المجموع الكلي", f"{total_sum} / 100")
+                    
+                    if st.form_submit_button("💾 حفظ الدرجات النهائية"):
+                        ws_g = sh.worksheet("grades")
+                        df_g = fetch_safe("grades")
+                        if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
+                            idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
+                            ws_g.update_cell(idx, 2, v_tasks) # عمود المشاركة والمهام
+                            ws_g.update_cell(idx, 3, v_quiz)  # عمود الاختبار القصير
+                            ws_g.update_cell(idx, 4, total_sum) # عمود المجموع
+                        else:
+                            ws_g.append_row([sid, v_tasks, v_quiz, total_sum, str(datetime.date.today()), ""])
+                        st.success(f"✅ تم رصد الدرجة الكلية ({total_sum}) للطالب {s_name}")
                         st.cache_data.clear()
-
-            # ب. سجل الملاحظات السابقة مع أزرار الإرسال (واتساب + إيميل)
-            st.markdown("##### 📜 سجل الملاحظات السابقة وإعادة الإرسال")
-            df_beh = fetch_safe("behavior")
-            my_beh = df_beh[df_beh.iloc[:, 0] == sid]
-            
-            if not my_beh.empty:
-                for _, row in my_beh.iloc[::-1].iterrows():
-                    with st.container(border=True):
-                        st.write(f"📅 **التاريخ:** {row[1]} | **النوع:** {row[2]}")
-                        st.write(f"📝 **الملاحظة:** {row[3]}")
-                        
-                        # تجهيز نص الرسالة
-                        msg = f"تحية طيبة، نود إبلاغكم بملاحظة سلوكية للطالب/ة ({s_name}) بتاريخ {row[1]}: \nنوع السلوك: {row[2]} \nالملاحظة: {row[3]}"
-                        encoded_msg = urllib.parse.quote(msg)
-                        
+    
+                st.divider()
+    
+                # --- 🎭 القسم الثاني: السلوك والتواصل ---
+                st.markdown("#### 🎭 سجل السلوك والتواصل الفوري")
+                
+                # أ. نموذج رصد سلوك جديد
+                with st.expander("🆕 رصد ملاحظة سلوكية جديدة", expanded=True):
+                    with st.form("behavior_comm_form", clear_on_submit=True):
                         c1, c2 = st.columns(2)
-                        # زر واتساب
-                        wa_url = f"https://wa.me/{s_phone}?text={encoded_msg}"
-                        c1.link_button("📲 إرسال عبر واتساب", wa_url, use_container_width=True)
+                        b_date = c1.date_input("تاريخ تسجيل الملاحظة", datetime.date.today())
+                        b_type = c2.selectbox("نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)"])
+                        b_desc = st.text_area("تفاصيل الملاحظة")
                         
-                        # زر إيميل
-                        subject = urllib.parse.quote(f"تحديث سلوكي: {s_name}")
-                        mail_url = f"mailto:{s_email}?subject={subject}&body={encoded_msg}"
-                        c2.link_button("📧 إرسال عبر الإيميل", mail_url, use_container_width=True)
-            else:
-                st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
-
-    else:
-        st.warning("⚠️ لا يوجد طلاب مسجلون حالياً.")
+                        if st.form_submit_button("💾 حفظ وإرسال الملاحظة"):
+                            # حفظ في الشيت
+                            sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
+                            
+                            # تحديث النقاط في جدول الطلاب
+                            p_idx = get_col_idx(df_st, "النقاط")
+                            row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
+                            points = 10 if "متميز" in b_type else (5 if "إيجابي" in b_type else -5 if "سلبي" in b_type else 0)
+                            old_p = int(student_info["النقاط"] or 0)
+                            sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + points))
+                            
+                            st.success("✅ تم حفظ الملاحظة وتحديث النقاط")
+                            st.cache_data.clear()
+    
+                # ب. سجل الملاحظات السابقة مع أزرار الإرسال (واتساب + إيميل)
+                st.markdown("##### 📜 سجل الملاحظات السابقة وإعادة الإرسال")
+                df_beh = fetch_safe("behavior")
+                my_beh = df_beh[df_beh.iloc[:, 0] == sid]
+                
+                if not my_beh.empty:
+                    for _, row in my_beh.iloc[::-1].iterrows():
+                        with st.container(border=True):
+                            st.write(f"📅 **التاريخ:** {row[1]} | **النوع:** {row[2]}")
+                            st.write(f"📝 **الملاحظة:** {row[3]}")
+                            
+                            # تجهيز نص الرسالة
+                            msg = f"تحية طيبة، نود إبلاغكم بملاحظة سلوكية للطالب/ة ({s_name}) بتاريخ {row[1]}: \nنوع السلوك: {row[2]} \nالملاحظة: {row[3]}"
+                            encoded_msg = urllib.parse.quote(msg)
+                            
+                            c1, c2 = st.columns(2)
+                            # زر واتساب
+                            wa_url = f"https://wa.me/{s_phone}?text={encoded_msg}"
+                            c1.link_button("📲 إرسال عبر واتساب", wa_url, use_container_width=True)
+                            
+                            # زر إيميل
+                            subject = urllib.parse.quote(f"تحديث سلوكي: {s_name}")
+                            mail_url = f"mailto:{s_email}?subject={subject}&body={encoded_msg}"
+                            c2.link_button("📧 إرسال عبر الإيميل", mail_url, use_container_width=True)
+                else:
+                    st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
+    
+        else:
+            st.warning("⚠️ لا يوجد طلاب مسجلون حالياً.")
     
     
     with menu[2]: # التواصل والتنبيهات
