@@ -143,52 +143,52 @@ if st.session_state.role == "teacher":
     # --- تبويب الطلاب (0) ---
     with menu[0]:
         st.subheader("👥 إدارة الطلاب")
-            with st.expander("➕ إضافة طالب جديد (الحقول السبعة)", expanded=False):
-                with st.form("add_st_full", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    f_id = c1.text_input("🔢 الرقم الأكاديمي (نص)")
-                    f_name = c2.text_input("👤 الاسم الثلاثي")
-                    c3, c4, c5 = st.columns(3)
-                    f_stage = c3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                    f_year = c4.text_input("🗓️ العام", "1447هـ")
-                    f_class = c5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                    f_mail = st.text_input("📧 البريد الإلكتروني")
-                    f_phone = st.text_input("📱 الجوال (بدون 0)")
-                    if st.form_submit_button("✅ اعتماد وحفظ"):
-                        df_cur = fetch_safe("students")
-                        if f_id.strip() in df_cur.iloc[:, 0].values:
-                            st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً")
-                        elif f_id and f_name:
-                            # تنسيق الجوال تلقائياً
-                            phone = f_phone.strip()
-                            if phone.startswith("0"): phone = phone[1:]
-                            if not phone.startswith("966"): phone = "966" + phone
-                            if dynamic_append_student(f_id.strip(), f_name, f_stage, f_year, f_class, f_mail, phone):
-                                st.success(f"تمت إضافة {f_name} بنجاح"); st.cache_data.clear(); st.rerun()
-    
-            st.divider()
-            df_st = fetch_safe("students")
-            if not df_st.empty:
-                c_s, c_d = st.columns([2, 1])
-                with c_s: q = st.text_input("🔍 ابحث (اسم/رقم):")
-                with c_d:
-                    st.markdown("##### 🗑️ الحذف الآمن")
-                    t_del = st.selectbox("اختر الرقم للحذف:", [""] + df_st.iloc[:, 0].tolist())
-                    if t_del:
-                        st.warning(f"⚠️ هل أنت متأكد من حذف {t_del}؟")
-                        if st.button("🚨 نعم، حذف نهائي من كافة الجداول"):
-                            for s in ["students", "grades", "behavior"]:
-                                ws = sh.worksheet(s); df_t = fetch_safe(s)
-                                if not df_t.empty and str(t_del) in df_t.iloc[:, 0].values:
-                                    idx = df_t[df_t.iloc[:, 0] == str(t_del)].index[0]
-                                    ws.delete_rows(int(idx) + 2)
-                            st.success("تم الحذف بنجاح"); st.cache_data.clear(); st.rerun()
-                
-                # عرض الجدول مع إخفاء المادة كما طلبت
-                cols_hide = ["لغة إنجليزية", "المادة", "sem"]
-                df_disp = df_st.drop(columns=[c for c in cols_hide if c in df_st.columns], errors='ignore')
-                if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
-                st.dataframe(df_disp, use_container_width=True, hide_index=True)    
+        with st.expander("➕ إضافة طالب جديد (الحقول السبعة)", expanded=False):
+            with st.form("add_st_full", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                f_id = c1.text_input("🔢 الرقم الأكاديمي (نص)")
+                f_name = c2.text_input("👤 الاسم الثلاثي")
+                c3, c4, c5 = st.columns(3)
+                f_stage = c3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                f_year = c4.text_input("🗓️ العام", "1447هـ")
+                f_class = c5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                f_mail = st.text_input("📧 البريد الإلكتروني")
+                f_phone = st.text_input("📱 الجوال (بدون 0)")
+                if st.form_submit_button("✅ اعتماد وحفظ"):
+                    df_cur = fetch_safe("students")
+                    if f_id.strip() in df_cur.iloc[:, 0].values:
+                        st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً")
+                    elif f_id and f_name:
+                        # تنسيق الجوال تلقائياً
+                        phone = f_phone.strip()
+                        if phone.startswith("0"): phone = phone[1:]
+                        if not phone.startswith("966"): phone = "966" + phone
+                        if dynamic_append_student(f_id.strip(), f_name, f_stage, f_year, f_class, f_mail, phone):
+                            st.success(f"تمت إضافة {f_name} بنجاح"); st.cache_data.clear(); st.rerun()
+
+        st.divider()
+        df_st = fetch_safe("students")
+        if not df_st.empty:
+            c_s, c_d = st.columns([2, 1])
+            with c_s: q = st.text_input("🔍 ابحث (اسم/رقم):")
+            with c_d:
+                st.markdown("##### 🗑️ الحذف الآمن")
+                t_del = st.selectbox("اختر الرقم للحذف:", [""] + df_st.iloc[:, 0].tolist())
+                if t_del:
+                    st.warning(f"⚠️ هل أنت متأكد من حذف {t_del}؟")
+                    if st.button("🚨 نعم، حذف نهائي من كافة الجداول"):
+                        for s in ["students", "grades", "behavior"]:
+                            ws = sh.worksheet(s); df_t = fetch_safe(s)
+                            if not df_t.empty and str(t_del) in df_t.iloc[:, 0].values:
+                                idx = df_t[df_t.iloc[:, 0] == str(t_del)].index[0]
+                                ws.delete_rows(int(idx) + 2)
+                        st.success("تم الحذف بنجاح"); st.cache_data.clear(); st.rerun()
+            
+            # عرض الجدول مع إخفاء المادة كما طلبت
+            cols_hide = ["لغة إنجليزية", "المادة", "sem"]
+            df_disp = df_st.drop(columns=[c for c in cols_hide if c in df_st.columns], errors='ignore')
+            if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
+            st.dataframe(df_disp, use_container_width=True, hide_index=True)    
 
     # --- تبويب التقييم والمتابعة (1) ---
     with menu[1]:
