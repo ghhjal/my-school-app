@@ -6,46 +6,44 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 import urllib.parse
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
-# --- 1. إعدادات الصفحة الأساسية ---
+# --- 1. إعدادات الصفحة الاحترافية ---
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 @st.cache_resource
 def get_client():
+    """الاتصال الآمن بجوجل شيت"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
-    except:
+    except Exception as e:
+        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
         return None
 
 sh = get_client()
 
-# --- 2. دوال التعامل مع البيانات الاحترافية ---
+# --- 2. دوال التعامل مع البيانات (الاستقرار) ---
 def fetch_safe(worksheet_name):
-    """جلب البيانات وتحويلها لـ DataFrame مع الحفاظ على أسماء الأعمدة"""
+    """جلب البيانات كقاموس (Dictionary) لضمان الربط بأسماء الأعمدة"""
     try:
         ws = sh.worksheet(worksheet_name)
-        data = ws.get_all_records() # تجلب البيانات كقاموس مرتب بأسماء الأعمدة
+        data = ws.get_all_records() # تجلب البيانات مرتبطة بأسماء الأعمدة تلقائياً
         return pd.DataFrame(data)
     except:
         return pd.DataFrame()
 
 def get_col_index(ws, col_name):
-    """دالة عبقرية تجد رقم العمود بناءً على اسمه لمنع الانهيار"""
+    """دالة ذكية تجد رقم العمود بناءً على اسمه لمنع انهيار البرنامج عند تغيير الجدول"""
     try:
         headers = ws.row_values(1)
         return headers.index(col_name) + 1
     except:
         return None
 
-# --- 3. التصميم (CSS) ---
-# (احتفظت بتصميمك مع تحسين خفيف لضمان عدم تداخل العناصر)
+# --- 3. التصميم المطور (CSS) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
@@ -53,72 +51,86 @@ st.markdown("""
         font-family: 'Cairo', sans-serif;
         direction: RTL; text-align: right;
     }
-    /* تحسينات لبطاقات الطلاب */
-    .st-expander { border-radius: 15px !important; border: 1px solid #e2e8f0 !important; }
+    .stButton>button { border-radius: 12px; font-weight: bold; transition: 0.3s; }
+    /* منع ظهور الشاشة البيضاء بسبب أخطاء التنسيق */
+    div[data-testid="stForm"] { border-radius: 20px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. منطق تسجيل الدخول ---
+# --- 4. إدارة الجلسة ---
 if "role" not in st.session_state:
     st.session_state.role = None
 
-# (جزء تسجيل الدخول يظل كما هو مع استبدال iloc بأسماء الأعمدة)
-# ... [كود الدخول الأصلي] ...
+# --- [واجهة تسجيل الدخول - تظل كما هي مع تحسين جلب البيانات] ---
+# ... (يمكنك الاحتفاظ بكود الدخول الخاص بك هنا) ...
 
-# --- 5. واجهة المعلم (التعديلات الاحترافية) ---
+# --- 5. واجهة المعلم الاحترافية ---
 if st.session_state.role == "teacher":
     st.markdown("### 👨‍🏫 لوحة تحكم المعلم")
-    tabs = st.tabs(["👥 إدارة الطلاب", "📈 الدرجات", "🥇 السلوك", "🚗 خروج"])
+    
+    tabs = st.tabs(["👥 إدارة الطلاب", "📈 رصد الدرجات", "🥇 السلوك", "⚙️ الإعدادات", "🚗 خروج"])
 
-    with tabs[0]: # إدارة الطلاب
+    # --- تبويب إدارة الطلاب (الحذف الآمن) ---
+    with tabs[0]:
+        st.markdown("#### 🗑️ حذف طالب (بناءً على الرقم الأكاديمي)")
         df_st = fetch_safe("students")
         if not df_st.empty:
-            # الحذف الاحترافي: نبحث بالرقم الأكاديمي لأنه "فريد" (ID)
-            st.markdown("#### 🗑️ حذف طالب")
-            del_id = st.selectbox("اختر الرقم الأكاديمي للحذف:", [""] + df_st['الرقم الأكاديمي'].astype(str).tolist())
-            if st.button("🚨 حذف نهائي"):
-                ws = sh.worksheet("students")
-                # البحث عن الصف باستخدام الرقم الأكاديمي في العمود الأول
-                cell = ws.find(del_id)
-                if cell:
-                    ws.delete_rows(cell.row)
-                    st.success("تم الحذف بنجاح")
-                    st.rerun()
-
-    with tabs[1]: # الدرجات
-        st.markdown("### 📝 رصد الدرجات")
-        df_st = fetch_safe("students")
-        if not df_st.empty:
-            with st.form("grade_form"):
-                student_name = st.selectbox("الطالب:", df_st['الاسم الثلاثي'].tolist())
-                p1 = st.number_input("المشاركة التفاعلية", 0, 20)
-                if st.form_submit_button("حفظ"):
-                    # جلب رقم الصف الصحيح للطالب
-                    ws_g = sh.worksheet("grades")
-                    # إضافة صف جديد مع ربطه بالرقم الأكاديمي (أكثر استقراراً)
-                    s_id = df_st[df_st['الاسم الثلاثي'] == student_name]['الرقم الأكاديمي'].values[0]
-                    ws_g.append_row([str(s_id), p1, datetime.date.today().isoformat()])
-                    st.success("تم الرصد")
-
-    with tabs[2]: # السلوك (تحديث النقاط ديناميكياً)
-        st.markdown("### 🥇 رصد السلوك")
-        if not df_st.empty:
-            target_student = st.selectbox("اختر الطالب للرصد السلوكي:", df_st['الاسم الثلاثي'].tolist())
-            b_type = st.radio("نوع السلوك:", ["🌟 متميز (+10)", "❌ مخالفة (-10)"])
+            # نستخدم الرقم الأكاديمي كمفتاح أساسي فريد للبحث والحذف
+            del_id = st.selectbox("اختر الرقم الأكاديمي للطالب:", [""] + df_st['الرقم الأكاديمي'].astype(str).tolist())
             
-            if st.button("تحديث النقاط"):
-                ws_st = sh.worksheet("students")
-                # إيجاد رقم عمود "النقاط" ديناميكياً
-                points_col = get_col_index(ws_st, "النقاط")
-                name_col = get_col_index(ws_st, "الاسم الثلاثي")
+            if st.button("🚨 تنفيذ الحذف النهائي", use_container_width=True):
+                if del_id:
+                    ws = sh.worksheet("students")
+                    cell = ws.find(del_id) # البحث عن السطر الذي يحتوي على هذا الرقم
+                    if cell:
+                        ws.delete_rows(cell.row)
+                        st.success(f"✅ تم حذف الطالب صاحب الرقم {del_id} بنجاح")
+                        time.sleep(1)
+                        st.rerun()
+
+    # --- تبويب رصد الدرجات (الاعتماد على الأسماء) ---
+    with tabs[1]:
+        st.markdown("#### 📝 إدخال درجات الطلاب")
+        if not df_st.empty:
+            with st.form("grades_pro_form"):
+                student_name = st.selectbox("اختر الطالب:", df_st['الاسم الثلاثي'].tolist())
+                col1, col2 = st.columns(2)
+                p1 = col1.number_input("المشاركة (p1)", 0.0, 20.0)
+                p2 = col2.number_input("الواجبات (p2)", 0.0, 20.0)
                 
-                # البحث عن الطالب
+                if st.form_submit_button("💾 حفظ الدرجات"):
+                    # جلب الرقم الأكاديمي للطالب المختار للربط الصحيح
+                    s_id = df_st[df_st['الاسم الثلاثي'] == student_name]['الرقم الأكاديمي'].values[0]
+                    ws_g = sh.worksheet("grades")
+                    ws_g.append_row([str(s_id), p1, p2, datetime.date.today().isoformat()])
+                    st.success("✅ تم حفظ الدرجات بنجاح")
+
+    # --- تبويب السلوك (تحديث النقاط الذكي) ---
+    with tabs[2]:
+        st.markdown("#### 🥇 تحديث نقاط السلوك ديناميكياً")
+        if not df_st.empty:
+            target_student = st.selectbox("اختر الطالب للرصد:", df_st['الاسم الثلاثي'].tolist(), key="beh_select")
+            b_type = st.radio("نوع الملاحظة:", ["🌟 متميز (+10)", "❌ مخالفة (-10)"])
+            
+            if st.button("🚀 تحديث الرصيد"):
+                ws_st = sh.worksheet("students")
+                # البحث عن رقم عمود "النقاط" بالاسم بدلاً من رقم (9)
+                points_col_idx = get_col_index(ws_st, "النقاط")
+                
                 cell = ws_st.find(target_student)
-                if cell and points_col:
-                    current_points = int(ws_st.cell(cell.row, points_col).value or 0)
-                    change = 10 if "+" in b_type else -10
-                    ws_st.update_cell(cell.row, points_col, current_points + change)
-                    st.success(f"تم تحديث نقاط {target_student}")
+                if cell and points_col_idx:
+                    # جلب النقاط الحالية بأمان
+                    current_val = ws_st.cell(cell.row, points_col_idx).value
+                    current_points = int(current_val) if current_val else 0
+                    
+                    points_change = 10 if "+" in b_type else -10
+                    ws_st.update_cell(cell.row, points_col_idx, current_points + points_change)
+                    st.success(f"✅ تم تحديث نقاط {target_student}")
+                    time.sleep(1)
                     st.rerun()
 
-# (واجهة الطالب تتبع نفس منطق أسماء الأعمدة لضمان عدم حدوث شاشة بيضاء)
+# --- خروج ---
+if st.session_state.role:
+    if st.sidebar.button("تسجيل الخروج"):
+        st.session_state.role = None
+        st.rerun()
