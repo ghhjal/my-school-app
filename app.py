@@ -310,114 +310,117 @@ if st.session_state.role == "teacher":
         if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (الملف الشخصي المتكامل)
+# 👨‍🎓 واجهة الطالب (مرآة المنصة والنتائج)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. جلب البيانات (محدثة بالـ ID النصي)
+    # 1. جلب البيانات بنظام التشفير الآمن والربط بالأسماء
     df_st = fetch_safe("students")
     df_grades = fetch_safe("grades") 
     df_beh = fetch_safe("behavior")
     df_ex = fetch_safe("exams")
 
-    # 2. تحديد بيانات الطالب الحالي (البحث بالـ ID)
-    s_id = str(st.session_state.sid)
+    s_id = str(st.session_state.sid) # المعرف كنص لضمان الاستقرار
+
     try:
-        # البحث عن سطر الطالب
-        s_data = df_st[df_st.iloc[:, 0].astype(str) == s_id].iloc[0]
+        # البحث عن الطالب بالـ ID
+        s_row = df_st[df_st.iloc[:, 0].astype(str) == s_id].iloc[0]
         
-        # 💡 تقنية الربط بالأسماء (لتفادي مشكلة الإزاحة التي ظهرت في صورك)
-        # الكود يبحث عن اسم العمود ويأخذ ما تحته مباشرة
-        s_name = s_data['class'] if 'class' in s_data else s_data.iloc[1]
-        s_class = s_data['year'] if 'year' in s_data else s_data.iloc[2]
-        s_phone = s_data['الجوال'] if 'الجوال' in s_data else "غير مسجل"
+        # الربط الذكي بأسماء الأعمدة (حل مشكلة الإزاحة نهائياً)
+        s_name = s_row['name'] if 'name' in s_row else s_row.iloc[1]
+        s_class = s_row['class'] if 'class' in s_row else s_row.iloc[4]
         
-        # جلب النقاط من عمود "النقاط" حصراً (لضمان عدم ظهور الجوال مكانه)
+        # جلب النقاط من عمود "النقاط" حصراً
         p_col = "النقاط"
-        raw_p = str(s_data[p_col]).strip() if p_col in s_data else "0"
+        raw_p = str(s_row[p_col]).strip() if p_col in s_row else "0"
         s_points = int(float(raw_p)) if raw_p.replace('.','',1).isdigit() else 0
         
     except Exception as e:
-        st.error(f"⚠️ خطأ في تحميل ملفك الشخصي: {e}")
+        st.error(f"⚠️ خطأ في مطابقة البيانات: يرجى التحقق من أسماء الأعمدة في ملف الإكسل.")
         st.stop()
 
-    # --- 📢 هيدر الطالب الجمالي ---
+    # --- 📢 هيدر الطالب المطور ---
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 30px; border-radius: 25px; color: white; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-            <h2 style="color: white; margin: 0; font-size: 1.8rem;">🎯 أهلاً بك يا بطل: <span style="color: #ffd700;">{s_name}</span></h2>
+            <h2 style="color: white; margin: 0; font-size: 1.8rem;">🎯 مرحباً بك يا بطل: <span style="color: #ffd700;">{s_name}</span></h2>
             <div style="margin-top: 10px; opacity: 0.9; font-weight: bold;">🏫 {s_class} | الرقم الأكاديمي: {s_id}</div>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 🏆 رصيد النقاط والأوسمة ---
+    # --- 🏆 لوحة النقاط والأوسمة الذكية ---
+    # حساب الوسام بناءً على النقاط
+    badge_icon, badge_name, color = "🥉", "البرونزي", "#cd7f32"
+    if s_points >= 50: badge_icon, badge_name, color = "🥈", "الفضي", "#7f8c8d"
+    if s_points >= 100: badge_icon, badge_name, color = "🥇", "الذهبي", "#d4af37"
+
     st.markdown(f"""
-        <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; text-align: center; margin-top: 20px;">
-            <div style="display: flex; justify-content: space-around; margin-bottom: 25px;">
-                <div style="opacity: {'1' if s_points >= 10 else '0.2'}">🥉<br><b>برونزي</b></div>
-                <div style="opacity: {'1' if s_points >= 50 else '0.2'}">🥈<br><b>فضي</b></div>
-                <div style="opacity: {'1' if s_points >= 100 else '0.2'}">🥇<br><b>ذهبي</b></div>
-            </div>
-            <div style="background: #f59e0b; color: white; padding: 20px; border-radius: 15px; font-size: 24px; font-weight: bold;">
-                رصيد النقاط السلوكية: {s_points}
+        <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; text-align: center; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">{badge_icon}</div>
+            <h4 style="color: {color}; margin-bottom: 15px;">وسام الطالب {badge_name}</h4>
+            <div style="background: #f59e0b; color: white; padding: 20px; border-radius: 15px;">
+                <b style="font-size: 1.2rem; display: block; margin-bottom: 5px;">رصيد النقاط السلوكية</b>
+                <b style="font-size: 3.5rem; line-height: 1;">{s_points}</b>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات الطلابية (كاملة المحتوى) ---
-    t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 تنبيهات", "📊 درجاتي", "🎭 سلوكي", "🏆 الأبطال", "⚙️ الإعدادات"])
+    # --- 📊 التبويبات المحدثة بالنتائج الجديدة ---
+    t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 تنبيهات", "📊 درجاتي", "🎭 سجل سلوكي", "🏆 الأبطال", "⚙️ الإعدادات"])
 
-    with t_ex: # 1. التنبيهات
-        st.markdown("##### 📢 آخر التعميمات والاختبارات")
+    with t_ex: # التنبيهات
         if not df_ex.empty:
             f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
             for _, r in f_ex.iloc[::-1].iterrows():
                 st.info(f"📍 {r[1]} | 📅 {r[2]}")
-        else: st.info("لا توجد تنبيهات جديدة.")
+        else: st.info("لا توجد تعميمات جديدة حالياً.")
 
-    with t_grade: # 2. الدرجات
-        st.markdown("##### 📊 مستواي الأكاديمي")
+    with t_grade: # 📊 درجاتي (المعادلة الحسابية المدمجة)
+        st.markdown("##### 📊 المجموع الكلي لدرجاتي")
         my_g = df_grades[df_grades.iloc[:, 0].astype(str) == s_id]
         if not my_g.empty:
             c1, c2, c3 = st.columns(3)
-            c1.metric("⭐ المشاركة", my_g.iloc[0, 1])
-            c2.metric("📚 الواجبات", my_g.iloc[0, 2])
-            c3.metric("📝 الاختبارات", my_g.iloc[0, 3])
-        else: st.info("لم يتم رصد درجات لك بعد.")
+            # عرض الدرجات بناءً على توزيعك الجديد (Tasks + Quiz = Total)
+            c1.metric("📚 المشاركة والمهام", f"{my_g.iloc[0, 1]} / 60")
+            c2.metric("📝 اختبار قصير", f"{my_g.iloc[0, 2]} / 40")
+            c3.metric("🏆 المجموع الكلي", f"{my_g.iloc[0, 3]} / 100")
+            
+            if len(my_g.columns) > 5 and my_g.iloc[0, 5]:
+                st.success(f"💬 ملاحظة المعلم: {my_g.iloc[0, 5]}")
+        else: st.info("بانتظار رصد درجاتك من قبل المعلم. واصل الاجتهاد! 🚀")
 
-    with t_beh: # 3. السلوك
-        st.markdown("##### 🎭 سجل الانضباط")
+    with t_beh: # 🎭 سجل سلوكي (التنسيق الموحد)
+        st.markdown("##### 📜 سجل الانضباط والملاحظات")
         my_b = df_beh[df_beh.iloc[:, 0].astype(str) == s_id]
         if not my_b.empty:
             for _, r in my_b.iloc[::-1].iterrows():
-                st.warning(f"🏷️ {r[2]} | {r[3]} (📅 {r[1]})")
-        else: st.success("سجلك نظيف ومتميز! واصل العمل الرائع. ✨")
-
-    with t_lead: # 4. الأبطال
-        st.markdown("##### 🏆 لوحة المتصدرين (أعلى 10)")
-        if p_col in df_st.columns:
-            df_st[p_col] = pd.to_numeric(df_st[p_col], errors='coerce').fillna(0)
-            top_10 = df_st.sort_values(by=p_col, ascending=False).head(10)
-            for i, row in top_10.iterrows():
-                is_me = str(row.iloc[0]) == s_id
-                d_name = row['class'] if 'class' in row else row.iloc[1]
+                is_positive = "+" in str(r[2])
                 st.markdown(f"""
-                    <div style="padding:10px; border:{"2px solid #1e3a8a" if is_me else "1px solid #ddd"}; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;">
-                        <span>{'⭐' if is_me else '👤'} {d_name}</span>
-                        <b style="color: #1e3a8a;">{int(row[p_col])} نقطة</b>
+                    <div style="background: {'#f0fdf4' if is_positive else '#fef2f2'}; padding: 15px; border-radius: 12px; border-right: 5px solid {'#16a34a' if is_positive else '#dc2626'}; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <b style="color: {'#16a34a' if is_positive else '#dc2626'};">{r[2]}</b>
+                            <small>📅 {r[1]}</small>
+                        </div>
+                        <div style="margin-top: 5px; color: #4b5563;">📝 {r[3] if r[3] else 'لا توجد ملاحظات إضافية'}</div>
                     </div>
                 """, unsafe_allow_html=True)
+        else: st.success("سجلك نظيف ومتميز! أنت قدوة لزملائك. ✨")
 
-    with t_set: # 5. الإعدادات
-        st.markdown("##### ⚙️ تحديث بيانات التواصل")
-        with st.form("st_update_form"):
-            new_mail = st.text_input("📧 البريد الإلكتروني")
-            new_phone = st.text_input("📱 جوال ولي الأمر", value=str(s_phone))
-            if st.form_submit_button("✅ حفظ التعديلات"):
-                ws = sh.worksheet("students")
-                row_idx = df_st[df_st.iloc[:, 0].astype(str) == s_id].index[0] + 2
-                col_phone_idx = get_col_idx(df_st, "الجوال")
-                if col_phone_idx:
-                    ws.update_cell(row_idx, col_phone_idx, new_phone)
-                    st.success("✅ تم تحديث الجوال بنجاح!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+    with t_lead: # 🏆 الأبطال
+        st.markdown("##### 🏆 لوحة المتصدرين (أعلى 10)")
+        df_st[p_col] = pd.to_numeric(df_st[p_col], errors='coerce').fillna(0)
+        top_10 = df_st.sort_values(by=p_col, ascending=False).head(10)
+        for i, row in top_10.iterrows():
+            is_me = str(row.iloc[0]) == s_id
+            d_name = row['name'] if 'name' in row else row.iloc[1]
+            st.markdown(f"""
+                <div style="padding:12px; border:{"2px solid #1e3a8a" if is_me else "1px solid #e2e8f0"}; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; background: {"#eff6ff" if is_me else "white"};">
+                    <span>{'🥇' if i==top_10.index[0] else '👤'} {d_name} {'(أنت)' if is_me else ''}</span>
+                    <b style="color: #1e3a8a;">{int(row[p_col])} نقطة</b>
+                </div>
+            """, unsafe_allow_html=True)
+
+    with t_set: # ⚙️ الإعدادات
+        if st.button("🚪 تسجيل الخروج من المنصة", use_container_width=True):
+            st.session_state.role = None; st.rerun()
 
     if st.button("🚪 تسجيل الخروج", use_container_width=True):
         st.session_state.role = None; st.rerun()
