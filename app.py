@@ -75,7 +75,7 @@ if st.session_state.role == "admin":
             
             target_cols = ['الرقم', 'الاسم', 'الصف', 'النقاط', 'الوسام']
             existing_cols = [c for c in target_cols if c in df_st.columns]
-            st.dataframe(df_st[existing_cols], use_container_width=True)
+            #st.dataframe(df_st[existing_cols], use_container_width=True)
 
     with tabs[2]: # الدرجات (حل مشكلة الصورة 1 والزر المفقود)
         st.subheader("📈 رصد الدرجات")
@@ -133,7 +133,7 @@ elif st.session_state.role == "student":
                 <h1 style="color: #1e40af;">{points} نقطة</h1>
                 <h3 style="color: #d97706;">{get_badge(points)}</h3>
             </div>
-        """, unsafe_allow_html=False)
+        """, unsafe_allow_html=True)
 
 # نظام الدخول يبقى كما هو مع توفير شاشة الدخول أولاً
 else:
