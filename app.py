@@ -171,7 +171,7 @@ if st.session_state.role == "teacher":
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
     #
     # ==========================================
-    # 📊 تبويب: التقييم والمتابعة (الإصدار الذكي الموحد)
+    # 📊 تبويب: التقييم والمتابعة (الإصدار الاحترافي الصامد)
     # ==========================================
     with menu[1]:
         st.subheader("📈 التقييم والمتابعة الشاملة")
@@ -179,7 +179,7 @@ if st.session_state.role == "teacher":
         df_st = fetch_safe("students")
         
         if not df_st.empty:
-            # 1. اختيار الطالب (حل مشكلة الإزاحة بالاعتماد على أسماء الأعمدة)
+            # 1. اختيار الطالب (تجنب الإزاحة عبر الربط بالأسماء)
             st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
             selected_label = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_list.keys()))
             
@@ -190,10 +190,10 @@ if st.session_state.role == "teacher":
                 s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
                 s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
     
-                # --- 💡 دالة التنسيق الموحد للرسائل (حل مشكلة علامات الاستفهام) ---
-                def get_formatted_msg(name, b_type, b_desc, b_date):
-                    # نستخدم رموزاً قياسية لضمان التوافق مع كافة المتصفحات
-                    msg = (
+                # --- 💡 دالة التنسيق الموحد مع الترميز الآمن ---
+                def get_safe_whatsapp_link(phone, name, b_type, b_desc, b_date):
+                    # نص الرسالة الاحترافي (تنسيق موحد)
+                    message = (
                         f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
                         f"---------------------------------------\n"
                         f"📍 نوع السلوك: {b_type}\n"
@@ -202,16 +202,18 @@ if st.session_state.role == "teacher":
                         f"---------------------------------------\n"
                         f"🏛️ منصة الأستاذ زياد الذكية"
                     )
-                    return msg
+                    # استخدام quote_plus لضمان تشفير الرموز التعبيرية والمسافات بشكل صحيح
+                    encoded_msg = urllib.parse.quote(message)
+                    return f"https://wa.me/{phone}?text={encoded_msg}", message
     
                 # --- 📝 القسم الأول: الرصد الأكاديمي (الآلة الحاسبة) ---
                 st.markdown("#### 📝 الرصد الأكاديمي")
-                with st.form("grade_calculator"):
+                with st.form("grade_calc_v2"):
                     c1, c2, c3 = st.columns(3)
-                    v_tasks = c1.number_input("المشاركة والمهام (من 60)", 0, 60)
-                    v_quiz = c2.number_input("اختبار قصير (من 40)", 0, 40)
+                    v_tasks = c1.number_input("المشاركة والمهام (60)", 0, 60)
+                    v_quiz = c2.number_input("اختبار قصير (40)", 0, 40)
                     
-                    # الحساب التلقائي للمجموع الكلي
+                    # الحساب التلقائي للمجموع
                     total_sum = v_tasks + v_quiz
                     c3.metric("المجموع الكلي", f"{total_sum} / 100")
                     
@@ -225,45 +227,38 @@ if st.session_state.role == "teacher":
                             ws_g.update_cell(idx, 4, total_sum)
                         else:
                             ws_g.append_row([sid, v_tasks, v_quiz, total_sum, str(datetime.date.today()), ""])
-                        st.success(f"✅ تم حفظ الدرجة ({total_sum}) للطالب {s_name}")
+                        st.success(f"✅ تم حفظ الدرجة ({total_sum})")
                         st.cache_data.clear()
     
                 st.divider()
     
-                # --- 🎭 القسم الثاني: السلوك والتواصل الموحد ---
-                st.markdown("#### 🎭 سجل السلوك والتواصل الاحترافي")
-                
+                # --- 🎭 القسم الثاني: السلوك والتواصل ---
+                st.markdown("#### 🎭 سجل السلوك والتواصل الفوري")
                 with st.expander("🆕 رصد ملاحظة جديدة", expanded=True):
-                    with st.form("behavior_form", clear_on_submit=True):
+                    with st.form("behavior_v2", clear_on_submit=True):
                         c1, c2 = st.columns(2)
-                        b_date = c1.date_input("تاريخ الملاحظة", datetime.date.today())
-                        # 🌟 إضافة الخيارات الجاهزة كما طلبت
+                        b_date = c1.date_input("التاريخ", datetime.date.today())
                         b_type = c2.selectbox("نوع السلوك", [
-                            "🌟 متميز (+10)", 
-                            "✅ مشاركة إيجابية (+5)", 
-                            "📚 لم يحضر الكتاب (-5)", 
-                            "✍️ لم يحل الواجب (-5)", 
-                            "🖊️ لم يحضر القلم (-5)", 
-                            "⚠️ تنبيه شفوي (0)"
+                            "🌟 متميز (+10)", "✅ مشاركة إيجابية (+5)", 
+                            "📚 لم يحضر الكتاب (-5)", "✍️ لم يحل الواجب (-5)", 
+                            "🖊️ لم يحضر القلم (-5)", "⚠️ تنبيه شفوي (0)"
                         ])
                         b_desc = st.text_input("ملاحظات إضافية")
                         
-                        if st.form_submit_button("💾 حفظ الملاحظة"):
+                        if st.form_submit_button("💾 حفظ السلوك"):
                             sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
-                            
-                            # تحديث النقاط الذكي
+                            # تحديث النقاط (تجنب الإزاحة)
                             p_idx = get_col_idx(df_st, "النقاط")
                             row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
                             p_map = {"متميز": 10, "إيجابية": 5, "الكتاب": -5, "الواجب": -5, "القلم": -5}
                             change = next((v for k, v in p_map.items() if k in b_type), 0)
-                            
                             old_p = int(student_info["النقاط"] or 0)
                             sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + change))
                             st.success("✅ تم الحفظ وتحديث النقاط")
                             st.cache_data.clear()
     
-                # 🌟 عرض سجل الملاحظات السابقة مع أزرار الإرسال الموحدة
-                st.markdown("##### 📜 سجل الملاحظات وإعادة الإرسال")
+                # 📜 سجل الملاحظات السابقة مع أزرار الإرسال الموحدة
+                st.markdown("##### 📜 سجل الملاحظات وإرسال التقارير")
                 df_beh = fetch_safe("behavior")
                 my_beh = df_beh[df_beh.iloc[:, 0] == sid]
                 
@@ -272,23 +267,20 @@ if st.session_state.role == "teacher":
                         with st.container(border=True):
                             st.write(f"📅 **التاريخ:** {row[1]} | **النوع:** {row[2]}")
                             
-                            # توليد الرسالة الموحدة
-                            full_msg = get_formatted_msg(s_name, row[2], row[3], row[1])
-                            # الترميز الصحيح لمنع علامات الاستفهام
-                            encoded_msg = urllib.parse.quote(full_msg)
+                            # توليد الرابط والرسالة بشكل آمن
+                            wa_url, clean_msg = get_safe_whatsapp_link(s_phone, s_name, row[2], row[3], row[1])
                             
                             col_wa, col_mail = st.columns(2)
-                            # رابط الواتساب الموحد
-                            wa_url = f"https://wa.me/{s_phone}?text={encoded_msg}"
                             col_wa.link_button("📲 إرسال عبر واتساب", wa_url, use_container_width=True)
                             
-                            # رابط الإيميل الموحد
-                            mail_url = f"mailto:{s_email}?subject=تقرير سلوكي: {s_name}&body={encoded_msg}"
+                            # ترميز الإيميل بشكل منفصل لضمان التوافق
+                            mail_body = urllib.parse.quote(clean_msg)
+                            mail_url = f"mailto:{s_email}?subject=تقرير سلوكي: {s_name}&body={mail_body}"
                             col_mail.link_button("📧 إرسال عبر الإيميل", mail_url, use_container_width=True)
                 else:
-                    st.info("لا توجد ملاحظات سابقة.")
+                    st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
         else:
-            st.warning("⚠️ لا يوجد طلاب مسجلون حالياً.")
+            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
     
     
     with menu[2]: # التواصل والتنبيهات
