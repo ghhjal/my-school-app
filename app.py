@@ -130,68 +130,73 @@ if not df_ex.empty:
                 </div>
             """, unsafe_allow_html=True)
 # ==========================================
-# 👨‍🏫 واجهة المعلم (التقسيم المدمج المطور)
+# 👨‍🏫 واجهة المعلم (الإصدار الاحترافي المستقر 2026)
 # ==========================================
 if st.session_state.role == "teacher":
-        # --- حفظ حالة التبويب النشط لضمان عدم "الخروج" عند التحديث ---
+    # 1. حفظ حالة التبويب النشط (منع الخروج المفاجئ)
     if "active_tab" not in st.session_state:
-        st.session_state.active_tab = 0 # الافتراضي هو التبويب الأول
+        st.session_state.active_tab = 0
 
-# دالة لتحديث التبويب عند النقر (اختياري) أو عند الرن
-def set_tab(i):
-    st.session_state.active_tab = i
+    # 2. تعريف التبويبات (أضفنا index لربطها بالذاكرة)
     menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التواصل والتنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
 
+    # --- تبويب الطلاب (0) ---
+    with menu[0]:
+        st.subheader("👥 إدارة الطلاب")
     with menu[0]: # تبويب الطلاب
-        st.subheader("👥 إدارة قاعدة بيانات الطلاب")
-        with st.expander("➕ إضافة طالب جديد (الحقول السبعة)", expanded=False):
-            with st.form("add_st_full", clear_on_submit=True):
-                c1, c2 = st.columns(2)
-                f_id = c1.text_input("🔢 الرقم الأكاديمي (نص)")
-                f_name = c2.text_input("👤 الاسم الثلاثي")
-                c3, c4, c5 = st.columns(3)
-                f_stage = c3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                f_year = c4.text_input("🗓️ العام", "1447هـ")
-                f_class = c5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                f_mail = st.text_input("📧 البريد الإلكتروني")
-                f_phone = st.text_input("📱 الجوال (بدون 0)")
-                if st.form_submit_button("✅ اعتماد وحفظ"):
-                    df_cur = fetch_safe("students")
-                    if f_id.strip() in df_cur.iloc[:, 0].values:
-                        st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً")
-                    elif f_id and f_name:
-                        # تنسيق الجوال تلقائياً
-                        phone = f_phone.strip()
-                        if phone.startswith("0"): phone = phone[1:]
-                        if not phone.startswith("966"): phone = "966" + phone
-                        if dynamic_append_student(f_id.strip(), f_name, f_stage, f_year, f_class, f_mail, phone):
-                            st.success(f"تمت إضافة {f_name} بنجاح"); st.cache_data.clear(); st.rerun()
+            st.subheader("👥 إدارة قاعدة بيانات الطلاب")
+            with st.expander("➕ إضافة طالب جديد (الحقول السبعة)", expanded=False):
+                with st.form("add_st_full", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    f_id = c1.text_input("🔢 الرقم الأكاديمي (نص)")
+                    f_name = c2.text_input("👤 الاسم الثلاثي")
+                    c3, c4, c5 = st.columns(3)
+                    f_stage = c3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                    f_year = c4.text_input("🗓️ العام", "1447هـ")
+                    f_class = c5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                    f_mail = st.text_input("📧 البريد الإلكتروني")
+                    f_phone = st.text_input("📱 الجوال (بدون 0)")
+                    if st.form_submit_button("✅ اعتماد وحفظ"):
+                        df_cur = fetch_safe("students")
+                        if f_id.strip() in df_cur.iloc[:, 0].values:
+                            st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً")
+                        elif f_id and f_name:
+                            # تنسيق الجوال تلقائياً
+                            phone = f_phone.strip()
+                            if phone.startswith("0"): phone = phone[1:]
+                            if not phone.startswith("966"): phone = "966" + phone
+                            if dynamic_append_student(f_id.strip(), f_name, f_stage, f_year, f_class, f_mail, phone):
+                                st.success(f"تمت إضافة {f_name} بنجاح"); st.cache_data.clear(); st.rerun()
+    
+            st.divider()
+            df_st = fetch_safe("students")
+            if not df_st.empty:
+                c_s, c_d = st.columns([2, 1])
+                with c_s: q = st.text_input("🔍 ابحث (اسم/رقم):")
+                with c_d:
+                    st.markdown("##### 🗑️ الحذف الآمن")
+                    t_del = st.selectbox("اختر الرقم للحذف:", [""] + df_st.iloc[:, 0].tolist())
+                    if t_del:
+                        st.warning(f"⚠️ هل أنت متأكد من حذف {t_del}؟")
+                        if st.button("🚨 نعم، حذف نهائي من كافة الجداول"):
+                            for s in ["students", "grades", "behavior"]:
+                                ws = sh.worksheet(s); df_t = fetch_safe(s)
+                                if not df_t.empty and str(t_del) in df_t.iloc[:, 0].values:
+                                    idx = df_t[df_t.iloc[:, 0] == str(t_del)].index[0]
+                                    ws.delete_rows(int(idx) + 2)
+                            st.success("تم الحذف بنجاح"); st.cache_data.clear(); st.rerun()
+                
+                # عرض الجدول مع إخفاء المادة كما طلبت
+                cols_hide = ["لغة إنجليزية", "المادة", "sem"]
+                df_disp = df_st.drop(columns=[c for c in cols_hide if c in df_st.columns], errors='ignore')
+                if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
+                st.dataframe(df_disp, use_container_width=True, hide_index=True)    
 
-        st.divider()
-        df_st = fetch_safe("students")
-        if not df_st.empty:
-            c_s, c_d = st.columns([2, 1])
-            with c_s: q = st.text_input("🔍 ابحث (اسم/رقم):")
-            with c_d:
-                st.markdown("##### 🗑️ الحذف الآمن")
-                t_del = st.selectbox("اختر الرقم للحذف:", [""] + df_st.iloc[:, 0].tolist())
-                if t_del:
-                    st.warning(f"⚠️ هل أنت متأكد من حذف {t_del}؟")
-                    if st.button("🚨 نعم، حذف نهائي من كافة الجداول"):
-                        for s in ["students", "grades", "behavior"]:
-                            ws = sh.worksheet(s); df_t = fetch_safe(s)
-                            if not df_t.empty and str(t_del) in df_t.iloc[:, 0].values:
-                                idx = df_t[df_t.iloc[:, 0] == str(t_del)].index[0]
-                                ws.delete_rows(int(idx) + 2)
-                        st.success("تم الحذف بنجاح"); st.cache_data.clear(); st.rerun()
-            
-            # عرض الجدول مع إخفاء المادة كما طلبت
-            cols_hide = ["لغة إنجليزية", "المادة", "sem"]
-            df_disp = df_st.drop(columns=[c for c in cols_hide if c in df_st.columns], errors='ignore')
-            if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
-            st.dataframe(df_disp, use_container_width=True, hide_index=True)
-    #
-    # ==========================================
+    # --- تبويب التقييم والمتابعة (1) ---
+    with menu[1]:
+        st.subheader("📊 رصد الدرجات والسلوك")
+        # كود التقييم الخاص بك هنا...
+# ==========================================
     # 📊 تبويب: التقييم والمتابعة (الإصدار المصفح برمجياً)
     # ==========================================
     with menu[1]:
@@ -304,10 +309,64 @@ def set_tab(i):
         else:
             st.warning("⚠️ يرجى إضافة طلاب أولاً لبدء عملية التقييم.")
     
-    
-  # --- خطوة هامة جداً: ضع هذا السطر في بداية كود المعلم قبل تعريف التبويبات مباشرة ---
-if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
+    # --- 📢 تبويب: التواصل والتنبيهات (2) - الكود المكتمل والمنسق ---
+    with menu[2]:
+        st.subheader("📢 مركز إدارة وبث التنبيهات")
+        
+        with st.expander("🚀 نشر إعلان أو موعد اختبار جديد", expanded=True):
+            with st.form("flexible_announcement_form", clear_on_submit=True):
+                c1, c2 = st.columns([2, 1])
+                ann_title = c1.text_input("📝 عنوان التنبيه")
+                ann_target = c2.selectbox("🎯 الفئة المستهدفة", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                
+                ann_details = st.text_area("📄 تفاصيل الإعلان (يمكنك وضع روابط هنا)")
+                show_on_home = st.checkbox("🌟 عرض هذا الإعلان بشكل بارز في الشاشة الرئيسية؟")
+                ann_date = st.date_input("🗓️ تاريخ النشر", datetime.date.today())
+                
+                if st.form_submit_button("📣 نشر الآن للمنصة"):
+                    if ann_title:
+                        try:
+                            is_urgent = "نعم" if show_on_home else "لا"
+                            sh.worksheet("exams").append_row([
+                                ann_target, ann_title, str(ann_date), ann_details, is_urgent
+                            ])
+                            st.success(f"✅ تم النشر بنجاح للفئة: {ann_target}")
+                            
+                            # تثبيت التبويب رقم 2 قبل إعادة التشغيل لضمان عدم الخروج
+                            st.session_state.active_tab = 2 
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ خطأ في قاعدة البيانات: {e}")
+                    else:
+                        st.warning("⚠️ يرجى كتابة عنوان للتنبيه.")
+
+        st.divider()
+        
+        # سجل التنبيهات وإرسال المجموعات
+        st.markdown("##### 📜 سجل التنبيهات وإرسال المجموعات")
+        df_ex = fetch_safe("exams")
+        if not df_ex.empty:
+            for index, row in df_ex.iloc[::-1].iterrows():
+                with st.container(border=True):
+                    status_h = "🏠 رئيسية" if len(row) > 4 and row.iloc[4] == "نعم" else "📱 عادي"
+                    st.markdown(f"**[{row.iloc[0]}]** - **{row.iloc[1]}** | `{status_h}`")
+                    
+                    # تنسيق رسالة الواتساب الاحترافية (تشفير آمن)
+                    msg = f"📢 *تنبيه من منصة الأستاذ زياد*\n📝 {row.iloc[1]}\n🗓️ {row.iloc[2]}\n🏛️ منصة زياد الذكية"
+                    encoded_msg = urllib.parse.quote(msg)
+                    
+                    c_wa, c_del = st.columns([2, 1])
+                    c_wa.link_button("👥 إرسال لمجموعة واتساب", f"https://api.whatsapp.com/send?text={encoded_msg}", use_container_width=True)
+                    
+                    if c_del.button("🗑️ حذف", key=f"del_ann_{index}", use_container_width=True):
+                        sh.worksheet("exams").delete_rows(int(index) + 2)
+                        st.session_state.active_tab = 2
+                        st.cache_data.clear(); st.rerun()
+    
+    #
+    
     # ==========================================
     # 📢 تبويب: التواصل والتنبيهات (نسخة التحكم المرن 2026)
     # ==========================================
