@@ -12,3 +12,5 @@ python-bidi
 qrcode
 plotly
 google-api-python-client
+streamlit==1.38.0
+xlsxwriter==3.2.9
