@@ -7,7 +7,8 @@ import datetime
 import logging
 from google.oauth2.service_account import Credentials
 import urllib.parse
-
+if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
+if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
 # --- 1. إعدادات النظام والاستقرار ---
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
 
@@ -136,8 +137,6 @@ if st.session_state.role == "teacher":
     # 1. حفظ حالة التبويب النشط (منع الخروج المفاجئ)
     if "active_tab" not in st.session_state:
         st.session_state.active_tab = 0
-if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-    if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
     # 2. تعريف التبويبات (أضفنا index لربطها بالذاكرة)
     menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التواصل والتنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
 
