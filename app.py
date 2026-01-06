@@ -6,7 +6,44 @@ import time
 import datetime
 from google.oauth2.service_account import Credentials
 import urllib.parse
+# --- دالة جلب البيانات مع تحويل المعرف لنص لضمان الاستقرار ---
+@st.cache_data(ttl=30)
+def fetch_safe(worksheet_name):
+    try:
+        ws = sh.worksheet(worksheet_name)
+        data = ws.get_all_values()
+        if not data: return pd.DataFrame()
+        df = pd.DataFrame(data[1:], columns=data[0])
+        if not df.empty:
+            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+        return df
+    except:
+        return pd.DataFrame()
 
+# --- دالة الإضافة الديناميكية (تحل مشكلة إزاحة الأعمدة في صورك) ---
+def dynamic_append_student(f_id, f_name, f_stage, f_year, f_class, f_email, f_phone):
+    try:
+        ws = sh.worksheet("students")
+        headers = ws.row_values(1) # جلب رؤوس الأعمدة الحقيقية من ملفك
+        
+        # ربط البيانات بالأسماء الموجودة في ملفك (Mapping)
+        data_map = {
+            "id": str(f_id).strip(),
+            "name": f_name,
+            "class": f_class,
+            "year": f_year,
+            "sem": f_stage,
+            "الإيميل": f_email,
+            "الجوال": str(f_phone),
+            "النقاط": "0"
+        }
+        # بناء السطر الجديد بناءً على ترتيب أعمدتك الفعلي لتجنب الإزاحة
+        new_row = [data_map.get(h, "") for h in headers]
+        ws.append_row(new_row)
+        return True
+    except Exception as e:
+        st.error(f"خطأ في الإضافة: {e}")
+        return False
 # --- 1. الإعدادات والاتصال ---
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
