@@ -216,9 +216,12 @@ if st.session_state.role == "teacher":
         df_st = fetch_safe("students")
         
         if not df_st.empty:
-            # 1. اختيار الطالب (حل مشكلة الإزاحة بالاعتماد على أسماء الأعمدة)
-            st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
-            selected_label = st.selectbox("🎯 اختر الطالب المراد تقييمه:", [""] + list(st_list.keys()))
+        # تعريف الأعمدة أولاً لمنع خطأ NameError
+        col_grades, col_behavior = st.columns(2)
+        
+        # اختيار الطالب...
+        st_list = {f"{row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
+        selected_label = st.selectbox("🎯 اختر الطالب:", [""] + list(st_list.keys()))
             
             if selected_label:
                 sid = st_list[selected_label]
@@ -383,27 +386,28 @@ if st.session_state.role == "teacher":
                         st.cache_data.clear(); st.rerun()
     
     # ==========================================
-    # ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة
+    # ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة (الإصدار الذهبي المدمج)
     # ==========================================
     with menu[3]:
         st.subheader("⚙️ مركز التحكم وإدارة النظام")
     
-            # --- ⚖️ 1. إعدادات توزيع الدرجات (الإصدار الدائم) ---
+        # --- ⚖️ 1. إعدادات توزيع الدرجات (الإصدار الدائم المرتبط بجدول settings) ---
         st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
-        with st.expander("تعديل الحدود العليا للدرجات (حفظ دائم)", expanded=True):
+        with st.expander("تعديل الحدود العليا للدرجات (حفظ دائم في القاعدة)", expanded=True):
             col_g1, col_g2 = st.columns(2)
             
+            # قراءة القيم الحالية من الذاكرة (التي تم تحميلها عند بدء التشغيل)
             new_max_t = col_g1.number_input("الحد الأعلى للمشاركة", 1, 100, st.session_state.max_tasks)
             new_max_q = col_g2.number_input("الحد الأعلى للاختبار", 1, 100, st.session_state.max_quiz)
             
-            if st.button("💾 اعتماد وحفظ التوزيع الجديد"):
+            if st.button("💾 اعتماد وحفظ التوزيع الجديد نهائياً"):
                 try:
                     ws_s = sh.worksheet("settings")
-                    # تحديث القيم في الإكسل (السطر 2 للمشاركة، والسطر 3 للاختبار)
+                    # تحديث القيم في الإكسل (السطر 2 للمشاركة، والسطر 3 للاختبار) كما في صورتك
                     ws_s.update_cell(2, 2, new_max_t)
                     ws_s.update_cell(3, 2, new_max_q)
                     
-                    # تحديث الذاكرة الحالية
+                    # تحديث الذاكرة الحالية للمنصة
                     st.session_state.max_tasks = new_max_t
                     st.session_state.max_quiz = new_max_q
                     
@@ -412,21 +416,40 @@ if st.session_state.role == "teacher":
                 except Exception as e:
                     st.error(f"⚠️ فشل الحفظ الدائم: {e}")
     
-        # --- 🔐 2. إدارة الحساب وكلمات المرور ---
-        with st.expander("🔐 إدارة كلمات المرور وتأمين الحساب", expanded=False):
+        st.divider()
+    
+        # --- 🔐 2. إدارة الحساب والمستخدمين (تغيير كلمة المرور + إضافة معلم) ---
+        st.markdown("#### 🔐 إدارة الحسابات والصلاحيات")
+        t_pass, t_add = st.tabs(["🔑 تغيير كلمات المرور", "👤 إضافة معلم جديد"])
+        
+        with t_pass:
             df_u = fetch_safe("users")
             user_to_fix = st.selectbox("اختر المستخدم للتعديل:", df_u['username'].tolist() if not df_u.empty else [])
-            new_pass = st.text_input("🔑 كلمة المرور الجديدة", type="password")
+            new_pass_val = st.text_input("🔑 كلمة المرور الجديدة", type="password", key="new_pass_key")
             
             if st.button("تحديث وتشفير كلمة المرور"):
-                if new_pass and not df_u.empty:
-                    u_hash = hashlib.sha256(str.encode(new_pass)).hexdigest()
-                    # إيجاد السطر الصحيح في Google Sheets
+                if new_pass_val and not df_u.empty:
+                    u_hash = hashlib.sha256(str.encode(new_pass_val)).hexdigest()
+                    # إيجاد السطر الصحيح في Google Sheets بناءً على اليوزر المختار
                     row_idx = df_u[df_u['username'] == user_to_fix].index[0] + 2
                     sh.worksheet("users").update_cell(row_idx, 2, u_hash)
                     st.success(f"✅ تم تحديث وتشفير كلمة مرور {user_to_fix}")
                 else:
                     st.warning("يرجى إدخال كلمة مرور جديدة.")
+    
+        with t_add:
+            with st.form("add_teacher_form", clear_on_submit=True):
+                st.write("➕ إضافة معلم أو مسؤول جديد للمنصة")
+                new_un = st.text_input("👤 اسم المستخدم الجديد")
+                new_pw = st.text_input("🔑 كلمة المرور الابتدائية", type="password")
+                new_role = st.selectbox("🎭 الصلاحية", ["teacher", "admin"])
+                if st.form_submit_button("إضافة المعلم الآن"):
+                    if new_un and new_pw:
+                        u_hash = hashlib.sha256(str.encode(new_pw)).hexdigest()
+                        sh.worksheet("users").append_row([new_un, u_hash, new_role])
+                        st.success(f"✅ تمت إضافة {new_un} بنجاح.")
+                        st.cache_data.clear()
+                    else: st.warning("يرجى إكمال البيانات")
     
         st.divider()
     
@@ -468,9 +491,9 @@ if st.session_state.role == "teacher":
                     sh.worksheet(target_sheet).append_rows(data_list)
                     
                     st.success(f"✅ تم بنجاح رفع {len(data_list)} سجل إلى جدول {target_sheet}!")
-                    st.cache_data.clear() # لتحديث البيانات في جميع التبويبات فوراً
+                    st.cache_data.clear()
                 except Exception as e:
-                    st.error(f"⚠️ خطأ: تأكد من مطابقة أعمدة الملف للقالب. (التفاصيل: {e})")
+                    st.error(f"⚠️ خطأ: تأكد من مطابقة الملف للقالب المعتمد. (التفاصيل: {e})")
     
         st.divider()
         if st.button("🔄 تحديث شامل للمنصة (تصفير الكاش)"):
