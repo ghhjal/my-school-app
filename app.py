@@ -1,18 +1,34 @@
 import streamlit as st
+import pandas as pd
 
-# التأكد من أن هذا هو أول سطر برمجي
-st.set_page_config(page_title="نظام المدرسة - تجربة الاستقرار", layout="wide")
+# إعداد الصفحة - يجب أن يكون أول أمر
+st.set_page_config(page_title="منصة المدرسة الذكية", layout="wide")
+
+# دالة لجلب البيانات بشكل آمن
+def load_school_data():
+    try:
+        # هنا تضع كود قراءة ملفك (Excel أو CSV)
+        df = pd.read_excel("students_data.xlsx")
+        return df
+    except Exception as e:
+        st.error(f"فشل في تحميل بيانات الطلاب: {e}")
+        return None
 
 def main():
-    st.success("✅ الخادم يعمل والمكتبات مستقرة!")
-    st.title("لوحة تحكم النظام المدرسي")
+    st.title("🏫 نظام إدارة المدرسة الاحترافي")
     
-    # عرض معلومات البيئة للتأكد
-    st.info(f"إصدار ستريمليت الحالي: {st.__version__}")
+    data = load_school_data()
     
-    if st.button("اضغط لاختبار التفاعل"):
-        st.balloons()
-        st.write("التفاعل يعمل بنجاح!")
+    if data is not None:
+        # البحث بالاسم بدلاً من رقم العمود لضمان الاستقرار
+        search_term = st.text_input("ابحث عن طالب بالاسم:")
+        
+        if search_term:
+            # فلترة احترافية باستخدام اسم العمود
+            results = data[data['اسم_الطالب'].str.contains(search_term, na=False)]
+            st.dataframe(results, use_container_width=True)
+        else:
+            st.info("يرجى إدخال اسم الطالب للبحث.")
 
 if __name__ == "__main__":
     main()
