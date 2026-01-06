@@ -15,17 +15,23 @@ st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 # إعدادات التسجيل
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
 
-# --- تحميل الإعدادات الدائمة من Google Sheets عند بدء التشغيل ---
-try:
-    df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
-    if "max_tasks" not in st.session_state:
+# --- 1. إعدادات الصفحة (يجب أن يكون أول أمر Streamlit) ---
+st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
+
+# --- 2. تحميل الإعدادات الدائمة من Google Sheets (حل مشكلة المسافات والاستمرارية) ---
+if "max_tasks" not in st.session_state:
+    try:
+        # قراءة ورقة الإعدادات التي أرفقتها في صورتك
+        df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
-    if "max_quiz" not in st.session_state:
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
-except:
-    # في حال فشل الاتصال، نستخدم القيم الافتراضية
-    if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-    if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+    except:
+        # قيم احتياطية في حال فشل التحميل
+        st.session_state.max_tasks = 60
+        st.session_state.max_quiz = 40
+
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
 # الاتصال بـ Google Sheets
 @st.cache_resource
 def get_gspread_client():
