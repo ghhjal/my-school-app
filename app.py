@@ -527,26 +527,47 @@ if st.session_state.role == "student":
         else:
             st.info("📭 صندوق التنبيهات فارغ حالياً.")
 
-    with t_grade: # 📊 درجاتي (إصدار العرض الديناميكي المستقر 2026)
-        st.markdown("##### 📊 المجموع الكلي لدرجاتي")
+    with t_grade: # 📊 درجاتي (إصدار الترتيب الذكي 2026)
+        st.markdown("##### 📊 المجموع الكلي والترتيب العام")
         
-        # تصفية البيانات للوصول لدرجات الطالب الحالي
+        # 1. جلب بيانات الطالب الحالي
         my_g = df_grades[df_grades.iloc[:, 0].astype(str) == s_id]
         
         if not my_g.empty:
-            c1, c2, c3 = st.columns(3)
+            # 2. منطق حساب الترتيب (بشكل احترافي ومستقر)
+            # تحويل المجموع لنوع عددي لضمان صحة الترتيب
+            df_grades_rank = df_grades.copy()
+            df_grades_rank.iloc[:, 3] = pd.to_numeric(df_grades_rank.iloc[:, 3], errors='coerce').fillna(0)
             
-            # جلب الحدود القصوى ديناميكياً من الإعدادات
-            # استخدمنا .get لضمان عدم تعليق البرنامج في حال عدم وجود قيمة افتراضية
+            # ترتيب الطلاب تنازلياً حسب المجموع
+            df_sorted = df_grades_rank.sort_values(by=df_grades_rank.columns[3], ascending=False).reset_index(drop=True)
+            
+            # إيجاد رتبة الطالب (Index + 1)
+            try:
+                rank = df_sorted[df_sorted.iloc[:, 0].astype(str) == s_id].index[0] + 1
+                total_students = len(df_sorted)
+            except:
+                rank = "-" # في حال وجود خلل في البيانات
+
+            # 3. عرض النتائج والترتيب في بطاقات عرضية
+            c1, c2, c3, c4 = st.columns(4)
+            
             max_t = st.session_state.get('max_tasks', 60)
             max_q = st.session_state.get('max_quiz', 40)
             
-            # عرض الدرجات باستخدام نظام المقياس (Metric)
-            c1.metric("📚 المشاركة والمهام", f"{my_g.iloc[0, 1]} / {max_t}")
-            c2.metric("📝 اختبار قصير", f"{my_g.iloc[0, 2]} / {max_q}")
-            c3.metric("🏆 المجموع الكلي", f"{my_g.iloc[0, 3]} / 100")
+            c1.metric("📚 المشاركة", f"{my_g.iloc[0, 1]} / {max_t}")
+            c2.metric("📝 الاختبار", f"{my_g.iloc[0, 2]} / {max_q}")
+            c3.metric("🏆 المجموع", f"{my_g.iloc[0, 3]} / 100")
             
-            # إظهار ملاحظات المعلم المكتوبة في الإكسل إن وجدت
+            # عرض الترتيب بلمسة جمالية
+            rank_color = "green" if rank <= 3 else "#1e3a8a" # تلوين الثلاثة الأوائل
+            st.markdown(f"""
+                <div style="text-align: center; background: {rank_color}; color: white; padding: 10px; border-radius: 15px; margin-top: 15px;">
+                    <h4 style="color: white; margin: 0;">🥇 ترتيبك في الفصل: {rank} من {total_students}</h4>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # إظهار ملاحظات المعلم إن وجدت
             if len(my_g.columns) > 5 and pd.notna(my_g.iloc[0, 5]):
                 st.info(f"💬 ملاحظة المعلم: {my_g.iloc[0, 5]}")
         else:
