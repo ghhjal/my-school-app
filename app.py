@@ -170,11 +170,10 @@ if st.session_state.role == "teacher":
             if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
     #
-    # ==========================================
+# ==========================================
 # 📊 تبويب: التقييم والمتابعة (الإصدار الذكي 2.0)
 # ==========================================
-    
-    with menu[1]:
+with menu[1]:
     st.subheader("📈 التقييم والمتابعة الشاملة")
     
     df_st = fetch_safe("students")
@@ -272,6 +271,8 @@ if st.session_state.role == "teacher":
 
     else:
         st.warning("⚠️ لا يوجد طلاب مسجلون حالياً.")
+    
+    
     with menu[2]: # التواصل والتنبيهات
         st.subheader("📢 التواصل والتنبيهات")
         with st.form("exam_comm"):
