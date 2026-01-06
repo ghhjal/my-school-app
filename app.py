@@ -15,15 +15,15 @@ st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 # إعدادات التسجيل
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
 
-# --- 2. تهيئة القيم الافتراضية (بدون مسافات زائدة) ---
+# --- تهيئة القيم الافتراضية وذاكرة التبويبات (إصلاح IndentationError) ---
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
+
 if "max_tasks" not in st.session_state:
     st.session_state.max_tasks = 60
 
 if "max_quiz" not in st.session_state:
     st.session_state.max_quiz = 40
-
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = 0
 # الاتصال بـ Google Sheets
 @st.cache_resource
 def get_gspread_client():
