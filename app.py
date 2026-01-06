@@ -8,7 +8,7 @@ import logging
 from google.oauth2.service_account import Credentials
 import urllib.parse
 if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+    if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
 # --- 1. إعدادات النظام والاستقرار ---
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
 
