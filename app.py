@@ -371,88 +371,88 @@ if st.session_state.role == "teacher":
                         st.cache_data.clear(); st.rerun()
     
     # ==========================================
-# ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة
-# ==========================================
-with menu[3]:
-    st.subheader("⚙️ مركز التحكم وإدارة النظام")
-
-    # --- ⚖️ 1. إعدادات توزيع الدرجات (الجزء الذي اختفى) ---
-    st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
-    with st.expander("تعديل الحدود العليا للدرجات (توزيع الوزارة)", expanded=True):
-        col_g1, col_g2 = st.columns(2)
-        # ضمان وجود القيم في الذاكرة لتجنب الأخطاء
-        if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
-        if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+    # ⚙️ تبويب: الإعدادات والأدوات الإدارية الشاملة
+    # ==========================================
+    with menu[3]:
+        st.subheader("⚙️ مركز التحكم وإدارة النظام")
+    
+        # --- ⚖️ 1. إعدادات توزيع الدرجات (الجزء الذي اختفى) ---
+        st.markdown("#### ⚖️ إعدادات توزيع الدرجات")
+        with st.expander("تعديل الحدود العليا للدرجات (توزيع الوزارة)", expanded=True):
+            col_g1, col_g2 = st.columns(2)
+            # ضمان وجود القيم في الذاكرة لتجنب الأخطاء
+            if "max_tasks" not in st.session_state: st.session_state.max_tasks = 60
+            if "max_quiz" not in st.session_state: st.session_state.max_quiz = 40
+            
+            st.session_state.max_tasks = col_g1.number_input("الحد الأعلى للمشاركة والمهام", 1, 100, st.session_state.max_tasks)
+            st.session_state.max_quiz = col_g2.number_input("الحد الأعلى للاختبار القصير", 1, 100, st.session_state.max_quiz)
+            st.info(f"💡 التوزيع الحالي: {st.session_state.max_tasks} للمشاركة + {st.session_state.max_quiz} للاختبار = 100")
+    
+        st.divider()
+    
+        # --- 🔐 2. إدارة الحساب وكلمات المرور ---
+        with st.expander("🔐 إدارة كلمات المرور وتأمين الحساب", expanded=False):
+            df_u = fetch_safe("users")
+            user_to_fix = st.selectbox("اختر المستخدم للتعديل:", df_u['username'].tolist() if not df_u.empty else [])
+            new_pass = st.text_input("🔑 كلمة المرور الجديدة", type="password")
+            
+            if st.button("تحديث وتشفير كلمة المرور"):
+                if new_pass and not df_u.empty:
+                    u_hash = hashlib.sha256(str.encode(new_pass)).hexdigest()
+                    # إيجاد السطر الصحيح في Google Sheets
+                    row_idx = df_u[df_u['username'] == user_to_fix].index[0] + 2
+                    sh.worksheet("users").update_cell(row_idx, 2, u_hash)
+                    st.success(f"✅ تم تحديث وتشفير كلمة مرور {user_to_fix}")
+                else:
+                    st.warning("يرجى إدخال كلمة مرور جديدة.")
+    
+        st.divider()
+    
+        # --- 📥 3. تحميل القوالب الفارغة (Templates) ---
+        st.markdown("#### 📥 تحميل قوالب الإدخال السريع")
+        c_t1, c_t2 = st.columns(2)
         
-        st.session_state.max_tasks = col_g1.number_input("الحد الأعلى للمشاركة والمهام", 1, 100, st.session_state.max_tasks)
-        st.session_state.max_quiz = col_g2.number_input("الحد الأعلى للاختبار القصير", 1, 100, st.session_state.max_quiz)
-        st.info(f"💡 التوزيع الحالي: {st.session_state.max_tasks} للمشاركة + {st.session_state.max_quiz} للاختبار = 100")
-
-    st.divider()
-
-    # --- 🔐 2. إدارة الحساب وكلمات المرور ---
-    with st.expander("🔐 إدارة كلمات المرور وتأمين الحساب", expanded=False):
-        df_u = fetch_safe("users")
-        user_to_fix = st.selectbox("اختر المستخدم للتعديل:", df_u['username'].tolist() if not df_u.empty else [])
-        new_pass = st.text_input("🔑 كلمة المرور الجديدة", type="password")
+        def create_template(cols):
+            output = io.BytesIO()
+            df_temp = pd.DataFrame(columns=cols)
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_temp.to_excel(writer, index=False)
+            return output.getvalue()
+    
+        c_t1.download_button("📥 قالب الطلاب فارغ", 
+                             create_template(["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]), 
+                             "Template_Students.xlsx", use_container_width=True)
         
-        if st.button("تحديث وتشفير كلمة المرور"):
-            if new_pass and not df_u.empty:
-                u_hash = hashlib.sha256(str.encode(new_pass)).hexdigest()
-                # إيجاد السطر الصحيح في Google Sheets
-                row_idx = df_u[df_u['username'] == user_to_fix].index[0] + 2
-                sh.worksheet("users").update_cell(row_idx, 2, u_hash)
-                st.success(f"✅ تم تحديث وتشفير كلمة مرور {user_to_fix}")
-            else:
-                st.warning("يرجى إدخال كلمة مرور جديدة.")
-
-    st.divider()
-
-    # --- 📥 3. تحميل القوالب الفارغة (Templates) ---
-    st.markdown("#### 📥 تحميل قوالب الإدخال السريع")
-    c_t1, c_t2 = st.columns(2)
+        c_t2.download_button("📥 قالب الدرجات فارغ", 
+                             create_template(["id", "tasks", "quiz", "total", "date"]), 
+                             "Template_Grades.xlsx", use_container_width=True)
     
-    def create_template(cols):
-        output = io.BytesIO()
-        df_temp = pd.DataFrame(columns=cols)
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_temp.to_excel(writer, index=False)
-        return output.getvalue()
-
-    c_t1.download_button("📥 قالب الطلاب فارغ", 
-                         create_template(["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]), 
-                         "Template_Students.xlsx", use_container_width=True)
+        st.divider()
     
-    c_t2.download_button("📥 قالب الدرجات فارغ", 
-                         create_template(["id", "tasks", "quiz", "total", "date"]), 
-                         "Template_Grades.xlsx", use_container_width=True)
-
-    st.divider()
-
-    # --- 📤 4. أداة رفع الملفات للمنصة ---
-    st.markdown("#### 📤 رفع البيانات من ملف Excel")
-    st.info("قم برفع ملف الإكسل الذي قمت بتعبئته بناءً على القوالب أعلاه.")
+        # --- 📤 4. أداة رفع الملفات للمنصة ---
+        st.markdown("#### 📤 رفع البيانات من ملف Excel")
+        st.info("قم برفع ملف الإكسل الذي قمت بتعبئته بناءً على القوالب أعلاه.")
+        
+        upload_type = st.radio("ماذا تريد أن ترفع الآن؟", ["طلاب جدد", "درجات الطلاب"], horizontal=True)
+        uploaded_file = st.file_uploader(f"اسحب ملف الـ {upload_type} هنا", type=["xlsx"])
     
-    upload_type = st.radio("ماذا تريد أن ترفع الآن؟", ["طلاب جدد", "درجات الطلاب"], horizontal=True)
-    uploaded_file = st.file_uploader(f"اسحب ملف الـ {upload_type} هنا", type=["xlsx"])
-
-    if uploaded_file is not None:
-        if st.button(f"🚀 بدء عملية الرفع إلى {upload_type}"):
-            try:
-                df_upload = pd.read_excel(uploaded_file).fillna("")
-                data_list = df_upload.values.tolist()
-                
-                target_sheet = "students" if upload_type == "طلاب جدد" else "grades"
-                sh.worksheet(target_sheet).append_rows(data_list)
-                
-                st.success(f"✅ تم بنجاح رفع {len(data_list)} سجل إلى جدول {target_sheet}!")
-                st.cache_data.clear() # لتحديث البيانات في جميع التبويبات فوراً
-            except Exception as e:
-                st.error(f"⚠️ خطأ: تأكد من مطابقة أعمدة الملف للقالب. (التفاصيل: {e})")
-
-    st.divider()
-    if st.button("🔄 تحديث شامل للمنصة (تصفير الكاش)"):
-        st.cache_data.clear(); st.rerun()
+        if uploaded_file is not None:
+            if st.button(f"🚀 بدء عملية الرفع إلى {upload_type}"):
+                try:
+                    df_upload = pd.read_excel(uploaded_file).fillna("")
+                    data_list = df_upload.values.tolist()
+                    
+                    target_sheet = "students" if upload_type == "طلاب جدد" else "grades"
+                    sh.worksheet(target_sheet).append_rows(data_list)
+                    
+                    st.success(f"✅ تم بنجاح رفع {len(data_list)} سجل إلى جدول {target_sheet}!")
+                    st.cache_data.clear() # لتحديث البيانات في جميع التبويبات فوراً
+                except Exception as e:
+                    st.error(f"⚠️ خطأ: تأكد من مطابقة أعمدة الملف للقالب. (التفاصيل: {e})")
+    
+        st.divider()
+        if st.button("🔄 تحديث شامل للمنصة (تصفير الكاش)"):
+            st.cache_data.clear(); st.rerun()
 # ==========================================
 # 👨‍🎓 واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
