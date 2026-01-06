@@ -169,37 +169,103 @@ if st.session_state.role == "teacher":
             df_disp = df_st.drop(columns=[c for c in cols_hide if c in df_st.columns], errors='ignore')
             if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
+    #
+    # ==========================================
+# 📊 تبويب: التقييم والمتابعة (دمج الدرجات والسلوك)
+# ==========================================
+with menu[1]:
+    st.subheader("📈 رصد الأداء الأكاديمي والسلوكي")
+    
+    # 1. جلب البيانات المحدثة
+    df_st = fetch_safe("students")
+    df_grades = fetch_safe("grades")
+    
+    if not df_st.empty:
+        # إنشاء قائمة بأسماء الطلاب مع أرقامهم الأكاديمية للاختيار
+        st_list = {f"{row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
+        selected_label = st.selectbox("🎯 اختر الطالب المراد تقييمه:", [""] + list(st_list.keys()))
+        
+        if selected_label:
+            sid = st_list[selected_label]
+            # جلب بيانات الطالب المختار حصراً
+            student_info = df_st[df_st.iloc[:, 0] == sid].iloc[0]
+            
+            # --- 💡 لمسة ذكية: عرض ملخص سريع للطالب قبل الرصد ---
+            st.markdown(f"""
+                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border-right: 5px solid #3b82f6; margin-bottom: 20px;">
+                    <b>الطالب:</b> {student_info.iloc[1]} | <b>الصف:</b> {student_info.iloc[4]} | <b>رصيد النقاط الحالي:</b> {student_info['النقاط']}
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # تقسيم الشاشة لعمودين (درجات وسلوك)
+            col_grades, col_behavior = st.columns(2)
+            
+            with col_grades:
+                st.markdown("##### 📝 رصد الدرجات الأكاديمية")
+                with st.form("grade_form", clear_on_submit=True):
+                    # محاولة جلب الدرجات الحالية إذا وجدت
+                    current_g = df_grades[df_grades.iloc[:, 0] == sid]
+                    p_val = int(current_g.iloc[0, 1]) if not current_g.empty else 0
+                    h_val = int(current_g.iloc[0, 2]) if not current_g.empty else 0
+                    
+                    v_participation = st.number_input("درجة المشاركة والنشاط", 0, 20, value=p_val)
+                    v_homework = st.number_input("درجة الواجبات والمهام", 0, 20, value=h_val)
+                    v_notes = st.text_area("ملاحظات المعلم الأكاديمية", placeholder="اكتب ملاحظاتك هنا...")
+                    
+                    if st.form_submit_button("💾 حفظ الدرجات"):
+                        ws_g = sh.worksheet("grades")
+                        df_g_latest = fetch_safe("grades")
+                        
+                        if not df_g_latest.empty and sid in df_g_latest.iloc[:, 0].values:
+                            # تحديث سطر موجود
+                            row_idx = df_g_latest[df_g_latest.iloc[:, 0] == sid].index[0] + 2
+                            ws_g.update_cell(row_idx, 2, v_participation)
+                            ws_g.update_cell(row_idx, 3, v_homework)
+                            ws_g.update_cell(row_idx, 6, v_notes) # عمود الملاحظات
+                        else:
+                            # إضافة سطر جديد (ID, مشاركة, واجبات, اختبار, تاريخ, ملاحظات)
+                            ws_g.append_row([sid, v_participation, v_homework, "0", str(datetime.date.today()), v_notes])
+                        
+                        st.success(f"✅ تم حفظ درجات {student_info.iloc[1]}")
+                        st.cache_data.clear()
 
-    with menu[1]: # التقييم والمتابعة
-        st.subheader("📈 التقييم الأكاديمي والسلوكي المدمج")
-        if not df_st.empty:
-            st_map = dict(zip(df_st.iloc[:, 1], df_st.iloc[:, 0]))
-            sel_st = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_map.keys()))
-            if sel_st:
-                sid = st_map[sel_st]
-                col_g, col_b = st.columns(2)
-                with col_g:
-                    st.markdown("##### 📝 الدرجات")
-                    v1 = st.number_input("المشاركة", 0, 20); v2 = st.number_input("الواجبات", 0, 20)
-                    if st.button("💾 حفظ الدرجات"):
-                        ws_g = sh.worksheet("grades"); df_g = fetch_safe("grades")
-                        if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
-                            idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
-                            ws_g.update_cell(idx, 2, v1); ws_g.update_cell(idx, 3, v2)
-                        else: ws_g.append_row([sid, v1, v2, "0", str(datetime.date.today()), ""])
-                        st.success("تم الحفظ")
-                with col_b:
-                    st.markdown("##### 🥇 السلوك والنقاط")
-                    b_type = st.selectbox("نوع السلوك", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "❌ سلبي (-5)"])
-                    if st.button("💾 تحديث رصيد النقاط"):
-                        sh.worksheet("behavior").append_row([sid, str(datetime.date.today()), b_type, ""])
-                        p_idx = get_col_idx(df_st, "النقاط")
+            with col_behavior:
+                st.markdown("##### 🥇 رصد السلوك والتحفيز")
+                with st.form("behavior_form", clear_on_submit=True):
+                    b_type = st.selectbox("نوع السلوك المرصود:", [
+                        "🌟 متميز جداً (+10)", 
+                        "✅ مشاركة إيجابية (+5)", 
+                        "⚠️ تنبيه شفوي (0)", 
+                        "❌ عدم إحضار كتاب (-5)",
+                        "🚫 سلوك غير لائق (-10)"
+                    ])
+                    b_notes = st.text_input("تفاصيل الموقف السلوكي")
+                    
+                    if st.form_submit_button("💾 رصد السلوك وتحديث النقاط"):
+                        # 1. تسجيل السلوك في جدول السلوك
+                        sh.worksheet("behavior").append_row([sid, str(datetime.date.today()), b_type, b_notes])
+                        
+                        # 2. تحديث رصيد النقاط في جدول الطلاب (ديناميكياً)
+                        ws_st = sh.worksheet("students")
+                        p_col_idx = get_col_idx(df_st, "النقاط")
                         row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
-                        points = 10 if "متميز" in b_type else (5 if "إيجابي" in b_type else -5 if "سلبي" in b_type else 0)
-                        old_p = int(df_st[df_st.iloc[:, 0] == sid].iloc[0]["النقاط"] or 0)
-                        sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + points))
-                        st.success("تم تحديث السلوك والنقاط بنجاح")
+                        
+                        # حساب القيمة المضافة
+                        points_map = {"متميز": 10, "إيجابية": 5, "تنبيه": 0, "عدم": -5, "غير": -10}
+                        change = 0
+                        for key in points_map:
+                            if key in b_type: change = points_map[key]; break
+                        
+                        current_points = int(student_info["النقاط"] if student_info["النقاط"] else 0)
+                        ws_st.update_cell(row_idx, p_col_idx, str(current_points + change))
+                        
+                        st.success(f"✅ تم تحديث نقاط {student_info.iloc[1]} بمقدار ({change})")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
 
+    else:
+        st.warning("⚠️ لا يوجد طلاب مسجلون حالياً لرصيد درجاتهم.")
     with menu[2]: # التواصل والتنبيهات
         st.subheader("📢 التواصل والتنبيهات")
         with st.form("exam_comm"):
