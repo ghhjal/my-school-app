@@ -170,8 +170,8 @@ if st.session_state.role == "teacher":
             if q: df_disp = df_disp[df_disp.iloc[:, 0].str.contains(q) | df_disp.iloc[:, 1].str.contains(q)]
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
     #
-        # ==========================================
-    # 📊 تبويب: التقييم والمتابعة (الإصدار الاحترافي الموحد)
+    # ==========================================
+    # 📊 تبويب: التقييم والمتابعة (الإصدار الذكي الموحد)
     # ==========================================
     with menu[1]:
         st.subheader("📈 التقييم والمتابعة الشاملة")
@@ -179,7 +179,7 @@ if st.session_state.role == "teacher":
         df_st = fetch_safe("students")
         
         if not df_st.empty:
-            # 1. اختيار الطالب
+            # 1. اختيار الطالب (حل مشكلة الإزاحة بالاعتماد على أسماء الأعمدة)
             st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
             selected_label = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_list.keys()))
             
@@ -190,76 +190,80 @@ if st.session_state.role == "teacher":
                 s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
                 s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
     
-                # --- 💡 دالة التنسيق الموحد للرسائل (بناءً على صورتك) ---
+                # --- 💡 دالة التنسيق الموحد للرسائل (حل مشكلة علامات الاستفهام) ---
                 def get_formatted_msg(name, b_type, b_desc, b_date):
-                    return (
+                    # نستخدم رموزاً قياسية لضمان التوافق مع كافة المتصفحات
+                    msg = (
                         f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
                         f"---------------------------------------\n"
-                        f"🏷️ نوع السلوك: {b_type}\n"
+                        f"📍 نوع السلوك: {b_type}\n"
                         f"📝 الملاحظة: {b_desc if b_desc else 'لا يوجد ملاحظات إضافية'}\n"
-                        f"🗓️ التاريخ: {b_date}\n"
+                        f"📅 التاريخ: {b_date}\n"
                         f"---------------------------------------\n"
                         f"🏛️ منصة الأستاذ زياد الذكية"
                     )
+                    return msg
     
-                # --- 📝 القسم الأول: الرصد الأكاديمي ---
+                # --- 📝 القسم الأول: الرصد الأكاديمي (الآلة الحاسبة) ---
                 st.markdown("#### 📝 الرصد الأكاديمي")
-                with st.form("grade_calc_form"):
-                    col1, col2, col3 = st.columns(3)
-                    v_tasks = col1.number_input("المشاركة والمهام", 0, 60)
-                    v_quiz = col2.number_input("اختبار قصير", 0, 40)
-                    total_sum = v_tasks + v_quiz
-                    col3.metric("المجموع الكلي", f"{total_sum} / 100")
+                with st.form("grade_calculator"):
+                    c1, c2, c3 = st.columns(3)
+                    v_tasks = c1.number_input("المشاركة والمهام (من 60)", 0, 60)
+                    v_quiz = c2.number_input("اختبار قصير (من 40)", 0, 40)
                     
-                    if st.form_submit_button("💾 حفظ الدرجات النهائية"):
-                        ws_g = sh.worksheet("grades"); df_g = fetch_safe("grades")
+                    # الحساب التلقائي للمجموع الكلي
+                    total_sum = v_tasks + v_quiz
+                    c3.metric("المجموع الكلي", f"{total_sum} / 100")
+                    
+                    if st.form_submit_button("💾 حفظ الدرجات"):
+                        ws_g = sh.worksheet("grades")
+                        df_g = fetch_safe("grades")
                         if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
                             idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
-                            ws_g.update_cell(idx, 2, v_tasks); ws_g.update_cell(idx, 3, v_quiz); ws_g.update_cell(idx, 4, total_sum)
+                            ws_g.update_cell(idx, 2, v_tasks)
+                            ws_g.update_cell(idx, 3, v_quiz)
+                            ws_g.update_cell(idx, 4, total_sum)
                         else:
                             ws_g.append_row([sid, v_tasks, v_quiz, total_sum, str(datetime.date.today()), ""])
-                        st.success(f"✅ تم رصد الدرجة الكلية ({total_sum}) للطالب {s_name}")
+                        st.success(f"✅ تم حفظ الدرجة ({total_sum}) للطالب {s_name}")
                         st.cache_data.clear()
     
                 st.divider()
     
-                # --- 🎭 القسم الثاني: السلوك والتواصل الاحترافي ---
-                st.markdown("#### 🎭 سجل السلوك والتواصل الموحد")
+                # --- 🎭 القسم الثاني: السلوك والتواصل الموحد ---
+                st.markdown("#### 🎭 سجل السلوك والتواصل الاحترافي")
                 
-                with st.expander("🆕 رصد ملاحظة سلوكية جديدة", expanded=True):
-                    with st.form("behavior_comm_form", clear_on_submit=True):
+                with st.expander("🆕 رصد ملاحظة جديدة", expanded=True):
+                    with st.form("behavior_form", clear_on_submit=True):
                         c1, c2 = st.columns(2)
-                        b_date = c1.date_input("تاريخ تسجيل الملاحظة", datetime.date.today())
-                        # 🌟 الميزة 1: القائمة المحدثة بالخيارات الجاهزة
+                        b_date = c1.date_input("تاريخ الملاحظة", datetime.date.today())
+                        # 🌟 إضافة الخيارات الجاهزة كما طلبت
                         b_type = c2.selectbox("نوع السلوك", [
                             "🌟 متميز (+10)", 
                             "✅ مشاركة إيجابية (+5)", 
                             "📚 لم يحضر الكتاب (-5)", 
                             "✍️ لم يحل الواجب (-5)", 
                             "🖊️ لم يحضر القلم (-5)", 
-                            "⚠️ تنبيه شفوي (0)", 
-                            "🚫 سلوك غير لائق (-10)"
+                            "⚠️ تنبيه شفوي (0)"
                         ])
-                        b_desc = st.text_input("ملاحظات إضافية (اختياري)")
+                        b_desc = st.text_input("ملاحظات إضافية")
                         
                         if st.form_submit_button("💾 حفظ الملاحظة"):
                             sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
                             
-                            # تحديث النقاط تلقائياً
+                            # تحديث النقاط الذكي
                             p_idx = get_col_idx(df_st, "النقاط")
                             row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
-                            # خريطة النقاط الذكية
-                            points_map = {"متميز": 10, "إيجابية": 5, "تنبيه": 0, "الكتاب": -5, "الواجب": -5, "القلم": -5, "سلوك": -10}
-                            change = next((v for k, v in points_map.items() if k in b_type), 0)
+                            p_map = {"متميز": 10, "إيجابية": 5, "الكتاب": -5, "الواجب": -5, "القلم": -5}
+                            change = next((v for k, v in p_map.items() if k in b_type), 0)
                             
                             old_p = int(student_info["النقاط"] or 0)
                             sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + change))
-                            
-                            st.success(f"✅ تم الحفظ وتحديث النقاط بمقدار ({change})")
+                            st.success("✅ تم الحفظ وتحديث النقاط")
                             st.cache_data.clear()
     
-                # 🌟 الميزة 2: سجل الملاحظات السابقة مع التنسيق الموحد
-                st.markdown("##### 📜 السجل التاريخي وإعادة الإرسال")
+                # 🌟 عرض سجل الملاحظات السابقة مع أزرار الإرسال الموحدة
+                st.markdown("##### 📜 سجل الملاحظات وإعادة الإرسال")
                 df_beh = fetch_safe("behavior")
                 my_beh = df_beh[df_beh.iloc[:, 0] == sid]
                 
@@ -268,21 +272,23 @@ if st.session_state.role == "teacher":
                         with st.container(border=True):
                             st.write(f"📅 **التاريخ:** {row[1]} | **النوع:** {row[2]}")
                             
-                            # توليد الرسالة الموحدة بناءً على تنسيق صورتك
+                            # توليد الرسالة الموحدة
                             full_msg = get_formatted_msg(s_name, row[2], row[3], row[1])
+                            # الترميز الصحيح لمنع علامات الاستفهام
                             encoded_msg = urllib.parse.quote(full_msg)
                             
-                            c1, c2 = st.columns(2)
-                            # واتساب موحد
+                            col_wa, col_mail = st.columns(2)
+                            # رابط الواتساب الموحد
                             wa_url = f"https://wa.me/{s_phone}?text={encoded_msg}"
-                            c1.link_button("📲 إرسال/إعادة إرسال واتساب", wa_url, use_container_width=True)
-                            # إيميل موحد
-                            mail_url = f"mailto:{s_email}?subject=تحديث سلوكي: {s_name}&body={encoded_msg}"
-                            c2.link_button("📧 إرسال/إعادة إرسال إيميل", mail_url, use_container_width=True)
+                            col_wa.link_button("📲 إرسال عبر واتساب", wa_url, use_container_width=True)
+                            
+                            # رابط الإيميل الموحد
+                            mail_url = f"mailto:{s_email}?subject=تقرير سلوكي: {s_name}&body={encoded_msg}"
+                            col_mail.link_button("📧 إرسال عبر الإيميل", mail_url, use_container_width=True)
                 else:
-                    st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
+                    st.info("لا توجد ملاحظات سابقة.")
         else:
-            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
+            st.warning("⚠️ لا يوجد طلاب مسجلون حالياً.")
     
     
     with menu[2]: # التواصل والتنبيهات
