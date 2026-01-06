@@ -171,17 +171,17 @@ if st.session_state.role == "teacher":
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
     #
     # ==========================================
-    # 📊 تبويب: التقييم والمتابعة (الإصدار الاحترافي الصامد)
+    # 📊 تبويب: التقييم والمتابعة (الحل النهائي للرموز والقوائم)
     # ==========================================
     with menu[1]:
-        st.subheader("📈 التقييم والمتابعة الشاملة")
+        st.subheader("📈 التقييم والمتابعة الاحترافية")
         
         df_st = fetch_safe("students")
         
         if not df_st.empty:
-            # 1. اختيار الطالب (تجنب الإزاحة عبر الربط بالأسماء)
+            # 1. اختيار الطالب (الربط بالأسماء لمنع الإزاحة)
             st_list = {f"{row['name'] if 'name' in row else row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
-            selected_label = st.selectbox("🎯 اختر الطالب للتقييم:", [""] + list(st_list.keys()))
+            selected_label = st.selectbox("🎯 اختر الطالب:", [""] + list(st_list.keys()))
             
             if selected_label:
                 sid = st_list[selected_label]
@@ -190,10 +190,9 @@ if st.session_state.role == "teacher":
                 s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
                 s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
     
-                # --- 💡 دالة التنسيق الموحد مع الترميز الآمن ---
-                def get_safe_whatsapp_link(phone, name, b_type, b_desc, b_date):
-                    # نص الرسالة الاحترافي (تنسيق موحد)
-                    message = (
+                # --- 💡 دالة التشفير العميق لحل مشكلة علامات الاستفهام ---
+                def format_for_whatsapp(name, b_type, b_desc, b_date):
+                    msg = (
                         f"تحية طيبة، تم رصد ملاحظة سلوكية للطالب: {name}\n"
                         f"---------------------------------------\n"
                         f"📍 نوع السلوك: {b_type}\n"
@@ -202,63 +201,63 @@ if st.session_state.role == "teacher":
                         f"---------------------------------------\n"
                         f"🏛️ منصة الأستاذ زياد الذكية"
                     )
-                    # استخدام quote_plus لضمان تشفير الرموز التعبيرية والمسافات بشكل صحيح
-                    encoded_msg = urllib.parse.quote(message)
-                    return f"https://wa.me/{phone}?text={encoded_msg}", message
+                    # استخدام quote لضمان تحويل الرموز التعبيرية إلى صيغة روابط سليمة
+                    return urllib.parse.quote(msg), msg
     
-                # --- 📝 القسم الأول: الرصد الأكاديمي (الآلة الحاسبة) ---
-                st.markdown("#### 📝 الرصد الأكاديمي")
-                with st.form("grade_calc_v2"):
+                # --- 📝 أولاً: رصد الدرجات (المجموع التلقائي) ---
+                st.markdown("#### 📝 رصد الدرجات")
+                with st.form("grade_calc_final"):
                     c1, c2, c3 = st.columns(3)
                     v_tasks = c1.number_input("المشاركة والمهام (60)", 0, 60)
                     v_quiz = c2.number_input("اختبار قصير (40)", 0, 40)
+                    total = v_tasks + v_quiz
+                    c3.metric("المجموع الكلي", f"{total} / 100")
                     
-                    # الحساب التلقائي للمجموع
-                    total_sum = v_tasks + v_quiz
-                    c3.metric("المجموع الكلي", f"{total_sum} / 100")
-                    
-                    if st.form_submit_button("💾 حفظ الدرجات"):
+                    if st.form_submit_button("💾 حفظ الدرجة"):
                         ws_g = sh.worksheet("grades")
                         df_g = fetch_safe("grades")
                         if not df_g.empty and str(sid) in df_g.iloc[:, 0].values:
                             idx = df_g[df_g.iloc[:, 0] == str(sid)].index[0] + 2
-                            ws_g.update_cell(idx, 2, v_tasks)
-                            ws_g.update_cell(idx, 3, v_quiz)
-                            ws_g.update_cell(idx, 4, total_sum)
+                            ws_g.update_cell(idx, 2, v_tasks); ws_g.update_cell(idx, 3, v_quiz); ws_g.update_cell(idx, 4, total)
                         else:
-                            ws_g.append_row([sid, v_tasks, v_quiz, total_sum, str(datetime.date.today()), ""])
-                        st.success(f"✅ تم حفظ الدرجة ({total_sum})")
-                        st.cache_data.clear()
+                            ws_g.append_row([sid, v_tasks, v_quiz, total, str(datetime.date.today()), ""])
+                        st.success("✅ تم حفظ الدرجات بنجاح"); st.cache_data.clear()
     
                 st.divider()
     
-                # --- 🎭 القسم الثاني: السلوك والتواصل ---
-                st.markdown("#### 🎭 سجل السلوك والتواصل الفوري")
-                with st.expander("🆕 رصد ملاحظة جديدة", expanded=True):
-                    with st.form("behavior_v2", clear_on_submit=True):
+                # --- 🎭 ثانياً: السلوك (إعادة القائمة الكاملة) ---
+                st.markdown("#### 🎭 سجل السلوك والتواصل")
+                with st.expander("🆕 رصد ملاحظة سلوكية جديدة", expanded=True):
+                    with st.form("behavior_full_form", clear_on_submit=True):
                         c1, c2 = st.columns(2)
-                        b_date = c1.date_input("التاريخ", datetime.date.today())
+                        b_date = c1.date_input("تاريخ الملاحظة", datetime.date.today())
+                        # 🌟 استعادة القائمة الكاملة التي طلبتها
                         b_type = c2.selectbox("نوع السلوك", [
-                            "🌟 متميز (+10)", "✅ مشاركة إيجابية (+5)", 
-                            "📚 لم يحضر الكتاب (-5)", "✍️ لم يحل الواجب (-5)", 
-                            "🖊️ لم يحضر القلم (-5)", "⚠️ تنبيه شفوي (0)"
+                            "🌟 متميز (+10)", 
+                            "✅ مشاركة إيجابية (+5)", 
+                            "📚 لم يحضر الكتاب (-5)", 
+                            "✍️ لم يحل الواجب (-5)", 
+                            "🖊️ لم يحضر القلم (-5)", 
+                            "⚠️ تنبيه شفوي (0)",
+                            "🚫 سلوك غير لائق (-10)"
                         ])
                         b_desc = st.text_input("ملاحظات إضافية")
                         
-                        if st.form_submit_button("💾 حفظ السلوك"):
+                        if st.form_submit_button("💾 رصد الملاحظة"):
                             sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
-                            # تحديث النقاط (تجنب الإزاحة)
+                            # تحديث رصيد النقاط (الربط بالأسماء)
                             p_idx = get_col_idx(df_st, "النقاط")
                             row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
-                            p_map = {"متميز": 10, "إيجابية": 5, "الكتاب": -5, "الواجب": -5, "القلم": -5}
+                            # خريطة خصم وإضافة النقاط
+                            p_map = {"متميز": 10, "إيجابية": 5, "الكتاب": -5, "الواجب": -5, "القلم": -5, "سلوك": -10}
                             change = next((v for k, v in p_map.items() if k in b_type), 0)
                             old_p = int(student_info["النقاط"] or 0)
                             sh.worksheet("students").update_cell(row_idx, p_idx, str(old_p + change))
-                            st.success("✅ تم الحفظ وتحديث النقاط")
+                            st.success(f"✅ تم الرصد وتحديث النقاط ({change})")
                             st.cache_data.clear()
     
-                # 📜 سجل الملاحظات السابقة مع أزرار الإرسال الموحدة
-                st.markdown("##### 📜 سجل الملاحظات وإرسال التقارير")
+                # --- 📜 ثالثاً: السجل التاريخي (حل مشكلة الواتساب) ---
+                st.markdown("##### 📜 سجل الملاحظات السابقة")
                 df_beh = fetch_safe("behavior")
                 my_beh = df_beh[df_beh.iloc[:, 0] == sid]
                 
@@ -266,19 +265,14 @@ if st.session_state.role == "teacher":
                     for _, row in my_beh.iloc[::-1].iterrows():
                         with st.container(border=True):
                             st.write(f"📅 **التاريخ:** {row[1]} | **النوع:** {row[2]}")
+                            # توليد الرابط مع التشفير الآمن للرموز
+                            wa_encoded, raw_text = format_for_whatsapp(s_name, row[2], row[3], row[1])
                             
-                            # توليد الرابط والرسالة بشكل آمن
-                            wa_url, clean_msg = get_safe_whatsapp_link(s_phone, s_name, row[2], row[3], row[1])
-                            
-                            col_wa, col_mail = st.columns(2)
-                            col_wa.link_button("📲 إرسال عبر واتساب", wa_url, use_container_width=True)
-                            
-                            # ترميز الإيميل بشكل منفصل لضمان التوافق
-                            mail_body = urllib.parse.quote(clean_msg)
-                            mail_url = f"mailto:{s_email}?subject=تقرير سلوكي: {s_name}&body={mail_body}"
-                            col_mail.link_button("📧 إرسال عبر الإيميل", mail_url, use_container_width=True)
+                            c1, c2 = st.columns(2)
+                            c1.link_button("📲 إرسال واتساب (بدون ?)", f"https://wa.me/{s_phone}?text={wa_encoded}", use_container_width=True)
+                            c2.link_button("📧 إرسال إيميل", f"mailto:{s_email}?subject=تقرير سلوكي&body={wa_encoded}", use_container_width=True)
                 else:
-                    st.info("لا توجد ملاحظات سابقة لهذا الطالب.")
+                    st.info("لا توجد ملاحظات سابقة.")
         else:
             st.warning("⚠️ يرجى إضافة طلاب أولاً.")
     
