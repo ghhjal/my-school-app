@@ -114,19 +114,21 @@ if st.session_state.role is None:
                         st.session_state.role = "teacher"; st.rerun()
                     else: st.error("كلمة المرور خاطئة")
     st.stop()
-# --- كود الإعلان البارز في الصفحة الرئيسية ---
+# --- كود الشاشة الرئيسية الذكي (يوضع بعد تسجيل الدخول مباشرة) ---
 df_ex = fetch_safe("exams")
 if not df_ex.empty:
-    # جلب آخر إعلان موجه لـ "الكل"
-    latest_global = df_ex[df_ex.iloc[:, 0] == "الكل"].iloc[-1:]
-    if not latest_global.empty:
-        st.markdown(f"""
-            <div style="background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 15px; margin-bottom: 20px; border-right: 10px solid #f56565;">
-                <h4 style="color: #c53030; margin: 0;">📢 إعلان هام وعاجل: {latest_global.iloc[0, 1]}</h4>
-                <p style="color: #4a5568; margin: 10px 0 0 0;">{latest_global.iloc[0, 3] if len(latest_global.columns) > 3 else ''}</p>
-                <small style="color: #a0aec0;">📅 تاريخ النشر: {latest_global.iloc[0, 2]}</small>
-            </div>
-        """, unsafe_allow_html=True)
+    # فلترة الإعلانات التي اخترت أنت عرضها في الرئيسية (العمود الخامس هو index 4)
+    # التأكد من وجود العمود الخامس أولاً لتجنب الأخطاء
+    if len(df_ex.columns) >= 5:
+        urgent_ann = df_ex[df_ex.iloc[:, 4] == "نعم"].iloc[-1:]
+        
+        if not urgent_ann.empty:
+            st.markdown(f"""
+                <div style="background: #fff5f5; border: 2px solid #feb2b2; padding: 20px; border-radius: 15px; margin-bottom: 25px; border-right: 10px solid #f56565;">
+                    <h3 style="color: #c53030; margin: 0;">📢 إعلان هام: {urgent_ann.iloc[0, 1]}</h3>
+                    <p style="color: #4a5568; margin: 10px 0;">{urgent_ann.iloc[0, 3]}</p>
+                </div>
+            """, unsafe_allow_html=True)
 # ==========================================
 # 👨‍🏫 واجهة المعلم (التقسيم المدمج المطور)
 # ==========================================
