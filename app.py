@@ -203,154 +203,61 @@ if st.session_state.role == "teacher":
         if st.button("🚪 خروج"): st.session_state.role = None; st.rerun()
 
 # ==========================================
-# 👨‍🎓 واجهة الطالب (الملف الشخصي المتكامل)
+# 👨‍🎓 واجهة الطالب (نسخة الاستقرار الكامل)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. جلب البيانات (محدثة بالـ ID النصي)
     df_st = fetch_data("students")
     df_grades = fetch_data("grades") 
     df_beh = fetch_data("behavior")
     df_ex = fetch_data("exams")
 
-    # 2. تحديد بيانات الطالب الحالي بدقة (البحث بالـ ID النصي)
     s_id = st.session_state.sid
     try:
-        # البحث في العمود الأول (الرقم الأكاديمي)
+        # البحث عن سطر الطالب بالرقم الأكاديمي
         s_data = df_st[df_st.iloc[:, 0].astype(str) == str(s_id)].iloc[0]
         
-        # توزيع البيانات بناءً على الترتيب الجديد (7 حقول + النقاط)
-        s_name = s_data.iloc[1]       # الاسم
-        s_stage = s_data.iloc[2]      # المرحلة
-        s_year = s_data.iloc[3]       # العام
-        s_class = s_data.iloc[4]      # الصف
-        s_email = s_data.iloc[5]      # البريد
-        s_phone = s_data.iloc[6]      # الجوال
-        # جلب النقاط (العمود الثامن - index 7) مع معالجة القيم الفارغة
-        p_val = str(s_data.iloc[7]).strip() if len(s_data) >= 8 else "0"
-        s_points = int(float(p_val)) if p_val.replace('.','',1).isdigit() else 0
+        # 💡 الحل الذكي: الوصول للبيانات عن طريق اسم العمود وليس رقمه
+        # تأكد أن هذه الأسماء مطابقة تماماً لما هو مكتوب في أول سطر في ملف الإكسل
+        s_name = s_data['name'] if 'name' in s_data else s_data.iloc[1]
+        s_class = s_data['class'] if 'class' in s_data else s_data.iloc[2]
+        
+        # جلب النقاط باستخدام اسم العمود "النقاط" حصراً
+        p_col_name = "النقاط" 
+        val = str(s_data[p_col_name]).strip() if p_col_name in s_data else "0"
+        s_points = int(float(val)) if val and val.replace('.','',1).isdigit() else 0
         
     except Exception as e:
-        st.error(f"⚠️ خطأ في تحميل ملفك الشخصي: {e}")
+        st.error(f"⚠️ هناك اختلاف في أسماء أعمدة ملف الإكسل: {e}")
         st.stop()
 
-    # 3. حساب الأوسمة والمتبقي
-    next_badge, points_to_next = "", 0
-    if s_points < 10: next_badge, points_to_next = "البرونزي", 10 - s_points
-    elif s_points < 50: next_badge, points_to_next = "الفضي", 50 - s_points
-    elif s_points < 100: next_badge, points_to_next = "الذهبي", 100 - s_points
-
-    # --- 📢 هيدر الطالب الجمالي ---
+    # --- 📢 الهيدر (استخدام الاسم الصحيح) ---
     st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 30px; border-radius: 25px; color: white; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-            <h2 style="color: white; margin: 0; font-size: 1.8rem;">🎯 أهلاً بك يا بطل: <span style="color: #ffd700;">{s_name}</span></h2>
-            <div style="margin-top: 10px; opacity: 0.9; font-weight: bold;">
-                🏫 {s_class} | {s_stage} | {s_year}
-            </div>
+        <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 20px; border-radius: 20px; color: white; text-align: center;">
+            <h2 style="color: white; margin: 0;">🎯 أهلاً بك: {s_name}</h2>
+            <p style="color: white; font-size: 1.1rem; margin-top: 5px;">🏫 {s_class}</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 🏆 نظام الأوسمة والنقاط ---
+    # --- 🏆 رصيد النقاط (تم تصحيحه ليقرأ من عمود "النقاط") ---
     st.markdown(f"""
-        <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; text-align: center; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-            <div style="display: flex; justify-content: space-around; margin-bottom: 25px;">
-                <div style="opacity: {'1' if s_points >= 10 else '0.2'}; filter: {'grayscale(0%)' if s_points >= 10 else 'grayscale(100%)'};">
-                    <div style="font-size: 2.5rem;">🥉</div><b style="color: #cd7f32;">برونزي</b>
-                </div>
-                <div style="opacity: {'1' if s_points >= 50 else '0.2'}; filter: {'grayscale(0%)' if s_points >= 50 else 'grayscale(100%)'};">
-                    <div style="font-size: 2.5rem;">🥈</div><b style="color: #7f8c8d;">فضي</b>
-                </div>
-                <div style="opacity: {'1' if s_points >= 100 else '0.2'}; filter: {'grayscale(0%)' if s_points >= 100 else 'grayscale(100%)'};">
-                    <div style="font-size: 2.5rem;">🥇</div><b style="color: #d4af37;">ذهبي</b>
-                </div>
-            </div>
-            <div style="background: #f59e0b; color: white; padding: 20px; border-radius: 15px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
-                <b style="font-size: 1.2rem; display: block; margin-bottom: 5px;">رصيد النقاط السلوكية</b>
-                <b style="font-size: 3.5rem; line-height: 1;">{s_points}</b>
-                {f'<div style="font-size: 0.9rem; margin-top:10px; background: rgba(255,255,255,0.2); padding: 5px; border-radius: 8px;">🚀 بقي لك {points_to_next} نقطة للوسام {next_badge}</div>' if points_to_next > 0 else ''}
-            </div>
+        <div style="background: #f59e0b; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-top: 15px;">
+            <b style="font-size: 1.2rem; display: block;">رصيد النقاط السلوكية</b>
+            <b style="font-size: 3rem; line-height: 1;">{s_points}</b>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 📊 التبويبات الطلابية ---
-    t_ex, t_grade, t_beh, t_lead, t_set = st.tabs(["📢 تنبيهات", "📊 درجاتي", "🎭 سلوكي", "🏆 الأبطال", "⚙️ الإعدادات"])
-
-    with t_ex: # التنبيهات
-        st.markdown("##### 📢 آخر التعميمات والاختبارات")
-        if not df_ex.empty:
-            # عرض التنبيهات الخاصة بصف الطالب أو الموجهة للكل
-            f_ex = df_ex[(df_ex.iloc[:, 0] == s_class) | (df_ex.iloc[:, 0] == "الكل")]
-            if not f_ex.empty:
-                for _, r in f_ex.iloc[::-1].iterrows():
-                    st.markdown(f"""
-                        <div style="background: #f0f7ff; padding: 15px; border-radius: 12px; border-right: 5px solid #1e40af; margin-bottom: 10px;">
-                            <b style="color: #1e40af; font-size: 1.1rem;">📝 {r[1]}</b><br>
-                            <small style="color: #64748b;">📅 تاريخ النشر: {r[2]}</small>
-                        </div>
-                    """, unsafe_allow_html=True)
-            else: st.info("لا توجد تنبيهات جديدة لصفك حالياً.")
-
-    with t_grade: # الدرجات
-        st.markdown("##### 📊 مستواي الأكاديمي")
-        my_g = df_grades[df_grades.iloc[:, 0].astype(str) == str(s_id)]
-        if not my_g.empty:
-            c1, c2, c3 = st.columns(3)
-            # عرض الدرجات (بافتراض ترتيبها: ID, مشاركة, واجبات, اختبار)
-            c1.metric("المشاركة", my_g.iloc[0, 1])
-            c2.metric("الواجبات", my_g.iloc[0, 2])
-            c3.metric("الاختبارات", my_g.iloc[0, 3])
-            if len(my_g.columns) > 5:
-                st.success(f"💬 ملاحظة المعلم: {my_g.iloc[0, 5]}")
-        else: st.info("لم يتم رصد درجات لك بعد.")
-
-    with t_beh: # السلوك
-        st.markdown("##### 🎭 سجل الانضباط")
-        my_b = df_beh[df_beh.iloc[:, 0].astype(str) == str(s_id)]
-        if not my_b.empty:
-            for _, r in my_b.iloc[::-1].iterrows():
-                is_pos = "+" in str(r[2])
+    # --- 🏆 لوحة المتصدرين (تصحيح البحث عن النقاط) ---
+    with st.expander("🏆 لوحة المتصدرين (أعلى 10)", expanded=True):
+        if p_col_name in df_st.columns:
+            # تحويل عمود النقاط لرقمي لضمان الترتيب الصحيح
+            df_st[p_col_name] = pd.to_numeric(df_st[p_col_name], errors='coerce').fillna(0)
+            top_10 = df_st.sort_values(by=p_col_name, ascending=False).head(10)
+            
+            for i, row in top_10.iterrows():
+                is_me = str(row.iloc[0]) == str(s_id)
                 st.markdown(f"""
-                    <div style="background: {'#f0fdf4' if is_pos else '#fef2f2'}; padding: 15px; border-radius: 12px; border-right: 5px solid {'#16a34a' if is_pos else '#dc2626'}; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <b style="color: {'#16a34a' if is_pos else '#dc2626'};">{r[2]}</b>
-                            <small>{r[1]}</small>
-                        </div>
-                        <div style="margin-top: 5px;">{r[3]}</div>
+                    <div style="background: {'#eff6ff' if is_me else 'white'}; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>{'⭐' if is_me else '👤'} {row.iloc[1] if pd.notnull(row.iloc[1]) else row.iloc[2]}</span>
+                        <b style="color: #1e40af;">{int(row[p_col_name])} نقطة</b>
                     </div>
                 """, unsafe_allow_html=True)
-        else: st.success("سجلك نظيف ومتميز! واصل العمل الرائع. ✨")
-
-    with t_lead: # الأبطال
-        st.markdown("##### 🏆 لوحة المتصدرين (أعلى 10)")
-        df_st.iloc[:, 7] = pd.to_numeric(df_st.iloc[:, 7], errors='coerce').fillna(0)
-        top_students = df_st.sort_values(by=df_st.columns[7], ascending=False).head(10)
-        for i, row in top_students.iterrows():
-            is_me = str(row[0]) == str(s_id)
-            st.markdown(f"""
-                <div style="background: {'#eff6ff' if is_me else 'white'}; padding: 12px; border-radius: 12px; border: {'2px solid #1e40af' if is_me else '1px solid #e2e8f0'}; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span>{'👑' if i==top_students.index[0] else '⭐'} <b>{row[1]}</b> {'(أنت)' if is_me else ''}</span>
-                    <b style="background: #1e40af; color: white; padding: 4px 12px; border-radius: 8px;">{int(row[7])}</b>
-                </div>
-            """, unsafe_allow_html=True)
-
-    with t_set: # الإعدادات (تحديث البيانات)
-        st.markdown("##### ⚙️ تحديث بيانات التواصل")
-        with st.form("st_update_form"):
-            new_mail = st.text_input("📧 البريد الإلكتروني", value=str(s_email))
-            new_phone = st.text_input("📱 جوال ولي الأمر (بدون 966)", value=str(s_phone).replace('966', ''))
-            if st.form_submit_button("✅ حفظ التعديلات"):
-                # تنسيق الهاتف تلقائياً قبل الحفظ
-                phone = new_phone.strip()
-                if phone.startswith("0"): phone = phone[1:]
-                if not phone.startswith("966") and phone: phone = "966" + phone
-                
-                try:
-                    ws = sh.worksheet("students")
-                    # إيجاد رقم السطر بالـ ID النصي
-                    row_idx = df_st[df_st.iloc[:, 0].astype(str) == str(s_id)].index[0] + 2
-                    ws.update_cell(row_idx, 6, new_mail) # تحديث البريد
-                    ws.update_cell(row_idx, 7, phone)    # تحديث الجوال
-                    st.success("✅ تم تحديث بياناتك بنجاح!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                except: st.error("فشل في تحديث البيانات")
-
-    if st.button("🚪 تسجيل الخروج", use_container_width=True):
-        st.session_state.role = None; st.rerun()
