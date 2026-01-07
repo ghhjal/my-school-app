@@ -24,41 +24,44 @@ def get_gspread_client():
         st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من Secrets.")
         return None
 
+# ==========================================
+# ⚙️ تأسيس النظام وتحميل الإعدادات (إصدار مستقر)
+# ==========================================
 sh = get_gspread_client()
-# تحميل الإعدادات المتقدمة من جدول settings
-if "current_year" not in st.session_state:
-    try:
-        df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
-        # جلب العام الدراسي
-        st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
-        # جلب قائمة الصفوف (مخزنة كنص مفصول بفاصلة في الإكسل)
-        classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
-        # أضف هذا الجزء داخل كود تحميل الإعدادات (بعد كود class_list)
-if "stage_options" not in st.session_state:
-    try:
-        # جلب قائمة المراحل من شيت settings (مفتاح stage_list)
-        stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
-        st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
-    except:
-        # قيم افتراضية للمراحل
-        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
-        st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
-    except:
-        # قيم افتراضية في حال عدم وجودها في الشيت بعد
-        st.session_state.current_year = "1447هـ"
-        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
-# تحميل الإعدادات الدائمة من شيت settings لضمان ثبات التوزيع
+
+# جلب الإعدادات مرة واحدة فقط لضمان السرعة ومنع اللاق
 if "max_tasks" not in st.session_state:
     try:
+        # قراءة ورقة الإعدادات كاملة في البداية
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
+        
+        # 1. تحميل توزيع الدرجات
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
-    except:
-        st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
+        
+        # 2. تحميل العام الدراسي
+        st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
+        
+        # 3. تحميل قائمة الصفوف
+        classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
+        st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
+        
+        # 4. تحميل قائمة المراحل الدراسية
+        stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
+        st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
+        
+    except Exception as e:
+        # في حال وجود أي خطأ أو نقص في الشيت، يتم تفعيل القيم الافتراضية فوراً
+        st.warning("⚠️ تم استخدام الإعدادات الافتراضية (تأكد من جدول settings في الإكسل)")
+        st.session_state.max_tasks = 60
+        st.session_state.max_quiz = 40
+        st.session_state.current_year = "1447هـ"
+        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
+        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
+# تهيئة بقية متغيرات الحالة
 if "role" not in st.session_state: st.session_state.role = None
 if "active_tab" not in st.session_state: st.session_state.active_tab = 0
-
 # ==========================================
 # 🧠 2. دوال معالجة البيانات الاحترافية
 # ==========================================
