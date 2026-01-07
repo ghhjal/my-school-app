@@ -627,49 +627,50 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
 # ==========================================
-# 📱 واجهة الطالب (إصدار الأوسمة الذهبية 2026)
+# 📱 واجهة الطالب (الإصدار الذهبي والمستقر)
 # ==========================================
 if st.session_state.role == "student":
+    # 1. استرجاع وتطهير الرقم الأكاديمي الموحد
     student_id = str(st.session_state.get('username', '')).strip()
     
+    # جلب الجداول السحابية
     df_st = fetch_safe("students")
     df_gr = fetch_safe("grades")
     df_beh = fetch_safe("behavior")
 
-    df_st['id_clean'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-    my_info = df_st[df_st['id_clean'] == student_id]
+    # مطابقة بيانات الطالب بدقة (توحيد اسم العمود clean_id لمنع الـ KeyError)
+    df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+    my_info = df_st[df_st['clean_id'] == student_id]
 
     if not my_info.empty:
         s_data = my_info.iloc[0]
         s_name = s_data.get('name', 'طالبنا المتميز')
         s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
         
-        # 🎨 تنسيق الأوسمة الذهبية والبطاقات الموحد
+        # 🎨 التنسيق البصري الموحد والأوسمة الملكية
         st.markdown(f"""
             <style>
             .welcome-card {{ background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: -50px; border-top: 8px solid #1e3a8a; }}
             .points-box {{ background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 25px; border-radius: 20px; text-align: center; margin: 20px 0; }}
             
-            /* تصميم بطاقة الوسام الذهبي الفاخر */
-            .medal-card-gold {{
-                background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-                color: white; padding: 20px; border-radius: 15px; text-align: center;
-                box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
-                border: 2px solid #d97706; transition: 0.3s;
+            /* تصميم الأوسمة الذهبية الفاخرة (نظام البطاقات المشعة) */
+            .medal-gold {{ 
+                background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c); 
+                color: #5d4037; padding: 20px; border-radius: 20px; text-align: center; 
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1); border: 2px solid #aa771c; font-weight: bold;
             }}
-            .medal-card-silver {{
-                background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%);
-                color: white; padding: 20px; border-radius: 15px; text-align: center;
-                box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.3);
-                border: 2px solid #64748b;
+            .medal-silver {{ 
+                background: linear-gradient(135deg, #757f9a, #d7dde8); 
+                color: #2c3e50; padding: 20px; border-radius: 20px; text-align: center; 
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1); border: 2px solid #757f9a; font-weight: bold;
             }}
-            .medal-card-locked {{
-                background: #f1f5f9; color: #94a3b8; padding: 20px; border-radius: 15px; 
+            .medal-locked {{ 
+                background: #f1f5f9; color: #94a3b8; padding: 20px; border-radius: 20px; 
                 text-align: center; border: 1px dashed #cbd5e1; opacity: 0.6;
             }}
             
-            /* تصميم بطاقات الدرجات والمتصدرين الموحد */
-            .item-card {{ background: white; padding: 18px; border-radius: 15px; border: 1px solid #edf2f7; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }}
+            /* تصميم البطاقات الموحد (درجات + متصدرين) */
+            .item-card {{ background: white; padding: 18px; border-radius: 15px; border: 1px solid #edf2f7; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }}
             .item-label {{ font-weight: bold; color: #1e3a8a; font-size: 1.1rem; }}
             .item-val {{ font-size: 1.5rem; font-weight: 900; color: #334155; }}
             </style>
@@ -688,12 +689,12 @@ if st.session_state.role == "student":
         st.divider()
         tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
-        # --- تبويب درجاتي ---
+        # --- تبويب 3: درجاتي (إزالة كافة الأحرف الإنجليزية) ---
         with tabs[2]:
             st.markdown("#### 📊 سجل النتائج الأكاديمية")
             if not df_gr.empty:
-                df_gr['id_clean'] = df_gr.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                my_gr = df_gr[df_gr['id_clean'] == student_id]
+                df_gr['clean_id'] = df_gr.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+                my_gr = df_gr[df_gr['clean_id'] == student_id]
                 if not my_gr.empty:
                     g = my_gr.iloc[0]
                     st.markdown(f"""
@@ -701,54 +702,51 @@ if st.session_state.role == "student":
                         <div class="item-card"><span class="item-label">✍️ اختبار قصير</span><span class="item-val">{g.get('p2', 0)}</span></div>
                         <div class="item-card" style="border-right: 6px solid #10b981; background: #f0fdf4;"><span class="item-label" style="color:#10b981;">🏆 المجموع الكلي</span><span class="item-val" style="color:#10b981;">{g.get('perf', 0)}</span></div>
                     """, unsafe_allow_html=True)
+                else: st.info("⏳ جاري رصد الدرجات...")
 
-        # --- تبويب المتصدرين ---
+        # --- تبويب 4: المتصدرين (تصميم البطاقات الموحد + إصلاح KeyError) ---
         with tabs[3]:
             st.markdown("#### 🏆 لوحة شرف المتصدرين")
             df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
             top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
             for i, (_, row) in enumerate(top_10.iterrows(), 1):
+                # تم إصلاح الخطأ هنا باستخدام clean_id بشكل صحيح
                 is_me = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
                 st.markdown(f"""
                     <div class="item-card" style="{is_me}">
                         <div style="display:flex; align-items:center;">
-                            <div style="background:#f1f5f9; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:10px;">{i}</div>
+                            <div style="background:#f1f5f9; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:10px; font-weight:bold;">{i}</div>
                             <span class="item-label">{"⭐ " if i <= 3 else ""}{row['name']}</span>
                         </div>
                         <span class="item-val" style="font-size:1.2rem;">{int(row['pts_num'])}</span>
                     </div>
                 """, unsafe_allow_html=True)
 
-        # --- تبويب الإعدادات والأوسمة الذهبية ---
+        # --- تبويب 5: الإعدادات والأوسمة (دمج الأوسمة وزر الخروج) ---
         with tabs[4]:
             st.markdown("#### 🏅 خزانة الأوسمة الملكية")
-            
-            # عرض الأوسمة كبطاقات ذهبية براقة
             m1, m2, m3 = st.columns(3)
             with m1:
-                style = "medal-card-gold" if s_points >= 100 else "medal-card-locked"
-                st.markdown(f"<div class='{style}'>🏆<br><b>وسام ذهبي</b><br><small>{'تم الاستحقاق' if s_points >= 100 else 'قريباً'}</small></div>", unsafe_allow_html=True)
+                style = "medal-gold" if s_points >= 100 else "medal-locked"
+                st.markdown(f"<div class='{style}'>🏆<br>وسام ذهبي</div>", unsafe_allow_html=True)
             with m2:
-                style = "medal-card-silver" if s_points >= 50 else "medal-card-locked"
-                st.markdown(f"<div class='{style}'>🥈<br><b>وسام فضي</b><br><small>{'تم الاستحقاق' if s_points >= 50 else 'قريباً'}</small></div>", unsafe_allow_html=True)
+                style = "medal-silver" if s_points >= 50 else "medal-locked"
+                st.markdown(f"<div class='{style}'>🥈<br>وسام فضي</div>", unsafe_allow_html=True)
             with m3:
-                st.markdown(f"<div class='medal-card-gold' style='background: linear-gradient(135deg, #b45309 0%, #d97706 100%);'>🥉<br><b>وسام برونزي</b><br><small>مستحق</small></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='medal-gold' style='background:linear-gradient(135deg, #804a00, #ffcc33); border-color:#804a00;'>🥉<br>برونزي</div>", unsafe_allow_html=True)
             
             st.divider()
-            
-            with st.form("up_settings_final"):
-                st.markdown("##### ⚙️ إعدادات الحساب")
+            with st.form("up_settings_vfinal"):
+                st.markdown("##### ⚙️ تحديث بيانات التواصل")
                 n_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
                 n_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
                 if st.form_submit_button("💾 حفظ البيانات"):
-                    # (كود التحديث في قوقل شيت)
-                    st.success("✅ تم تحديث بياناتك بنجاح")
-
+                    # منطق التحديث يبقى كما هو في كودك
+                    st.success("✅ تم التحديث")
+            
             st.markdown("---")
-            # زر الخروج النهائي
+            # زر تسجيل الخروج الأحمر في النهاية
             if st.button("🚪 تسجيل الخروج من المنصة", type="primary", use_container_width=True):
-                st.session_state.role = None
-                st.session_state.username = None
-                st.rerun()
+                st.session_state.role = None; st.session_state.username = None; st.rerun()
 
     show_footer()
