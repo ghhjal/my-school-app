@@ -317,74 +317,74 @@ else:
                         st.cache_data.clear(); st.rerun()
 
     with menu[3]:
-    st.subheader("⚙️ مركز التحكم وإدارة النظام")
+        st.subheader("⚙️ مركز التحكم وإدارة النظام")
+        
+        # 1. إدارة توزيع الدرجات (حفظ دائم)
+        with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
+            c1, c2 = st.columns(2)
+            nt = c1.number_input("حد المشاركة والمهام", 1, 100, st.session_state.max_tasks)
+            nq = c2.number_input("حد الاختبار القصير", 1, 100, st.session_state.max_quiz)
+            if st.button("💾 حفظ توزيع الدرجات نهائياً"):
+                ws_s = sh.worksheet("settings")
+                ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
+                st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
+                st.success("✅ تم تحديث توزيع الدرجات في القاعدة.")
     
-    # 1. إدارة توزيع الدرجات (حفظ دائم)
-    with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
-        c1, c2 = st.columns(2)
-        nt = c1.number_input("حد المشاركة والمهام", 1, 100, st.session_state.max_tasks)
-        nq = c2.number_input("حد الاختبار القصير", 1, 100, st.session_state.max_quiz)
-        if st.button("💾 حفظ توزيع الدرجات نهائياً"):
-            ws_s = sh.worksheet("settings")
-            ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
-            st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
-            st.success("✅ تم تحديث توزيع الدرجات في القاعدة.")
-
-    # 2. إدارة العام والصفوف والمراحل
-    with st.expander("🗓️ إدارة العام الدراسي والصفوف والمراحل"):
-        c1, c2, c3 = st.columns(3)
-        new_year = c1.text_input("العام الدراسي الحالي:", st.session_state.current_year)
-        
-        # تعديل القوائم عبر نص مفصول بفاصلة
-        classes_str = c2.text_area("قائمة الصفوف (افصل بفاصلة):", ", ".join(st.session_state.class_options))
-        stages_str = c3.text_area("قائمة المراحل (افصل بفاصلة):", ", ".join(st.session_state.stage_options))
-        
-        if st.button("💾 حفظ إعدادات القوائم"):
-            ws_s = sh.worksheet("settings")
-            ws_s.update_cell(4, 2, new_year) # current_year
-            ws_s.update_cell(5, 2, classes_str) # class_list
-            ws_s.update_cell(6, 2, stages_str) # stage_list
-            st.success("✅ تم تحديث القوائم بنجاح. (يرجى إعادة تحميل الصفحة)")
-
-    # 3. إدارة المستخدمين (إضافة مع تشفير الباسوورد)
-    with st.expander("🔐 إدارة الوصول (إضافة مستخدم جديد)"):
-        with st.form("add_user_form", clear_on_submit=True):
-            new_u = st.text_input("👤 اسم المستخدم الجديد")
-            new_p = st.text_input("🔑 كلمة المرور", type="password")
-            u_role = st.selectbox("📌 الصلاحية", ["teacher", "admin"])
-            if st.form_submit_button("➕ إضافة المستخدم للقاعدة"):
-                if new_u and new_p:
-                    # تشفير كلمة المرور قبل الحفظ للأمان
-                    h_pass = hashlib.sha256(str.encode(new_p)).hexdigest()
-                    if safe_append_row("users", {"username": new_u, "password_hash": h_pass, "role": u_role}):
-                        st.success(f"✅ تم إضافة المستخدم {new_u} بنجاح.")
-                else: st.warning("⚠️ يرجى تعبئة كافة الحقول.")
-
-    # 4. إدارة البيانات (نسخ احتياطي + قوالب فارغة)
-    with st.expander("📂 إدارة البيانات (إكسل)"):
-        st.write("📥 **تحميل قوالب إكسل فارغة (للرفع الجديد):**")
-        # إنشاء ملف إكسل فارغ في الذاكرة
-        buffer_tpl = io.BytesIO()
-        with pd.ExcelWriter(buffer_tpl, engine='xlsxwriter') as writer:
-            pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(writer, index=False)
-        st.download_button("📝 تحميل قالب بيانات الطلاب", data=buffer_tpl.getvalue(), file_name="students_template.xlsx", mime="application/vnd.ms-excel")
-
-        st.divider()
-        st.write("📤 **نسخة احتياطية من البيانات الحالية:**")
-        if st.button("📊 توليد ملف النسخة الاحتياطية (BackUp)"):
-            df_backup = fetch_safe("students")
-            buffer_bu = io.BytesIO()
-            with pd.ExcelWriter(buffer_bu, engine='xlsxwriter') as writer:
-                df_backup.to_excel(writer, index=False)
-            st.download_button("📥 تنزيل سجل الطلاب الحالي", data=buffer_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
-
-    # 5. صيانة النظام (تصفير الكاش)
-    with st.expander("🛠️ صيانة النظام"):
-        st.warning("تصفير الكاش سيقوم بإعادة جلب كافة البيانات من Google Sheets (يحل مشكلة عدم ظهور التحديثات).")
-        if st.button("🔄 تصفير الكاش وتحديث البيانات (Clear Cache)"):
-            st.cache_data.clear()
-            st.success("✅ تم تصفير الكاش بنجاح!")
-            st.rerun()
+        # 2. إدارة العام والصفوف والمراحل
+        with st.expander("🗓️ إدارة العام الدراسي والصفوف والمراحل"):
+            c1, c2, c3 = st.columns(3)
+            new_year = c1.text_input("العام الدراسي الحالي:", st.session_state.current_year)
+            
+            # تعديل القوائم عبر نص مفصول بفاصلة
+            classes_str = c2.text_area("قائمة الصفوف (افصل بفاصلة):", ", ".join(st.session_state.class_options))
+            stages_str = c3.text_area("قائمة المراحل (افصل بفاصلة):", ", ".join(st.session_state.stage_options))
+            
+            if st.button("💾 حفظ إعدادات القوائم"):
+                ws_s = sh.worksheet("settings")
+                ws_s.update_cell(4, 2, new_year) # current_year
+                ws_s.update_cell(5, 2, classes_str) # class_list
+                ws_s.update_cell(6, 2, stages_str) # stage_list
+                st.success("✅ تم تحديث القوائم بنجاح. (يرجى إعادة تحميل الصفحة)")
+    
+        # 3. إدارة المستخدمين (إضافة مع تشفير الباسوورد)
+        with st.expander("🔐 إدارة الوصول (إضافة مستخدم جديد)"):
+            with st.form("add_user_form", clear_on_submit=True):
+                new_u = st.text_input("👤 اسم المستخدم الجديد")
+                new_p = st.text_input("🔑 كلمة المرور", type="password")
+                u_role = st.selectbox("📌 الصلاحية", ["teacher", "admin"])
+                if st.form_submit_button("➕ إضافة المستخدم للقاعدة"):
+                    if new_u and new_p:
+                        # تشفير كلمة المرور قبل الحفظ للأمان
+                        h_pass = hashlib.sha256(str.encode(new_p)).hexdigest()
+                        if safe_append_row("users", {"username": new_u, "password_hash": h_pass, "role": u_role}):
+                            st.success(f"✅ تم إضافة المستخدم {new_u} بنجاح.")
+                    else: st.warning("⚠️ يرجى تعبئة كافة الحقول.")
+    
+        # 4. إدارة البيانات (نسخ احتياطي + قوالب فارغة)
+        with st.expander("📂 إدارة البيانات (إكسل)"):
+            st.write("📥 **تحميل قوالب إكسل فارغة (للرفع الجديد):**")
+            # إنشاء ملف إكسل فارغ في الذاكرة
+            buffer_tpl = io.BytesIO()
+            with pd.ExcelWriter(buffer_tpl, engine='xlsxwriter') as writer:
+                pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(writer, index=False)
+            st.download_button("📝 تحميل قالب بيانات الطلاب", data=buffer_tpl.getvalue(), file_name="students_template.xlsx", mime="application/vnd.ms-excel")
+    
+            st.divider()
+            st.write("📤 **نسخة احتياطية من البيانات الحالية:**")
+            if st.button("📊 توليد ملف النسخة الاحتياطية (BackUp)"):
+                df_backup = fetch_safe("students")
+                buffer_bu = io.BytesIO()
+                with pd.ExcelWriter(buffer_bu, engine='xlsxwriter') as writer:
+                    df_backup.to_excel(writer, index=False)
+                st.download_button("📥 تنزيل سجل الطلاب الحالي", data=buffer_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
+    
+        # 5. صيانة النظام (تصفير الكاش)
+        with st.expander("🛠️ صيانة النظام"):
+            st.warning("تصفير الكاش سيقوم بإعادة جلب كافة البيانات من Google Sheets (يحل مشكلة عدم ظهور التحديثات).")
+            if st.button("🔄 تصفير الكاش وتحديث البيانات (Clear Cache)"):
+                st.cache_data.clear()
+                st.success("✅ تم تصفير الكاش بنجاح!")
+                st.rerun()
 
     with menu[4]:
         if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
