@@ -323,45 +323,45 @@ with menu[0]:
                         st.cache_data.clear(); st.rerun()
 
     with menu[3]:
-    st.subheader("⚙️ إعدادات النظام المتقدمة")
-    
-    # 1. لوحة توزيع الدرجات (الموجودة سابقاً)
-    with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
-        c1, c2 = st.columns(2)
-        nt = c1.number_input("حد المشاركة", 1, 100, st.session_state.max_tasks)
-        nq = c2.number_input("حد الاختبار", 1, 100, st.session_state.max_quiz)
-        if st.button("💾 حفظ توزيع الدرجات"):
-            ws_s = sh.worksheet("settings")
-            ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
-            st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
-            st.success("✅ تم حفظ التوزيع")
-
-    # 2. اللوحة الجديدة: إدارة العام والصفوف
-    with st.expander("🗓️ إدارة العام الدراسي والصفوف", expanded=True):
-        c1, c2 = st.columns(2)
-        new_year = c1.text_input("تعديل العام الدراسي الحالي:", st.session_state.current_year)
+        st.subheader("⚙️ إعدادات النظام المتقدمة")
         
-        # تحويل القائمة لنص ليتمكن المعلم من تعديلها بسهولة
-        current_classes_str = ", ".join(st.session_state.class_options)
-        new_classes_str = c2.text_area("تعديل قائمة الصفوف (افصل بينها بفاصلة):", current_classes_str)
-        
-        if st.button("💾 حفظ إعدادات العام والصفوف"):
-            try:
+        # 1. لوحة توزيع الدرجات (الموجودة سابقاً)
+        with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
+            c1, c2 = st.columns(2)
+            nt = c1.number_input("حد المشاركة", 1, 100, st.session_state.max_tasks)
+            nq = c2.number_input("حد الاختبار", 1, 100, st.session_state.max_quiz)
+            if st.button("💾 حفظ توزيع الدرجات"):
                 ws_s = sh.worksheet("settings")
-                # تحديث العام الدراسي (نفترض أنه في السطر 4 من شيت settings)
-                ws_s.update_cell(4, 2, new_year)
-                # تحديث قائمة الصفوف (نفترض أنها في السطر 5)
-                ws_s.update_cell(5, 2, new_classes_str)
-                
-                # تحديث الذاكرة فوراً
-                st.session_state.current_year = new_year
-                st.session_state.class_options = [c.strip() for c in new_classes_str.split(',')]
-                
-                st.success("✅ تم تحديث العام والصفوف بنجاح!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"⚠️ فشل الحفظ: {e}. تأكد من وجود مفاتيح current_year و class_list في شيت settings")
-        
+                ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
+                st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
+                st.success("✅ تم حفظ التوزيع")
+    
+        # 2. اللوحة الجديدة: إدارة العام والصفوف
+        with st.expander("🗓️ إدارة العام الدراسي والصفوف", expanded=True):
+            c1, c2 = st.columns(2)
+            new_year = c1.text_input("تعديل العام الدراسي الحالي:", st.session_state.current_year)
+            
+            # تحويل القائمة لنص ليتمكن المعلم من تعديلها بسهولة
+            current_classes_str = ", ".join(st.session_state.class_options)
+            new_classes_str = c2.text_area("تعديل قائمة الصفوف (افصل بينها بفاصلة):", current_classes_str)
+            
+            if st.button("💾 حفظ إعدادات العام والصفوف"):
+                try:
+                    ws_s = sh.worksheet("settings")
+                    # تحديث العام الدراسي (نفترض أنه في السطر 4 من شيت settings)
+                    ws_s.update_cell(4, 2, new_year)
+                    # تحديث قائمة الصفوف (نفترض أنها في السطر 5)
+                    ws_s.update_cell(5, 2, new_classes_str)
+                    
+                    # تحديث الذاكرة فوراً
+                    st.session_state.current_year = new_year
+                    st.session_state.class_options = [c.strip() for c in new_classes_str.split(',')]
+                    
+                    st.success("✅ تم تحديث العام والصفوف بنجاح!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"⚠️ فشل الحفظ: {e}. تأكد من وجود مفاتيح current_year و class_list في شيت settings")
+            
         with st.expander("🔐 تغيير كلمة مرور (z1 / Ziyad1)"):
             df_u = fetch_safe("users")
             user_fix = st.selectbox("المستخدم:", df_u['username'].tolist() if not df_u.empty else [])
