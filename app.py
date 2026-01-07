@@ -195,26 +195,41 @@ if st.session_state.role is None:
 # ==========================================
 if st.session_state.role is None:
     t1, t2 = st.tabs(["🎓 دخول الطلاب", "🔐 دخول الإدارة"])
+    
     with t1:
         with st.form("st_log"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي").strip()
+            sid_in = st.text_input("🆔 الرقم الأكاديمي (بدون مسافات)").strip()
             if st.form_submit_button("دخول الطلاب 🚀"):
-                df_st = fetch_safe("students")
-                if not df_st.empty and sid_in in df_st.iloc[:, 0].values:
-                    st.session_state.role = "student"; st.session_state.sid = sid_in; st.rerun()
-                else: st.error("عذراً، الرقم غير مسجل.")
+                if sid_in:
+                    df_st = fetch_safe("students")
+                    if not df_st.empty:
+                        # ✨ المطابق الذكي: تنظيف المدخلات والبيانات من أي .0 أو مسافات
+                        search_id = sid_in.split('.')[0]
+                        df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+                        
+                        if search_id in df_st['clean_id'].values:
+                            # ✅ توحيد اسم المتغير ليكون 'username' في الحالتين
+                            st.session_state.role = "student"
+                            st.session_state.username = search_id 
+                            st.success("تم تسجيل الدخول بنجاح")
+                            st.rerun()
+                        else: st.error("عذراً، الرقم الأكاديمي غير مسجل.")
+                else: st.warning("يرجى إدخال الرقم الأكاديمي أولاً.")
+                
     with t2:
         with st.form("admin_log"):
-            u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
+            u = st.text_input("👤 اسم المستخدم (الإدارة)").strip()
+            p = st.text_input("🔑 كلمة المرور", type="password")
             if st.form_submit_button("دخول الإدارة"):
                 df_u = fetch_safe("users")
-                if not df_u.empty and u.strip() in df_u['username'].values:
-                    user_data = df_u[df_u['username']==u.strip()].iloc[0]
+                if not df_u.empty and u in df_u['username'].values:
+                    user_data = df_u[df_u['username'] == u].iloc[0]
                     if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
-                        st.session_state.role = "teacher"; st.session_state.username = u.strip(); st.rerun()
+                        st.session_state.role = "teacher"
+                        st.session_state.username = u
+                        st.rerun()
                 st.error("بيانات الدخول غير صحيحة.")
     st.stop()
-
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
