@@ -161,58 +161,7 @@ if st.session_state.role is None:
 # ==========================================
 # 👨‍🏫 5. واجهة المعلم (المكتملة بدون نقصان)
 # ==========================================
-if st.session_state.role == "teacher":
-    menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
-    # ==========================================
-    # 👥 الوحدة 2: تبويب إدارة الطلاب (الإصدار الشامل)
-    # ==========================================
-    with menu[0]:
-        st.subheader("👥 إدارة قاعدة بيانات الطلاب")
-        df_st = fetch_safe("students")
-        
-        if not df_st.empty:
-            # 1. شريط الإحصائيات الذكي
-            c1, c2, c3 = st.columns(3)
-            c1.metric("📊 إجمالي الطلاب", len(df_st))
-            c2.metric("🏫 عدد الفصول", len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1)
-            # تحويل النقاط لرقم لضمان دقة المتوسط
-            df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-            c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
-            
-            st.divider()
-    
-            with st.expander("➕ إضافة طالب جديد (تنسيق الجوال آلي)"):
-                with st.form("add_st_final_v5", clear_on_submit=True):
-                    col1, col2 = st.columns(2)
-                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
-                    f_name = col2.text_input("👤 الاسم الثلاثي")
-                    col3, col4, col5 = st.columns(3)
-                    f_stage = col3.selectbox("🎓 المرحلة", st.session_state.stage_options)
-                    f_year = col4.text_input("🗓️ العام", st.session_state.current_year)
-                    f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
-                    f_mail = st.text_input("📧 الإيميل")
-                    f_phone_raw = st.text_input("📱 الجوال (مثال: 05xxxx)")
-                    
-                    if st.form_submit_button("✅ حفظ"):
-                        # ✅ تنظيف الرقم قبل الحفظ
-                        f_phone = clean_phone_number(f_phone_raw)
-                        st_data = {
-                            "id": f_id.strip(), "name": f_name.strip(), 
-                            "class": f_class, "year": f_year, "sem": f_stage, 
-                            "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"
-                        }
-                        if safe_append_row("students", st_data):
-                            st.success(f"✅ تم الحفظ بالرقم الدولي: {f_phone}")
-                            st.cache_data.clear(); st.rerun()
 
-    # 3. محرك البحث الذكي (الاسم أو الرقم)
-    sq = st.text_input("🔍 ابحث عن طالب محدد:")
-    df_disp = df_st[df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)] if sq else df_st
-    
-    # عرض الجدول بشكل احترافي
-    st.dataframe(df_disp, use_container_width=True, hide_index=True)
-else:
-    st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
 
     # ==========================================
     # 📊 تبويب: التقييم والمتابعة (الإصدار الشامل والمصحح)
@@ -317,78 +266,7 @@ else:
                         sh.worksheet("exams").delete_rows(int(idx) + 2)
                         st.cache_data.clear(); st.rerun()
     #
-    with menu[3]:
-        st.subheader("⚙️ مركز التحكم وإدارة النظام")
-        
-        # 1. إدارة توزيع الدرجات (حفظ دائم)
-        with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
-            c1, c2 = st.columns(2)
-            nt = c1.number_input("حد المشاركة والمهام", 1, 100, st.session_state.max_tasks)
-            nq = c2.number_input("حد الاختبار القصير", 1, 100, st.session_state.max_quiz)
-            if st.button("💾 حفظ توزيع الدرجات نهائياً"):
-                ws_s = sh.worksheet("settings")
-                ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
-                st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
-                st.success("✅ تم تحديث توزيع الدرجات في القاعدة.")
     
-        # 2. إدارة العام والصفوف والمراحل
-        with st.expander("🗓️ إدارة العام الدراسي والصفوف والمراحل"):
-            c1, c2, c3 = st.columns(3)
-            new_year = c1.text_input("العام الدراسي الحالي:", st.session_state.current_year)
-            
-            # تعديل القوائم عبر نص مفصول بفاصلة
-            classes_str = c2.text_area("قائمة الصفوف (افصل بفاصلة):", ", ".join(st.session_state.class_options))
-            stages_str = c3.text_area("قائمة المراحل (افصل بفاصلة):", ", ".join(st.session_state.stage_options))
-            
-            if st.button("💾 حفظ إعدادات القوائم"):
-                ws_s = sh.worksheet("settings")
-                ws_s.update_cell(4, 2, new_year) # current_year
-                ws_s.update_cell(5, 2, classes_str) # class_list
-                ws_s.update_cell(6, 2, stages_str) # stage_list
-                st.success("✅ تم تحديث القوائم بنجاح. (يرجى إعادة تحميل الصفحة)")
-    
-        # 3. إدارة المستخدمين (إضافة مع تشفير الباسوورد)
-        with st.expander("🔐 إدارة الوصول (إضافة مستخدم جديد)"):
-            with st.form("add_user_form", clear_on_submit=True):
-                new_u = st.text_input("👤 اسم المستخدم الجديد")
-                new_p = st.text_input("🔑 كلمة المرور", type="password")
-                u_role = st.selectbox("📌 الصلاحية", ["teacher", "admin"])
-                if st.form_submit_button("➕ إضافة المستخدم للقاعدة"):
-                    if new_u and new_p:
-                        # تشفير كلمة المرور قبل الحفظ للأمان
-                        h_pass = hashlib.sha256(str.encode(new_p)).hexdigest()
-                        if safe_append_row("users", {"username": new_u, "password_hash": h_pass, "role": u_role}):
-                            st.success(f"✅ تم إضافة المستخدم {new_u} بنجاح.")
-                    else: st.warning("⚠️ يرجى تعبئة كافة الحقول.")
-    
-        # 4. إدارة البيانات (نسخ احتياطي + قوالب فارغة)
-        with st.expander("📂 إدارة البيانات (إكسل)"):
-            st.write("📥 **تحميل قوالب إكسل فارغة (للرفع الجديد):**")
-            # إنشاء ملف إكسل فارغ في الذاكرة
-            buffer_tpl = io.BytesIO()
-            with pd.ExcelWriter(buffer_tpl, engine='xlsxwriter') as writer:
-                pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(writer, index=False)
-            st.download_button("📝 تحميل قالب بيانات الطلاب", data=buffer_tpl.getvalue(), file_name="students_template.xlsx", mime="application/vnd.ms-excel")
-    
-            st.divider()
-            st.write("📤 **نسخة احتياطية من البيانات الحالية:**")
-            if st.button("📊 توليد ملف النسخة الاحتياطية (BackUp)"):
-                df_backup = fetch_safe("students")
-                buffer_bu = io.BytesIO()
-                with pd.ExcelWriter(buffer_bu, engine='xlsxwriter') as writer:
-                    df_backup.to_excel(writer, index=False)
-                st.download_button("📥 تنزيل سجل الطلاب الحالي", data=buffer_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
-    
-        # 5. صيانة النظام (تصفير الكاش)
-        with st.expander("🛠️ صيانة النظام"):
-            st.warning("تصفير الكاش سيقوم بإعادة جلب كافة البيانات من Google Sheets (يحل مشكلة عدم ظهور التحديثات).")
-            if st.button("🔄 تصفير الكاش وتحديث البيانات (Clear Cache)"):
-                st.cache_data.clear()
-                st.success("✅ تم تصفير الكاش بنجاح!")
-                st.rerun()
-
-    with menu[4]:
-        if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
 # ==========================================
@@ -396,38 +274,94 @@ if st.session_state.role == "teacher":
     # 1. إنشاء التبويبات الخمسة (مُزاحة بـ Tab واحدة عن الـ if)
     menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
 
-    # ------------------------------------------
-    # 👥 التبويب 0: إدارة الطلاب (7 حقول + تنسيق دولي)
-    # ------------------------------------------
+    # ---------------------------------------------------------
+    # 👥 التبويب 0: إدارة الطلاب (النسخة الشاملة والمدمجة)
+    # ---------------------------------------------------------
     with menu[0]:
         st.subheader("👥 إدارة قاعدة بيانات الطلاب")
-        df_st = fetch_safe("students")
+        df_st = fetch_safe("students") # جلب البيانات بأمان
         
         if not df_st.empty:
-            # نموذج الإضافة الاحترافي
-            with st.expander("➕ إضافة طالب جديد (ربط ذكي بالأعمدة)"):
-                with st.form("add_st_v2026", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    f_id = c1.text_input("🔢 الرقم الأكاديمي")
-                    f_name = c2.text_input("👤 الاسم الثلاثي")
-                    c3, c4, c5 = st.columns(3)
-                    f_stage = c3.selectbox("🎓 المرحلة", st.session_state.stage_options)
-                    f_year = c4.text_input("🗓️ العام الدراسي", st.session_state.current_year)
-                    f_class = c5.selectbox("🏫 الصف", st.session_state.class_options)
-                    c6, c7 = st.columns(2)
-                    f_mail = c6.text_input("📧 الإيميل")
-                    f_phone_raw = c7.text_input("📱 الجوال (05xxxx)")
+            # 1. شريط الإحصائيات الذكي
+            c1, c2, c3 = st.columns(3)
+            c1.metric("📊 إجمالي الطلاب", len(df_st))
+            c2.metric("🏫 عدد الفصول", len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1)
+            # معالجة النقاط كأرقام للحساب
+            df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+            c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+            
+            st.divider()
 
-                    if st.form_submit_button("✅ حفظ الطالب"):
+            # 2. نموذج إضافة طالب جديد (7 حقول كاملة مع ربط ذكي وتنسيق جوال)
+            with st.expander("➕ إضافة طالب جديد (تنسيق دولي + ربط أعمدة)"):
+                with st.form("add_student_v2026_final", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
+                    f_name = col2.text_input("👤 الاسم الثلاثي")
+                    
+                    col3, col4, col5 = st.columns(3)
+                    f_stage = col3.selectbox("🎓 المرحلة", st.session_state.stage_options)
+                    f_year = col4.text_input("🗓️ العام الدراسي", st.session_state.current_year)
+                    f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
+                    
+                    col6, col7 = st.columns(2)
+                    f_mail = col6.text_input("📧 الإيميل")
+                    f_phone_raw = col7.text_input("📱 الجوال (مثال: 05xxxx)")
+                    
+                    if st.form_submit_button("✅ اعتماد وحفظ الطالب"):
                         if f_id and f_name:
                             f_phone = clean_phone_number(f_phone_raw) # تنسيق 966 آلياً
-                            st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"}
-                            if safe_append_row("students", st_map): # منع الإزاحة
-                                st.success("✅ تم حفظ البيانات بدقة"); st.cache_data.clear(); st.rerun()
+                            
+                            # الخريطة الذكية لمنع إزاحة الأعمدة (Mapping)
+                            st_map = {
+                                "id": f_id.strip(),
+                                "name": f_name.strip(),
+                                "class": f_class,
+                                "year": f_year,
+                                "sem": f_stage, # ربط المرحلة بعمود sem
+                                "الإيميل": f_mail,
+                                "الجوال": f_phone,
+                                "النقاط": "0"
+                            }
+                            
+                            if safe_append_row("students", st_map): # الحفظ الآمن
+                                st.success(f"✅ تم حفظ الطالب {f_name} بنجاح")
+                                st.cache_data.clear() # تحديث البيانات فوراً
+                                st.rerun()
+                        else:
+                            st.warning("⚠️ يرجى إدخال البيانات الأساسية (الاسم والرقم).")
 
-            sq = st.text_input("🔍 محرك البحث الذكي:")
+            # 3. عرض الطلاب ومحرك البحث الذكي
+            st.write("---")
+            sq = st.text_input("🔍 محرك البحث الذكي (اكتب اسم الطالب أو رقمه):")
             mask = df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)
             st.dataframe(df_st[mask] if sq else df_st, use_container_width=True, hide_index=True)
+
+            # 4. منطقة الحذف والإدارة النهائية (مدمجة)
+            st.divider()
+            with st.expander("🗑️ منطقة الحذف والإدارة النهائية"):
+                st.warning("⚠️ تنبيه: حذف الطالب نهائي ولا يمكن التراجع عنه.")
+                del_q = st.text_input("ابحث عن اسم الطالب الذي تود حذفه نهائياً:", key="del_search_tab")
+                
+                if del_q:
+                    df_del = df_st[df_st.iloc[:, 0].str.contains(del_q) | df_st.iloc[:, 1].str.contains(del_q)]
+                    if not df_del.empty:
+                        for idx, row in df_del.iterrows():
+                            ci, ca = st.columns([3, 1])
+                            ci.write(f"👤 **{row.iloc[1]}** ({row.iloc[0]})")
+                            if ca.button(f"🗑️ حذف", key=f"del_btn_{idx}"):
+                                try:
+                                    # حذف السطر من Google Sheets (Index + 2 لضمان السطر الصحيح)
+                                    sh.worksheet("students").delete_rows(int(idx) + 2)
+                                    st.success(f"✅ تم حذف {row.iloc[1]} بنجاح")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"❌ خطأ أثناء الحذف: {e}")
+                    else:
+                        st.info("🔎 لم يتم العثور على طالب بهذا الاسم.")
+        else:
+            st.info("💡 لا يوجد طلاب حالياً في قاعدة البيانات، ابدأ بإضافة الطالب الأول.")
 
     # ------------------------------------------
     # 📊 التبويب 1: التقييم والمتابعة (7 حالات سلوك + واتساب)
