@@ -4,6 +4,7 @@ import gspread
 import urllib.parse
 import datetime
 import hashlib
+import io
 from google.oauth2.service_account import Credentials
 
 # ==========================================
@@ -13,34 +14,35 @@ st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 @st.cache_resource
 def get_gspread_client():
+    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
-    except:
-        st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من Secrets.")
+    except Exception as e:
+        st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
         return None
 
 sh = get_gspread_client()
 
 # ==========================================
-# ⚙️ تأسيس النظام وتحميل الإعدادات (حل مشكلة اللاق)
+# ⚙️ تأسيس النظام وتحميل الإعدادات (منع اللاق)
 # ==========================================
 if "max_tasks" not in st.session_state:
     try:
-        # قراءة ورقة الإعدادات مرة واحدة لضمان السرعة
+        # قراءة ورقة الإعدادات مرة واحدة لضمان سرعة الاستجابة
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
         
-        # 1. تحميل توزيع الدرجات
+        # 1. تحميل توزيع الدرجات (مشاركة واختبار)
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
         
         # 2. تحميل العام الدراسي الحالي
         st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
         
-        # 3. تحميل قائمة الصفوف الديناميكية
+        # 3. تحميل قائمة الصفوف (نص مفصول بفاصلة)
         classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
         st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
         
@@ -49,13 +51,13 @@ if "max_tasks" not in st.session_state:
         st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
         
     except Exception as e:
-        # صمام أمان: تفعيل القيم الافتراضية في حال تعطل الربط
+        # صمام أمان: تفعيل القيم الافتراضية في حال تعطل الربط أو نقص البيانات
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
         st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
         st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
-# تهيئة متغيرات الجلسة الأساسية
+# تهيئة متغيرات الجلسة الأساسية للتحكم في الدخول والتبويبات
 if "role" not in st.session_state: st.session_state.role = None
 if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
@@ -65,53 +67,50 @@ if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
-    """جلب البيانات مع ضمان تحويل المعرف (ID) لنص لمنع الانهيار"""
+    """جلب البيانات مع ضمان معالجة المعرفات (IDs) كنصوص لمنع الأخطاء الحسابية"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
         if not df.empty: 
+            # تنظيف العمود الأول (غالباً الرقم الأكاديمي) من المسافات
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
     except: 
         return pd.DataFrame()
 
-# 📱 دالة تنظيف وتنسيق رقم الجوال (966)
 def clean_phone_number(phone):
-    """تنظيف رقم الجوال: إزالة الصفر، المسافات، وإضافة 966"""
+    """تنسيق رقم الجوال دولياً: إزالة الصفر البادئ وإضافة مفتاح المملكة 966"""
     p = str(phone).strip().replace(" ", "")
-    # إزالة الصفر من البداية إن وجد
-    if p.startswith("0"):
+    if p.startswith("0"): 
         p = p[1:]
-    # إضافة 966 إذا لم تكن موجودة وكان الحقل غير فارغ
-    if not p.startswith("966") and p != "":
+    if not p.startswith("966") and p != "": 
         p = "966" + p
     return p
 
-# 🌟 الدالة الأهم: منع إزاحة الأعمدة (Mapping System)
 def safe_append_row(worksheet_name, data_dict):
-    """تضمن إرسال كل بيان للعمود الصحيح بناءً على اسمه في الإكسل"""
+    """نظام الربط الذكي (Mapping): يضمن إرسال كل بيان للعمود الصحيح بناءً على اسمه في الإكسل"""
     try:
         ws = sh.worksheet(worksheet_name)
-        headers = ws.row_values(1) # قراءة الرؤوس الفعلية من ملفك
-        # بناء السطر بترتيب يطابق الملف تماماً لمنع الإزاحة
+        headers = ws.row_values(1) # قراءة الرؤوس الفعلية من الملف
+        # بناء السطر بترتيب يطابق الملف تماماً لمنع مشكلة الإزاحة
         row_to_append = [data_dict.get(h, "") for h in headers]
         ws.append_row(row_to_append)
         return True
     except Exception as e:
-        st.error(f"⚠️ خطأ في جدول {worksheet_name}: {e}")
+        st.error(f"⚠️ خطأ في الكتابة لجدول {worksheet_name}: {e}")
         return False
 
 def get_col_idx(df, col_name):
-    """إيجاد رقم العمود ديناميكياً بناءً على اسمه"""
+    """إيجاد رقم العمود ديناميكياً بناءً على اسمه لمنع تعطل البرنامج عند تغيير الترتيب"""
     try: 
         return df.columns.get_loc(col_name) + 1
     except: 
         return None
 
 def get_professional_msg(name, b_type, b_desc, date):
-    """تنسيق رسالة الواتساب بترميز آمن لضمان سلامة اللغة العربية"""
+    """تنسيق وتشفير رسالة الواتساب لضمان سلامة اللغة العربية في الروابط"""
     msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n"
            f"------------------\n"
            f"👤 *الطالب:* {name}\n"
@@ -121,6 +120,16 @@ def get_professional_msg(name, b_type, b_desc, date):
            f"------------------\n"
            f"🏛️ *منصة زياد الذكية*")
     return urllib.parse.quote(msg)
+
+# ==========================================
+# 🎨 3. التصميم البصري (RTL)
+# ==========================================
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
+    </style>
+""", unsafe_allow_html=True)
 # ==========================================
 # 🎨 3. التصميم البصري (RTL + Cairo Font)
 # ==========================================
