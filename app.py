@@ -624,7 +624,7 @@ if st.session_state.role == "teacher":
         if st.button("🚪 تأكيد تسجيل الخروج"):
             st.session_state.role = None; st.rerun()
 # ==========================================
-# 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
+# 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة والمطورة)
 # ==========================================
 if st.session_state.role == "student":
     # 1. جلب وتنظيف الرقم الأكاديمي
@@ -642,54 +642,82 @@ if st.session_state.role == "student":
     else: my_info = pd.DataFrame()
 
     if not my_info.empty:
-        # استخراج المتغيرات لضمان ظهورها في الهيدر
         s_data = my_info.iloc[0]
         s_name = s_data.get('name', 'طالبنا المتميز')
         s_class = s_data.get('class', 'غير محدد')
         s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
         
-        # 🎨 1. الهيدر والترحيب والأوسمة (حل مشكلة اختفاء الاسم)
+        # 🎨 تنسيق CSS متطور (علاج مشكلة الألوان والوضوح في الجوال)
         st.markdown(f"""
             <style>
-            .app-header {{ background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: -60px; border-top: 8px solid #1e3a8a; text-align: center; }}
-            .medal-row {{ display: flex; justify-content: space-around; margin: 20px 0; }}
-            .medal-card {{ background: #f8fafc; padding: 15px; border-radius: 15px; width: 30%; border: 2px solid #eee; text-align: center; }}
-            .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 20px; text-align: center; margin: 20px 0; box-shadow: 0 10px 15px rgba(245, 158, 11, 0.2); }}
+            .app-header {{ background: white; padding: 20px; border-radius: 15px; border-right: 8px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: -50px; text-align: right; }}
+            
+            /* تصميم الأوسمة الأفقي الجمالي */
+            .medal-flex-container {{ 
+                display: flex; justify-content: space-between; gap: 10px; margin: 20px 0; 
+            }}
+            .medal-card-h {{ 
+                flex: 1; background: #ffffff; padding: 12px 5px; border-radius: 12px; 
+                text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }}
+            .gold-active {{ border-color: #f59e0b; background: #fffbeb; }}
+            .silver-active {{ border-color: #94a3b8; background: #f8fafc; }}
+            .bronze-active {{ border-color: #b45309; background: #fff7ed; }}
+
+            .points-banner-h {{ 
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+                color: white; padding: 20px; border-radius: 15px; text-align: center; 
+                margin-bottom: 20px; box-shadow: 0 8px 16px rgba(217, 119, 6, 0.2); 
+            }}
+            
+            /* تحسين تباين الملاحظات للجوال (الخط الداكن على خلفية فاتحة صلبة) */
+            .high-contrast-note {{ 
+                background: #fff; color: #1a202c !important; padding: 15px; 
+                border-radius: 10px; border-right: 5px solid #e53e3e; 
+                margin-bottom: 10px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }}
             </style>
             
             <div class="app-header">
-                <h2 style='margin:0; color:#1e3a8a;'>👋 مرحباً بك يا {s_name}</h2>
-                <p style='margin:5px 0 0 0; color:#64748b;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {student_id}</p>
+                <h3 style='margin:0; color:#1e3a8a;'>👋 مرحباً، {s_name}</h3>
+                <p style='margin:5px 0 0 0; color:#4a5568; font-size:0.9rem;'>الصف: {s_class} | الرقم الأكاديمي: {student_id}</p>
+            </div>
+
+            <div class="medal-flex-container">
+                <div class="medal-card-h {'gold-active' if s_points >= 100 else ''}">
+                    <span style='font-size:1.5rem;'>🥇</span><br><small style='font-weight:bold; color:#b45309;'>ذهبي</small>
+                </div>
+                <div class="medal-card-h {'silver-active' if s_points >= 50 else ''}">
+                    <span style='font-size:1.5rem;'>🥈</span><br><small style='font-weight:bold; color:#475569;'>فضي</small>
+                </div>
+                <div class="medal-card-h bronze-active">
+                    <span style='font-size:1.5rem;'>🥉</span><br><small style='font-weight:bold; color:#92400e;'>برونزي</small>
+                </div>
+            </div>
+
+            <div class="points-banner-h">
+                <p style='margin:0; font-size: 0.9rem; opacity:0.9;'>رصيد النقاط السلوكية</p>
+                <h1 style='margin:0; font-size: 3.5rem; font-weight: 900;'>{s_points}</h1>
             </div>
         """, unsafe_allow_html=True)
 
-        # عرض الأوسمة الثلاثة
-        m1, m2, m3 = st.columns(3)
-        with m1: st.markdown(f"<div class='medal-card' style='border-color:{'#f59e0b' if s_points >= 100 else '#eee'}'>🥇<br><b>ذهبي</b></div>", unsafe_allow_html=True)
-        with m2: st.markdown(f"<div class='medal-card' style='border-color:{'#94a3b8' if s_points >= 50 else '#eee'}'>🥈<br><b>فضي</b></div>", unsafe_allow_html=True)
-        with m3: st.markdown(f"<div class='medal-card' style='border-color:#b45309'>🥉<br><b>برونزي</b></div>", unsafe_allow_html=True)
-
-        # بطاقة النقاط
-        st.markdown(f"""
-            <div class="points-banner">
-                <p style='margin:0; opacity:0.9;'>رصيد نقاط التميز</p>
-                <h1 style='margin:0; font-size: 4rem; font-weight: 900;'>{s_points}</h1>
-            </div>
-        """, unsafe_allow_html=True)
-
-        st.divider()
-
-        # 📱 2. التبويبات (Alerts, Notes, Grades, Leaderboard, Settings)
+        # 📱 التبويبات المحدثة
         tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
-        # --- تبويب التنبيهات (حل مشكلة لا تعمل) ---
+        # --- 1. التنبيهات (تم إصلاح العرض) ---
         with tabs[0]:
-            st.markdown("#### 📢 آخر التنبيهات العامة")
-            # نجلب التنبيهات من جدول الإعدادات أو نعرض رسالة ثابتة من المعلم
-            st.info(f"📅 تنبيه: يبدأ اختبار نهاية الفصل الدراسي في {st.session_state.current_year}")
-            st.success("✅ تم تحديث جدول الحصص للأسبوع القادم، يرجى الاطلاع عليه.")
+            st.markdown("#### 📢 التعاميم والتنبيهات")
+            # عرض تنبيهات ديناميكية بتباين عالٍ
+            st.markdown(f"""
+                <div class="high-contrast-note" style="border-right-color: #3182ce;">
+                    🚀 تنبيه: تم فتح باب التسجيل في مسابقة الموهوبين لعام {st.session_state.current_year}.
+                </div>
+                <div class="high-contrast-note" style="border-right-color: #38a169;">
+                    ✅ ملاحظة: تم تحديث درجات المشاركة (p1) لجميع الطلاب اليوم.
+                </div>
+            """, unsafe_allow_html=True)
 
-        # --- تبويب الملاحظات السلوكية ---
+        # --- 2. الملاحظات (علاج مشكلة الألوان والوضوح) ---
         with tabs[1]:
             st.markdown("#### 📝 سجل ملاحظات المعلم")
             if not df_beh.empty:
@@ -697,71 +725,56 @@ if st.session_state.role == "student":
                 notes = df_beh[df_beh['clean_id'] == student_id]
                 if not notes.empty:
                     for _, n in notes.iterrows():
-                        st.warning(f"📍 **{n.get('type', 'تنبيه')}:** {n.get('desc', '')} ({n.get('date', '')})")
-                else: st.success("🌟 سجلك خالي من الملاحظات، أحسنت!")
+                        st.markdown(f"""
+                            <div class="high-contrast-note">
+                                <b>📌 {n.get('type', 'تنبيه')}:</b> {n.get('desc', '')} <br>
+                                <small style="color:#718096;">🗓️ التاريخ: {n.get('date', '')}</small>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else: st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
 
-        # --- تبويب درجاتي ---
+        # --- 3. درجاتي (المسميات العربية الصافية) ---
         with tabs[2]:
-            st.markdown("#### 📊 سجل النتائج الأكاديمية")
+            st.markdown("#### 📊 نتائج الاختبارات والمهام")
             if not df_gr.empty:
                 df_gr['clean_id'] = df_gr.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
                 my_gr = df_gr[df_gr['clean_id'] == student_id]
                 if not my_gr.empty:
                     g = my_gr.iloc[0]
                     st.markdown(f"""
-                        <div style='background:white; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:10px; display:flex; justify-content:space-between;'>
-                            <b>📝 المشاركة والمهام</b> <span>{g.get('p1', 0)}</span>
+                        <div style='background:white; padding:15px; border-radius:12px; border:1px solid #edf2f7; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; color:#2d3748;'>
+                            <b style='color:#1e3a8a;'>📝 المشاركة والمهام</b> <span style='font-size:1.2rem; font-weight:bold;'>{g.get('p1', 0)}</span>
                         </div>
-                        <div style='background:white; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:10px; display:flex; justify-content:space-between;'>
-                            <b>✍️ اختبار قصير</b> <span>{g.get('p2', 0)}</span>
+                        <div style='background:white; padding:15px; border-radius:12px; border:1px solid #edf2f7; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; color:#2d3748;'>
+                            <b style='color:#1e3a8a;'>✍️ اختبار قصير</b> <span style='font-size:1.2rem; font-weight:bold;'>{g.get('p2', 0)}</span>
                         </div>
-                        <div style='background:#f0fdf4; padding:15px; border-radius:12px; border:1px solid #10b981; display:flex; justify-content:space-between;'>
-                            <b style='color:#10b981;'>🏆 المجموع الكلي</b> <span style='color:#10b981; font-weight:bold;'>{g.get('perf', 0)}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-        # --- تبويب 4: المتصدرين (تصميم البطاقات الموحد) ---
-        with tabs[3]:
-            st.markdown("#### 🏆 لوحة شرف المتصدرين (الأفضل 10)")
-            
-            if not df_st.empty:
-                # 1. تجهيز البيانات والترتيب
-                # تحويل عمود النقاط لرقم لضمان الترتيب التنازلي الصحيح
-                df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-                top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
-                
-                # 2. عرض المتصدرين في بطاقات
-                for i, (_, row) in enumerate(top_10.iterrows(), 1):
-                    # تمييز المراكز الثلاثة الأولى بأيقونات
-                    rank_icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
-                    
-                    # تمييز بطاقة الطالب الحالي بلون مختلف إذا كان من المتصدرين
-                    is_me_style = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else "background: white; border: 1px solid #edf2f7;"
-                    
-                    st.markdown(f"""
-                        <div style="{is_me_style} padding: 15px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center;">
-                                <div style="background: #f1f5f9; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: 15px; font-size: 1.2rem; font-weight: bold; color: #1e3a8a;">
-                                    {rank_icon}
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="font-weight: bold; color: #1e3a8a; font-size: 1.1rem;">{row['name']}</div>
-                                    <div style="font-size: 0.8rem; color: #64748b;">الصف: {row.get('class', 'غير محدد')}</div>
-                                </div>
-                            </div>
-                            <div style="text-align: center; min-width: 65px;">
-                                <div style="font-size: 1.6rem; font-weight: 900; color: #f59e0b; line-height: 1;">{int(row['pts_num'])}</div>
-                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: bold;">نقطة</div>
-                            </div>
+                        <div style='background:#f0fdf4; padding:15px; border-radius:12px; border:2px solid #10b981; display:flex; justify-content:space-between; align-items:center;'>
+                            <b style='color:#10b981;'>🏆 المجموع الكلي</b> <span style='color:#10b981; font-size:1.5rem; font-weight:bold;'>{g.get('perf', 0)}</span>
                         </div>
                     """, unsafe_allow_html=True)
-            else:
-                st.info("⏳ لا توجد بيانات للطلاب حالياً.")
 
-        # --- تبويب الإعدادات (حل مشكلة اختفاء التحديث والخروج) ---
+        # --- 4. المتصدرون (بطاقات المتصدرين) ---
+        with tabs[3]:
+            st.markdown("#### 🏆 لوحة الشرف")
+            df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+            top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
+            for i, (_, row) in enumerate(top_10.iterrows(), 1):
+                icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
+                is_me = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else "background:white;"
+                st.markdown(f"""
+                    <div style="{is_me} padding:12px; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-size:1.2rem; margin-left:10px;">{icon}</span>
+                            <b style="color:#1e3a8a;">{row['name']}</b>
+                        </div>
+                        <b style="color:#f59e0b;">{int(row['pts_num'])} ن</b>
+                    </div>
+                """, unsafe_allow_html=True)
+
+        # --- 5. الإعدادات (تحديث البيانات + الخروج) ---
         with tabs[4]:
             st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_contact_student"):
-                st.write("🔄 تحديث بيانات التواصل")
+            with st.form("up_contact"):
                 new_mail = st.text_input("📧 البريد الإلكتروني الجديد", s_data.get('الإيميل', ''))
                 new_phone = st.text_input("📱 رقم الجوال الجديد", s_data.get('الجوال', ''))
                 if st.form_submit_button("💾 حفظ التغييرات"):
@@ -770,17 +783,14 @@ if st.session_state.role == "student":
                         ids = [str(x).split('.')[0] for x in ws_st.col_values(1)]
                         if student_id in ids:
                             r_idx = ids.index(student_id) + 1
-                            ws_st.update_cell(r_idx, 6, new_mail) # عمود 6 للإيميل
-                            ws_st.update_cell(r_idx, 7, new_phone) # عمود 7 للجوال
-                            st.success("✅ تم تحديث بياناتك بنجاح!")
-                            st.cache_data.clear()
-                    except: st.error("❌ فشل التحديث حالياً.")
-
+                            ws_st.update_cell(r_idx, 6, new_mail); ws_st.update_cell(r_idx, 7, new_phone)
+                            st.success("✅ تم التحديث بنجاح!"); st.cache_data.clear()
+                    except: st.error("❌ فشل التحديث.")
+            
             st.divider()
-            if st.button("🚪 تسجيل الخروج من المنصة", type="primary", use_container_width=True):
+            if st.button("🚪 تسجيل الخروج", type="primary", use_container_width=True):
                 st.session_state.role = None; st.session_state.username = None; st.rerun()
 
     else:
         st.error(f"⚠️ الرقم ({student_id}) غير مسجل.")
-
-    show_footer() # إظهار الحقوق والتواصل
+    show_footer()
