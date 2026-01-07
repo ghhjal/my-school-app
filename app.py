@@ -207,14 +207,14 @@ if st.session_state.role == "teacher":
                             st.success(f"✅ تم الحفظ بالرقم الدولي: {f_phone}")
                             st.cache_data.clear(); st.rerun()
 
-        # 3. محرك البحث الذكي (الاسم أو الرقم)
-        sq = st.text_input("🔍 ابحث عن طالب محدد:")
-        df_disp = df_st[df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)] if sq else df_st
-        
-        # عرض الجدول بشكل احترافي
-        st.dataframe(df_disp, use_container_width=True, hide_index=True)
-    else:
-        st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
+    # 3. محرك البحث الذكي (الاسم أو الرقم)
+    sq = st.text_input("🔍 ابحث عن طالب محدد:")
+    df_disp = df_st[df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)] if sq else df_st
+    
+    # عرض الجدول بشكل احترافي
+    st.dataframe(df_disp, use_container_width=True, hide_index=True)
+else:
+    st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
 
     # ==========================================
     # 📊 تبويب: التقييم والمتابعة (الإصدار الشامل والمصحح)
