@@ -120,16 +120,6 @@ def get_professional_msg(name, b_type, b_desc, date):
            f"------------------\n"
            f"🏛️ *منصة زياد الذكية*")
     return urllib.parse.quote(msg)
-
-# ==========================================
-# 🎨 3. التصميم البصري (RTL)
-# ==========================================
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
-    </style>
-""", unsafe_allow_html=True)
 # ==========================================
 # 🎨 3. التصميم البصري (RTL + Cairo Font)
 # ==========================================
@@ -400,7 +390,6 @@ else:
 
     with menu[4]:
         if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
-
 # ==========================================
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
