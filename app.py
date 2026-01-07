@@ -472,55 +472,60 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. رفع البيانات والدرجات (إصدار معالجة الدرجات والعمليات الحسابية)
-        with st.expander("📤 رفع الأسماء والدرجات (المعالج الذكي للدرجات)"):
-            st.info("💡 ملاحظة: عند رفع الدرجات، سيقوم النظام بحساب 'المجموع' وتنسيق التاريخ آلياً.")
-            up_file = st.file_uploader("اختر ملف الإكسل (Template)", type=['xlsx'], key="secure_uploader")
-            target_sheet = st.radio("حدد الجدول المطلوب:", ["students", "grades"], horizontal=True)
+        # 7. رفع البيانات والدرجات (إصدار الحماية القصوى المتوافق مع جدولك)
+        with st.expander("📤 رفع الأسماء والدرجات (تنسيق الحقول التلقائي)"):
+            st.info("💡 ملاحظة: تم تحديث النظام ليطابق حقول جدولك (student_id, p1, p2, perf).")
+            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'], key="secure_up_v2026")
+            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"], horizontal=True)
             
-            if st.button("🚀 بدء الرفع والمعالجة الرقمية"):
+            if st.button("🚀 بدء الرفع الذكي والمطهر", key="btn_final_upload"):
                 if up_file:
                     try:
-                        # أ. قراءة الملف وتطهير القيم الفارغة فوراً
+                        # أ. قراءة الملف وتحويل كل الخانات الفارغة (NaN) إلى نصوص فارغة
                         df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                         
                         sc_count = 0
                         for _, row in df_up.iterrows():
-                            data_dict = row.to_dict()
-                            
-                            # ب. معالجة خاصة لجدول الدرجات (grades)
+                            # تحويل السطر لقاموس لمعالجته
+                            raw_dict = row.to_dict()
+                            final_map = {}
+
                             if target_sheet == "grades":
-                                # تحويل القيم لأرقام لضمان صحة العمليات الحسابية
-                                tasks = pd.to_numeric(data_dict.get('tasks', 0), errors='coerce') or 0
-                                quiz = pd.to_numeric(data_dict.get('quiz', 0), errors='coerce') or 0
+                                # ب. الربط الذكي المطابق لصورة جدولك (image_cdf105.png)
+                                p1_val = pd.to_numeric(raw_dict.get('p1', 0), errors='coerce') or 0
+                                p2_val = pd.to_numeric(raw_dict.get('p2', 0), errors='coerce') or 0
                                 
-                                # تحديث القاموس بالقيم الرقمية وحساب المجموع تلقائياً
-                                data_dict['tasks'] = str(tasks)
-                                data_dict['quiz'] = str(quiz)
-                                data_dict['total'] = str(tasks + quiz)
-                                
-                                # إذا كان التاريخ فارغاً، نضع تاريخ اليوم
-                                if not data_dict.get('date'):
-                                    data_dict['date'] = str(datetime.date.today())
+                                final_map = {
+                                    "student_id": str(raw_dict.get('student_id', raw_dict.get('id', ''))).strip(),
+                                    "p1": str(p1_val),
+                                    "p2": str(p2_val),
+                                    "perf": str(p1_val + p2_val), # حساب المجموع آلياً في عمود perf
+                                    "date": str(datetime.date.today()) # وضع التاريخ آلياً في عمود التاريخ
+                                }
 
-                            # ج. معالجة خاصة لجدول الطلاب (تطهير الأسماء)
-                            if target_sheet == "students":
-                                if 'name' in data_dict:
-                                    data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
-                                if 'id' in data_dict:
-                                    data_dict['id'] = str(data_dict['id']).strip()
+                            elif target_sheet == "students":
+                                # ج. معالجة جدول الطلاب (تطهير الأسماء والجوال)
+                                final_map = {
+                                    "id": str(raw_dict.get('id', raw_dict.get('student_id', ''))).strip(),
+                                    "name": " ".join(str(raw_dict.get('name', '')).split()).strip(),
+                                    "class": raw_dict.get('class', ''),
+                                    "year": str(raw_dict.get('year', '')),
+                                    "sem": raw_dict.get('sem', ''),
+                                    "الإيميل": raw_dict.get('الإيميل', ''),
+                                    "الجوال": clean_phone_number(raw_dict.get('الجوال', '')),
+                                    "النقاط": str(raw_dict.get('النقاط', '0'))
+                                }
 
-                            # د. تنفيذ الإرسال عبر نظام الـ Mapping
-                            if safe_append_row(target_sheet, data_dict):
+                            # د. الإرسال النهائي لجدول الإكسل
+                            if safe_append_row(target_sheet, final_map):
                                 sc_count += 1
                         
-                        st.success(f"✅ تم رفع {sc_count} سجل بنجاح إلى جدول {target_sheet}!")
+                        st.success(f"✅ تم الرفع بنجاح! معالجة {sc_count} سجل في جدول {target_sheet}.")
                         st.cache_data.clear(); st.rerun()
-                        
                     except Exception as e:
-                        st.error(f"❌ خطأ تقني في المعالجة: {e}")
-                else:
-                    st.warning("⚠️ يرجى رفع الملف أولاً.")
+                        st.error(f"❌ خطأ أثناء المعالجة: {e}")
+                else: 
+                    st.warning("⚠️ يرجى اختيار ملف أولاً.")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
