@@ -1,10 +1,9 @@
 import streamlit as st
-import gspread
 import pandas as pd
-import hashlib
-import datetime
+import gspread
 import urllib.parse
-import io
+import datetime
+import hashlib
 from google.oauth2.service_account import Credentials
 
 # ==========================================
@@ -24,49 +23,49 @@ def get_gspread_client():
         st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من Secrets.")
         return None
 
-# ==========================================
-# ⚙️ تأسيس النظام وتحميل الإعدادات (إصدار مستقر)
-# ==========================================
 sh = get_gspread_client()
 
-# جلب الإعدادات مرة واحدة فقط لضمان السرعة ومنع اللاق
+# ==========================================
+# ⚙️ تأسيس النظام وتحميل الإعدادات (حل مشكلة اللاق)
+# ==========================================
 if "max_tasks" not in st.session_state:
     try:
-        # قراءة ورقة الإعدادات كاملة في البداية
+        # قراءة ورقة الإعدادات مرة واحدة لضمان السرعة
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
         
-        # 1. تحميل توزيع الدرجات
+        # 1. توزيع الدرجات
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
         
-        # 2. تحميل العام الدراسي
+        # 2. العام الدراسي الحالي
         st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
         
-        # 3. تحميل قائمة الصفوف
+        # 3. قائمة الصفوف الديناميكية
         classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
         st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
         
-        # 4. تحميل قائمة المراحل الدراسية
+        # 4. قائمة المراحل الدراسية
         stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
         st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
         
     except Exception as e:
-        # في حال وجود أي خطأ أو نقص في الشيت، يتم تفعيل القيم الافتراضية فوراً
-        st.warning("⚠️ تم استخدام الإعدادات الافتراضية (تأكد من جدول settings في الإكسل)")
-        st.session_state.max_tasks = 60
-        st.session_state.max_quiz = 40
+        # صمام أمان: تفعيل القيم الافتراضية في حال تعطل الربط
+        st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
         st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
         st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
-# تهيئة بقية متغيرات الحالة
+# تهيئة متغيرات الجلسة الأساسية
 if "role" not in st.session_state: st.session_state.role = None
 if "active_tab" not in st.session_state: st.session_state.active_tab = 0
+
 # ==========================================
 # 🧠 2. دوال معالجة البيانات الاحترافية
 # ==========================================
+
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
+    """جلب البيانات مع ضمان تحويل المعرف (ID) لنص لمنع الانهيار"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
@@ -76,9 +75,31 @@ def fetch_safe(worksheet_name):
         return df
     except: return pd.DataFrame()
 
-# دالة التنسيق الاحترافي لرسائل الواتساب
+# 🌟 الدالة الأهم: منع إزاحة الأعمدة (Mapping System)
+def safe_append_row(worksheet_name, data_dict):
+    """تضمن إرسال كل بيان للعمود الصحيح بناءً على اسمه في الإكسل"""
+    try:
+        ws = sh.worksheet(worksheet_name)
+        headers = ws.row_values(1) # قراءة الرؤوس الفعلية
+        # بناء السطر بترتيب يطابق الملف تماماً
+        row_to_append = [data_dict.get(h, "") for h in headers]
+        ws.append_row(row_to_append)
+        return True
+    except Exception as e:
+        st.error(f"⚠️ خطأ في جدول {worksheet_name}: {e}")
+        return False
+
+def get_col_idx(df, col_name):
+    """إيجاد رقم العمود ديناميكياً بناءً على اسمه"""
+    try: return df.columns.get_loc(col_name) + 1
+    except: return None
+
 def get_professional_msg(name, b_type, b_desc, date):
-    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n------------------\n👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n📝 *التفاصيل:* {b_desc}\n📅 *التاريخ:* {date}\n------------------\n🏛️ *منصة زياد الذكية*")
+    """تنسيق رسالة الواتساب بترميز آمن للغة العربية"""
+    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n------------------\n"
+           f"👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n"
+           f"📝 *التفاصيل:* {b_desc}\n📅 *التاريخ:* {date}\n"
+           f"------------------\n🏛️ *منصة زياد الذكية*")
     return urllib.parse.quote(msg)
 
 # ==========================================
