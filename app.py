@@ -249,7 +249,8 @@ else:
                             if v_tasks <= st.session_state.max_tasks and v_quiz <= st.session_state.max_quiz:
                                 safe_append_row("grades", {"id": sid, "tasks": v_tasks, "quiz": v_quiz, "total": v_tasks+v_quiz, "date": str(datetime.date.today())})
                                 st.success("✅ تم الحفظ"); st.cache_data.clear()
-                            else: st.error("⚠️ تجاوزت الحد المسموح!")
+                            else: 
+                                st.error("⚠️ تجاوزت الحد المسموح!")
     
                 # --- 🎭 رصد السلوك (القائمة الكاملة 7 حالات) ---
                 with col_behavior:
@@ -267,7 +268,7 @@ else:
                             sh.worksheet("students").update_cell(row_idx, df_st.columns.get_loc("النقاط")+1, str(int(float(s_info['النقاط'])) + change))
                             st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
     
-                # --- 📜 السجل التاريخي (هذا هو الكود الذي سألت عنه مدمجاً بالأزرار) ---
+                # --- 📜 السجل التاريخي (الملاحظات مع الأزرار) ---
                 st.divider()
                 st.markdown(f"#### 📜 سجل ملاحظات الطالب: {s_name}")
                 df_beh = fetch_safe("behavior")
@@ -282,13 +283,15 @@ else:
                                 if r.iloc[3]: st.caption(f"📝 {r.iloc[3]}")
                             
                             with c_actions:
-                                # توليد الرسالة المشفرة لكل سطر بناءً على ملاحظته
+                                # توليد الرسالة المشفرة لكل سطر
                                 msg_enc = get_professional_msg(s_name, r.iloc[2], r.iloc[3], r.iloc[1])
                                 st.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={clean_p}&text={msg_enc}", use_container_width=True)
                                 st.link_button("📧 Email", f"mailto:{s_email}?subject=تقرير&body={msg_enc}", use_container_width=True)
                 else:
                     st.info("💡 لا توجد ملاحظات مسجلة لهذا الطالب.")
-                    
+        else:
+            st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
+                        
     with menu[2]: # 📢 تبويب التنبيهات (الذي سقط سهواً - عاد بكامل ميزاته)
         st.subheader("📢 إدارة وبث التنبيهات")
         with st.expander("🚀 نشر تنبيه جديد", expanded=True):
