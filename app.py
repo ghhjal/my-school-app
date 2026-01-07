@@ -719,6 +719,43 @@ if st.session_state.role == "student":
                             <b style='color:#10b981;'>🏆 المجموع الكلي</b> <span style='color:#10b981; font-weight:bold;'>{g.get('perf', 0)}</span>
                         </div>
                     """, unsafe_allow_html=True)
+        # --- تبويب 4: المتصدرين (تصميم البطاقات الموحد) ---
+        with tabs[3]:
+            st.markdown("#### 🏆 لوحة شرف المتصدرين (الأفضل 10)")
+            
+            if not df_st.empty:
+                # 1. تجهيز البيانات والترتيب
+                # تحويل عمود النقاط لرقم لضمان الترتيب التنازلي الصحيح
+                df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+                top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
+                
+                # 2. عرض المتصدرين في بطاقات
+                for i, (_, row) in enumerate(top_10.iterrows(), 1):
+                    # تمييز المراكز الثلاثة الأولى بأيقونات
+                    rank_icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
+                    
+                    # تمييز بطاقة الطالب الحالي بلون مختلف إذا كان من المتصدرين
+                    is_me_style = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else "background: white; border: 1px solid #edf2f7;"
+                    
+                    st.markdown(f"""
+                        <div style="{is_me_style} padding: 15px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center;">
+                                <div style="background: #f1f5f9; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: 15px; font-size: 1.2rem; font-weight: bold; color: #1e3a8a;">
+                                    {rank_icon}
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-weight: bold; color: #1e3a8a; font-size: 1.1rem;">{row['name']}</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">الصف: {row.get('class', 'غير محدد')}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: center; min-width: 65px;">
+                                <div style="font-size: 1.6rem; font-weight: 900; color: #f59e0b; line-height: 1;">{int(row['pts_num'])}</div>
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: bold;">نقطة</div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("⏳ لا توجد بيانات للطلاب حالياً.")
 
         # --- تبويب الإعدادات (حل مشكلة اختفاء التحديث والخروج) ---
         with tabs[4]:
