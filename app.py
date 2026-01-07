@@ -390,6 +390,149 @@ else:
     with menu[4]:
         if st.button("🚪 تسجيل الخروج"): st.session_state.role = None; st.rerun()
 # ==========================================
+# 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
+# ==========================================
+if st.session_state.role == "teacher":
+    # 1. إنشاء التبويبات الخمسة (مُزاحة بـ Tab واحدة عن الـ if)
+    menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
+
+    # ------------------------------------------
+    # 👥 التبويب 0: إدارة الطلاب (7 حقول + تنسيق دولي)
+    # ------------------------------------------
+    with menu[0]:
+        st.subheader("👥 إدارة قاعدة بيانات الطلاب")
+        df_st = fetch_safe("students")
+        
+        if not df_st.empty:
+            # نموذج الإضافة الاحترافي
+            with st.expander("➕ إضافة طالب جديد (ربط ذكي بالأعمدة)"):
+                with st.form("add_st_v2026", clear_on_submit=True):
+                    c1, c2 = st.columns(2)
+                    f_id = c1.text_input("🔢 الرقم الأكاديمي")
+                    f_name = c2.text_input("👤 الاسم الثلاثي")
+                    c3, c4, c5 = st.columns(3)
+                    f_stage = c3.selectbox("🎓 المرحلة", st.session_state.stage_options)
+                    f_year = c4.text_input("🗓️ العام الدراسي", st.session_state.current_year)
+                    f_class = c5.selectbox("🏫 الصف", st.session_state.class_options)
+                    c6, c7 = st.columns(2)
+                    f_mail = c6.text_input("📧 الإيميل")
+                    f_phone_raw = c7.text_input("📱 الجوال (05xxxx)")
+
+                    if st.form_submit_button("✅ حفظ الطالب"):
+                        if f_id and f_name:
+                            f_phone = clean_phone_number(f_phone_raw) # تنسيق 966 آلياً
+                            st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"}
+                            if safe_append_row("students", st_map): # منع الإزاحة
+                                st.success("✅ تم حفظ البيانات بدقة"); st.cache_data.clear(); st.rerun()
+
+            sq = st.text_input("🔍 محرك البحث الذكي:")
+            mask = df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)
+            st.dataframe(df_st[mask] if sq else df_st, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------
+    # 📊 التبويب 1: التقييم والمتابعة (7 حالات سلوك + واتساب)
+    # ------------------------------------------
+    with menu[1]:
+        st.subheader("📊 المتابعة والتقييم")
+        df_eval = fetch_safe("students")
+        if not df_eval.empty:
+            st_list = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_eval.iterrows()}
+            sel = st.selectbox("🎯 اختر الطالب:", [""] + list(st_list.keys()))
+            if sel:
+                sid = st_list[sel]; s_info = df_eval[df_eval.iloc[:, 0] == sid].iloc[0]
+                cl_p = clean_phone_number(s_info['الجوال'])
+                
+                c_g, c_b = st.columns(2)
+                with c_g: # رصد الدرجات
+                    with st.form("gr_v26"):
+                        v_t = st.number_input(f"المشاركة (الحد: {st.session_state.max_tasks})", 0, 100)
+                        v_q = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100)
+                        if st.form_submit_button("💾 حفظ الدرجة"):
+                            if v_t <= st.session_state.max_tasks and v_q <= st.session_state.max_quiz:
+                                safe_append_row("grades", {"id": sid, "tasks": v_t, "quiz": v_q, "total": v_t+v_q, "date": str(datetime.date.today())})
+                                st.success("✅ تم الرصد")
+
+                with c_b: # رصد السلوك (7 حالات)
+                    with st.form("be_v26", clear_on_submit=True):
+                        b_type = st.selectbox("نوع السلوك:", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص قلم (-5)", "🚫 سلبي (-10)"])
+                        b_msg = st.text_area("الملاحظة")
+                        if st.form_submit_button("💾 تسجيل السلوك"):
+                            safe_append_row("behavior", {"id": sid, "date": str(datetime.date.today()), "type": b_type, "note": b_msg})
+                            st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
+
+                # سجل الملاحظات التاريخي مع أزرار التواصل
+                st.divider(); df_beh = fetch_safe("behavior")
+                my_beh = df_beh[df_beh.iloc[:, 0] == sid]
+                for _, r in my_beh.iloc[::-1].iterrows():
+                    with st.container(border=True):
+                        ct, cb = st.columns([3, 1])
+                        ct.write(f"📅 **{r.iloc[1]}** | **{r.iloc[2]}**\n\n📝 {r.iloc[3]}")
+                        msg_enc = get_professional_msg(s_info.iloc[1], r.iloc[2], r.iloc[3], r.iloc[1])
+                        cb.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={cl_p}&text={msg_enc}")
+
+    # ------------------------------------------
+    # 📢 التبويب 2: التنبيهات والتعميمات
+    # ------------------------------------------
+    with menu[2]:
+        st.subheader("📢 بث التنبيهات والتعميمات")
+        with st.form("ann_v26", clear_on_submit=True):
+            a_t = st.text_input("📝 العنوان"); a_d = st.text_area("📄 التفاصيل")
+            if st.form_submit_button("📣 نشر الآن"):
+                safe_append_row("exams", {"class": "الكل", "title": a_t, "date": str(datetime.date.today()), "details": a_d, "urgent": "نعم"})
+                st.success("✅ تم النشر بنجاح"); st.cache_data.clear()
+
+    # ------------------------------------------
+    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل
+    # ------------------------------------------
+    with menu[3]:
+        st.subheader("⚙️ غرفة التحكم المتقدمة")
+        
+        # 1. تصفير الكاش وصيانة النظام
+        with st.expander("🛠️ صيانة النظام (تحديث البيانات)"):
+            if st.button("🔄 تصفير الكاش (Clear Cache)"):
+                st.cache_data.clear(); st.success("✅ تم تحديث البيانات من السحابة"); st.rerun()
+
+        # 2. إدارة العام والصفوف والمراحل (حفظ دائم)
+        with st.expander("🗓️ إدارة العام والصفوف والمراحل"):
+            c1, c2, c3 = st.columns(3)
+            ny = c1.text_input("تعديل العام الدراسي:", st.session_state.current_year)
+            cl_s = c2.text_area("قائمة الصفوف (فاصلة):", ", ".join(st.session_state.class_options))
+            st_s = c3.text_area("قائمة المراحل (فاصلة):", ", ".join(st.session_state.stage_options))
+            if st.button("💾 حفظ الإعدادات"):
+                ws_s = sh.worksheet("settings")
+                ws_s.update_cell(4, 2, ny); ws_s.update_cell(5, 2, cl_s); ws_s.update_cell(6, 2, st_s)
+                st.success("✅ تم الحفظ بنجاح")
+
+        # 3. إدارة المستخدمين (تشفير آمن)
+        with st.expander("🔐 إضافة مستخدم جديد للقاعدة"):
+            with st.form("u_v26", clear_on_submit=True):
+                u_n = st.text_input("👤 اسم المستخدم"); u_p = st.text_input("🔑 الباسوورد", type="password")
+                if st.form_submit_button("➕ إضافة"):
+                    h_p = hashlib.sha256(str.encode(u_p)).hexdigest()
+                    safe_append_row("users", {"username": u_n, "password_hash": h_p, "role": "teacher"})
+                    st.success("✅ تم الإضافة")
+
+        # 4. النسخ الاحتياطي والقوالب (Excel)
+        with st.expander("📂 النسخ الاحتياطي والقوالب"):
+            # كود توليد ملفات Excel باستخدام io.BytesIO
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine='xlsxwriter') as wr:
+                pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(wr, index=False)
+            st.download_button("📝 تحميل قالب فارغ", data=buf.getvalue(), file_name="Template.xlsx")
+            
+            if st.button("📊 توليد نسخة احتياطية (BackUp)"):
+                df_bu = fetch_safe("students")
+                buf_bu = io.BytesIO()
+                with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
+                st.download_button("📥 تنزيل النسخة الاحتياطية", data=buf_bu.getvalue(), file_name=f"Backup_{datetime.date.today()}.xlsx")
+
+    # ------------------------------------------
+    # 🚗 التبويب 4: الخروج
+    # ------------------------------------------
+    with menu[4]:
+        if st.button("🚪 تأكيد تسجيل الخروج"):
+            st.session_state.role = None; st.rerun()
+# ==========================================
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
 if st.session_state.role == "student":
