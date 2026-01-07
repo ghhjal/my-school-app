@@ -183,37 +183,29 @@ with menu[0]:
         
         st.divider()
 
-        with st.expander("➕ إضافة طالب جديد (ربط ديناميكي)", expanded=False):
-            with st.form("add_student_final_v1", clear_on_submit=True):
+        with st.expander("➕ إضافة طالب جديد (تنسيق الجوال آلي)"):
+            with st.form("add_st_final_v5", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 f_id = col1.text_input("🔢 الرقم الأكاديمي")
                 f_name = col2.text_input("👤 الاسم الثلاثي")
-                
                 col3, col4, col5 = st.columns(3)
-                f_stage = col3.selectbox("🎓 المرحلة الدراسية", st.session_state.stage_options)
-                f_year = col4.text_input("🗓️ العام الدراسي", st.session_state.current_year)
+                f_stage = col3.selectbox("🎓 المرحلة", st.session_state.stage_options)
+                f_year = col4.text_input("🗓️ العام", st.session_state.current_year)
                 f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
+                f_mail = st.text_input("📧 الإيميل")
+                f_phone_raw = st.text_input("📱 الجوال (مثال: 05xxxx)")
                 
-                col6, col7 = st.columns(2)
-                f_mail = col6.text_input("📧 البريد الإلكتروني")
-                f_phone = col7.text_input("📱 الجوال (966...)")
-                
-                if st.form_submit_button("✅ اعتماد وحفظ الطالب"):
-                    if f_id and f_name:
-                        # ✅ استخدام خريطة الأسماء (Keys) لضمان العمود الصحيح
-                        st_map = {
-                            "id": f_id.strip(),
-                            "name": f_name.strip(),
-                            "class": f_class,
-                            "year": f_year,
-                            "sem": f_stage,
-                            "الإيميل": f_mail,
-                            "الجوال": f_phone,
-                            "النقاط": "0"
-                        }
-                        if safe_append_row("students", st_map):
-                            st.success(f"✅ تم حفظ {f_name} في الأعمدة الصحيحة")
-                            st.cache_data.clear(); st.rerun()
+                if st.form_submit_button("✅ حفظ"):
+                    # ✅ تنظيف الرقم قبل الحفظ
+                    f_phone = clean_phone_number(f_phone_raw)
+                    st_data = {
+                        "id": f_id.strip(), "name": f_name.strip(), 
+                        "class": f_class, "year": f_year, "sem": f_stage, 
+                        "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"
+                    }
+                    if safe_append_row("students", st_data):
+                        st.success(f"✅ تم الحفظ بالرقم الدولي: {f_phone}")
+                        st.cache_data.clear(); st.rerun()
 
         # 3. محرك البحث الذكي (الاسم أو الرقم)
         sq = st.text_input("🔍 ابحث عن طالب محدد:")
