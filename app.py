@@ -622,107 +622,124 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. جلب بيانات الطالب المسجل حالياً
-    st_id = st.session_state.get('username') # نفترض أن اسم المستخدم هو الرقم الأكاديمي
+    # 1. تنظيف الرقم الأكاديمي المسجل (Username) لضمان المطابقة
+    raw_user_id = str(st.session_state.get('username', '')).strip()
+    st_id = raw_user_id.split('.')[0] # إزالة أي .0 إذا وجدت
+    
     df_students = fetch_safe("students")
     df_grades = fetch_safe("grades")
     
-    # التأكد من وجود بيانات الطالب
-    student_data = df_students[df_students.iloc[:, 0] == st_id]
-    
-    if not student_data.empty:
-        s_name = student_data.iloc[0]['name']
-        s_class = student_data.iloc[0]['class']
-        s_points = int(student_data.iloc[0].get('النقاط', 0))
+    # البحث الذكي: تنظيف عمود الهوية في الجدول أيضاً قبل البحث
+    if not df_students.empty:
+        df_students['clean_id'] = df_students.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+        student_row = df_students[df_students['clean_id'] == st_id]
+    else:
+        student_row = pd.DataFrame()
+
+    if not student_row.empty:
+        s_data = student_row.iloc[0]
+        s_name = s_data.get('name', 'طالبنا المتميز')
+        s_class = s_data.get('class', 'غير محدد')
+        s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
         
-        # 🎨 تنسيق إضافي لبطاقات الجوال
+        # 🎨 الهوية البصرية للطالب (البطاقة الترحيبية)
         st.markdown(f"""
             <style>
-            .welcome-card {{ background: white; padding: 20px; border-radius: 20px; border-right: 8px solid #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }}
-            .points-box {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
-            .medal-card {{ background: #f8fafc; padding: 10px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0; }}
+            .student-welcome {{ background: white; padding: 25px; border-radius: 20px; border-right: 10px solid #1e40af; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-top: -50px; }}
+            .points-card {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; border-radius: 25px; text-align: center; margin: 20px 0; }}
+            .metric-card {{ background: #f1f5f9; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0; }}
             </style>
-            <div class="welcome-card">
-                <h3 style='margin:0;'>👋 مرحباً، {s_name}</h3>
-                <p style='color: #64748b; margin:5px 0 0 0;'>الصف: {s_class} | العام: {st.session_state.current_year}</p>
+            <div class="student-welcome">
+                <h2 style='margin:0; color:#1e3a8a;'>👋 أهلاً بك، {s_name}</h2>
+                <p style='margin:5px 0 0 0; color:#64748b;'>📚 الصف الدراسي: {s_class} | 🎓 الرقم الأكاديمي: {st_id}</p>
+            </div>
+            <div class="points-card">
+                <p style='margin:0; font-size: 1.2rem; opacity: 0.9;'>رصيد نقاط التميز السلوكي</p>
+                <h1 style='margin:0; font-size: 4rem; font-weight: 900;'>{s_points}</h1>
+                <p style='margin:0;'>{'🌟 أنت في الصدارة!' if s_points >= 100 else '💪 استمر في التقدم'}</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 🎖️ قسم الأوسمة والنقاط (كما في الصورة d03ee2)
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.markdown(f"<div class='medal-card'>🥇<br><small style='color:{'#f59e0b' if s_points >= 100 else '#cbd5e1'}'>ذهبي</small></div>", unsafe_allow_html=True)
-        with col_m2:
-            st.markdown(f"<div class='medal-card'>🥈<br><small style='color:{'#94a3b8' if s_points >= 50 else '#cbd5e1'}'>فضي</small></div>", unsafe_allow_html=True)
-        with col_m3:
-            st.markdown(f"<div class='medal-card'>🥉<br><small style='color:#b45309'>برونزي</small></div>", unsafe_allow_html=True)
+        # 🎖️ أوسمة الطالب
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(f"<div class='metric-card'>🥇<br><b style='color:{'#f59e0b' if s_points >= 100 else '#cbd5e1'}'>ذهبي</b></div>", unsafe_allow_html=True)
+        c2.markdown(f"<div class='metric-card'>🥈<br><b style='color:{'#94a3b8' if s_points >= 50 else '#cbd5e1'}'>فضي</b></div>", unsafe_allow_html=True)
+        c3.markdown(f"<div class='metric-card'>🥉<br><b style='color:#b45309'>برونزي</b></div>", unsafe_allow_html=True)
 
-        st.markdown(f"""
-            <div class="points-box">
-                <p style='margin:0; font-size: 1.1rem;'>رصيد النقاط السلوكية</p>
-                <h1 style='margin:0; font-size: 3.5rem; font-weight: 900;'>{s_points}</h1>
-            </div>
-        """, unsafe_allow_html=True)
+        st.divider()
 
-        # 📱 التنقل الرئيسي (نظام التبويبات العصري)
-        st.write("### 🚀 لوحة التحكم")
-        tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
+        # 📱 التبويبات المطلوبة
+        tab_list = ["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"]
+        tabs = st.tabs(tab_list)
 
-        # --- تبويب 1: التنبيهات ---
+        # --- 1. التنبيهات ---
         with tabs[0]:
-            st.info("💡 لا توجد تنبيهات عامة جديدة اليوم.")
+            st.info(f"📢 لا توجد تعاميم جديدة للفصل الدراسي {st.session_state.current_year}")
 
-        # --- تبويب 2: سجل الملاحظات ---
+        # --- 2. سجل الملاحظات ---
         with tabs[1]:
-            st.markdown("#### ✍️ ملاحظات المعلم")
-            df_notes = fetch_safe("behavior") # نفترض وجود شيت للسلوك
-            my_notes = df_notes[df_notes.iloc[:, 0] == st_id]
-            if not my_notes.empty:
-                for _, n in my_notes.iterrows():
-                    st.warning(f"📍 **{n['type']}:** {n['desc']} ({n['date']})")
-            else:
-                st.write("🌟 سجلك نظيف ومثالي يا بطل!")
+            st.markdown("### 📝 سجل ملاحظات السلوك")
+            df_beh = fetch_safe("behavior")
+            if not df_beh.empty:
+                df_beh['clean_id'] = df_beh.iloc[:, 0].astype(str).str.split('.').str[0]
+                my_notes = df_beh[df_beh['clean_id'] == st_id]
+                if not my_notes.empty:
+                    for _, note in my_notes.iterrows():
+                        st.warning(f"🔔 **{note.get('type', 'ملاحظة')}:** {note.get('desc', '')} ({note.get('date', '')})")
+                else: st.success("🌟 سجلّك خالي من الملاحظات السلبية، أحسنت!")
 
-        # --- تبويب 3: درجاتي (مطابق لصورة d03ee2) ---
+        # --- 3. درجاتي (p1, p2, perf) ---
         with tabs[2]:
-            st.markdown("#### 📊 سجل الدرجات (p1, p2, perf)")
-            st_grades = df_grades[df_grades.iloc[:, 0] == st_id]
-            if not st_grades.empty:
-                g = st_grades.iloc[0]
-                # عرض بطاقات الدرجات
-                st.metric("درجة المشاركة (p1)", g.get('p1', 0))
-                st.metric("درجة الواجبات (p2)", g.get('p2', 0))
-                st.metric("الاختبارات القصيرة (perf)", g.get('perf', 0), delta="ممتاز" if int(g.get('perf', 0)) > 15 else None)
-            else:
-                st.info("⏳ لم تُرصد الدرجات بعد.")
+            st.markdown("### 📊 نتائجي الدراسية")
+            if not df_grades.empty:
+                df_grades['clean_id'] = df_grades.iloc[:, 0].astype(str).str.split('.').str[0]
+                my_grades = df_grades[df_grades['clean_id'] == st_id]
+                if not my_grades.empty:
+                    g = my_grades.iloc[0]
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("المشاركة (p1)", g.get('p1', 0))
+                    col2.metric("الواجبات (p2)", g.get('p2', 0))
+                    col3.metric("المجموع (perf)", g.get('perf', 0))
+                    
+                    # مكافأة الشهادة إذا كان الطالب ذهبي
+                    if s_points >= 100:
+                        st.balloons()
+                        pdf_data = create_pdf_certificate(s_name, s_points) # الدالة التي كتبناها سابقاً
+                        st.download_button("📥 تحميل شهادة التميز (PDF)", pdf_data, f"Certificate_{st_id}.pdf", "application/pdf")
+                else: st.info("⏳ لم يتم رصد درجاتك في النظام حتى الآن.")
 
-        # --- تبويب 4: المتصدرين ---
+        # --- 4. المتصدرين ---
         with tabs[3]:
-            st.markdown("#### 🏆 قائمة لوحة الشرف (Top 10)")
-            top_10 = df_students.sort_values(by="النقاط", ascending=False).head(10)
-            for i, (idx, row) in enumerate(top_10.iterrows(), 1):
+            st.markdown("### 🏆 لوحة الشرف (Top 10)")
+            top_students = df_students.sort_values(by="النقاط", ascending=False).head(10)
+            for i, (_, row) in enumerate(top_students.iterrows(), 1):
                 st.write(f"{i}. ⭐ **{row['name']}** - {row['النقاط']} نقطة")
 
-        # --- تبويب 5: الإعدادات ---
+        # --- 5. الإعدادات ---
         with tabs[4]:
-            st.markdown("#### ⚙️ تحديث بيانات التواصل")
-            with st.form("update_contact"):
-                new_mail = st.text_input("📧 البريد الإلكتروني الجديد", student_data.iloc[0].get('الإيميل', ''))
-                new_phone = st.text_input("📱 رقم الجوال الجديد", student_data.iloc[0].get('الجوال', ''))
-                if st.form_submit_button("💾 حفظ التعديلات"):
-                    # ابحث عن السطر في قوقل شيت وحدثه
+            st.markdown("### ⚙️ تحديث بيانات التواصل")
+            with st.form("up_data"):
+                new_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
+                new_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
+                if st.form_submit_button("💾 حفظ البيانات"):
+                    # منطق التحديث في قوقل شيت
                     try:
                         ws_st = sh.worksheet("students")
-                        row_idx = student_data.index[0] + 2
-                        ws_st.update_cell(row_idx, 6, new_mail) # عمود 6 للإيميل
-                        ws_st.update_cell(row_idx, 7, new_phone) # عمود 7 للجوال
-                        st.success("✅ تم تحديث بياناتك بنجاح")
-                        st.cache_data.clear()
-                    except:
-                        st.error("❌ فشل التحديث، تواصل مع المعلم.")
+                        # البحث عن السطر الحقيقي للطالب لتحديثه
+                        all_ids = ws_st.col_values(1)
+                        # محاولة مطابقة الرقم
+                        matching_indices = [i for i, x in enumerate(all_ids) if x.split('.')[0] == st_id]
+                        if matching_indices:
+                            actual_row = matching_indices[0] + 1
+                            ws_st.update_cell(actual_row, 6, new_mail) # عمود الإيميل
+                            ws_st.update_cell(actual_row, 7, new_phone) # عمود الجوال
+                            st.success("✅ تم تحديث بياناتك بنجاح!")
+                            st.cache_data.clear()
+                    except Exception as e: st.error(f"❌ حدث خطأ: {e}")
 
     else:
-        st.error("⚠️ لم يتم العثور على بياناتك. تأكد من الرقم الأكاديمي.")
+        # رسالة الخطأ التي ظهرت في صورتك مع شرح الحل
+        st.error(f"⚠️ لم يتم العثور على بيانات للرقم ({st_id}).")
+        st.info("💡 تأكد أن الرقم الأكاديمي مسجل في جدول students ولا يحتوي على مسافات.")
 
-# استدعاء الحقوق في النهاية
-show_footer()
+    show_footer() # إظهار الحقوق والتواصل في الأسفل
