@@ -472,60 +472,77 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. رفع البيانات والدرجات (إصدار الحماية القصوى المتوافق مع جدولك)
-        with st.expander("📤 رفع الأسماء والدرجات (تنسيق الحقول التلقائي)"):
-            st.info("💡 ملاحظة: تم تحديث النظام ليطابق حقول جدولك (student_id, p1, p2, perf).")
-            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'], key="secure_up_v2026")
-            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"], horizontal=True)
+        # 7. رفع البيانات والدرجات (إصدار المزامنة الذكية + رسائل التأكيد)
+        with st.expander("📤 مزامنة وتحديث البيانات (منع التكرار + إشعارات النجاح)"):
+            st.info("💡 هذا النظام سيتعرف على الطلاب الموجودين مسبقاً ويحدث درجاتهم تلقائياً.")
+            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'], key="smart_sync_v2026")
+            target_sheet = st.radio("حدد الجدول المطلوب تحديثه:", ["students", "grades"], horizontal=True)
             
-            if st.button("🚀 بدء الرفع الذكي والمطهر", key="btn_final_upload"):
+            if st.button("🚀 بدء عملية المزامنة الآن", key="run_sync_btn"):
                 if up_file:
                     try:
-                        # أ. قراءة الملف وتحويل كل الخانات الفارغة (NaN) إلى نصوص فارغة
-                        df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
-                        
-                        sc_count = 0
-                        for _, row in df_up.iterrows():
-                            # تحويل السطر لقاموس لمعالجته
-                            raw_dict = row.to_dict()
-                            final_map = {}
-
-                            if target_sheet == "grades":
-                                # ب. الربط الذكي المطابق لصورة جدولك (image_cdf105.png)
-                                p1_val = pd.to_numeric(raw_dict.get('p1', 0), errors='coerce') or 0
-                                p2_val = pd.to_numeric(raw_dict.get('p2', 0), errors='coerce') or 0
+                        # 1. إظهار رسالة انتظار للمستخدم
+                        with st.status("⏳ جاري معالجة الملف ومزامنة البيانات...", expanded=True) as status:
+                            
+                            # أ. قراءة الملف ومعالجة الأصفار (fillna(0))
+                            df_up = pd.read_excel(up_file, engine='openpyxl').fillna(0)
+                            
+                            # ب. جلب البيانات الحالية للمقارنة
+                            ws = sh.worksheet(target_sheet)
+                            df_current = fetch_safe(target_sheet)
+                            
+                            up_count = 0  # عداد التحديث
+                            new_count = 0 # عداد الإضافة الجديدة
+                            
+                            for _, row in df_up.iterrows():
+                                data_dict = row.to_dict()
                                 
-                                final_map = {
-                                    "student_id": str(raw_dict.get('student_id', raw_dict.get('id', ''))).strip(),
-                                    "p1": str(p1_val),
-                                    "p2": str(p2_val),
-                                    "perf": str(p1_val + p2_val), # حساب المجموع آلياً في عمود perf
-                                    "date": str(datetime.date.today()) # وضع التاريخ آلياً في عمود التاريخ
-                                }
+                                # تحديد المفتاح الأساسي للبحث
+                                id_key = 'student_id' if target_sheet == 'grades' else 'id'
+                                search_id = str(data_dict.get(id_key, '')).strip()
+                                
+                                # تصفية الدرجات وحساب المجموع (perf)
+                                if target_sheet == "grades":
+                                    p1 = pd.to_numeric(data_dict.get('p1', 0), errors='coerce') or 0
+                                    p2 = pd.to_numeric(data_dict.get('p2', 0), errors='coerce') or 0
+                                    data_dict.update({
+                                        "p1": str(int(p1)), 
+                                        "p2": str(int(p2)), 
+                                        "perf": str(int(p1 + p2)), 
+                                        "date": str(datetime.date.today())
+                                    })
 
-                            elif target_sheet == "students":
-                                # ج. معالجة جدول الطلاب (تطهير الأسماء والجوال)
-                                final_map = {
-                                    "id": str(raw_dict.get('id', raw_dict.get('student_id', ''))).strip(),
-                                    "name": " ".join(str(raw_dict.get('name', '')).split()).strip(),
-                                    "class": raw_dict.get('class', ''),
-                                    "year": str(raw_dict.get('year', '')),
-                                    "sem": raw_dict.get('sem', ''),
-                                    "الإيميل": raw_dict.get('الإيميل', ''),
-                                    "الجوال": clean_phone_number(raw_dict.get('الجوال', '')),
-                                    "النقاط": str(raw_dict.get('النقاط', '0'))
-                                }
+                                # ج. منطق التحديث أو الإضافة (Upsert)
+                                if not df_current.empty and search_id in df_current.iloc[:, 0].values:
+                                    # تحديث سطر موجود مسبقاً
+                                    row_idx = df_current[df_current.iloc[:, 0] == search_id].index[0] + 2
+                                    headers = ws.row_values(1)
+                                    updated_row = [str(data_dict.get(h, "")) for h in headers]
+                                    ws.update(f"A{row_idx}", [updated_row])
+                                    up_count += 1
+                                else:
+                                    # إضافة سطر جديد تماماً
+                                    if safe_append_row(target_sheet, data_dict):
+                                        new_count += 1
+                            
+                            status.update(label="✅ اكتملت العملية بنجاح!", state="complete", expanded=False)
 
-                            # د. الإرسال النهائي لجدول الإكسل
-                            if safe_append_row(target_sheet, final_map):
-                                sc_count += 1
+                        # 🌟 رسالة النجاح النهائية التي طلبتها
+                        st.success(f"""
+                            🏁 **انتهت المزامنة بنجاح:**
+                            * ✅ تم تحديث **{up_count}** سجل (طلاب موجودين مسبقاً).
+                            * ➕ تم إضافة **{new_count}** سجل جديد (طلاب جدد).
+                            * 📊 إجمالي السجلات المعالجة: **{up_count + new_count}**.
+                        """)
                         
-                        st.success(f"✅ تم الرفع بنجاح! معالجة {sc_count} سجل في جدول {target_sheet}.")
-                        st.cache_data.clear(); st.rerun()
+                        st.cache_data.clear() # تحديث الذاكرة فوراً
+                        
                     except Exception as e:
-                        st.error(f"❌ خطأ أثناء المعالجة: {e}")
-                else: 
-                    st.warning("⚠️ يرجى اختيار ملف أولاً.")
+                        # 🌟 رسالة الخطأ في حال الفشل
+                        st.error(f"❌ حدث خطأ أثناء المزامنة: {e}")
+                else:
+                    # 🌟 رسالة تحذير في حال لم يتم اختيار ملف
+                    st.warning("⚠️ يرجى اختيار ملف الإكسل أولاً قبل الضغط على زر الرفع.")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
