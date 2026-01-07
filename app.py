@@ -704,17 +704,58 @@ if st.session_state.role == "student":
                             st.warning(f"📍 **{n.get('type', 'تنبيه')}:** {n.get('desc', '')} ({n.get('date', '')})")
                     else: st.success("🌟 سجلك خالي من الملاحظات، استمر في تفوقك!")
 
-            with tabs[2]: # درجاتي (p1, p2, perf)
-                st.markdown("### 📊 سجل النتائج الأكاديمية")
-                if not df_gr.empty:
-                    df_gr['id_clean'] = df_gr.iloc[:, 0].astype(str).str.split('.').str[0]
-                    my_grades = df_gr[df_gr['id_clean'] == student_id]
-                    if not my_grades.empty:
-                        g = my_grades.iloc[0]
-                        st.metric("درجة المشاركة (p1)", g.get('p1', 0))
-                        st.metric("درجة الواجبات (p2)", g.get('p2', 0))
-                        st.metric("الاختبارات (perf)", g.get('perf', 0))
-                    else: st.info("⏳ جاري رصد الدرجات لهذا الفصل.")
+            if st.session_state.role == "student":
+    # استرداد الرقم الأكاديمي
+    student_id = str(st.session_state.get('username', '')).strip()
+    
+    df_st = fetch_safe("students")
+    df_gr = fetch_safe("grades")
+
+    # تنظيف وتجهيز البحث
+    df_st['id_clean'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+    my_info = df_st[df_st['id_clean'] == student_id]
+
+    if not my_info.empty:
+        s_data = my_info.iloc[0]
+        st.markdown(f"### 👋 أهلاً بك: {s_data['name']}")
+        
+        # التبويبات
+        tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
+
+        with tabs[2]: # تبويب درجاتي (تعديل المسميات)
+            st.markdown("#### 📊 سجل النتائج الأكاديمية")
+            if not df_gr.empty:
+                df_gr['id_clean'] = df_gr.iloc[:, 0].astype(str).str.split('.').str[0]
+                my_grades = df_gr[df_gr['id_clean'] == student_id]
+                
+                if not my_grades.empty:
+                    g = my_grades.iloc[0]
+                    
+                    # عرض الدرجات بالمسميات العربية المطلوبة
+                    st.markdown(f"""
+                        <style>
+                        .grade-card {{ background: white; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }}
+                        .grade-label {{ font-weight: bold; color: #1e3a8a; }}
+                        .grade-value {{ font-size: 1.5rem; color: #333; }}
+                        </style>
+                        
+                        <div class="grade-card">
+                            <span class="grade-label">📝 المشاركة والمهام (p1)</span>
+                            <span class="grade-value">{g.get('p1', 0)}</span>
+                        </div>
+                        
+                        <div class="grade-card">
+                            <span class="grade-label">✍️ اختبار قصير (p2)</span>
+                            <span class="grade-value">{g.get('p2', 0)}</span>
+                        </div>
+                        
+                        <div class="grade-card" style="border-right: 5px solid #10b981;">
+                            <span class="grade-label">🏆 المجموع الكلي (perf)</span>
+                            <span class="grade-value" style="color: #10b981; font-weight: bold;">{g.get('perf', 0)}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.info("⏳ جاري رصد الدرجات حالياً.")
 
             with tabs[3]: # المتصدرين
                 st.markdown("### 🏆 لوحة شرف المتصدرين (Top 10)")
