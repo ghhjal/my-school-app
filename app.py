@@ -5,6 +5,15 @@ import urllib.parse
 import datetime
 import hashlib
 import io
+# يجب أن تكون هذه الدالة في الأعلى تماماً
+def safe_append_row(worksheet_name, data_dict):
+    try:
+        ws = sh.worksheet(worksheet_name)
+        headers = ws.row_values(1)
+        row_to_append = [data_dict.get(h, "") for h in headers]
+        ws.append_row(row_to_append)
+        return True
+    except: return False
 from google.oauth2.service_account import Credentials
 
 # ==========================================
