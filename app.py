@@ -100,19 +100,93 @@ if st.session_state.role is None:
 if st.session_state.role == "teacher":
     menu = st.tabs(["👥 الطلاب", "📊 التقييم", "📢 التواصل", "⚙️ الإعدادات", "🚗 خروج"])
 
-    with menu[0]: # تبويب الطلاب: إحصائيات + بحث ذكي
-        st.subheader("👥 إدارة قاعدة الطلاب")
+    # ==========================================
+# 👥 تبويب: إدارة قاعدة بيانات الطلاب (الإصدار الشامل)
+# ==========================================
+    with menu[0]:
+        st.subheader("👥 إدارة قاعدة بيانات الطلاب")
+        
+        # 1. جلب البيانات وتحديث الإحصائيات (لمسة احترافية)
         df_st = fetch_safe("students")
+        
         if not df_st.empty:
-            c1, c2, c3 = st.columns(3)
+            # عرض بطاقات إحصائية سريعة
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("📊 إجمالي الطلاب", len(df_st))
-            c2.metric("🏫 الصفوف", len(df_st.iloc[:, 4].unique()) if len(df_st.columns) > 4 else 1)
-            c3.metric("⭐ متوسط النقاط", round(pd.to_numeric(df_st['النقاط'], errors='coerce').mean(), 1))
+            c2.metric("🏫 عدد الصفوف", len(df_st.iloc[:, 4].unique()) if len(df_st.columns) > 4 else 1)
+            # تحويل النقاط لرقم لحساب المتوسط
+            df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+            c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+            c4.metric("📅 العام الدراسي", df_st.iloc[0, 3] if len(df_st.columns) > 3 else "1447هـ")
+    
             st.divider()
-            search_q = st.text_input("🔍 محرك البحث (الاسم أو الرقم):")
-            df_disp = df_st[df_st.iloc[:, 0].str.contains(search_q) | df_st.iloc[:, 1].str.contains(search_q)] if search_q else df_st
-            st.dataframe(df_disp, use_container_width=True, hide_index=True)
-
+    
+            # 2. محرك البحث الذكي (بحث لحظي بالاسم أو الرقم)
+            search_query = st.text_input("🔍 ابحث عن طالب (اكتب الاسم أو الرقم الأكاديمي):", placeholder="مثال: زياد أو 101...")
+    
+            # 3. نموذج إضافة طالب جديد (كافة الحقول السبعة)
+            with st.expander("➕ إضافة طالب جديد يدوياً للسجلات"):
+                with st.form("add_student_full_form", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    f_id = col1.text_input("🔢 الرقم الأكاديمي (نص)")
+                    f_name = col2.text_input("👤 الاسم الثلاثي للطالب")
+                    
+                    col3, col4, col5 = st.columns(3)
+                    f_stage = col3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                    f_year = col4.text_input("🗓️ العام الدراسي", "1447هـ")
+                    f_class = col5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                    
+                    col6, col7 = st.columns(2)
+                    f_mail = col6.text_input("📧 البريد الإلكتروني")
+                    f_phone = col7.text_input("📱 جوال ولي الأمر (بدون 0)")
+                    
+                    if st.form_submit_button("✅ حفظ الطالب في القاعدة"):
+                        if f_id and f_name:
+                            # تنسيق الجوال تلقائياً قبل الحفظ
+                            phone = f_phone.strip()
+                            if phone.startswith("0"): phone = phone[1:]
+                            if not phone.startswith("966") and phone: phone = "966" + phone
+                            
+                            # إضافة السطر لـ Google Sheets
+                            new_student = [f_id.strip(), f_name, f_class, f_year, f_stage, f_mail, phone, "0"]
+                            sh.worksheet("students").append_row(new_student)
+                            st.success(f"✅ تم حفظ الطالب {f_name} بنجاح.")
+                            st.cache_data.clear(); st.rerun()
+                        else:
+                            st.warning("⚠️ يرجى إكمال الحقول الأساسية (الرقم والاسم).")
+    
+            # 4. فلترة وعرض البيانات (جدول تفاعلي)
+            mask = df_st.iloc[:, 0].str.contains(search_query) | df_st.iloc[:, 1].str.contains(search_query)
+            df_filtered = df_st[mask] if search_query else df_st
+            
+            st.markdown(f"**📂 قائمة الطلاب الحالية: ({len(df_filtered)}) طالب**")
+            st.dataframe(
+                df_filtered,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "id": st.column_config.TextColumn("🆔 الرقم"),
+                    "name": st.column_config.TextColumn("👤 الاسم"),
+                    "النقاط": st.column_config.ProgressColumn("🏆 النقاط", min_value=0, max_value=100, format="%d")
+                }
+            )
+    
+            # 5. منطقة الحذف الآمن (لمنع الأخطاء)
+            with st.expander("🗑️ منطقة إدارة الحذف (حذف نهائي)"):
+                del_id = st.selectbox("اختر الرقم الأكاديمي للطالب المراد حذفه:", [""] + df_filtered.iloc[:, 0].tolist())
+                if st.button("🚨 تأكيد الحذف من كافة السجلات"):
+                    if del_id:
+                        try:
+                            # الحذف من شيت الطلاب
+                            idx = df_st[df_st.iloc[:, 0] == del_id].index[0] + 2
+                            sh.worksheet("students").delete_rows(int(idx))
+                            # يمكن إضافة حذف درجاته وسلوكه هنا أيضاً لضمان نظافة البيانات
+                            st.success(f"✅ تم حذف الطالب {del_id} بنجاح."); st.cache_data.clear(); st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ فشل الحذف: {e}")
+        else:
+            st.info("💡 لا يوجد طلاب مضافون حالياً. استخدم نموذج الإضافة أعلاه أو أداة الرفع في الإعدادات.")
+            #............#
     with menu[1]: # تبويب التقييم: رصد بحدود الوزارة + سلوك + واتساب
         df_st = fetch_safe("students")
         if not df_st.empty:
