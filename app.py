@@ -25,7 +25,28 @@ def get_gspread_client():
         return None
 
 sh = get_gspread_client()
-
+# تحميل الإعدادات المتقدمة من جدول settings
+if "current_year" not in st.session_state:
+    try:
+        df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
+        # جلب العام الدراسي
+        st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
+        # جلب قائمة الصفوف (مخزنة كنص مفصول بفاصلة في الإكسل)
+        classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
+        # أضف هذا الجزء داخل كود تحميل الإعدادات (بعد كود class_list)
+if "stage_options" not in st.session_state:
+    try:
+        # جلب قائمة المراحل من شيت settings (مفتاح stage_list)
+        stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
+        st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
+    except:
+        # قيم افتراضية للمراحل
+        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
+        st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
+    except:
+        # قيم افتراضية في حال عدم وجودها في الشيت بعد
+        st.session_state.current_year = "1447هـ"
+        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
 # تحميل الإعدادات الدائمة من شيت settings لضمان ثبات التوزيع
 if "max_tasks" not in st.session_state:
     try:
@@ -101,37 +122,72 @@ if st.session_state.role is None:
 if st.session_state.role == "teacher":
     menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
 
-    with menu[0]: # تبويب الطلاب الشامل
-        st.subheader("👥 إدارة قاعدة الطلاب")
-        df_st = fetch_safe("students")
-        if not df_st.empty:
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("📊 إجمالي الطلاب", len(df_st))
-            c2.metric("🏫 الصفوف", len(df_st.iloc[:, 4].unique()) if len(df_st.columns) > 4 else 1)
-            df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-            c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
-            c4.metric("🗓️ العام", df_st.iloc[0, 3] if len(df_st.columns) > 3 else "1447هـ")
-            
-            st.divider()
-            search_q = st.text_input("🔍 محرك البحث الذكي (الاسم أو الرقم):")
-            
-            with st.expander("➕ إضافة طالب جديد يدوياً بكافة الحقول"):
-                with st.form("add_st_full", clear_on_submit=True):
-                    col1, col2 = st.columns(2)
-                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
-                    f_name = col2.text_input("👤 الاسم الثلاثي")
-                    col3, col4, col5 = st.columns(3)
-                    f_stage = col3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
-                    f_year = col4.text_input("🗓️ العام", "1447هـ")
-                    f_class = col5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
-                    f_mail = st.text_input("📧 الإيميل")
-                    f_phone = st.text_input("📱 الجوال (966...)")
-                    if st.form_submit_button("✅ اعتماد وحفظ"):
-                        sh.worksheet("students").append_row([f_id, f_name, f_class, f_year, f_stage, f_mail, f_phone, "0"])
-                        st.success("تمت الإضافة"); st.cache_data.clear(); st.rerun()
+    # ==========================================
+# 👥 الوحدة 2: تبويب إدارة الطلاب (الإصدار الشامل)
+# ==========================================
+with menu[0]:
+    st.subheader("👥 إدارة قاعدة بيانات الطلاب")
+    df_st = fetch_safe("students")
+    
+    if not df_st.empty:
+        # 1. شريط الإحصائيات الذكي
+        c1, c2, c3 = st.columns(3)
+        c1.metric("📊 إجمالي الطلاب", len(df_st))
+        c2.metric("🏫 عدد الفصول", len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1)
+        # تحويل النقاط لرقم لضمان دقة المتوسط
+        df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+        c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+        
+        st.divider()
 
-            df_disp = df_st[df_st.iloc[:, 0].str.contains(search_q) | df_st.iloc[:, 1].str.contains(search_q)] if search_q else df_st
-            st.dataframe(df_disp, use_container_width=True, hide_index=True)
+        # 2. نموذج الإضافة المطور (7 حقول كاملة)
+        with st.expander("➕ إضافة طالب جديد (ربط ديناميكي)", expanded=False):
+            with st.form("add_student_final_v1", clear_on_submit=True):
+                # السطر الأول: البيانات الأساسية
+                col1, col2 = st.columns(2)
+                f_id = col1.text_input("🔢 الرقم الأكاديمي")
+                f_name = col2.text_input("👤 الاسم الثلاثي")
+                
+                # السطر الثاني: المرحلة والعام والصف (ديناميكي)
+                col3, col4, col5 = st.columns(3)
+                f_stage = col3.selectbox("🎓 المرحلة الدراسية", st.session_state.stage_options) # الحقل المطلوب
+                f_year = col4.text_input("🗓️ العام الدراسي", st.session_state.current_year)
+                f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
+                
+                # السطر الثالث: بيانات التواصل
+                col6, col7 = st.columns(2)
+                f_mail = col6.text_input("📧 البريد الإلكتروني")
+                f_phone = col7.text_input("📱 جوال ولي الأمر (966...)")
+                
+                if st.form_submit_button("✅ اعتماد وحفظ الطالب"):
+                    if f_id and f_name:
+                        # خريطة البيانات (Mapping) لضمان الوصول للعمود الصحيح في الإكسل
+                        # ملاحظة: سنربط "المرحلة" بعمود "sem" كما هو معتاد في ملفك
+                        st_map = {
+                            "id": f_id.strip(),
+                            "name": f_name.strip(),
+                            "class": f_class,
+                            "year": f_year,
+                            "sem": f_stage, # المرحلة الدراسية
+                            "الإيميل": f_mail,
+                            "الجوال": f_phone,
+                            "النقاط": "0"
+                        }
+                        
+                        if safe_append_row("students", st_map):
+                            st.success(f"✅ تم حفظ الطالب {f_name} بنجاح في الأعمدة الصحيحة")
+                            st.cache_data.clear(); st.rerun()
+                    else:
+                        st.warning("⚠️ يرجى إدخال الرقم الأكاديمي والاسم.")
+
+        # 3. محرك البحث الذكي (الاسم أو الرقم)
+        sq = st.text_input("🔍 ابحث عن طالب محدد:")
+        df_disp = df_st[df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)] if sq else df_st
+        
+        # عرض الجدول بشكل احترافي
+        st.dataframe(df_disp, use_container_width=True, hide_index=True)
+    else:
+        st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
 
     # ==========================================
 # 📊 تبويب: التقييم والمتابعة (الإصدار الشامل والمصحح)
@@ -263,17 +319,45 @@ if st.session_state.role == "teacher":
                         sh.worksheet("exams").delete_rows(int(idx) + 2)
                         st.cache_data.clear(); st.rerun()
 
-    with menu[3]: # تبويب الإعدادات المكتمل
-        st.subheader("⚙️ التحكم المتقدم")
-        with st.expander("⚖️ توزيع الدرجات (حفظ دائم)", expanded=True):
-            c1, c2 = st.columns(2)
-            nt = c1.number_input("حد المشاركة", 1, 100, st.session_state.max_tasks)
-            nq = c2.number_input("حد الاختبار", 1, 100, st.session_state.max_quiz)
-            if st.button("💾 حفظ نهائي"):
+    with menu[3]:
+    st.subheader("⚙️ إعدادات النظام المتقدمة")
+    
+    # 1. لوحة توزيع الدرجات (الموجودة سابقاً)
+    with st.expander("⚖️ توزيع الدرجات السنوي", expanded=False):
+        c1, c2 = st.columns(2)
+        nt = c1.number_input("حد المشاركة", 1, 100, st.session_state.max_tasks)
+        nq = c2.number_input("حد الاختبار", 1, 100, st.session_state.max_quiz)
+        if st.button("💾 حفظ توزيع الدرجات"):
+            ws_s = sh.worksheet("settings")
+            ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
+            st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
+            st.success("✅ تم حفظ التوزيع")
+
+    # 2. اللوحة الجديدة: إدارة العام والصفوف
+    with st.expander("🗓️ إدارة العام الدراسي والصفوف", expanded=True):
+        c1, c2 = st.columns(2)
+        new_year = c1.text_input("تعديل العام الدراسي الحالي:", st.session_state.current_year)
+        
+        # تحويل القائمة لنص ليتمكن المعلم من تعديلها بسهولة
+        current_classes_str = ", ".join(st.session_state.class_options)
+        new_classes_str = c2.text_area("تعديل قائمة الصفوف (افصل بينها بفاصلة):", current_classes_str)
+        
+        if st.button("💾 حفظ إعدادات العام والصفوف"):
+            try:
                 ws_s = sh.worksheet("settings")
-                ws_s.update_cell(2, 2, nt); ws_s.update_cell(3, 2, nq)
-                st.session_state.max_tasks, st.session_state.max_quiz = nt, nq
-                st.success("✅ تم الحفظ"); st.rerun()
+                # تحديث العام الدراسي (نفترض أنه في السطر 4 من شيت settings)
+                ws_s.update_cell(4, 2, new_year)
+                # تحديث قائمة الصفوف (نفترض أنها في السطر 5)
+                ws_s.update_cell(5, 2, new_classes_str)
+                
+                # تحديث الذاكرة فوراً
+                st.session_state.current_year = new_year
+                st.session_state.class_options = [c.strip() for c in new_classes_str.split(',')]
+                
+                st.success("✅ تم تحديث العام والصفوف بنجاح!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ فشل الحفظ: {e}. تأكد من وجود مفاتيح current_year و class_list في شيت settings")
         
         with st.expander("🔐 تغيير كلمة مرور (z1 / Ziyad1)"):
             df_u = fetch_safe("users")
