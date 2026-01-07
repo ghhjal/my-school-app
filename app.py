@@ -488,37 +488,31 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. رفع البيانات والدرجات (مع ميزة تنظيف الأسماء التلقائية)
-        with st.expander("📤 رفع الأسماء والدرجات (Upload Excel)"):
-            st.info("💡 سيقوم النظام بتنظيف الأسماء آلياً من المسافات الزائدة لضمان استقرار الأعمدة.")
-            up_file = st.file_uploader("اختر ملف الإكسل", type=['xlsx'])
-            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"], horizontal=True)
+        # 7. رفع البيانات والدرجات (إصدار الحماية القصوى 2026)
+        with st.expander("📤 رفع الأسماء والدرجات (المطهر البرمجي للبيانات الفارغة)"):
+            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'])
+            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"], horizontal=True, key="up_v26_fix")
             
-            if st.button("🚀 بدء الرفع الذكي والمطهر"):
+            if st.button("🚀 بدء الرفع الذكي", key="btn_secure_up"):
                 if up_file:
                     try:
-                        # استخدام محرك openpyxl لضمان التوافق
-                        df_up = pd.read_excel(up_file, engine='openpyxl')
+                        # ✅ الحل: fillna("") تحول كل NaN إلى نص فارغ لمنع الانهيار
+                        df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                         
-                        # عداد للعمليات الناجحة
                         success_count = 0
                         for _, row in df_up.iterrows():
                             data_dict = row.to_dict()
+                            # تنظيف الاسم وتنسيق المعرف آلياً
+                            if 'name' in data_dict: data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
+                            if 'id' in data_dict: data_dict['id'] = str(data_dict['id']).strip()
                             
-                            # ✨ الميزة المطلوبة: تنظيف الاسم لمنع تشتت الأعمدة
-                            if 'name' in data_dict:
-                                # إزالة المسافات الزائدة، علامات الجدولة، والأسطر الجديدة
-                                data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
-                            
-                            # إرسال البيانات المنظفة للقاعدة
                             if safe_append_row(target_sheet, data_dict):
                                 success_count += 1
                         
-                        st.success(f"✅ اكتمل الرفع! تم معالجة وحفظ {success_count} سجل بنجاح في جدول {target_sheet}.")
-                        st.cache_data.clear()
+                        st.success(f"✅ تم رفع {success_count} سجل بنجاح في {target_sheet}!")
+                        st.cache_data.clear(); st.rerun()
                     except Exception as e:
-                        st.error(f"❌ خطأ أثناء معالجة الملف: {e}")
-                else: st.warning("⚠️ يرجى اختيار ملف أولاً.")
+                        st.error(f"❌ خطأ في المعالجة: {e}")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
