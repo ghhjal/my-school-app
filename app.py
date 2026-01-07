@@ -472,82 +472,82 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. المزامنة الشاملة (الإصدار المرن - حل مشكلة اختلاف المسميات)
-        with st.expander("📤 مزامنة وتحديث البيانات (نظام الحماية والتحقق)") :
-            st.markdown("### 🛠️ معالج المزامنة الذكي")
-            up_file = st.file_uploader("اختر ملف الإكسل (xlsx)", type=['xlsx'], key="flexible_sync_v4")
-            target_sheet = st.radio("حدد الجدول المرجعي في قوقل شيت:", ["students", "grades"], horizontal=True)
+        # 7. المزامنة الذكية (حل مشكلة التكرار، الأصفار، وغياب الرسائل)
+        with st.expander("📤 مزامنة وتحديث البيانات (نظام الحماية والتحقق القصوى)"):
+            st.markdown("### 🛠️ معالج المزامنة المطور")
+            st.info("💡 سيقوم النظام بتحديث درجات الطلاب الحاليين ومنع تكرارهم، مع تجاهل الصفوف الفارغة.")
             
-            if st.button("🚀 بدء المزامنة الآن", key="run_flex_sync"):
+            up_file = st.file_uploader("اختر ملف الإكسل المحدث (p1, p2)", type=['xlsx'], key="smart_sync_final")
+            target_sheet = st.radio("حدد الجدول المطلوب تحديثه:", ["students", "grades"], horizontal=True)
+            
+            if st.button("🚀 بدء المزامنة والتطهير الآن", key="run_master_sync"):
                 if up_file:
                     try:
-                        with st.status("⏳ جاري تحليل الملف ومزامنة البيانات...", expanded=True) as status:
-                            # 1. قراءة الملف وتطهير البيانات
+                        # 1. إظهار حالة المعالجة
+                        with st.status("⏳ جاري تحليل البيانات وفلترة الأصفار...", expanded=True) as status:
+                            # أ. قراءة الملف وتجاهل الصفوف الفارغة تماماً
                             df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                             df_up = df_up.dropna(how='all')
                             
-                            # عرض الأعمدة المكتشفة لمساعدة المعلم في التأكد
-                            st.caption(f"📊 الأعمدة المكتشفة في ملفك: {', '.join(df_up.columns)}")
-                            
                             ws = sh.worksheet(target_sheet)
-                            df_current = fetch_safe(target_sheet)
-                            headers = ws.row_values(1)
+                            df_current = fetch_safe(target_sheet) # جلب البيانات الحالية للمقارنة
+                            headers = ws.row_values(1) # جلب رؤوس الأعمدة من قوقل شيت
                             
                             up_count = 0; new_count = 0; skip_count = 0
 
-                            for index, row in df_up.iterrows():
+                            for _, row in df_up.iterrows():
                                 data_dict = row.to_dict()
                                 
-                                # 🔍 البحث المرن عن الرقم الأكاديمي (id أو student_id)
-                                raw_id = str(data_dict.get('student_id', data_dict.get('id', data_dict.get('الرقم الأكاديمي', "")))).strip()
+                                # ب. تحديد الرقم الأكاديمي وتطهيره من الـ (.0)
+                                id_val = str(data_dict.get('student_id', data_dict.get('id', ""))).strip()
+                                if "." in id_val: id_val = id_val.split(".")[0]
                                 
-                                # تنظيف الرقم من الفواصل العشرية (.0)
-                                if "." in raw_id: raw_id = raw_id.split(".")[0]
-                                
-                                # تجاهل الصفوف الفارغة أو الأصفار
-                                if raw_id in ["0", "", "nan", "None", "0.0"]:
+                                # 🛡️ صمام الأمان: تجاهل الأرقام غير الصحيحة والأصفار (حل مشكلتك)
+                                if id_val in ["0", "0.0", "", "nan", "None"]:
                                     skip_count += 1
                                     continue
 
-                                # تنسيق البيانات لجدول الدرجات
+                                # ج. معالجة الدرجات وحساب المجموع (perf) آلياً
                                 if target_sheet == "grades":
                                     p1 = pd.to_numeric(data_dict.get('p1', 0), errors='coerce') or 0
                                     p2 = pd.to_numeric(data_dict.get('p2', 0), errors='coerce') or 0
                                     data_dict.update({
-                                        "student_id": raw_id,
+                                        "student_id": id_val,
                                         "p1": str(int(p1)), "p2": str(int(p2)),
-                                        "perf": str(int(p1 + p2)),
+                                        "perf": str(int(p1 + p2)), # تحديث عمود perf بدلاً من total
                                         "date": str(datetime.date.today())
                                     })
                                 else:
-                                    data_dict['id'] = raw_id
-                                    if 'name' in data_dict:
-                                        data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
+                                    data_dict['id'] = id_val
 
-                                # المزامنة (تحديث أو إضافة)
-                                if not df_current.empty and raw_id in df_current.iloc[:, 0].values:
-                                    row_idx = df_current[df_current.iloc[:, 0] == raw_id].index[0] + 2
+                                # د. منطق المزامنة: تحديث سطر موجود أو إضافة سطر جديد
+                                if not df_current.empty and id_val in df_current.iloc[:, 0].values:
+                                    # تحديث السطر الموجود فعلياً في قوقل شيت لمنع التكرار
+                                    row_idx = df_current[df_current.iloc[:, 0] == id_val].index[0] + 2
                                     updated_row = [str(data_dict.get(h, "")) for h in headers]
                                     ws.update(f"A{row_idx}", [updated_row])
                                     up_count += 1
                                 else:
+                                    # إضافة سجل جديد تماماً
                                     new_row = [str(data_dict.get(h, "")) for h in headers]
                                     ws.append_row(new_row)
                                     new_count += 1
                             
-                            status.update(label="✅ اكتملت المعالجة", state="complete", expanded=False)
+                            status.update(label="✅ اكتملت المزامنة بنجاح!", state="complete", expanded=False)
 
-                        # إظهار النتيجة حتى لو كانت صفر
-                        if up_count == 0 and new_count == 0:
-                            st.warning(f"⚠️ لم يتم رفع أي درجات. تم تجاهل {skip_count} سطر. تأكد أن مسمى عمود الرقم الأكاديمي هو (id) أو (student_id).")
-                        else:
-                            st.success(f"🏁 تم تحديث {up_count} سجل وإضافة {new_count} سجل جديد. (تجاهل {skip_count} سطر فارغ).")
-                            st.cache_data.clear()
+                        # 🌟 رسالة النجاح النهائية التي تظهر للمستخدم
+                        st.success(f"""
+                            🏁 **تقرير العملية النهائي:**
+                            * ✅ تم تحديث **{up_count}** سجل (تحديث درجات موجودة).
+                            * ➕ تم إضافة **{new_count}** سجل جديد.
+                            * 🚫 تم تجاهل **{skip_count}** صف (أصفار أو صفوف فارغة).
+                        """)
+                        st.cache_data.clear(); st.rerun()
                         
                     except Exception as e:
-                        st.error(f"❌ خطأ تقني: {e}")
+                        st.error(f"❌ حدث خطأ تقني: {e}")
                 else:
-                    st.warning("⚠️ يرجى اختيار الملف أولاً.")
+                    st.warning("⚠️ يرجى اختيار ملف الإكسل أولاً.")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
