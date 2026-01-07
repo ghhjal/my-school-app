@@ -5,16 +5,7 @@ import urllib.parse
 import datetime
 import hashlib
 import io
-# يجب أن تكون هذه الدالة في الأعلى تماماً
-def safe_append_row(worksheet_name, data_dict):
-    try:
-        ws = sh.worksheet(worksheet_name)
-        headers = ws.row_values(1)
-        row_to_append = [data_dict.get(h, "") for h in headers]
-        ws.append_row(row_to_append)
-        return True
-    except: return False
-from google.oauth2.service_account import Credentials
+from google.oauth2.service_account import Credentials # تم نقلها للأعلى مع المكتبات
 
 # ==========================================
 # ⚙️ 1. إعدادات النظام والاستقرار الأساسية
@@ -34,6 +25,7 @@ def get_gspread_client():
         st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
         return None
 
+# تعريف العميل الأساسي (يجب أن يسبق الدوال التي تستخدمه)
 sh = get_gspread_client()
 
 # ==========================================
@@ -44,29 +36,22 @@ if "max_tasks" not in st.session_state:
         # قراءة ورقة الإعدادات مرة واحدة لضمان سرعة الاستجابة
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
         
-        # 1. تحميل توزيع الدرجات (مشاركة واختبار)
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
-        
-        # 2. تحميل العام الدراسي الحالي
         st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
         
-        # 3. تحميل قائمة الصفوف (نص مفصول بفاصلة)
         classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
         st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
         
-        # 4. تحميل قائمة المراحل الدراسية
         stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
         st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
         
     except Exception as e:
-        # صمام أمان: تفعيل القيم الافتراضية في حال تعطل الربط أو نقص البيانات
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
         st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
         st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
-# تهيئة متغيرات الجلسة الأساسية للتحكم في الدخول والتبويبات
 if "role" not in st.session_state: st.session_state.role = None
 if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
@@ -76,21 +61,20 @@ if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
-    """جلب البيانات مع ضمان معالجة المعرفات (IDs) كنصوص لمنع الأخطاء الحسابية"""
+    """جلب البيانات مع ضمان معالجة المعرفات (IDs) كنصوص"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
         if not df.empty: 
-            # تنظيف العمود الأول (غالباً الرقم الأكاديمي) من المسافات
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
     except: 
         return pd.DataFrame()
 
 def clean_phone_number(phone):
-    """تنسيق رقم الجوال دولياً: إزالة الصفر البادئ وإضافة مفتاح المملكة 966"""
+    """تنسيق رقم الجوال دولياً (966)"""
     p = str(phone).strip().replace(" ", "")
     if p.startswith("0"): 
         p = p[1:]
@@ -99,11 +83,11 @@ def clean_phone_number(phone):
     return p
 
 def safe_append_row(worksheet_name, data_dict):
-    """نظام الربط الذكي (Mapping): يضمن إرسال كل بيان للعمود الصحيح بناءً على اسمه في الإكسل"""
+    """نظام الربط الذكي ومنع الإزاحة (Mapping)"""
     try:
         ws = sh.worksheet(worksheet_name)
-        headers = ws.row_values(1) # قراءة الرؤوس الفعلية من الملف
-        # بناء السطر بترتيب يطابق الملف تماماً لمنع مشكلة الإزاحة
+        headers = ws.row_values(1)
+        # بناء السطر بترتيب يطابق الملف تماماً
         row_to_append = [data_dict.get(h, "") for h in headers]
         ws.append_row(row_to_append)
         return True
@@ -112,14 +96,14 @@ def safe_append_row(worksheet_name, data_dict):
         return False
 
 def get_col_idx(df, col_name):
-    """إيجاد رقم العمود ديناميكياً بناءً على اسمه لمنع تعطل البرنامج عند تغيير الترتيب"""
+    """إيجاد رقم العمود ديناميكياً"""
     try: 
         return df.columns.get_loc(col_name) + 1
     except: 
         return None
 
 def get_professional_msg(name, b_type, b_desc, date):
-    """تنسيق وتشفير رسالة الواتساب لضمان سلامة اللغة العربية في الروابط"""
+    """تنسيق رسالة الواتساب بترميز آمن"""
     msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n"
            f"------------------\n"
            f"👤 *الطالب:* {name}\n"
