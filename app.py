@@ -103,19 +103,63 @@ def get_professional_msg(name, b_type, b_desc, date):
     return urllib.parse.quote(msg)
 
 # ==========================================
-# 🎨 3. التصميم البصري وقنوات التواصل وحفظ الحقوق
+# 🎨 3. التصميم البصري (تحديث نظام اللوجو والهوية)
 # ==========================================
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
-    .header-section { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 35px; border-radius: 0 0 25px 25px; color: white; text-align: center; margin: -80px -20px 25px -20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-    .stMetric { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
+    
+    /* تنسيق الهيدر المطور (نظام اللوجو الجانبي) */
+    .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); /* تدرج ملكي */
+        padding: 40px 30px;
+        border-radius: 0 0 40px 40px;
+        margin: -80px -20px 35px -20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        color: white;
+    }
+    
+    .logo-icon {
+        font-size: 5.5rem;
+        margin-left: 30px;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .header-text h1 {
+        margin: 0;
+        font-size: 2.8rem;
+        font-weight: 900;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .header-text p {
+        margin: 10px 0 0 0;
+        font-size: 1.2rem;
+        color: #dbeafe;
+        font-weight: 700;
+    }
+
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+    }
+    
+    .stMetric { background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
     .footer-text { text-align: center; color: #666; padding: 20px; font-size: 0.9em; }
     </style>
-    <div class="header-section">
-        <h1>🏛️ منصة الأستاذ زياد الذكية</h1>
-        <p>الإصدار الإداري الشامل والمستقر - 2026</p>
+    
+    <div class="header-container">
+        <div class="logo-icon">🎓</div>
+        <div class="header-text">
+            <h1>منصة الأستاذ زياد الذكية</h1>
+            <p>بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
