@@ -622,71 +622,75 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. استرجاع وتطهير الرقم الأكاديمي فوراً
-    # نتحقق من وجود الرقم في 'username' أو 'user_id' لضمان عدم بقاء الأقواس فارغة ()
-    login_id = str(st.session_state.get('username', st.session_state.get('user_id', ''))).strip()
-    
-    # تنظيف الرقم من الفواصل العشرية (مثل 1170.0)
-    student_id = login_id.split('.')[0] if login_id and login_id != 'None' else ""
+    # 1. استرجاع الرقم الأكاديمي وتطهيره (الحل النهائي لمشكلة الأقواس الفارغة)
+    raw_user = str(st.session_state.get('username', '')).strip()
+    # تحويل 1170.0 إلى 1170 لضمان المطابقة
+    student_id = raw_user.split('.')[0] if raw_user and raw_user != "None" else ""
 
     if not student_id:
-        st.error("⚠️ خطأ: لم يتم التعرف على الرقم الأكاديمي. يرجى تسجيل الخروج والدخول مجدداً.")
+        st.warning("⚠️ يرجى تسجيل الدخول برقمك الأكاديمي أولاً.")
         if st.button("↩️ العودة لصفحة الدخول"):
             st.session_state.role = None
             st.rerun()
     else:
-        # جلب البيانات مع ضمان تحديثها
+        # جلب البيانات
         df_st = fetch_safe("students")
         df_gr = fetch_safe("grades")
 
-        # 🔍 البحث الذكي (مطابقة دقيقة بنسبة 100%)
+        # البحث الذكي عن الطالب
         if not df_st.empty:
-            # تجهيز عمود البحث لمنع أخطاء التنسيق
             df_st['id_clean'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-            current_student = df_st[df_st['id_clean'] == student_id]
-        else:
-            current_student = pd.DataFrame()
+            student_row = df_st[df_st['id_clean'] == student_id]
+        else: student_row = pd.DataFrame()
 
-        if not current_student.empty:
-            s_info = current_student.iloc[0]
-            s_name = s_info.get('name', 'طالبنا المتميز')
-            s_points = int(pd.to_numeric(s_info.get('النقاط', 0), errors='coerce') or 0)
+        if not student_row.empty:
+            s_data = student_row.iloc[0]
+            s_name = s_data.get('name', 'طالبنا المتميز')
+            s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
             
-            # 🎨 تصميم البطاقة الترحيبية (متوافق مع الجوال)
+            # --- التصميم العصري (نظام البطاقات) ---
             st.markdown(f"""
                 <style>
-                .app-card {{ background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); margin-top: -50px; border-top: 8px solid #1e3a8a; }}
-                .points-circle {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; border-radius: 25px; text-align: center; margin: 20px 0; }}
+                .welcome-card {{ background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); margin-top: -50px; border-top: 8px solid #1e3a8a; }}
+                .points-section {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; border-radius: 25px; text-align: center; margin: 20px 0; }}
+                .badge-box {{ background: #f8fafc; padding: 10px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0; }}
                 </style>
-                <div class="app-card">
+                <div class="welcome-card">
                     <h2 style='margin:0; color:#1e3a8a;'>👋 أهلاً بك، {s_name}</h2>
-                    <p style='margin:5px 0 0 0; color:#64748b;'>🏫 الصف: {s_info.get('class', 'عام')} | 🆔 الرقم: {student_id}</p>
+                    <p style='margin:5px 0 0 0; color:#64748b;'>🏫 الصف: {s_data.get('class', 'عام')} | 🆔 الرقم: {student_id}</p>
                 </div>
-                <div class="points-circle">
-                    <p style='margin:0; opacity: 0.9;'>رصيد نقاطك السلوكية</p>
-                    <h1 style='margin:0; font-size: 3.5rem; font-weight: 900;'>{s_points}</h1>
+                <div class="points-section">
+                    <p style='margin:0; opacity: 0.9;'>رصيد نقاط التميز السلوكي</p>
+                    <h1 style='margin:0; font-size: 3.8rem; font-weight: 900;'>{s_points}</h1>
                 </div>
             """, unsafe_allow_html=True)
 
-            # 📱 التبويبات الخمسة المطلوبة
+            # قسم الأوسمة
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f"<div class='badge-box'>🥇<br><b style='color:{'#f59e0b' if s_points >= 100 else '#cbd5e1'}'>ذهبي</b></div>", unsafe_allow_html=True)
+            c2.markdown(f"<div class='badge-box'>🥈<br><b style='color:{'#94a3b8' if s_points >= 50 else '#cbd5e1'}'>فضي</b></div>", unsafe_allow_html=True)
+            c3.markdown(f"<div class='badge-box'>🥉<br><b style='color:#b45309'>برونزي</b></div>", unsafe_allow_html=True)
+
+            # --- التبويبات المطلوبة ---
+            st.divider()
             tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
             with tabs[0]: # التنبيهات
-                st.info("💡 التنبيهات: لا يوجد تعاميم جديدة اليوم.")
+                st.info(f"📅 لا توجد تنبيهات جديدة للفصل الحالي {st.session_state.current_year}")
 
-            with tabs[1]: # الملاحظات
-                st.markdown("### 📝 سجل الملاحظات")
+            with tabs[1]: # سجل الملاحظات
+                st.markdown("### 📝 سجل ملاحظات المعلم")
                 df_beh = fetch_safe("behavior")
                 if not df_beh.empty:
                     df_beh['id_clean'] = df_beh.iloc[:, 0].astype(str).str.split('.').str[0]
                     my_notes = df_beh[df_beh['id_clean'] == student_id]
                     if not my_notes.empty:
                         for _, n in my_notes.iterrows():
-                            st.warning(f"📍 {n.get('type', 'تنبيه')}: {n.get('desc', '')} ({n.get('date', '')})")
-                    else: st.success("🌟 سجلك خالي من الملاحظات، أحسنت!")
+                            st.warning(f"📍 **{n.get('type', 'تنبيه')}:** {n.get('desc', '')} ({n.get('date', '')})")
+                    else: st.success("🌟 سجلك خالي من الملاحظات، استمر في تفوقك!")
 
-            with tabs[2]: # درجاتي
-                st.markdown("### 📊 نتائجي (p1, p2, perf)")
+            with tabs[2]: # درجاتي (p1, p2, perf)
+                st.markdown("### 📊 سجل النتائج الأكاديمية")
                 if not df_gr.empty:
                     df_gr['id_clean'] = df_gr.iloc[:, 0].astype(str).str.split('.').str[0]
                     my_grades = df_gr[df_gr['id_clean'] == student_id]
@@ -694,33 +698,36 @@ if st.session_state.role == "student":
                         g = my_grades.iloc[0]
                         st.metric("درجة المشاركة (p1)", g.get('p1', 0))
                         st.metric("درجة الواجبات (p2)", g.get('p2', 0))
-                        st.metric("المجموع (perf)", g.get('perf', 0))
+                        st.metric("الاختبارات (perf)", g.get('perf', 0))
                     else: st.info("⏳ جاري رصد الدرجات لهذا الفصل.")
 
             with tabs[3]: # المتصدرين
-                st.markdown("### 🏆 لوحة الشرف (أفضل 10 طلاب)")
-                top_10 = df_st.sort_values(by="النقاط", ascending=False).head(10)
-                for i, (_, row) in enumerate(top_10.iterrows(), 1):
-                    st.write(f"{i}. ⭐ **{row['name']}** - {row['النقاط']} نقطة")
+                st.markdown("### 🏆 لوحة شرف المتصدرين (Top 10)")
+                if not df_st.empty:
+                    # تحويل النقاط لرقم لضمان الترتيب الصحيح
+                    df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+                    top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
+                    for i, (_, row) in enumerate(top_10.iterrows(), 1):
+                        st.write(f"{i}. ⭐ **{row['name']}** - {int(row['pts_num'])} نقطة")
 
             with tabs[4]: # الإعدادات
-                st.markdown("### ⚙️ تحديث البريد والجوال")
-                with st.form("up_st_data"):
-                    n_mail = st.text_input("📧 البريد الإلكتروني", s_info.get('الإيميل', ''))
-                    n_phone = st.text_input("📱 رقم الجوال", s_info.get('الجوال', ''))
+                st.markdown("### ⚙️ تحديث بيانات التواصل")
+                with st.form("update_info"):
+                    n_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
+                    n_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
                     if st.form_submit_button("💾 حفظ البيانات"):
                         try:
                             ws_st = sh.worksheet("students")
-                            # تحديد السطر الصحيح للتحديث
+                            # تحديد السطر الصحيح في شيت قوقل
                             ids = [str(x).split('.')[0] for x in ws_st.col_values(1)]
                             if student_id in ids:
                                 r_idx = ids.index(student_id) + 1
-                                ws_st.update_cell(r_idx, 6, n_mail) # تحديث الإيميل
-                                ws_st.update_cell(r_idx, 7, n_phone) # تحديث الجوال
+                                ws_st.update_cell(r_idx, 6, n_mail)
+                                ws_st.update_cell(r_idx, 7, n_phone)
                                 st.success("✅ تم تحديث بياناتك بنجاح!")
                                 st.cache_data.clear()
-                        except: st.error("❌ فشل التحديث حالياً.")
+                        except: st.error("❌ فشل التحديث، يرجى المحاولة لاحقاً.")
         else:
-            st.error(f"⚠️ الرقم ({student_id}) غير موجود في قاعدة بيانات الطلاب.")
+            st.error(f"⚠️ الرقم ({student_id}) غير مسجل في قاعدة البيانات.")
 
-    show_footer() # إظهار الحقوق والتواصل
+    show_footer() # إظهار الحقوق والتواصل في الأسفل
