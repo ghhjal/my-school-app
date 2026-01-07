@@ -105,14 +105,32 @@ if st.session_state.role == "teacher":
         st.subheader("👥 إدارة قاعدة الطلاب")
         df_st = fetch_safe("students")
         if not df_st.empty:
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("📊 إجمالي الطلاب", len(df_st))
             c2.metric("🏫 الصفوف", len(df_st.iloc[:, 4].unique()) if len(df_st.columns) > 4 else 1)
             df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
             c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+            c4.metric("🗓️ العام", df_st.iloc[0, 3] if len(df_st.columns) > 3 else "1447هـ")
+            
             st.divider()
-            sq = st.text_input("🔍 محرك البحث الذكي (اسم أو رقم):")
-            df_disp = df_st[df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)] if sq else df_st
+            search_q = st.text_input("🔍 محرك البحث الذكي (الاسم أو الرقم):")
+            
+            with st.expander("➕ إضافة طالب جديد يدوياً بكافة الحقول"):
+                with st.form("add_st_full", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
+                    f_name = col2.text_input("👤 الاسم الثلاثي")
+                    col3, col4, col5 = st.columns(3)
+                    f_stage = col3.selectbox("🎓 المرحلة", ["ابتدائي", "متوسط", "ثانوي"])
+                    f_year = col4.text_input("🗓️ العام", "1447هـ")
+                    f_class = col5.selectbox("🏫 الصف", ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                    f_mail = st.text_input("📧 الإيميل")
+                    f_phone = st.text_input("📱 الجوال (966...)")
+                    if st.form_submit_button("✅ اعتماد وحفظ"):
+                        sh.worksheet("students").append_row([f_id, f_name, f_class, f_year, f_stage, f_mail, f_phone, "0"])
+                        st.success("تمت الإضافة"); st.cache_data.clear(); st.rerun()
+
+            df_disp = df_st[df_st.iloc[:, 0].str.contains(search_q) | df_st.iloc[:, 1].str.contains(search_q)] if search_q else df_st
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
 
     # ==========================================
