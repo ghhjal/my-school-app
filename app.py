@@ -398,50 +398,108 @@ if st.session_state.role == "teacher":
             st.info("💡 لا توجد تنبيهات منشورة حالياً.")
 
     # ------------------------------------------
-    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل
+    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة 2026)
     # ------------------------------------------
     with menu[3]:
         st.subheader("⚙️ غرفة التحكم المتقدمة")
         
-        # 1. تصفير الكاش وصيانة النظام
+        # 1. صيانة النظام وتحديث البيانات
         with st.expander("🛠️ صيانة النظام (تحديث البيانات)"):
             if st.button("🔄 تصفير الكاش (Clear Cache)"):
                 st.cache_data.clear(); st.success("✅ تم تحديث البيانات من السحابة"); st.rerun()
 
-        # 2. إدارة العام والصفوف والمراحل (حفظ دائم)
+        # 2. تحديث قيمة الدرجات (المشاركة والاختبار)
+        with st.expander("⚖️ توزيع الدرجات (تحديث الحدود القصوى)"):
+            c1, c2 = st.columns(2)
+            mt = c1.number_input("حد المشاركة الحالي", 0, 100, st.session_state.max_tasks)
+            mq = c2.number_input("حد الاختبار الحالي", 0, 100, st.session_state.max_quiz)
+            if st.button("💾 حفظ حدود الدرجات الجديدة"):
+                ws_s = sh.worksheet("settings")
+                # تحديث القيم في شيت settings (يفترض أنها في السطر 2 و 3)
+                ws_s.update_cell(2, 2, mt)
+                ws_s.update_cell(3, 2, mq)
+                st.session_state.max_tasks, st.session_state.max_quiz = mt, mq
+                st.success("✅ تم تحديث توزيع الدرجات بنجاح")
+
+        # 3. إدارة العام والصفوف والمراحل
         with st.expander("🗓️ إدارة العام والصفوف والمراحل"):
             c1, c2, c3 = st.columns(3)
             ny = c1.text_input("تعديل العام الدراسي:", st.session_state.current_year)
             cl_s = c2.text_area("قائمة الصفوف (فاصلة):", ", ".join(st.session_state.class_options))
             st_s = c3.text_area("قائمة المراحل (فاصلة):", ", ".join(st.session_state.stage_options))
-            if st.button("💾 حفظ الإعدادات"):
+            if st.button("💾 حفظ الإعدادات العامة"):
                 ws_s = sh.worksheet("settings")
                 ws_s.update_cell(4, 2, ny); ws_s.update_cell(5, 2, cl_s); ws_s.update_cell(6, 2, st_s)
-                st.success("✅ تم الحفظ بنجاح")
+                st.success("✅ تم حفظ إعدادات الفصول بنجاح")
 
-        # 3. إدارة المستخدمين (تشفير آمن)
+        # 4. تغيير كلمة المرور للمستخدم الحالي
+        with st.expander("🔑 تغيير كلمة المرور الخاصة بك"):
+            with st.form("change_pass_form"):
+                new_p = st.text_input("كلمة المرور الجديدة", type="password")
+                conf_p = st.text_input("تأكيد كلمة المرور", type="password")
+                if st.form_submit_button("💾 تحديث كلمة المرور"):
+                    if new_p and new_p == conf_p:
+                        h_p = hashlib.sha256(str.encode(new_p)).hexdigest()
+                        df_u = fetch_safe("users")
+                        # البحث عن سطر المستخدم الحالي لتحديثه
+                        user_idx = df_u[df_u['username'] == st.session_state.get('username', 'admin')].index
+                        if not user_idx.empty:
+                            sh.worksheet("users").update_cell(int(user_idx[0]) + 2, 2, h_p)
+                            st.success("✅ تم تغيير كلمة المرور بنجاح")
+                    else: st.error("⚠️ كلمتا المرور غير متطابقتين!")
+
+        # 5. إدارة المستخدمين (إضافة مستخدم جديد)
         with st.expander("🔐 إضافة مستخدم جديد للقاعدة"):
             with st.form("u_v26", clear_on_submit=True):
-                u_n = st.text_input("👤 اسم المستخدم"); u_p = st.text_input("🔑 الباسوورد", type="password")
-                if st.form_submit_button("➕ إضافة"):
-                    h_p = hashlib.sha256(str.encode(u_p)).hexdigest()
-                    safe_append_row("users", {"username": u_n, "password_hash": h_p, "role": "teacher"})
-                    st.success("✅ تم الإضافة")
+                u_n = st.text_input("👤 اسم المستخدم الجديد")
+                u_p = st.text_input("🔑 الباسوورد", type="password")
+                if st.form_submit_button("➕ إضافة المستخدم"):
+                    if u_n and u_p:
+                        h_p = hashlib.sha256(str.encode(u_p)).hexdigest()
+                        safe_append_row("users", {"username": u_n, "password_hash": h_p, "role": "teacher"})
+                        st.success(f"✅ تم إضافة {u_n} كمعلم")
+                    else: st.warning("⚠️ أكمل البيانات")
 
-        # 4. النسخ الاحتياطي والقوالب (Excel)
-        with st.expander("📂 النسخ الاحتياطي والقوالب"):
-            # كود توليد ملفات Excel باستخدام io.BytesIO
-            buf = io.BytesIO()
-            with pd.ExcelWriter(buf, engine='xlsxwriter') as wr:
+        # 6. النسخ الاحتياطي والقوالب (Excel)
+        with st.expander("📂 النسخ الاحتياطي وقوالب الدرجات والطلاب"):
+            col_t1, col_t2 = st.columns(2)
+            # قالب الطلاب
+            buf_st = io.BytesIO()
+            with pd.ExcelWriter(buf_st, engine='xlsxwriter') as wr:
                 pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(wr, index=False)
-            st.download_button("📝 تحميل قالب فارغ", data=buf.getvalue(), file_name="Template.xlsx")
+            col_t1.download_button("📝 تحميل قالب الطلاب", data=buf_st.getvalue(), file_name="Students_Template.xlsx")
             
-            if st.button("📊 توليد نسخة احتياطية (BackUp)"):
+            # قالب الدرجات (الميزة الناقصة)
+            buf_gr = io.BytesIO()
+            with pd.ExcelWriter(buf_gr, engine='xlsxwriter') as wr:
+                pd.DataFrame(columns=["id", "tasks", "quiz", "total", "date"]).to_excel(wr, index=False)
+            col_t2.download_button("📊 تحميل قالب الدرجات", data=buf_gr.getvalue(), file_name="Grades_Template.xlsx")
+            
+            st.divider()
+            if st.button("📊 توليد نسخة احتياطية كاملة (BackUp)"):
                 df_bu = fetch_safe("students")
                 buf_bu = io.BytesIO()
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
-                st.download_button("📥 تنزيل النسخة الاحتياطية", data=buf_bu.getvalue(), file_name=f"Backup_{datetime.date.today()}.xlsx")
+                st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
+        # 7. رفع البيانات والدرجات من ملف إكسل
+        with st.expander("📤 رفع الأسماء والدرجات (Upload Excel)"):
+            st.info("يرجى استخدام القوالب المحملة أعلاه لضمان تطابق الأعمدة.")
+            up_file = st.file_uploader("اختر ملف الإكسل", type=['xlsx'])
+            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"])
+            
+            if st.button("🚀 بدء رفع البيانات"):
+                if up_file:
+                    try:
+                        df_up = pd.read_excel(up_file)
+                        for _, row in df_up.iterrows():
+                            # تحويل السطر لقاموس وإرساله بالربط الذكي
+                            safe_append_row(target_sheet, row.to_dict())
+                        st.success(f"✅ تم رفع {len(df_up)} سجل بنجاح إلى جدول {target_sheet}")
+                        st.cache_data.clear()
+                    except Exception as e:
+                        st.error(f"❌ خطأ في المعالجة: {e}")
+                else: st.warning("⚠️ اختر الملف أولاً")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
