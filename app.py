@@ -472,18 +472,21 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. المزامنة الذكية (إصدار منع الأصفار والصفوف الفارغة)
-        with st.expander("📤 مزامنة وتحديث البيانات (منع الأصفار والصفوف الفارغة)"):
-            st.info("💡 سيقوم النظام آلياً بتجاهل الصفوف الفارغة والأرقام الأكاديمية غير الصحيحة.")
-            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'], key="sync_v2026_final")
+        # 7. المزامنة الذكية الماركة (منع الأصفار والصفوف الفارغة تماماً)
+        with st.expander("📤 مزامنة وتحديث البيانات (إصدار منع الأصفار والصفوف الوهمية)"):
+            st.warning("⚠️ نصيحة: يرجى حذف الصفوف التي تحتوي على الرقم (0) يدوياً من شيت قوقل قبل البدء لمرة واحدة.")
+            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'], key="sync_final_v26")
             target_sheet = st.radio("حدد الجدول المرجعي:", ["students", "grades"], horizontal=True)
             
-            if st.button("🚀 بدء المزامنة وتطهير البيانات", key="run_final_sync"):
+            if st.button("🚀 بدء المزامنة وتطهير الجداول", key="run_secure_sync"):
                 if up_file:
                     try:
-                        with st.status("⏳ جاري المزامنة وفلترة البيانات الفارغة...", expanded=True) as status:
-                            # 1. قراءة الملف ومعالجة القيم الفارغة مبدئياً
-                            df_up = pd.read_excel(up_file, engine='openpyxl').fillna(0)
+                        with st.status("⏳ جاري المزامنة وفحص البيانات...", expanded=True) as status:
+                            # 1. قراءة الملف بدون ملء آلي للأصفار لمنع الأخطاء
+                            df_raw = pd.read_excel(up_file, engine='openpyxl')
+                            
+                            # 2. حذف أي صفوف فارغة تماماً في ملف الإكسل
+                            df_up = df_raw.dropna(how='all')
                             
                             ws = sh.worksheet(target_sheet)
                             df_current = fetch_safe(target_sheet)
@@ -491,32 +494,34 @@ if st.session_state.role == "teacher":
                             up_count = 0; new_count = 0; skip_count = 0
                             
                             for _, row in df_up.iterrows():
-                                data_dict = row.to_dict()
-                                
-                                # أ. تحديد الهوية والتأكد من أنها ليست صفراً أو فارغة
+                                # أ. تحديد الهوية وفحص صلاحيتها
                                 id_key = 'student_id' if target_sheet == 'grades' else 'id'
-                                raw_id = str(data_dict.get(id_key, '')).strip()
+                                raw_id = str(row.get(id_key, '')).strip()
                                 
-                                # 🛡️ صمام الأمان: تجاهل الأصفار والصفوف الفارغة
-                                if raw_id in ["0", "0.0", "", "nan", "None"]:
+                                # 🛡️ صمام الأمان المطور: تجاهل الأصفار والصفوف غير المكتملة
+                                # سيتم تجاهل "0" أو "0.0" أو النصوص الفارغة
+                                if raw_id in ["0", "0.0", "", "nan", "None", "الرقم الأكاديمي"]:
                                     skip_count += 1
                                     continue 
                                 
-                                search_id = raw_id # الهوية الآن صالحة للاستخدام
+                                # تحويل الهوية لنص نظيف (مثلاً 1170 بدلاً من 1170.0)
+                                search_id = raw_id.replace('.0', '')
+                                data_dict = row.to_dict()
 
-                                # ب. معالجة الدرجات وحساب المجموع (perf)
+                                # ب. معالجة الدرجات (P1, P2) وضمان حساب المجموع
                                 if target_sheet == "grades":
                                     p1 = pd.to_numeric(data_dict.get('p1', 0), errors='coerce') or 0
                                     p2 = pd.to_numeric(data_dict.get('p2', 0), errors='coerce') or 0
                                     data_dict.update({
                                         "student_id": search_id,
                                         "p1": str(int(p1)), "p2": str(int(p2)), 
-                                        "perf": str(int(p1 + p2)), "date": str(datetime.date.today())
+                                        "perf": str(int(p1 + p2)), 
+                                        "date": str(datetime.date.today())
                                     })
 
-                                # ج. المزامنة: تحديث إذا كان موجوداً أو إضافة إذا كان جديداً
+                                # ج. منطق التحديث (Update) أو الإضافة (Insert)
                                 if not df_current.empty and search_id in df_current.iloc[:, 0].values:
-                                    # تحديث السطر الحالي
+                                    # تحديث سطر موجود لمنع التكرار
                                     row_idx = df_current[df_current.iloc[:, 0] == search_id].index[0] + 2
                                     headers = ws.row_values(1)
                                     updated_row = [str(data_dict.get(h, "")) for h in headers]
@@ -527,19 +532,20 @@ if st.session_state.role == "teacher":
                                     if safe_append_row(target_sheet, data_dict):
                                         new_count += 1
                             
-                            status.update(label="✅ تمت العملية بنجاح!", state="complete", expanded=False)
+                            status.update(label="✅ اكتملت المزامنة بنجاح!", state="complete", expanded=False)
 
+                        # 🌟 رسالة التأكيد والتقرير التفصيلي
                         st.success(f"""
-                            🏁 **تقرير المزامنة النهائية:**
-                            * ✅ تم تحديث درجات **{up_count}** طالب.
-                            * ➕ تم إضافة **{new_count}** سجل جديد.
-                            * 🚫 تم تجاهل **{skip_count}** صف فارغ أو غير صالح.
+                            🏁 **تقرير العملية:**
+                            * ✅ تم تحديث بيانات **{up_count}** طالب موجود مسبقاً.
+                            * ➕ تم إضافة **{new_count}** سجل جديد تماماً.
+                            * 🚫 تم تجاهل **{skip_count}** صف (فارغ أو يحتوي على أصفار).
                         """)
                         st.cache_data.clear(); st.rerun()
                         
                     except Exception as e:
-                        st.error(f"❌ حدث خطأ غير متوقع: {e}")
-                else: st.warning("⚠️ اختر الملف أولاً.")
+                        st.error(f"❌ حدث خطأ أثناء المزامنة: {e}")
+                else: st.warning("⚠️ يرجى اختيار ملف الإكسل أولاً.")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
