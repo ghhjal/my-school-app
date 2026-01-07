@@ -472,31 +472,55 @@ if st.session_state.role == "teacher":
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. رفع البيانات والدرجات (إصدار الحماية القصوى 2026)
-        with st.expander("📤 رفع الأسماء والدرجات (المطهر البرمجي للبيانات الفارغة)"):
-            up_file = st.file_uploader("اختر ملف الإكسل المعبأ", type=['xlsx'])
-            target_sheet = st.radio("اختر وجهة البيانات:", ["students", "grades"], horizontal=True, key="up_v26_fix")
+        # 7. رفع البيانات والدرجات (إصدار معالجة الدرجات والعمليات الحسابية)
+        with st.expander("📤 رفع الأسماء والدرجات (المعالج الذكي للدرجات)"):
+            st.info("💡 ملاحظة: عند رفع الدرجات، سيقوم النظام بحساب 'المجموع' وتنسيق التاريخ آلياً.")
+            up_file = st.file_uploader("اختر ملف الإكسل (Template)", type=['xlsx'], key="secure_uploader")
+            target_sheet = st.radio("حدد الجدول المطلوب:", ["students", "grades"], horizontal=True)
             
-            if st.button("🚀 بدء الرفع الذكي", key="btn_secure_up"):
+            if st.button("🚀 بدء الرفع والمعالجة الرقمية"):
                 if up_file:
                     try:
-                        # ✅ الحل: fillna("") تحول كل NaN إلى نص فارغ لمنع الانهيار
+                        # أ. قراءة الملف وتطهير القيم الفارغة فوراً
                         df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                         
-                        success_count = 0
+                        sc_count = 0
                         for _, row in df_up.iterrows():
                             data_dict = row.to_dict()
-                            # تنظيف الاسم وتنسيق المعرف آلياً
-                            if 'name' in data_dict: data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
-                            if 'id' in data_dict: data_dict['id'] = str(data_dict['id']).strip()
                             
+                            # ب. معالجة خاصة لجدول الدرجات (grades)
+                            if target_sheet == "grades":
+                                # تحويل القيم لأرقام لضمان صحة العمليات الحسابية
+                                tasks = pd.to_numeric(data_dict.get('tasks', 0), errors='coerce') or 0
+                                quiz = pd.to_numeric(data_dict.get('quiz', 0), errors='coerce') or 0
+                                
+                                # تحديث القاموس بالقيم الرقمية وحساب المجموع تلقائياً
+                                data_dict['tasks'] = str(tasks)
+                                data_dict['quiz'] = str(quiz)
+                                data_dict['total'] = str(tasks + quiz)
+                                
+                                # إذا كان التاريخ فارغاً، نضع تاريخ اليوم
+                                if not data_dict.get('date'):
+                                    data_dict['date'] = str(datetime.date.today())
+
+                            # ج. معالجة خاصة لجدول الطلاب (تطهير الأسماء)
+                            if target_sheet == "students":
+                                if 'name' in data_dict:
+                                    data_dict['name'] = " ".join(str(data_dict['name']).split()).strip()
+                                if 'id' in data_dict:
+                                    data_dict['id'] = str(data_dict['id']).strip()
+
+                            # د. تنفيذ الإرسال عبر نظام الـ Mapping
                             if safe_append_row(target_sheet, data_dict):
-                                success_count += 1
+                                sc_count += 1
                         
-                        st.success(f"✅ تم رفع {success_count} سجل بنجاح في {target_sheet}!")
+                        st.success(f"✅ تم رفع {sc_count} سجل بنجاح إلى جدول {target_sheet}!")
                         st.cache_data.clear(); st.rerun()
+                        
                     except Exception as e:
-                        st.error(f"❌ خطأ في المعالجة: {e}")
+                        st.error(f"❌ خطأ تقني في المعالجة: {e}")
+                else:
+                    st.warning("⚠️ يرجى رفع الملف أولاً.")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
