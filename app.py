@@ -168,44 +168,44 @@ if st.session_state.role == "teacher":
     # ==========================================
 # 👥 الوحدة 2: تبويب إدارة الطلاب (الإصدار الشامل)
 # ==========================================
-with menu[0]:
-    st.subheader("👥 إدارة قاعدة بيانات الطلاب")
-    df_st = fetch_safe("students")
-    
-    if not df_st.empty:
-        # 1. شريط الإحصائيات الذكي
-        c1, c2, c3 = st.columns(3)
-        c1.metric("📊 إجمالي الطلاب", len(df_st))
-        c2.metric("🏫 عدد الفصول", len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1)
-        # تحويل النقاط لرقم لضمان دقة المتوسط
-        df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-        c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+    with menu[0]:
+        st.subheader("👥 إدارة قاعدة بيانات الطلاب")
+        df_st = fetch_safe("students")
         
-        st.divider()
-
-        with st.expander("➕ إضافة طالب جديد (تنسيق الجوال آلي)"):
-            with st.form("add_st_final_v5", clear_on_submit=True):
-                col1, col2 = st.columns(2)
-                f_id = col1.text_input("🔢 الرقم الأكاديمي")
-                f_name = col2.text_input("👤 الاسم الثلاثي")
-                col3, col4, col5 = st.columns(3)
-                f_stage = col3.selectbox("🎓 المرحلة", st.session_state.stage_options)
-                f_year = col4.text_input("🗓️ العام", st.session_state.current_year)
-                f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
-                f_mail = st.text_input("📧 الإيميل")
-                f_phone_raw = st.text_input("📱 الجوال (مثال: 05xxxx)")
-                
-                if st.form_submit_button("✅ حفظ"):
-                    # ✅ تنظيف الرقم قبل الحفظ
-                    f_phone = clean_phone_number(f_phone_raw)
-                    st_data = {
-                        "id": f_id.strip(), "name": f_name.strip(), 
-                        "class": f_class, "year": f_year, "sem": f_stage, 
-                        "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"
-                    }
-                    if safe_append_row("students", st_data):
-                        st.success(f"✅ تم الحفظ بالرقم الدولي: {f_phone}")
-                        st.cache_data.clear(); st.rerun()
+        if not df_st.empty:
+            # 1. شريط الإحصائيات الذكي
+            c1, c2, c3 = st.columns(3)
+            c1.metric("📊 إجمالي الطلاب", len(df_st))
+            c2.metric("🏫 عدد الفصول", len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1)
+            # تحويل النقاط لرقم لضمان دقة المتوسط
+            df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+            c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+            
+            st.divider()
+    
+            with st.expander("➕ إضافة طالب جديد (تنسيق الجوال آلي)"):
+                with st.form("add_st_final_v5", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
+                    f_name = col2.text_input("👤 الاسم الثلاثي")
+                    col3, col4, col5 = st.columns(3)
+                    f_stage = col3.selectbox("🎓 المرحلة", st.session_state.stage_options)
+                    f_year = col4.text_input("🗓️ العام", st.session_state.current_year)
+                    f_class = col5.selectbox("🏫 الصف", st.session_state.class_options)
+                    f_mail = st.text_input("📧 الإيميل")
+                    f_phone_raw = st.text_input("📱 الجوال (مثال: 05xxxx)")
+                    
+                    if st.form_submit_button("✅ حفظ"):
+                        # ✅ تنظيف الرقم قبل الحفظ
+                        f_phone = clean_phone_number(f_phone_raw)
+                        st_data = {
+                            "id": f_id.strip(), "name": f_name.strip(), 
+                            "class": f_class, "year": f_year, "sem": f_stage, 
+                            "الإيميل": f_mail, "الجوال": f_phone, "النقاط": "0"
+                        }
+                        if safe_append_row("students", st_data):
+                            st.success(f"✅ تم الحفظ بالرقم الدولي: {f_phone}")
+                            st.cache_data.clear(); st.rerun()
 
         # 3. محرك البحث الذكي (الاسم أو الرقم)
         sq = st.text_input("🔍 ابحث عن طالب محدد:")
@@ -217,84 +217,58 @@ with menu[0]:
         st.info("💡 لا يوجد طلاب حالياً، ابدأ بإضافة الطالب الأول.")
 
     # ==========================================
-# 📊 تبويب: التقييم والمتابعة (الإصدار الشامل والمصحح)
-# ==========================================
+    # 📊 تبويب: التقييم والمتابعة (الإصدار الشامل والمصحح)
+    # ==========================================
     with menu[1]:
-        st.subheader("📊 مركز تقييم الطلاب والمتابعة السلوكية")
+        st.subheader("📊 مركز التقييم والمتابعة السلوكية")
         df_st = fetch_safe("students")
         
         if not df_st.empty:
-            # 1. نظام اختيار الطالب
+            # 1. اختيار الطالب
             st_list = {f"{row.iloc[1]} ({row.iloc[0]})": row.iloc[0] for _, row in df_st.iterrows()}
-            selected_label = st.selectbox("🎯 اختر الطالب لبدء التقييم:", [""] + list(st_list.keys()), key="eval_box_final")
+            selected_label = st.selectbox("🎯 اختر الطالب لبدء التقييم:", [""] + list(st_list.keys()))
             
             if selected_label:
                 sid = st_list[selected_label]
-                student_info = df_st[df_st.iloc[:, 0] == sid].iloc[0]
-                s_name = student_info.iloc[1]
-                s_phone = student_info['الجوال'] if 'الجوال' in student_info else ""
-                s_email = student_info['الإيميل'] if 'الإيميل' in student_info else ""
-    
-                # --- دالة التشفير لضمان عمل الروابط باللغة العربية ---
-                def encode_whatsapp(name, b_type, b_desc, date):
-                    msg = (
-                        f"🔔 *إشعار متابعة سلوكية*\n"
-                        f"----------------------\n"
-                        f"👤 *الطالب:* {name}\n"
-                        f"📍 *السلوك:* {b_type}\n"
-                        f"📝 *التفاصيل:* {b_desc if b_desc else 'لا يوجد'}\n"
-                        f"📅 *التاريخ:* {date}\n"
-                        f"----------------------\n"
-                        f"🏛️ *منصة زياد الذكية*"
-                    )
-                    return urllib.parse.quote(msg)
+                s_info = df_st[df_st.iloc[:, 0] == sid].iloc[0]
+                s_name = s_info.iloc[1]
+                
+                # تنظيف رقم الجوال فوراً لاستخدامه في الروابط
+                clean_p = clean_phone_number(s_info['الجوال'])
+                s_email = s_info['الإيميل']
     
                 col_grades, col_behavior = st.columns(2)
     
-                # --- 📝 القسم الأول: رصد الدرجات (مقيد بالحدود) ---
+                # --- 📝 رصد الدرجات (مقيد بالحدود الدائمة) ---
                 with col_grades:
-                    st.markdown("##### 📝 رصد وتحرير الدرجات")
-                    with st.form("grade_f_v4", clear_on_submit=False):
-                        v_tasks = st.number_input(f"المشاركة (الحد: {st.session_state.max_tasks})", 0, 100, 0)
-                        v_quiz = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100, 0)
-                        if st.form_submit_button("💾 حفظ الدرجات"):
+                    st.markdown("##### 📝 رصد الدرجات")
+                    with st.form("grade_form_vFinal"):
+                        v_tasks = st.number_input(f"المشاركة (الحد: {st.session_state.max_tasks})", 0, 100)
+                        v_quiz = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100)
+                        if st.form_submit_button("💾 حفظ"):
                             if v_tasks <= st.session_state.max_tasks and v_quiz <= st.session_state.max_quiz:
-                                sh.worksheet("grades").append_row([sid, v_tasks, v_quiz, v_tasks + v_quiz, str(datetime.date.today())])
+                                safe_append_row("grades", {"id": sid, "tasks": v_tasks, "quiz": v_quiz, "total": v_tasks+v_quiz, "date": str(datetime.date.today())})
                                 st.success("✅ تم الحفظ"); st.cache_data.clear()
-                            else:
-                                st.error(f"⚠️ تجاوزت الحد المسموح به!")
+                            else: st.error("⚠️ تجاوزت الحد المسموح!")
     
-                # --- 🎭 القسم الثاني: سجل السلوك (القائمة الكاملة 7 حالات) ---
+                # --- 🎭 رصد السلوك (القائمة الكاملة 7 حالات) ---
                 with col_behavior:
-                    st.markdown("##### 🎭 إضافة ملاحظة سلوكية")
-                    with st.form("beh_f_v4", clear_on_submit=True):
-                        b_date = st.date_input("📅 تاريخ الملاحظة", datetime.date.today())
-                        b_type = st.selectbox("نوع السلوك المرصود:", [
-                            "🌟 متميز (+10)", 
-                            "✅ مشاركة إيجابية (+5)", 
-                            "⚠️ تنبيه شفوي (0)", 
-                            "📚 لم يحضر الكتاب (-5)", 
-                            "✍️ لم يحل الواجب (-5)", 
-                            "🖊️ لم يحضر القلم (-5)", 
-                            "🚫 سلوك غير لائق (-10)"
-                        ])
-                        b_desc = st.text_area("تفاصيل إضافية")
+                    st.markdown("##### 🎭 المتابعة السلوكية")
+                    with st.form("beh_form_vFinal", clear_on_submit=True):
+                        b_date = st.date_input("🗓️ التاريخ", datetime.date.today())
+                        b_type = st.selectbox("نوع السلوك:", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص قلم (-5)", "🚫 سلبي (-10)"])
+                        b_desc = st.text_area("الملاحظة")
                         if st.form_submit_button("💾 تسجيل وتحديث النقاط"):
-                            try:
-                                sh.worksheet("behavior").append_row([sid, str(b_date), b_type, b_desc])
-                                # تحديث النقاط
-                                p_map = {"متميز": 10, "إيجابية": 5, "الكتاب": -5, "الواجب": -5, "القلم": -5, "غير لائق": -10}
-                                change = next((v for k, v in p_map.items() if k in b_type), 0)
-                                row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
-                                col_p_idx = df_st.columns.get_loc("النقاط") + 1
-                                sh.worksheet("students").update_cell(row_idx, col_p_idx, str(int(float(student_info['النقاط'])) + change))
-                                st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
-                            except Exception as e:
-                                st.error(f"⚠️ خطأ: {e}")
+                            safe_append_row("behavior", {"id": sid, "date": str(b_date), "type": b_type, "note": b_desc})
+                            # تحديث النقاط في شيت الطلاب تلقائياً
+                            p_map = {"متميز": 10, "إيجابي": 5, "كتاب": -5, "واجب": -5, "قلم": -5, "سلبي": -10}
+                            change = next((v for k, v in p_map.items() if k in b_type), 0)
+                            row_idx = df_st[df_st.iloc[:, 0] == sid].index[0] + 2
+                            sh.worksheet("students").update_cell(row_idx, df_st.columns.get_loc("النقاط")+1, str(int(float(s_info['النقاط'])) + change))
+                            st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
     
+                # --- 📜 السجل التاريخي (هذا هو الكود الذي سألت عنه مدمجاً بالأزرار) ---
                 st.divider()
-    
-                # --- 📜 القسم الثالث: السجل التاريخي (أزرار التواصل بجانب كل ملاحظة) ---
                 st.markdown(f"#### 📜 سجل ملاحظات الطالب: {s_name}")
                 df_beh = fetch_safe("behavior")
                 my_beh = df_beh[df_beh.iloc[:, 0] == sid]
@@ -308,17 +282,13 @@ with menu[0]:
                                 if r.iloc[3]: st.caption(f"📝 {r.iloc[3]}")
                             
                             with c_actions:
-                                # توليد روابط التواصل لكل ملاحظة بشكل مستقل
-                                encoded_text = encode_whatsapp(s_name, r.iloc[2], r.iloc[3], r.iloc[1])
-                                wa_url = f"https://api.whatsapp.com/send?phone={s_phone}&text={encoded_text}"
-                                mail_url = f"mailto:{s_email}?subject=تقرير سلوكي&body={encoded_text}"
-                                
-                                st.link_button("📲 واتساب", wa_url, use_container_width=True)
-                                st.link_button("📧 إيميل", mail_url, use_container_width=True)
+                                # توليد الرسالة المشفرة لكل سطر بناءً على ملاحظته
+                                msg_enc = get_professional_msg(s_name, r.iloc[2], r.iloc[3], r.iloc[1])
+                                st.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={clean_p}&text={msg_enc}", use_container_width=True)
+                                st.link_button("📧 Email", f"mailto:{s_email}?subject=تقرير&body={msg_enc}", use_container_width=True)
                 else:
-                    st.info("لا توجد ملاحظات مسجلة لهذا الطالب.")
-        else:
-            st.warning("⚠️ يرجى إضافة طلاب أولاً.")
+                    st.info("💡 لا توجد ملاحظات مسجلة لهذا الطالب.")
+                    #...........#
     with menu[2]: # 📢 تبويب التنبيهات (الذي سقط سهواً - عاد بكامل ميزاته)
         st.subheader("📢 إدارة وبث التنبيهات")
         with st.expander("🚀 نشر تنبيه جديد", expanded=True):
