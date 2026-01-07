@@ -5,7 +5,7 @@ import urllib.parse
 import datetime
 import hashlib
 import io
-from google.oauth2.service_account import Credentials # تم نقلها للأعلى مع المكتبات
+from google.oauth2.service_account import Credentials
 
 # ==========================================
 # ⚙️ 1. إعدادات النظام والاستقرار الأساسية
@@ -25,17 +25,15 @@ def get_gspread_client():
         st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
         return None
 
-# تعريف العميل الأساسي (يجب أن يسبق الدوال التي تستخدمه)
+# تعريف العميل الأساسي
 sh = get_gspread_client()
 
 # ==========================================
-# ⚙️ تأسيس النظام وتحميل الإعدادات (منع اللاق)
+# ⚙️ تأسيس النظام وتحميل الإعدادات
 # ==========================================
 if "max_tasks" not in st.session_state:
     try:
-        # قراءة ورقة الإعدادات مرة واحدة لضمان سرعة الاستجابة
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
-        
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
         st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
@@ -61,7 +59,6 @@ if "active_tab" not in st.session_state: st.session_state.active_tab = 0
 
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
-    """جلب البيانات مع ضمان معالجة المعرفات (IDs) كنصوص"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
@@ -74,20 +71,15 @@ def fetch_safe(worksheet_name):
         return pd.DataFrame()
 
 def clean_phone_number(phone):
-    """تنسيق رقم الجوال دولياً (966)"""
     p = str(phone).strip().replace(" ", "")
-    if p.startswith("0"): 
-        p = p[1:]
-    if not p.startswith("966") and p != "": 
-        p = "966" + p
+    if p.startswith("0"): p = p[1:]
+    if not p.startswith("966") and p != "": p = "966" + p
     return p
 
 def safe_append_row(worksheet_name, data_dict):
-    """نظام الربط الذكي ومنع الإزاحة (Mapping)"""
     try:
         ws = sh.worksheet(worksheet_name)
         headers = ws.row_values(1)
-        # بناء السطر بترتيب يطابق الملف تماماً
         row_to_append = [data_dict.get(h, "") for h in headers]
         ws.append_row(row_to_append)
         return True
@@ -96,14 +88,10 @@ def safe_append_row(worksheet_name, data_dict):
         return False
 
 def get_col_idx(df, col_name):
-    """إيجاد رقم العمود ديناميكياً"""
-    try: 
-        return df.columns.get_loc(col_name) + 1
-    except: 
-        return None
+    try: return df.columns.get_loc(col_name) + 1
+    except: return None
 
 def get_professional_msg(name, b_type, b_desc, date):
-    """تنسيق رسالة الواتساب بترميز آمن"""
     msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n"
            f"------------------\n"
            f"👤 *الطالب:* {name}\n"
@@ -113,8 +101,9 @@ def get_professional_msg(name, b_type, b_desc, date):
            f"------------------\n"
            f"🏛️ *منصة زياد الذكية*")
     return urllib.parse.quote(msg)
+
 # ==========================================
-# 🎨 3. التصميم البصري (RTL + Cairo Font)
+# 🎨 3. التصميم البصري وقنوات التواصل وحفظ الحقوق
 # ==========================================
 st.markdown("""
     <style>
@@ -122,10 +111,41 @@ st.markdown("""
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
     .header-section { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 35px; border-radius: 0 0 25px 25px; color: white; text-align: center; margin: -80px -20px 25px -20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
     .stMetric { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .footer-text { text-align: center; color: #666; padding: 20px; font-size: 0.9em; }
     </style>
-    <div class="header-section"><h1>🏛️ منصة زياد الذكية</h1><p>الإصدار الإداري الشامل والمستقر - 2026</p></div>
+    <div class="header-section">
+        <h1>🏛️ منصة الأستاذ زياد الذكية</h1>
+        <p>الإصدار الإداري الشامل والمستقر - 2026</p>
+    </div>
 """, unsafe_allow_html=True)
 
+# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
+def show_footer():
+    st.markdown("---")
+    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    
+    col_tele, col_wa, col_mail = st.columns(3)
+    with col_tele:
+        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
+    with col_wa:
+        # يرجى وضع رقمك الحقيقي هنا
+        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
+    with col_mail:
+        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
+    
+    st.markdown("""
+        <div class="footer-text">
+            <hr style="border: 0.1px solid #eee;">
+            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
+            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
+# ---------------------------------------------------------
+if st.session_state.role is None:
+    show_footer()
 # ==========================================
 # 🔐 4. نظام الدخول
 # ==========================================
