@@ -664,11 +664,11 @@ if st.session_state.role == "student":
             <style>
             .app-header {{ background: #ffffff; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-top: -50px; text-align: right; border: 1px solid #ddd; }}
             .medal-flex {{ display: flex; justify-content: space-between; gap: 8px; margin: 15px 0; }}
-            .m-card {{ flex: 1; background: #ffffff; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
+            .m-card {{ flex: 1; background: #ffffff; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }}
             .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }}
             .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
             
-            /* حل مشكلة البهتان: نصوص سوداء واضحة جداً للجوال */
+            /* تباين عالي: نصوص سوداء واضحة جداً للجوال */
             .mobile-card {{ background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 12px; border: 1px solid #000; margin-bottom: 12px; font-weight: 800; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
             .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; }}
             </style>
@@ -679,18 +679,23 @@ if st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 🚨 التنبيه العاجل في الشاشة الرئيسية ---
+        # --- 🚨 التنبيه العاجل في الشاشة الرئيسية (مفلتر بالصف وبالاسم) ---
         if not df_ann.empty:
-            # فلترة ذكية: عاجل + (صف الطالب أو الكل)
+            # تنظيف البيانات لضمان المطابقة
+            df_ann['عاجل'] = df_ann['عاجل'].astype(str).str.strip()
+            df_ann['الصف'] = df_ann['الصف'].astype(str).str.strip()
+            
+            # فلترة ذكية: التنبيهات العاجلة الموجهة لصف الطالب أو للكل
             urgent = df_ann[(df_ann['عاجل'] == 'نعم') & (df_ann['الصف'].isin(['الكل', s_class]))]
             if not urgent.empty:
                 u = urgent.tail(1).iloc[0]
                 st.markdown(f"""
-                    <div style="background:#fff5f5; border:2px solid #e53e3e; color:#c53030; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center; font-weight:bold;">
+                    <div class="urgent-msg">
                         🌟 تنبيه هام لـ {s_class}: {u.get('العنوان')} <br>
                         <small style="font-weight:normal;">{u.get('الرابط')}</small>
                     </div>
                 """, unsafe_allow_html=True)
+
         # 🏅 2. الأوسمة الأفقية ورصيد النقاط
         st.markdown(f"""
             <div class="medal-flex">
@@ -704,22 +709,22 @@ if st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # 📱 3. التبويبات المدمجة (نظام الفلترة المطور)
+        # 📱 3. التبويبات المدمجة (نظام الفلترة المطور بأسماء الحقول)
         tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
-        # --- تبويب التنبيهات (الفلترة بناءً على حقل class) ---
+        # --- تبويب التنبيهات (الفلترة بناءً على حقل الصف - الربط بالأسماء) ---
         with tabs[0]:
             st.markdown(f"#### 📢 سجل تعميمات {s_class}")
             if not df_ann.empty:
                 # يظهر للطالب التنبيهات الموجهة لصفه المسجل فقط أو للكل
-                student_ann = df_ann[df_ann.iloc[:, 0].isin(['الكل', s_class])]
+                student_ann = df_ann[df_ann['الصف'].isin(['الكل', s_class])]
                 if not student_ann.empty:
                     for _, row in student_ann.iloc[::-1].iterrows(): 
                         st.markdown(f"""
                             <div class="mobile-card">
-                                📢 {row.iloc[1]} <br> 
-                                <small style='color:#555; font-weight:normal;'>📅 {row.iloc[2]}</small> <br> 
-                                <div style='margin-top:5px; font-weight:normal;'>{row.iloc[3]}</div>
+                                📢 {row.get('العنوان')} <br> 
+                                <small style='color:#555; font-weight:normal;'>📅 {row.get('التاريخ')}</small> <br> 
+                                <div style='margin-top:5px; font-weight:normal;'>{row.get('الرابط')}</div>
                             </div>
                         """, unsafe_allow_html=True)
                 else: st.info(f"💡 لا توجد تنبيهات جديدة لـ {s_class} حالياً.")
@@ -736,7 +741,7 @@ if st.session_state.role == "student":
                         st.markdown(f"""<div class="mobile-card" style="border-right-color:#e53e3e;">📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> <small style="font-weight:normal;">📅 {n.get('date', '')}</small></div>""", unsafe_allow_html=True)
                 else: st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
 
-        # --- تبويب درجاتي (إزالة الإنجليزية) ---
+        # --- تبويب درجاتي (المسميات العربية الصافية) ---
         with tabs[2]:
             st.markdown("#### 📊 نتائج الاختبارات")
             if not df_gr.empty:
@@ -750,7 +755,7 @@ if st.session_state.role == "student":
                         <div class="mobile-card" style="background:#f0fdf4; border-right-color:#10b981;">🏆 المجموع الكلي: {g.get('perf', 0)}</div>
                     """, unsafe_allow_html=True)
 
-        # --- تبويب المتصدرين (بطاقات) ---
+        # --- تبويب المتصدرين (بطاقات تنافسية) ---
         with tabs[3]:
             st.markdown("#### 🏆 لوحة الشرف")
             df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
@@ -760,10 +765,10 @@ if st.session_state.role == "student":
                 is_me = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
                 st.markdown(f"""<div class="mobile-card" style="{is_me}"> {icon} {row['name']} <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span></div>""", unsafe_allow_html=True)
 
-        # --- تبويب الإعدادات (تحديث البيانات + الخروج) ---
+        # --- تبويب الإعدادات (تحديث الملف + الخروج الآمن) ---
         with tabs[4]:
             st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_info_v4"):
+            with st.form("up_info_v4_merged"):
                 new_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
                 new_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
                 if st.form_submit_button("💾 حفظ البيانات"):
@@ -773,8 +778,8 @@ if st.session_state.role == "student":
                         if student_id in ids:
                             r_idx = ids.index(student_id) + 1
                             ws_st.update_cell(r_idx, 6, new_mail); ws_st.update_cell(r_idx, 7, new_phone)
-                            st.success("✅ تم التحديث بنجاح!"); st.cache_data.clear()
-                    except: st.error("❌ فشل التحديث.")
+                            st.success("✅ تم تحديث بياناتك بنجاح!"); st.cache_data.clear()
+                    except: st.error("❌ فشل التحديث حالياً.")
             
             st.divider()
             if st.button("🚪 تسجيل الخروج الآمن", type="primary", use_container_width=True):
