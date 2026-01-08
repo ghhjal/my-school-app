@@ -257,106 +257,71 @@ if st.session_state.role == "teacher":
     # ---------------------------------------------------------
     # 👥 التبويب 0: إدارة قاعدة بيانات الطلاب (الإصدار المصحح 2026)
     # ---------------------------------------------------------
+    # ---------------------------------------------------------
+    # 👥 التبويب 0: إدارة قاعدة بيانات الطلاب (الإصدار المصحح والمستقر)
+    # ---------------------------------------------------------
     with menu[0]:
         st.subheader("👥 إدارة قاعدة بيانات الطلاب")
-        df_st = fetch_safe("students") # جلب البيانات بأمان
+        df_st = fetch_safe("students") 
         
         if not df_st.empty:
-            # 🛡️ معالجة KeyError 'clean_id': نضمن وجود العمود فور جلب البيانات
+            # 🛡️ ضمان وجود عمود التطهير لتجنب KeyError
             df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
             
             # 1. شريط الإحصائيات الذكي
             c1, c2, c3 = st.columns(3)
             c1.metric("📊 إجمالي الطلاب", len(df_st))
-            
-            # حساب عدد الفصول ديناميكياً
             unique_classes = len(df_st.iloc[:, 2].unique()) if len(df_st.columns) > 2 else 1
             c2.metric("🏫 عدد الفصول النشطة", unique_classes)
-            
-            # معالجة النقاط كأرقام للحساب
             df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
             c3.metric("⭐ متوسط النقاط", round(df_st['النقاط'].mean(), 1))
             
             st.divider()
     
-            # 2. نموذج إضافة طالب جديد (الربط الديناميكي مع الإعدادات)
+            # 2. نموذج إضافة طالب جديد (الربط الديناميكي)
             with st.expander("➕ إضافة طالب جديد (تنسيق ديناميكي)"):
-                st.info("💡 يتم جلب خيارات (الصف والمرحلة) آلياً من تبويب الإعدادات.")
-                
                 with st.form("add_student_v2026_final", clear_on_submit=True):
                     col1, col2 = st.columns(2)
                     f_id = col1.text_input("🔢 الرقم الأكاديمي")
                     f_name = col2.text_input("👤 الاسم الثلاثي")
                     
                     col3, col4, col5 = st.columns(3)
-                    # جلب الخيارات من الـ Session State لضمان الديناميكية
                     f_stage = col3.selectbox("🎓 المرحلة", st.session_state.get('stage_options', ['ابتدائي']))
-                    f_year = col4.text_input("🗓️ العام الدراسي الحالي", st.session_state.get('current_year', '1447هـ'))
-                    f_class = col5.selectbox("🏫 الصف الدراسي", st.session_state.get('class_options', ['الأول']))
-                    
-                    col6, col7 = st.columns(2)
-                    f_mail = col6.text_input("📧 الإيميل")
-                    f_phone_raw = col7.text_input("📱 الجوال (مثال: 05xxxx)")
+                    f_year = col4.text_input("🗓️ العام الدراسي", st.session_state.get('current_year', '1447هـ'))
+                    f_class = col5.selectbox("🏫 الصف", st.session_state.get('class_options', ['الأول']))
                     
                     if st.form_submit_button("✅ اعتماد وحفظ الطالب"):
                         if f_id and f_name:
-                            # تنسيق رقم الجوال آلياً
-                            f_phone = clean_phone_number(f_phone_raw) 
-                            
-                            # الخريطة الذكية (Mapping)
-                            st_map = {
-                                "id": f_id.strip(),
-                                "name": f_name.strip(),
-                                "class": f_class,
-                                "year": f_year,
-                                "sem": f_stage,
-                                "الإيميل": f_mail,
-                                "الجوال": f_phone,
-                                "النقاط": "0" 
-                            }
-                            
+                            f_phone = clean_phone_number(st.text_input("📱 الجوال")) 
+                            st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "النقاط": "0"}
                             if safe_append_row("students", st_map):
-                                st.success(f"✅ تم إضافة الطالب {f_name} بنجاح")
-                                st.cache_data.clear() 
-                                st.rerun()
-                        else:
-                            st.warning("⚠️ حقول الاسم والرقم الأكاديمي إلزامية.")
-        # ⬇️ هذا هو سطر الـ else الذي كان يسبب المشكلة (يجب محاذاته مع "if not df_st.empty")
-        else:
-            st.warning("⚠️ قاعدة بيانات الطلاب فارغة حالياً، يرجى استيراد ملف إكسل أو إضافة طالب يدوياً.")
-
-            # 3. عرض الطلاب ومحرك البحث الذكي
+                                st.success(f"✅ تم إضافة {f_name}")
+                                st.cache_data.clear(); st.rerun()
+                        else: st.warning("⚠️ يرجى إكمال الاسم والرقم.")
+    
+            # 3. عرض الطلاب ومحرك البحث الذكي (يجب أن يكون داخل الـ IF)
             st.write("---")
             sq = st.text_input("🔍 محرك البحث الذكي (اكتب اسم الطالب أو رقمه):")
-            mask = df_st.iloc[:, 0].str.contains(sq) | df_st.iloc[:, 1].str.contains(sq)
+            mask = df_st.iloc[:, 0].astype(str).str.contains(sq) | df_st.iloc[:, 1].astype(str).str.contains(sq)
             st.dataframe(df_st[mask] if sq else df_st, use_container_width=True, hide_index=True)
-
-            # 4. منطقة الحذف والإدارة النهائية (مدمجة)
-            st.divider()
+    
+            # 4. منطقة الحذف والإدارة
             with st.expander("🗑️ منطقة الحذف والإدارة النهائية"):
-                st.warning("⚠️ تنبيه: حذف الطالب نهائي ولا يمكن التراجع عنه.")
-                del_q = st.text_input("ابحث عن اسم الطالب الذي تود حذفه نهائياً:", key="del_search_tab")
-                
+                st.warning("⚠️ تنبيه: الحذف نهائي.")
+                del_q = st.text_input("ابحث عن الطالب لحذفه:", key="del_search_main")
                 if del_q:
-                    df_del = df_st[df_st.iloc[:, 0].str.contains(del_q) | df_st.iloc[:, 1].str.contains(del_q)]
-                    if not df_del.empty:
-                        for idx, row in df_del.iterrows():
-                            ci, ca = st.columns([3, 1])
-                            ci.write(f"👤 **{row.iloc[1]}** ({row.iloc[0]})")
-                            if ca.button(f"🗑️ حذف", key=f"del_btn_{idx}"):
-                                try:
-                                    # حذف السطر من Google Sheets (Index + 2 لضمان السطر الصحيح)
-                                    sh.worksheet("students").delete_rows(int(idx) + 2)
-                                    st.success(f"✅ تم حذف {row.iloc[1]} بنجاح")
-                                    st.cache_data.clear()
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"❌ خطأ أثناء الحذف: {e}")
-                    else:
-                        st.info("🔎 لم يتم العثور على طالب بهذا الاسم.")
+                    df_del = df_st[df_st.iloc[:, 0].astype(str).str.contains(del_q) | df_st.iloc[:, 1].astype(str).str.contains(del_q)]
+                    for idx, row in df_del.iterrows():
+                        ci, ca = st.columns([3, 1])
+                        ci.write(f"👤 {row.iloc[1]} ({row.iloc[0]})")
+                        if ca.button(f"🗑️ حذف", key=f"del_final_{idx}"):
+                            sh.worksheet("students").delete_rows(int(idx) + 2)
+                            st.cache_data.clear(); st.rerun()
+    
+        # 🏁 سطر الـ else متموضع بشكل صحيح الآن في نهاية التبويب
         else:
-            st.info("💡 لا يوجد طلاب حالياً في قاعدة البيانات، ابدأ بإضافة الطالب الأول.")
-
+            st.warning("⚠️ قاعدة بيانات الطلاب فارغة حالياً.")
+            if st.button("🔄 تحديث الشاشة"): st.rerun()
     # ---------------------------------------------------------
     # 📊 التبويب 1: التقييم والمتابعة (النسخة الشاملة + أزرار التواصل)
     # ---------------------------------------------------------
