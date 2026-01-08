@@ -635,19 +635,19 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة والمطورة)
 # ==========================================
 # ==========================================
-# 👨‍🎓 2. واجهة الطالب (إصدار الاستقرار والتباين العالي)
+# 👨‍🎓 2. واجهة الطالب (إصدار الاستقرار والتباين العالي المدمج)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. استرجاع وتطهير الرقم الأكاديمي
+    # 1. استرجاع وتطهير الرقم الأكاديمي لضمان المطابقة
     student_id = str(st.session_state.get('username', '')).strip()
     
-    # تحميل كافة الجداول
+    # تحميل كافة الجداول الحقيقية من قوقل شيت
     df_st = fetch_safe("students")
     df_gr = fetch_safe("grades")
     df_beh = fetch_safe("behavior")
-    df_ann = fetch_safe("exams") # شيت التنبيهات الحقيقي
+    df_ann = fetch_safe("exams") # شيت التنبيهات المربوط بلوحة الإدارة
 
-    # 🛠️ البحث الدقيق وتجنب KeyError
+    # 🛠️ البحث الدقيق عن بيانات الطالب وتجنب KeyError
     if not df_st.empty:
         df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
         my_info = df_st[df_st['clean_id'] == student_id]
@@ -656,10 +656,10 @@ if st.session_state.role == "student":
     if not my_info.empty:
         s_data = my_info.iloc[0]
         s_name = s_data.get('name', 'طالبنا المتميز')
-        s_class = s_data.get('class', 'غير محدد')
+        s_class = str(s_data.get('class', 'غير محدد')).strip() # تحديد صف الطالب للفلترة
         s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
         
-        # 🎨 تنسيق التباين العالي للجوال (نصوص سوداء عريضة)
+        # 🎨 تنسيق التباين العالي للجوال والأوسمة الأفقية
         st.markdown(f"""
             <style>
             .app-header {{ background: #ffffff; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-top: -50px; text-align: right; border: 1px solid #ddd; }}
@@ -668,7 +668,7 @@ if st.session_state.role == "student":
             .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }}
             .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
             
-            /* حل مشكلة البهتان: نصوص سوداء واضحة جداً */
+            /* حل مشكلة البهتان: نصوص سوداء واضحة جداً للجوال */
             .mobile-card {{ background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 12px; border: 1px solid #000; margin-bottom: 12px; font-weight: 800; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
             .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; }}
             </style>
@@ -679,16 +679,16 @@ if st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # 🚨 1. عرض التنبيهات العاجلة (حل مشكلة التنبيهات لا تظهر)
+        # 🚨 1. عرض "التنبيهات العاجلة" في الشاشة الرئيسية (مفلترة بالصف)
         if not df_ann.empty:
-            # التأكد من عدد الأعمدة لتجنب IndexError
             if df_ann.shape[1] >= 5:
-                urgent_news = df_ann[(df_ann.iloc[:, 4] == 'نعم') & (df_ann.iloc[:, 0].isin(['الكل', 'الطلاب فقط']))]
+                # فلترة التنبيهات العاجلة الموجهة لصف الطالب المسجل أو للكل
+                urgent_news = df_ann[(df_ann.iloc[:, 4] == 'نعم') & (df_ann.iloc[:, 0].isin(['الكل', s_class]))]
                 if not urgent_news.empty:
                     latest = urgent_news.tail(1).iloc[0]
-                    st.markdown(f"""<div class="urgent-msg">📢 تنبيه عاجل: {latest.iloc[1]} <br> <small>{latest.iloc[3]}</small></div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div class="urgent-msg">📢 تنبيه عاجل لـ {s_class}: {latest.iloc[1]} <br> <small style="font-weight:normal;">{latest.iloc[3]}</small></div>""", unsafe_allow_html=True)
 
-        # 🏅 2. الأوسمة الأفقية (تصميم البطاقات الأفقي)
+        # 🏅 2. الأوسمة الأفقية ورصيد النقاط
         st.markdown(f"""
             <div class="medal-flex">
                 <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:#000;'>ذهبي</b></div>
@@ -701,18 +701,26 @@ if st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # 📱 3. التبويبات المدمجة
+        # 📱 3. التبويبات المدمجة (نظام الفلترة المطور)
         tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
-        # --- تبويب التنبيهات الديناميكي ---
+        # --- تبويب التنبيهات (الفلترة بناءً على حقل class) ---
         with tabs[0]:
-            st.markdown("#### 📢 سجل التعميمات")
+            st.markdown(f"#### 📢 سجل تعميمات {s_class}")
             if not df_ann.empty:
-                student_ann = df_ann[df_ann.iloc[:, 0].isin(['الكل', 'الطلاب فقط'])]
+                # يظهر للطالب التنبيهات الموجهة لصفه المسجل فقط أو للكل
+                student_ann = df_ann[df_ann.iloc[:, 0].isin(['الكل', s_class])]
                 if not student_ann.empty:
-                    for _, row in student_ann.iloc[::-1].iterrows(): # الأحدث أولاً
-                        st.markdown(f"""<div class="mobile-card">📢 {row.iloc[1]} <br> <small style='color:#555;'>📅 {row.iloc[2]}</small> <br> <div style='margin-top:5px; font-weight:normal;'>{row.iloc[3]}</div></div>""", unsafe_allow_html=True)
-                else: st.info("💡 لا توجد تنبيهات حالياً.")
+                    for _, row in student_ann.iloc[::-1].iterrows(): 
+                        st.markdown(f"""
+                            <div class="mobile-card">
+                                📢 {row.iloc[1]} <br> 
+                                <small style='color:#555; font-weight:normal;'>📅 {row.iloc[2]}</small> <br> 
+                                <div style='margin-top:5px; font-weight:normal;'>{row.iloc[3]}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else: st.info(f"💡 لا توجد تنبيهات جديدة لـ {s_class} حالياً.")
+            else: st.info("💡 سجل التنبيهات فارغ.")
 
         # --- تبويب الملاحظات (تباين عالي للجوال) ---
         with tabs[1]:
@@ -722,8 +730,8 @@ if st.session_state.role == "student":
                 my_notes = df_beh[df_beh['clean_id'] == student_id]
                 if not my_notes.empty:
                     for _, n in my_notes.iterrows():
-                        st.markdown(f"""<div class="mobile-card" style="border-right-color:#e53e3e;">📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> <small>📅 {n.get('date', '')}</small></div>""", unsafe_allow_html=True)
-                else: st.success("🌟 سجلّك خالٍ من الملاحظات السلبية.")
+                        st.markdown(f"""<div class="mobile-card" style="border-right-color:#e53e3e;">📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> <small style="font-weight:normal;">📅 {n.get('date', '')}</small></div>""", unsafe_allow_html=True)
+                else: st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
 
         # --- تبويب درجاتي (إزالة الإنجليزية) ---
         with tabs[2]:
@@ -747,12 +755,12 @@ if st.session_state.role == "student":
             for i, (_, row) in enumerate(top_10.iterrows(), 1):
                 icon = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else str(i)
                 is_me = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
-                st.markdown(f"""<div class="mobile-card" style="{is_me}"> {icon} {row['name']} <span style='float:left;'>{int(row['pts_num'])} نقطة</span></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="mobile-card" style="{is_me}"> {icon} {row['name']} <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span></div>""", unsafe_allow_html=True)
 
-        # --- تبويب الإعدادات (إعادة تحديث البيانات) ---
+        # --- تبويب الإعدادات (تحديث البيانات + الخروج) ---
         with tabs[4]:
             st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_info_v3"):
+            with st.form("up_info_v4"):
                 new_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
                 new_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
                 if st.form_submit_button("💾 حفظ البيانات"):
@@ -769,5 +777,8 @@ if st.session_state.role == "student":
             if st.button("🚪 تسجيل الخروج الآمن", type="primary", use_container_width=True):
                 st.session_state.role = None; st.session_state.username = None; st.rerun()
 
-    else: st.error(f"⚠️ الرقم ({student_id}) غير مسجل في النظام.")
-    show_footer()
+    else: 
+        st.error(f"⚠️ الرقم ({student_id}) غير مسجل في النظام.")
+        if st.button("🔄 العودة لمحاولة الدخول برقم آخر"): st.rerun()
+
+    show_footer() # إظهار الحقوق والتواصل
