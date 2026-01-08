@@ -403,31 +403,27 @@ if st.session_state.role == "teacher":
     with menu[2]:
         st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
         
-        # 1. نموذج نشر تنبيه جديد
-        with st.form("admin_announcement_v2026", clear_on_submit=True):
-            a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
-            a_details = st.text_area("📄 تفاصيل التعميم (تظهر للطالب)")
+        # في تبويب إدارة التنبيهات (لوحة المعلم)
+        with st.form("admin_announcement_final", clear_on_submit=True):
+            a_title = st.text_input("📝 عنوان التنبيه")
+            a_details = st.text_area("📄 تفاصيل التعميم")
+            target_list = ["الكل"] + st.session_state.get('class_options', [])
+            a_target = st.selectbox("🎯 الفئة المستهدفة:", target_list)
+            is_urgent = st.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)") # هذا هو الحقل المطلوب
             
-            c1, c2 = st.columns(2)
-            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)")
-            # جلب قائمة الصفوف ديناميكياً من الإعدادات
-            t_list = ["الكل"] + st.session_state.get('class_options', [])
-            a_target = c2.selectbox("🎯 الفئة المستهدفة (الصف):", t_list)
-            
-            if st.form_submit_button("📣 نشر وبث التنبيه"):
+            if st.form_submit_button("📣 نشر التنبيه"):
                 if a_title and a_details:
-                    # حفظ البيانات بأسماء الحقول لضمان الاستقرار
-                    ann_data = {
+                    # الترتيب لضمان عدم حدوث IndexError: [الصف، العنوان، التاريخ، الرابط/التفاصيل، عاجل]
+                    new_row = {
                         "الصف": a_target,
                         "العنوان": a_title,
                         "التاريخ": str(datetime.date.today()),
                         "الرابط": a_details,
-                        "عاجل": "نعم" if is_urgent else "لا"
+                        "عاجل": "نعم" if is_urgent else "لا" # إضافة العمود الخامس
                     }
-                    if safe_append_row("exams", ann_data):
-                        st.success(f"✅ تم النشر بنجاح لـ {a_target}")
+                    if safe_append_row("exams", new_row):
+                        st.success("✅ تم النشر بنجاح")
                         st.cache_data.clear(); st.rerun()
-                else: st.warning("⚠️ يرجى كتابة العنوان والتفاصيل.")
     
         st.divider()
         
