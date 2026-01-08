@@ -420,70 +420,107 @@ if st.session_state.role == "teacher":
     # 📢 التبويب 2: التنبيهات (بث مجموعات + عرض رئيسي)
     # ---------------------------------------------------------
     with menu[2]:
-        st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
-        
-        # 1. نموذج نشر تنبيه جديد
-        with st.form("announcement_form_v2026", clear_on_submit=True):
-            a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
-            a_details = st.text_area("📄 تفاصيل التعميم")
+        import urllib.parse
+        import time
+
+        # 1. تثبيت تنسيقات الألوان (الأحمر للحذف)
+        st.markdown("""
+        <style>
+            div.stButton > button[key*="del_ex_"] {
+                background-color: #FF0000 !important;
+                color: white !important;
+                border: none !important;
+            }
+            .wa-btn {
+                background-color: #25D366; color: white; padding: 10px;
+                border-radius: 8px; text-align: center; font-weight: bold;
+                text-decoration: none; display: block; width: 100%;
+            }
+            .link-btn {
+                background-color: #4F46E5; color: white; padding: 10px;
+                border-radius: 8px; text-align: center; font-weight: bold;
+                text-decoration: none; display: block; width: 100%;
+            }
+            .ann-card {
+                padding: 15px; border-radius: 10px; margin-bottom: 5px;
+                border-right: 5px solid #4F46E5; background-color: #F8FAFC;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+        # 2. نموذج الإضافة مع معالجة محسنة للرابط
+        with st.expander("➕ إضافة تنبيه أو موعد جديد", expanded=True):
+            with st.form("ann_form_final_fixed", clear_on_submit=True):
+                c1, c2 = st.columns([1, 2])
+                a_class = c1.selectbox("🏫 الصف", ["الكل", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"])
+                a_title = c2.text_input("📝 عنوان التنبيه / الاختبار")
             
-            c1, c2 = st.columns(2)
-            # المميزة 1: اختيار العرض في الشاشة الرئيسية
-            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)")
-            a_target = c2.selectbox("🎯 الفئة المستهدفة:", ["الكل", "أولياء الأمور", "الطلاب فقط"])
+                c3, c4 = st.columns([1, 2])
+                a_date = c3.date_input("📅 التاريخ")
+                a_link = c4.text_input("🔗 رابط إضافي (اختياري)", placeholder="https://example.com")
             
-            if st.form_submit_button("📣 نشر وبث التنبيه"):
-                if a_title and a_details:
-                    # تحضير البيانات للحفظ في شيت (exams)
-                    ann_data = {
-                        "class": a_target,
-                        "title": a_title,
-                        "date": str(datetime.date.today()),
-                        "details": a_details,
-                        "urgent": "نعم" if is_urgent else "لا"
-                    }
-                    if safe_append_row("exams", ann_data):
-                        st.success("✅ تم النشر بنجاح في قاعدة البيانات")
-                        st.cache_data.clear()
+                btn_post = st.form_submit_button("🚀 نشر التنبيه الآن")
+            
+                if btn_post and a_title:
+                    try:
+                        # إرسال البيانات كقائمة صريحة لضمان تعبئة الأعمدة الأربعة A, B, C, D
+                        row_to_add = [str(a_class), str(a_title), str(a_date), str(a_link)]
+                        sh.worksheet("exams").append_row(row_to_add)
+                    
+                        st.balloons()
+                        st.success("✅ تم النشر بنجاح")
+                        time.sleep(1)
                         st.rerun()
-                else:
-                    st.warning("⚠️ يرجى كتابة العنوان والتفاصيل.")
+                    except Exception as e:
+                        st.error(f"⚠️ خطأ فني: تأكد أن الشيت يحتوي على 4 أعمدة على الأقل")
 
-        # 2. عرض سجل التنبيهات مع ميزات التواصل
-        st.divider()
-        st.markdown("#### 📜 سجل التعميمات المرسلة")
-        df_ann = fetch_safe("exams")
-        
-        if not df_ann.empty:
-            # عرض التنبيهات من الأحدث للأقدم
-            for idx, row in df_ann.iloc[::-1].iterrows():
-                # تلوين التنبيه الهام لتمييزه
-                border_color = "red" if str(row.get('urgent', '')) == "نعم" else "gray"
-                
-                with st.container(border=True):
-                    col_txt, col_btn = st.columns([3, 1])
-                    
-                    with col_txt:
-                        prefix = "🚨 **[هام]** " if str(row.get('urgent', '')) == "نعم" else "📢 "
-                        st.write(f"{prefix} **{row.iloc[1]}** | 📅 {row.iloc[2]}")
-                        st.caption(f"📝 {row.iloc[3]}")
-                    
-                    with col_btn:
-                        # المميزة 2: إرسال لمجموعة الواتساب
-                        # يتم تشفير الرسالة لضمان عملها كـ "بث عام" للمجموعات
-                        whatsapp_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n------------------\n📌 *{row.iloc[1]}*\n📝 {row.iloc[3]}\n------------------")
-                        
-                        # رابط الواتساب العام (بدون رقم) يفتح قائمة الدردشات لاختيار المجموعة
-                        st.link_button("👥 بث للواتساب", f"https://api.whatsapp.com/send?text={whatsapp_msg}", use_container_width=True)
-                        
-                        # زر الحذف
-                        if st.button("🗑️ حذف", key=f"del_ann_{idx}", use_container_width=True):
-                            sh.worksheet("exams").delete_rows(int(idx) + 2)
-                            st.cache_data.clear()
+                # 3. عرض التنبيهات المنشورة
+                df_ann = fetch_safe("exams")
+            if df_ann is not None and not df_ann.empty:
+                # تحويل البيانات لنص لضمان عدم حدوث خطأ في الروابط الفارغة
+                df_ann = df_ann.astype(str)
+                reversed_df = df_ann.iloc[::-1]
+
+            for index, row in reversed_df.iterrows():
+                r_class, r_title, r_date = row[0], row[1], row[2]
+                # التحقق من وجود العمود الرابع للرابط
+                r_link = row[3] if len(row) > 3 and row[3] != 'nan' else ""
+            
+                # رسالة الواتساب
+                link_wa = f"\n🔗 *الرابط:* {r_link}" if r_link else ""
+                wa_msg = f"📢 *تنبيه من الأستاذ زياد*\n---\n🏫 *الصف:* {r_class}\n📝 *الموضوع:* {r_title}\n📅 *التاريخ:* {r_date}{link_wa}\n---\nبالتوفيق 🌟"
+                encoded_msg = urllib.parse.quote(wa_msg)
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+
+                st.markdown(f"""
+                    <div class="ann-card">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: #666;">
+                            <span>📅 {r_date}</span>
+                            <span><b>{r_class}</b></span>
+                        </div>
+                        <h4 style="margin: 10px 0;">{r_title}</h4>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+                col_del, col_link, col_wa = st.columns([1, 2, 3])
+                with col_del:
+                    if st.button("🗑️", key=f"del_ex_{index}"):
+                        ws_ex = sh.worksheet("exams")
+                        cell = ws_ex.find(r_title)
+                        if cell:
+                            ws_ex.delete_rows(cell.row)
                             st.rerun()
-        else:
-            st.info("💡 لا توجد تنبيهات منشورة حالياً.")
-
+            
+                with col_link:
+                    if r_link and r_link.strip():
+                        st.markdown(f'<a href="{r_link}" target="_blank" class="link-btn">🔗 فتح الرابط</a>', unsafe_allow_html=True)
+                    else:
+                        st.button("🔗 لا يوجد", disabled=True, key=f"no_lnk_{index}")
+            
+                with col_wa:
+                    st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn">💬 واتساب</a>', unsafe_allow_html=True)
+            
+                st.markdown("<br>", unsafe_allow_html=True)
     # ---------------------------------------------------------
     # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة 2026)
     # ---------------------------------------------------------
