@@ -4,16 +4,16 @@ import gspread
 import urllib.parse
 import datetime
 import hashlib
-import io
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# ⚙️ 1. إعدادات النظام الأساسية
+# ⚙️ 1. إعدادات النظام والاستقرار الأساسية
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 @st.cache_resource
 def get_gspread_client():
+    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -21,7 +21,7 @@ def get_gspread_client():
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
     except Exception as e:
-        st.error(f"⚠️ خطأ الاتصال: {e}")
+        st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
         return None
 
 sh = get_gspread_client()
@@ -43,7 +43,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🧠 2. دوال معالجة البيانات
+# 🧠 2. دوال معالجة البيانات الاحترافية
 # ==========================================
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
@@ -52,7 +52,8 @@ def fetch_safe(worksheet_name):
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
-        if not df.empty: df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+        if not df.empty: 
+            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
     except: return pd.DataFrame()
 
@@ -65,18 +66,17 @@ def safe_append_row(worksheet_name, data_dict):
     except: return False
 
 # ==========================================
-# 🎨 3. التصميم البصري المطور (CSS)
+# 🎨 3. التصميم البصري الموحد (CSS)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
     
-    /* تقليل المساحات البيضاء */
     .block-container { padding-top: 1.5rem; }
     div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
 
-    /* الهيدر الملكي مع القبعة */
+    /* الهيدر الملكي مع القبعة المتحركة */
     .header-container {
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
@@ -87,20 +87,16 @@ st.markdown("""
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
 
     /* شريط الأخبار المتحرك */
-    .marquee-container { background: #1e3a8a; color: white; padding: 10px 0; border-radius: 10px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }
+    .marquee-container { background: #1e3a8a; color: white; padding: 10px 0; border-radius: 8px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }
     .marquee-text { display: inline-block; animation: marquee 30s linear infinite; font-weight: 900; font-size: 1.1rem; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-    /* بطاقات واجهة الطالب (تباين عالي جداً) */
+    /* بطاقات واجهة الطالب والأوسمة */
     .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .urgent-msg { background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }
-    
-    /* تصميم الأوسمة الأفقية */
     .medal-flex { display: flex; justify-content: space-between; gap: 8px; margin: 20px 0; }
     .m-card { flex: 1; background: white; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .m-active { border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }
-
-    /* هيدر النقاط العملاق */
     .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; box-shadow: 0 8px 15px rgba(217, 119, 6, 0.3); }
 
     /* أزرار التواصل */
@@ -126,7 +122,7 @@ def show_enhanced_footer():
     st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 4. نظام الدخول الموحد
+# 🔐 4. نظام تسجيل الدخول الموحد
 # ==========================================
 if st.session_state.role is None:
     t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 لوحة المعلم"])
