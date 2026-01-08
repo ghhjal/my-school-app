@@ -47,11 +47,11 @@ if "max_tasks" not in st.session_state:
     except Exception as e:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
-        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
+        st.session_state.class_options = ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"]
         st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
 if "role" not in st.session_state: st.session_state.role = None
-if "active_tab" not in st.session_state: st.session_state.active_tab = 0
+if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
 # 🧠 2. دوال معالجة البيانات الاحترافية
@@ -87,164 +87,115 @@ def safe_append_row(worksheet_name, data_dict):
         st.error(f"⚠️ خطأ في الكتابة لجدول {worksheet_name}: {e}")
         return False
 
-def get_col_idx(df, col_name):
-    try: return df.columns.get_loc(col_name) + 1
-    except: return None
-
-def get_professional_msg(name, b_type, b_desc, date):
-    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n"
-           f"------------------\n"
-           f"👤 *الطالب:* {name}\n"
-           f"📍 *الملاحظة:* {b_type}\n"
-           f"📝 *التفاصيل:* {b_desc if b_desc else 'متابعة دورية'}\n"
-           f"📅 *التاريخ:* {date}\n"
-           f"------------------\n"
-           f"🏛️ *منصة زياد الذكية*")
-    return urllib.parse.quote(msg)
-
 # ==========================================
-# 🎨 3. التصميم البصري (تحديث نظام اللوجو والهوية)
+# 🎨 3. التصميم البصري المطور (علاج المساحات والبهتان)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
     
-    /* تنسيق الهيدر المطور (نظام اللوجو الجانبي) */
+    /* تقليل المساحات البيضاء */
+    .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+    div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
+
+    /* الهيدر الملكي */
     .header-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); /* تدرج ملكي */
-        padding: 40px 30px;
-        border-radius: 0 0 40px 40px;
-        margin: -80px -20px 35px -20px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        color: white;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 30px; border-radius: 0 0 40px 40px; margin: -80px -20px 25px -20px;
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1); color: white;
     }
-    
-    .logo-icon {
-        font-size: 5.5rem;
-        margin-left: 30px;
-        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
-        animation: float 3s ease-in-out infinite;
-    }
+    .logo-icon { font-size: 4rem; margin-left: 20px; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-    .header-text h1 {
-        margin: 0;
-        font-size: 2.8rem;
-        font-weight: 900;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    /* شريط الأخبار المتحرك */
+    .marquee-container {
+        background: #1e3a8a; color: white; padding: 10px 0; border-radius: 10px;
+        margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6;
     }
-    
-    .header-text p {
-        margin: 10px 0 0 0;
-        font-size: 1.2rem;
-        color: #dbeafe;
-        font-weight: 700;
-    }
+    .marquee-text { display: inline-block; animation: marquee 25s linear infinite; font-weight: bold; }
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-    @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-        100% { transform: translateY(0px); }
+    /* أزرار تواصل حقيقية */
+    .contact-btn {
+        display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0;
+        border-radius: 12px; color: #1e3a8a !important; text-decoration: none;
+        font-weight: bold; text-align: center; width: 100%; transition: 0.3s;
     }
-    
-    .stMetric { background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-    .footer-text { text-align: center; color: #666; padding: 20px; font-size: 0.9em; }
+    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
+
+    /* تمييز التبويبات النشطة */
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background: #f1f5f9; border-radius: 10px 10px 0 0; padding: 10px 25px; }
+    .stTabs [aria-selected="true"] { background: #1e3a8a !important; color: white !important; font-weight: 900; }
+
+    /* بطاقات واجهة الطالب (تباين عالٍ) */
+    .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .urgent-banner { background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; }
     </style>
-    
+
     <div class="header-container">
         <div class="logo-icon">🎓</div>
-        <div class="header-text">
-            <h1>منصة الأستاذ زياد الذكية</h1>
-            <p>بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+        <div class="header-text" style="text-align:right;">
+            <h1 style="margin:0; font-size:2.2rem; font-weight:900;">منصة الأستاذ زياد الذكية</h1>
+            <p style="margin:5px 0 0 0; color:#dbeafe;">بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
-def show_footer():
-    st.markdown("---")
-    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
-    
-    col_tele, col_wa, col_mail = st.columns(3)
-    with col_tele:
-        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
-    with col_wa:
-        # يرجى وضع رقمك الحقيقي هنا
-        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
-    with col_mail:
-        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
-    
-    st.markdown("""
-        <div class="footer-text">
-            <hr style="border: 0.1px solid #eee;">
-            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
-            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
-        </div>
-    """, unsafe_allow_html=True)
+# دالة الفوتر المطور بأزرار واضحة
+def show_enhanced_footer():
+    st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.markdown('<a href="https://t.me/YourUsername" class="contact-btn">📢 قناة تليجرام →</a>', unsafe_allow_html=True)
+    c2.markdown('<a href="https://wa.me/966500000000" class="contact-btn">💬 واتساب الدعم →</a>', unsafe_allow_html=True)
+    c3.markdown('<a href="mailto:your-email@gmail.com" class="contact-btn">📧 البريد الإلكتروني →</a>', unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية | تم التطوير بكل فخر</p>", unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
-# ---------------------------------------------------------
-if st.session_state.role is None:
-    show_footer()
 # ==========================================
-# 🔐 4. نظام الدخول
-# ==========================================
-# ==========================================
-# 🔐 1. نظام تسجيل الدخول الموحد (إصدار زر العودة الذكي)
+# 🔐 4. نظام تسجيل الدخول الموحد (إصدار زر العودة الذكي)
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 دخول الطلاب", "🔐 دخول الإدارة"])
+    t1, t2 = st.tabs(["🎓 دخول الطلاب", "👨‍💼 دخول الإدارة"])
     
     with t1:
-        # قمنا بتعريف نموذج الدخول
-        with st.form("st_log_v3", clear_on_submit=False):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي").strip()
-            submit_btn = st.form_submit_button("دخول الطلاب 🚀")
+        st.markdown("<h3 style='text-align:center; color:#1e3a8a;'>👋 مرحباً بك يا بطل.. سجل دخولك</h3>", unsafe_allow_html=True)
+        with st.form("st_log_v2026", clear_on_submit=False):
+            sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
+            submit_btn = st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True)
             
             if submit_btn:
                 if sid_in:
                     df_st = fetch_safe("students")
                     if not df_st.empty:
-                        # تنظيف الرقم المكتوب
                         search_id = sid_in.split('.')[0]
                         df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                        
                         if search_id in df_st['clean_id'].values:
                             st.session_state.username = search_id
                             st.session_state.role = "student"
-                            st.success("✅ جاري الدخول...")
+                            st.success("✅ جاري تحضير ملفك الشخصي...")
                             st.rerun()
                         else:
-                            # هنا الحل: رسالة الخطأ مع زر العودة
-                            st.error(f"❌ الرقم ({sid_in}) غير مسجل في النظام.")
-                            st.info("💡 تأكد من كتابة الرقم بشكل صحيح أو تواصل مع الإدارة.")
-                else:
-                    st.warning("⚠️ يرجى إدخال الرقم الأكاديمي أولاً.")
-
-        # زر العودة يظهر خارج الفورم عند الحاجة لتحديث الحالة
-        if not st.session_state.role:
-             if st.button("🔄 تحديث الشاشة / محاولة مرة أخرى", use_container_width=True):
-                 st.rerun()
+                            st.error(f"❌ الرقم ({sid_in}) غير موجود. تأكد من الرقم أو تواصل مع معلمك.")
+                else: st.warning("⚠️ فضلاً أدخل رقمك الأكاديمي.")
 
     with t2:
-        with st.form("admin_log_v3"):
-            u = st.text_input("👤 اسم المستخدم (الإدارة)")
+        st.markdown("<h3 style='text-align:center; color:#1e3a8a;'>🔐 لوحة تحكم المعلم</h3>", unsafe_allow_html=True)
+        with st.form("admin_log_v2026"):
+            u = st.text_input("👤 اسم المستخدم")
             p = st.text_input("🔑 كلمة المرور", type="password")
-            if st.form_submit_button("دخول الإدارة 🛠️"):
+            if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
                 df_u = fetch_safe("users")
                 if not df_u.empty and u in df_u['username'].values:
                     user_data = df_u[df_u['username']==u].iloc[0]
-                    import hashlib
                     if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
                         st.session_state.role = "teacher"
                         st.session_state.username = u
                         st.rerun()
                 st.error("❌ بيانات الدخول غير صحيحة.")
-    st.stop()
+    
+    show_enhanced_footer()
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
