@@ -299,44 +299,44 @@ if st.session_state.role == "teacher":
             st.info("💡 لا يوجد طلاب حالياً، يرجى إضافة طلاب من التبويب الأول.")
 
     # ---------------------------------------------------------
-# ==========================================
-# 👨‍💼 6. واجهة المعلم (الإدارة والتحكم الشامل)
-# ==========================================
-elif st.session_state.role == "teacher":
-    menu = st.tabs(["👥 الطلاب", "📊 الدرجات", "📢 التنبيهات", "⚙️ الإعدادات"])
+    # ==========================================
+    # 👨‍💼 6. واجهة المعلم (الإدارة والتحكم الشامل)
+    # ==========================================
+    elif st.session_state.role == "teacher":
+        menu = st.tabs(["👥 الطلاب", "📊 الدرجات", "📢 التنبيهات", "⚙️ الإعدادات"])
+        
+        with menu[2]:
+            st.subheader("📢 إدارة التنبيهات والتعميمات")
+            with st.form("admin_announcement_v2026"):
+                a_title = st.text_input("📝 العنوان")
+                a_details = st.text_area("📄 التفاصيل")
+                c1, c2 = st.columns(2)
+                is_urgent = c1.checkbox("🌟 عاجل (يظهر في القمة)")
+                target = c2.selectbox("🎯 الفئة:", ["الكل"] + st.session_state.class_options)
+                if st.form_submit_button("📣 نشر وتعميم وبث"):
+                    ann_data = {"الصف": target, "عاجل": "نعم" if is_urgent else "لا", "العنوان": a_title, "التاريخ": str(datetime.date.today()), "الرابط": a_details}
+                    if safe_append_row("exams", ann_data):
+                        st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
     
-    with menu[2]:
-        st.subheader("📢 إدارة التنبيهات والتعميمات")
-        with st.form("admin_announcement_v2026"):
-            a_title = st.text_input("📝 العنوان")
-            a_details = st.text_area("📄 التفاصيل")
-            c1, c2 = st.columns(2)
-            is_urgent = c1.checkbox("🌟 عاجل (يظهر في القمة)")
-            target = c2.selectbox("🎯 الفئة:", ["الكل"] + st.session_state.class_options)
-            if st.form_submit_button("📣 نشر وتعميم وبث"):
-                ann_data = {"الصف": target, "عاجل": "نعم" if is_urgent else "لا", "العنوان": a_title, "التاريخ": str(datetime.date.today()), "الرابط": a_details}
-                if safe_append_row("exams", ann_data):
-                    st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
-
-        st.divider()
-        df_ann = fetch_safe("exams")
-        if not df_ann.empty:
-            for idx, row in df_ann.iloc[::-1].iterrows():
-                with st.container(border=True):
-                    col_txt, col_btn = st.columns([3, 1])
-                    with col_txt:
-                        pfx = "🚨 [عاجل] " if str(row.get('عاجل')).strip() == "نعم" else "📢 "
-                        st.markdown(f"<b style='color:#1e3a8a;'>{pfx}{row.get('العنوان')}</b>", unsafe_allow_html=True)
-                        st.caption(f"🎯 لـ: {row.get('الصف')} | 📅 {row.get('التاريخ')}")
-                    with col_btn:
-                        w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
-                        st.link_button("👥 بث", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
-                        if st.button("🗑️", key=f"del_{idx}", use_container_width=True):
-                            sh.worksheet("exams").delete_rows(int(idx) + 2); st.cache_data.clear(); st.rerun()
-
-    with menu[3]:
-        if st.button("🚪 تسجيل خروج الإدارة", type="primary", use_container_width=True):
-            st.session_state.role = None; st.rerun()
+            st.divider()
+            df_ann = fetch_safe("exams")
+            if not df_ann.empty:
+                for idx, row in df_ann.iloc[::-1].iterrows():
+                    with st.container(border=True):
+                        col_txt, col_btn = st.columns([3, 1])
+                        with col_txt:
+                            pfx = "🚨 [عاجل] " if str(row.get('عاجل')).strip() == "نعم" else "📢 "
+                            st.markdown(f"<b style='color:#1e3a8a;'>{pfx}{row.get('العنوان')}</b>", unsafe_allow_html=True)
+                            st.caption(f"🎯 لـ: {row.get('الصف')} | 📅 {row.get('التاريخ')}")
+                        with col_btn:
+                            w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
+                            st.link_button("👥 بث", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
+                            if st.button("🗑️", key=f"del_{idx}", use_container_width=True):
+                                sh.worksheet("exams").delete_rows(int(idx) + 2); st.cache_data.clear(); st.rerun()
+    
+        with menu[3]:
+            if st.button("🚪 تسجيل خروج الإدارة", type="primary", use_container_width=True):
+                st.session_state.role = None; st.rerun()
     # ---------------------------------------------------------
     # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة والمدمجة 2026)
     # ---------------------------------------------------------
