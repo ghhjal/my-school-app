@@ -468,15 +468,32 @@ if st.session_state.role == "teacher":
                             sh.worksheet("exams").delete_rows(int(idx) + 2)
                             st.cache_data.clear(); st.rerun()
     # ---------------------------------------------------------
-    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة 2026)
+    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة والمدمجة 2026)
     # ---------------------------------------------------------
     with menu[3]:
         st.subheader("⚙️ غرفة التحكم المتقدمة")
         
         # 1. صيانة النظام وتحديث البيانات
         with st.expander("🛠️ صيانة النظام (تحديث البيانات)"):
-            if st.button("🔄 تصفير الكاش (Clear Cache)"):
+            c1, c2 = st.columns(2)
+            if c1.button("🔄 تصفير الكاش (Clear Cache)", use_container_width=True):
                 st.cache_data.clear(); st.success("✅ تم تحديث البيانات من السحابة"); st.rerun()
+            
+            # 🔥 الميزة الجديدة: تصفير نقاط التميز السلوكي (إجراء حساس)
+            if c2.button("🧹 تصفير نقاط كافة الطلاب", type="secondary", use_container_width=True):
+                try:
+                    ws_st = sh.worksheet("students")
+                    df_st = fetch_safe("students")
+                    if not df_st.empty:
+                        # تحديث عمود "النقاط" (يفترض أنه العمود رقم 8) لجميع الصفوف
+                        row_count = len(df_st) + 1
+                        # إرسال قائمة من الأصفار لتغطية كافة الطلاب بضغطة واحدة
+                        zero_fill = [[0]] * (row_count - 1)
+                        ws_st.update(f"I2:I{row_count}", zero_fill) # تحديث العمود I (النقاط)
+                        st.success("✅ تم تصفير نقاط جميع الطلاب بنجاح!")
+                        st.cache_data.clear(); st.rerun()
+                except Exception as e:
+                    st.error(f"❌ فشل التصفير: {e}")
 
         # 2. تحديث قيمة الدرجات (المشاركة والاختبار)
         with st.expander("⚖️ توزيع الدرجات (تحديث الحدود القصوى)"):
@@ -485,22 +502,32 @@ if st.session_state.role == "teacher":
             mq = c2.number_input("حد الاختبار الحالي", 0, 100, st.session_state.max_quiz)
             if st.button("💾 حفظ حدود الدرجات الجديدة"):
                 ws_s = sh.worksheet("settings")
-                # تحديث القيم في شيت settings (يفترض أنها في السطر 2 و 3)
                 ws_s.update_cell(2, 2, mt)
                 ws_s.update_cell(3, 2, mq)
                 st.session_state.max_tasks, st.session_state.max_quiz = mt, mq
                 st.success("✅ تم تحديث توزيع الدرجات بنجاح")
 
-        # 3. إدارة العام والصفوف والمراحل
+        # 3. إدارة العام والصفوف والمراحل (الربط الديناميكي المصلح)
         with st.expander("🗓️ إدارة العام والصفوف والمراحل"):
+            st.info("💡 ملاحظة: التعديل هنا سيغير الخيارات في 'نموذج إضافة طالب جديد' فوراً.")
             c1, c2, c3 = st.columns(3)
             ny = c1.text_input("تعديل العام الدراسي:", st.session_state.current_year)
             cl_s = c2.text_area("قائمة الصفوف (فاصلة):", ", ".join(st.session_state.class_options))
             st_s = c3.text_area("قائمة المراحل (فاصلة):", ", ".join(st.session_state.stage_options))
-            if st.button("💾 حفظ الإعدادات العامة"):
+            
+            if st.button("💾 حفظ الإعدادات العامة وتحديث القوائم"):
                 ws_s = sh.worksheet("settings")
-                ws_s.update_cell(4, 2, ny); ws_s.update_cell(5, 2, cl_s); ws_s.update_cell(6, 2, st_s)
-                st.success("✅ تم حفظ إعدادات الفصول بنجاح")
+                ws_s.update_cell(4, 2, ny) # العام الدراسي
+                ws_s.update_cell(5, 2, cl_s) # قائمة الصفوف
+                ws_s.update_cell(6, 2, st_s) # قائمة المراحل
+                
+                # تحديث الذاكرة الحالية (Session State) لضمان التغيير الفوري في النماذج
+                st.session_state.current_year = ny
+                st.session_state.class_options = [x.strip() for x in cl_s.split(',')]
+                st.session_state.stage_options = [x.strip() for x in st_s.split(',')]
+                
+                st.success("✅ تم حفظ الإعدادات وتحديث قوائم الاختيار بنجاح")
+                st.cache_data.clear(); st.rerun()
 
         # 4. تغيير كلمة المرور للمستخدم الحالي
         with st.expander("🔑 تغيير كلمة المرور الخاصة بك"):
@@ -535,24 +562,24 @@ if st.session_state.role == "teacher":
             buf_st = io.BytesIO()
             with pd.ExcelWriter(buf_st, engine='xlsxwriter') as wr:
                 pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الإيميل", "الجوال", "النقاط"]).to_excel(wr, index=False)
-            col_t1.download_button("📝 تحميل قالب الطلاب", data=buf_st.getvalue(), file_name="Students_Template.xlsx")
+            col_t1.download_button("📝 تحميل قالب الطلاب", data=buf_st.getvalue(), file_name="Students_Template.xlsx", use_container_width=True)
             
             buf_gr = io.BytesIO()
             with pd.ExcelWriter(buf_gr, engine='xlsxwriter') as wr:
-                pd.DataFrame(columns=["id", "tasks", "quiz", "total", "date"]).to_excel(wr, index=False)
-            col_t2.download_button("📊 تحميل قالب الدرجات", data=buf_gr.getvalue(), file_name="Grades_Template.xlsx")
+                pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(wr, index=False)
+            col_t2.download_button("📊 تحميل قالب الدرجات المطور", data=buf_gr.getvalue(), file_name="Smart_Grades_Template.xlsx", use_container_width=True)
             
             st.divider()
-            if st.button("📊 توليد نسخة احتياطية كاملة (BackUp)"):
+            if st.button("📊 توليد نسخة احتياطية كاملة (BackUp)", use_container_width=True):
                 df_bu = fetch_safe("students")
                 buf_bu = io.BytesIO()
                 with pd.ExcelWriter(buf_bu, engine='xlsxwriter') as wr: df_bu.to_excel(wr, index=False)
                 st.download_button("📥 تنزيل ملف Backup الطلاب", data=buf_bu.getvalue(), file_name=f"Backup_Students_{datetime.date.today()}.xlsx")
 
-        # 7. المزامنة الذكية (حل مشكلة التكرار، الأصفار، وغياب الرسائل)
+        # 7. المزامنة الذكية (المعالجة المتقدمة)
         with st.expander("📤 مزامنة وتحديث البيانات (نظام الحماية والتحقق القصوى)"):
             st.markdown("### 🛠️ معالج المزامنة المطور")
-            st.info("💡 سيقوم النظام بتحديث درجات الطلاب الحاليين ومنع تكرارهم، مع تجاهل الصفوف الفارغة.")
+            st.info("💡 سيقوم النظام بتحديث درجات الطلاب الحاليين ومنع تكرارهم.")
             
             up_file = st.file_uploader("اختر ملف الإكسل المحدث (p1, p2)", type=['xlsx'], key="smart_sync_final")
             target_sheet = st.radio("حدد الجدول المطلوب تحديثه:", ["students", "grades"], horizontal=True)
@@ -560,71 +587,54 @@ if st.session_state.role == "teacher":
             if st.button("🚀 بدء المزامنة والتطهير الآن", key="run_master_sync"):
                 if up_file:
                     try:
-                        # 1. إظهار حالة المعالجة
                         with st.status("⏳ جاري تحليل البيانات وفلترة الأصفار...", expanded=True) as status:
-                            # أ. قراءة الملف وتجاهل الصفوف الفارغة تماماً
                             df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                             df_up = df_up.dropna(how='all')
                             
                             ws = sh.worksheet(target_sheet)
-                            df_current = fetch_safe(target_sheet) # جلب البيانات الحالية للمقارنة
-                            headers = ws.row_values(1) # جلب رؤوس الأعمدة من قوقل شيت
+                            df_current = fetch_safe(target_sheet)
+                            headers = ws.row_values(1)
                             
                             up_count = 0; new_count = 0; skip_count = 0
 
                             for _, row in df_up.iterrows():
                                 data_dict = row.to_dict()
-                                
-                                # ب. تحديد الرقم الأكاديمي وتطهيره من الـ (.0)
                                 id_val = str(data_dict.get('student_id', data_dict.get('id', ""))).strip()
                                 if "." in id_val: id_val = id_val.split(".")[0]
                                 
-                                # 🛡️ صمام الأمان: تجاهل الأرقام غير الصحيحة والأصفار (حل مشكلتك)
+                                # 🛡️ صمام الأمان: تجاهل الأرقام غير الصحيحة
                                 if id_val in ["0", "0.0", "", "nan", "None"]:
                                     skip_count += 1
                                     continue
 
-                                # ج. معالجة الدرجات وحساب المجموع (perf) آلياً
                                 if target_sheet == "grades":
                                     p1 = pd.to_numeric(data_dict.get('p1', 0), errors='coerce') or 0
                                     p2 = pd.to_numeric(data_dict.get('p2', 0), errors='coerce') or 0
                                     data_dict.update({
                                         "student_id": id_val,
                                         "p1": str(int(p1)), "p2": str(int(p2)),
-                                        "perf": str(int(p1 + p2)), # تحديث عمود perf بدلاً من total
+                                        "perf": str(int(p1 + p2)), 
                                         "date": str(datetime.date.today())
                                     })
                                 else:
                                     data_dict['id'] = id_val
 
-                                # د. منطق المزامنة: تحديث سطر موجود أو إضافة سطر جديد
                                 if not df_current.empty and id_val in df_current.iloc[:, 0].values:
-                                    # تحديث السطر الموجود فعلياً في قوقل شيت لمنع التكرار
                                     row_idx = df_current[df_current.iloc[:, 0] == id_val].index[0] + 2
                                     updated_row = [str(data_dict.get(h, "")) for h in headers]
                                     ws.update(f"A{row_idx}", [updated_row])
                                     up_count += 1
                                 else:
-                                    # إضافة سجل جديد تماماً
                                     new_row = [str(data_dict.get(h, "")) for h in headers]
                                     ws.append_row(new_row)
                                     new_count += 1
                             
                             status.update(label="✅ اكتملت المزامنة بنجاح!", state="complete", expanded=False)
 
-                        # 🌟 رسالة النجاح النهائية التي تظهر للمستخدم
-                        st.success(f"""
-                            🏁 **تقرير العملية النهائي:**
-                            * ✅ تم تحديث **{up_count}** سجل (تحديث درجات موجودة).
-                            * ➕ تم إضافة **{new_count}** سجل جديد.
-                            * 🚫 تم تجاهل **{skip_count}** صف (أصفار أو صفوف فارغة).
-                        """)
+                        st.success(f"🏁 التقرير: تحديث {up_count} | إضافة {new_count} | تجاهل {skip_count}")
                         st.cache_data.clear(); st.rerun()
-                        
                     except Exception as e:
-                        st.error(f"❌ حدث خطأ تقني: {e}")
-                else:
-                    st.warning("⚠️ يرجى اختيار ملف الإكسل أولاً.")
+                        st.error(f"❌ خطأ: {e}")
     # ------------------------------------------
     # 🚗 التبويب 4: الخروج
     # ------------------------------------------
