@@ -680,17 +680,17 @@ if st.session_state.role == "student":
         """, unsafe_allow_html=True)
 
         # --- 🚨 التنبيه العاجل في الشاشة الرئيسية ---
-            if not df_ann.empty:
-                # فلترة ذكية: عاجل + (صف الطالب أو الكل)
-                urgent = df_ann[(df_ann['عاجل'] == 'نعم') & (df_ann['الصف'].isin(['الكل', s_class]))]
-                if not urgent.empty:
-                    u = urgent.tail(1).iloc[0]
-                    st.markdown(f"""
-                        <div style="background:#fff5f5; border:2px solid #e53e3e; color:#c53030; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center; font-weight:bold;">
-                            🌟 تنبيه هام لـ {s_class}: {u.get('العنوان')} <br>
-                            <small style="font-weight:normal;">{u.get('الرابط')}</small>
-                        </div>
-                    """, unsafe_allow_html=True)
+        if not df_ann.empty:
+            # فلترة ذكية: عاجل + (صف الطالب أو الكل)
+            urgent = df_ann[(df_ann['عاجل'] == 'نعم') & (df_ann['الصف'].isin(['الكل', s_class]))]
+            if not urgent.empty:
+                u = urgent.tail(1).iloc[0]
+                st.markdown(f"""
+                    <div style="background:#fff5f5; border:2px solid #e53e3e; color:#c53030; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center; font-weight:bold;">
+                        🌟 تنبيه هام لـ {s_class}: {u.get('العنوان')} <br>
+                        <small style="font-weight:normal;">{u.get('الرابط')}</small>
+                    </div>
+                """, unsafe_allow_html=True)
         # 🏅 2. الأوسمة الأفقية ورصيد النقاط
         st.markdown(f"""
             <div class="medal-flex">
