@@ -8,13 +8,12 @@ import io
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# ⚙️ 1. إعدادات النظام والاستقرار الأساسية
+# ⚙️ 1. إعدادات النظام الأساسية
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
 @st.cache_resource
 def get_gspread_client():
-    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -22,33 +21,29 @@ def get_gspread_client():
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
     except Exception as e:
-        st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
+        st.error(f"⚠️ خطأ الاتصال: {e}")
         return None
 
 sh = get_gspread_client()
 
-# تحميل الإعدادات من قوقل شيت وتأسيس الـ Session State
+# تحميل الإعدادات وتأسيس الـ Session State
 if "max_tasks" not in st.session_state:
     try:
         df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
         st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
         st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
         st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
-        classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
-        st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
-        stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
-        st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
+        st.session_state.class_options = [c.strip() for c in str(df_sett[df_sett['key'] == 'class_list']['value'].values[0]).split(',')]
+        st.session_state.stage_options = [s.strip() for s in str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0]).split(',')]
     except:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
-        st.session_state.current_year = "1447هـ"
-        st.session_state.class_options = ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"]
-        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
+        st.session_state.current_year, st.session_state.class_options, st.session_state.stage_options = "1447هـ", ["الأول", "الثاني"], ["ابتدائي"]
 
 if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🧠 2. دوال معالجة البيانات الاحترافية
+# 🧠 2. دوال معالجة البيانات
 # ==========================================
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
@@ -57,8 +52,7 @@ def fetch_safe(worksheet_name):
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
-        if not df.empty: 
-            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+        if not df.empty: df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
     except: return pd.DataFrame()
 
@@ -66,30 +60,23 @@ def safe_append_row(worksheet_name, data_dict):
     try:
         ws = sh.worksheet(worksheet_name)
         headers = ws.row_values(1)
-        row_to_append = [data_dict.get(h, "") for h in headers]
-        ws.append_row(row_to_append)
+        ws.append_row([data_dict.get(h, "") for h in headers])
         return True
     except: return False
 
-def clean_phone_number(phone):
-    p = str(phone).strip().replace(" ", "")
-    if p.startswith("0"): p = p[1:]
-    if not p.startswith("966") and p != "": p = "966" + p
-    return p
-
 # ==========================================
-# 🎨 3. التصميم البصري الموحد (علاج الفراغات والبهتان)
+# 🎨 3. التصميم البصري المطور (CSS)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
     
-    /* تقليل المساحات البيضاء وتحسين الرؤية */
-    .block-container { padding-top: 1.5rem; padding-bottom: 0rem; }
+    /* تقليل المساحات البيضاء */
+    .block-container { padding-top: 1.5rem; }
     div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
 
-    /* الهيدر الملكي (إصدار القبعة المتحركة) */
+    /* الهيدر الملكي مع القبعة */
     .header-container {
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
@@ -100,36 +87,25 @@ st.markdown("""
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
 
     /* شريط الأخبار المتحرك */
-    .marquee-container {
-        background: #1e3a8a; color: white; padding: 10px 0; border-radius: 8px;
-        margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6;
-    }
-    .marquee-text { display: inline-block; animation: marquee 30s linear infinite; font-weight: bold; }
+    .marquee-container { background: #1e3a8a; color: white; padding: 10px 0; border-radius: 10px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }
+    .marquee-text { display: inline-block; animation: marquee 30s linear infinite; font-weight: 900; font-size: 1.1rem; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-    /* تباين عالي لبطاقات واجهة الطالب */
-    .mobile-card { 
-        background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 15px; 
-        border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; 
-        border-right: 10px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-        font-size: 1.1rem;
-    }
-    .urgent-msg { 
-        background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; 
-        padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; 
-        font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1);
-    }
+    /* بطاقات واجهة الطالب (تباين عالي جداً) */
+    .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .urgent-msg { background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }
     
-    /* أزرار التواصل المطورة */
-    .contact-btn {
-        display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0;
-        border-radius: 12px; color: #1e3a8a !important; text-decoration: none;
-        font-weight: bold; text-align: center; width: 100%; transition: 0.3s;
-    }
-    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
+    /* تصميم الأوسمة الأفقية */
+    .medal-flex { display: flex; justify-content: space-between; gap: 8px; margin: 20px 0; }
+    .m-card { flex: 1; background: white; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .m-active { border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }
 
-    /* تمييز التبويبات النشطة */
-    .stTabs [aria-selected="true"] { background: #1e3a8a !important; color: white !important; font-weight: 900; }
+    /* هيدر النقاط العملاق */
+    .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; box-shadow: 0 8px 15px rgba(217, 119, 6, 0.3); }
+
+    /* أزرار التواصل */
+    .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
+    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
     </style>
 
     <div class="header-container">
@@ -144,38 +120,36 @@ st.markdown("""
 def show_enhanced_footer():
     st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.markdown('<a href="https://t.me/YourUsername" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
-    c2.markdown('<a href="https://wa.me/966500000000" class="contact-btn">💬 واتساب الدعم 👉</a>', unsafe_allow_html=True)
-    c3.markdown('<a href="mailto:ziad@email.com" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
+    c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
+    c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
+    c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 4. نظام تسجيل الدخول الموحد
+# 🔐 4. نظام الدخول الموحد
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 دخول الطلاب", "👨‍💼 دخول الإدارة"])
+    t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 لوحة المعلم"])
     with t1:
-        st.markdown("<h3 style='text-align:center; color:#1e3a8a;'>👋 مرحباً بك يا بطل.. سجل دخولك</h3>", unsafe_allow_html=True)
         with st.form("st_log_v2026"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
+            sid_in = st.text_input("🆔 الرقم الأكاديمي").strip()
             if st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True):
                 df_st = fetch_safe("students")
                 if not df_st.empty:
                     df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                    search_id = sid_in.split('.')[0]
-                    if search_id in df_st['clean_id'].values:
-                        st.session_state.username = search_id; st.session_state.role = "student"; st.rerun()
-                    else: st.error("❌ الرقم غير مسجل. تأكد من الرقم أو تواصل مع معلمك.")
+                    if sid_in.split('.')[0] in df_st['clean_id'].values:
+                        st.session_state.username = sid_in.split('.')[0]; st.session_state.role = "student"; st.rerun()
+                    else: st.error("❌ الرقم غير مسجل.")
     with t2:
         with st.form("admin_log_v2026"):
-            u = st.text_input("👤 اسم المستخدم"); p = st.text_input("🔑 كلمة المرور", type="password")
+            u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
             if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
                 df_u = fetch_safe("users")
                 if not df_u.empty and u in df_u['username'].values:
                     user_data = df_u[df_u['username']==u].iloc[0]
                     if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
                         st.session_state.role = "teacher"; st.session_state.username = u; st.rerun()
-                st.error("❌ بيانات الدخول غير صحيحة.")
+                st.error("❌ بيانات خاطئة.")
     show_enhanced_footer()
     
 # ==========================================
@@ -329,40 +303,39 @@ if st.session_state.role == "teacher":
             st.info("💡 لا يوجد طلاب حالياً، يرجى إضافة طلاب من التبويب الأول.")
 
     # ---------------------------------------------------------
-    # ==========================================
-# 👨‍💼 6. واجهة المعلم (الإدارة الشاملة)
+# ==========================================
+# 👨‍💼 6. واجهة المعلم (الإدارة والتبويب المدمج)
 # ==========================================
 elif st.session_state.role == "teacher":
     menu = st.tabs(["👥 الطلاب", "📊 الدرجات", "📢 التنبيهات", "⚙️ الإعدادات"])
     
-    with menu[2]: # إدارة التنبيهات مع ميزات البث والحذف
-        st.subheader("📢 إدارة التعميمات العامة")
-        with st.form("admin_ann_final_merged"):
+    with menu[2]:
+        st.subheader("📢 إدارة التنبيهات والتعميمات")
+        with st.form("admin_announcement_v2026"):
             a_title = st.text_input("📝 العنوان")
             a_details = st.text_area("📄 التفاصيل")
             c1, c2 = st.columns(2)
-            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (عاجل)")
-            target = c2.selectbox("🎯 الموجه إلى:", ["الكل"] + st.session_state.class_options)
-            if st.form_submit_button("📣 نشر وتعميم وبث الآن"):
-                if a_title and a_details:
-                    ann_data = {"الصف": target, "عاجل": "نعم" if is_urgent else "لا", "العنوان": a_title, "التاريخ": str(datetime.date.today()), "الرابط": a_details}
-                    if safe_append_row("exams", ann_data):
-                        st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
+            is_urgent = c1.checkbox("🌟 عاجل (في القمة)")
+            target = c2.selectbox("🎯 الفئة:", ["الكل"] + st.session_state.class_options)
+            if st.form_submit_button("📣 نشر وتعميم وبث"):
+                ann_data = {"الصف": target, "عاجل": "نعم" if is_urgent else "لا", "العنوان": a_title, "التاريخ": str(datetime.date.today()), "الرابط": a_details}
+                if safe_append_row("exams", ann_data):
+                    st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
 
         st.divider()
         df_ann = fetch_safe("exams")
         if not df_ann.empty:
             for idx, row in df_ann.iloc[::-1].iterrows():
                 with st.container(border=True):
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
+                    col_txt, col_btn = st.columns([3, 1])
+                    with col_txt:
                         pfx = "🚨 [عاجل] " if str(row.get('عاجل')).strip() == "نعم" else "📢 "
                         st.markdown(f"<b style='color:#1e3a8a;'>{pfx}{row.get('العنوان')}</b>", unsafe_allow_html=True)
                         st.caption(f"🎯 لـ: {row.get('الصف')} | 📅 {row.get('التاريخ')}")
-                    with col2:
-                        w_msg = urllib.parse.quote(f"📢 *تنبيه منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
+                    with col_btn:
+                        w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
                         st.link_button("👥 بث", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
-                        if st.button("🗑️ حذف", key=f"del_{idx}", use_container_width=True):
+                        if st.button("🗑️", key=f"del_{idx}", use_container_width=True):
                             sh.worksheet("exams").delete_rows(int(idx) + 2); st.cache_data.clear(); st.rerun()
 
     if st.sidebar.button("🚪 خروج الإدارة"): st.session_state.role = None; st.rerun()
@@ -544,129 +517,64 @@ elif st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة والمطورة)
 # ==========================================
 # ==========================================
-# 👨‍🎓 5. واجهة الطالب (النسخة المدمجة والمستقرة)
+# 👨‍🎓 5. واجهة الطالب (النسخة الكاملة والمدمجة)
 # ==========================================
 elif st.session_state.role == "student":
-    student_id = st.session_state.username
-    df_st = fetch_safe("students"); df_gr = fetch_safe("grades")
-    df_beh = fetch_safe("behavior"); df_ann = fetch_safe("exams")
+    df_st = fetch_safe("students"); df_ann = fetch_safe("exams")
+    df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+    my_info = df_st[df_st['clean_id'] == st.session_state.username].iloc[0]
+    
+    s_name = my_info.get('name', 'بطلنا المتميز')
+    s_class = str(my_info.get('class', 'الكل')).strip()
+    s_points = int(pd.to_numeric(my_info.get('النقاط', 0), errors='coerce') or 0)
 
-    if not df_st.empty:
-        df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-        my_info = df_st[df_st['clean_id'] == student_id].iloc[0]
-        s_name = my_info.get('name', 'طالبنا المتميز')
-        s_class = str(my_info.get('class', 'غير محدد')).strip()
-        s_points = int(pd.to_numeric(my_info.get('النقاط', 0), errors='coerce') or 0)
+    # 🎨 1. الهيدر الشخصي
+    st.markdown(f"""
+        <div style="background:#ffffff; padding:20px; border-radius:15px; border-right:10px solid #1e3a8a; box-shadow:0 4px 10px rgba(0,0,0,0.15); margin-top:-50px; text-align:right; border:1px solid #ddd;">
+            <h2 style='margin:0; color:#1e3a8a;'>👋 مرحباً بك: {s_name}</h2>
+            <p style='margin:5px 0 0 0; color:#000; font-weight:900;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {st.session_state.username}</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-        # 🎨 الهيدر الشخصي
-        st.markdown(f"""
-            <div style="background:#ffffff; padding:20px; border-radius:15px; border-right:10px solid #1e3a8a; box-shadow:0 4px 10px rgba(0,0,0,0.15); margin-top:-50px; text-align:right; border:1px solid #ddd;">
-                <h2 style='margin:0; color:#1e3a8a;'>👋 مرحباً بك: {s_name}</h2>
-                <p style='margin:5px 0 0 0; color:#000; font-weight:900;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {student_id}</p>
-            </div>
-        """, unsafe_allow_html=True)
+    # 🚨 2. شريط الأخبار المتحرك (Marquee)
+    if not df_ann.empty:
+        scrolling = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])].tail(3)
+        if not scrolling.empty:
+            news_line = " 🌟 | ".join(scrolling['العنوان'].tolist())
+            st.markdown(f'<div class="marquee-container"><div class="marquee-text">📢 آخر الأخبار لـ {s_class}: {news_line} 🌟</div></div>', unsafe_allow_html=True)
 
-        # 🚨 شريط الأخبار المتحرك (Marquee)
-        if not df_ann.empty:
-            scrolling = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])].tail(3)
-            if not scrolling.empty:
-                news_line = " 🌟 | ".join(scrolling['العنوان'].tolist())
-                st.markdown(f'<div class="marquee-container"><div class="marquee-text">📢 آخر الأخبار: {news_line} 🌟</div></div>', unsafe_allow_html=True)
+    # 🚨 3. الإعلان العاجل (في قمة الشاشة الرئيسية)
+    if not df_ann.empty and 'عاجل' in df_ann.columns:
+        urgent = df_ann[(df_ann['عاجل'].astype(str).str.strip() == "نعم") & (df_ann['الصف'].astype(str).str.strip().isin(["الكل", s_class]))]
+        if not urgent.empty:
+            u_row = urgent.tail(1).iloc[0]
+            st.markdown(f'<div class="urgent-msg">🌟 تنبيه هام وعاجل: {u_row.get("العنوان")} <br><small style="font-weight:normal;">{u_row.get("الرابط")}</small></div>', unsafe_allow_html=True)
 
-        # 🚨 التنبيه العاجل (في قمة الشاشة الرئيسية)
-        if not df_ann.empty and 'عاجل' in df_ann.columns:
-            urgent = df_ann[(df_ann['عاجل'].astype(str).str.strip() == "نعم") & 
-                            (df_ann['الصف'].astype(str).str.strip().isin(["الكل", s_class]))]
-            if not urgent.empty:
-                u_row = urgent.tail(1).iloc[0]
-                st.markdown(f"""
-                    <div class="urgent-msg">
-                        🌟 تنبيه هام لـ {s_class}: {u_row.get('العنوان', 'تنبيه جديد')} <br>
-                        <small style="font-weight:normal;">{u_row.get('الرابط', u_row.get('التفاصيل', ''))}</small>
-                    </div>
-                """, unsafe_allow_html=True)
+    # 🏅 4. الأوسمة الأفقية ورصيد النقاط (تمت الإعادة بالكامل)
+    st.markdown(f"""
+        <div class="medal-flex">
+            <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:#000;'>وسام ذهبي</b></div>
+            <div class="m-card {'m-active' if s_points >= 50 else ''}">🥈<br><b style='color:#000;'>وسام فضي</b></div>
+            <div class="m-card m-active">🥉<br><b style='color:#000;'>وسام برونزي</b></div>
+        </div>
+        <div class="points-banner">
+            <p style='margin:0; font-size: 1.1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز السلوكي</p>
+            <h1 style='margin:0; font-size: 4.5rem; font-weight: 900;'>{s_points}</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
-        # 🏅 الأوسمة الأفقية ورصيد النقاط
-        st.markdown(f"""
-            <div class="medal-flex">
-                <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:#000;'>ذهبي</b></div>
-                <div class="m-card {'m-active' if s_points >= 50 else ''}">🥈<br><b style='color:#000;'>فضي</b></div>
-                <div class="m-card m-active">🥉<br><b style='color:#000;'>برونزي</b></div>
-            </div>
-            <div class="points-banner">
-                <p style='margin:0; font-size:1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز</p>
-                <h1 style='margin:0; font-size:4rem; font-weight:900;'>{s_points}</h1>
-            </div>
-        """, unsafe_allow_html=True)
+    # 📱 5. التبويبات المدمجة
+    tabs = st.tabs(["📢 التنبيهات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
+    
+    with tabs[0]:
+        st.markdown(f"#### 📢 تعميمات {s_class}")
+        my_alerts = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])]
+        if not my_alerts.empty:
+            for _, r in my_alerts.iloc[::-1].iterrows():
+                st.markdown(f'<div class="mobile-card">📢 {r.get("العنوان")}<br><small>📅 {r.get("التاريخ")}</small><br><div style="font-weight:normal; margin-top:5px;">{r.get("الرابط")}</div></div>', unsafe_allow_html=True)
+        else: st.info("💡 لا توجد تعميمات جديدة.")
 
-        # 📱 التبويبات المدمجة
-        tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
-
-        with tabs[0]:
-            st.markdown(f"#### 📢 سجل تعميمات {s_class}")
-            if not df_ann.empty:
-                student_ann = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])]
-                if not student_ann.empty:
-                    for _, row in student_ann.iloc[::-1].iterrows(): 
-                        st.markdown(f"""
-                            <div class="mobile-card">
-                                📢 {row.get('العنوان')} <br> 
-                                <small style='color:#555; font-weight:normal;'>📅 {row.get('التاريخ')}</small> <br> 
-                                <div style='margin-top:5px; font-weight:normal; font-size:0.95rem;'>{row.get('الرابط')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                else: st.info(f"💡 لا توجد تنبيهات حالياً لـ {s_class}.")
-
-        with tabs[1]:
-            st.markdown("#### 📝 ملاحظات المعلم")
-            if not df_beh.empty:
-                df_beh['clean_id'] = df_beh.iloc[:, 0].astype(str).str.split('.').str[0]
-                my_notes = df_beh[df_beh['clean_id'] == student_id]
-                if not my_notes.empty:
-                    for _, n in my_notes.iterrows():
-                        st.markdown(f"""<div class="mobile-card" style="border-right-color:#e53e3e;">📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> <small style="font-weight:normal;">📅 {n.get('date', '')}</small></div>""", unsafe_allow_html=True)
-                else: st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
-
-        with tabs[2]:
-            st.markdown("#### 📊 نتائج الاختبارات والمهام")
-            if not df_gr.empty:
-                df_gr['clean_id'] = df_gr.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                my_gr = df_gr[df_gr['clean_id'] == student_id]
-                if not my_gr.empty:
-                    g = my_gr.iloc[0]
-                    st.markdown(f"""
-                        <div class="mobile-card">📝 المشاركة والمهام: {g.get('p1', 0)}</div>
-                        <div class="mobile-card">✍️ اختبار قصير: {g.get('p2', 0)}</div>
-                        <div class="mobile-card" style="background:#f0fdf4; border-right-color:#10b981; border-width:2px;">
-                            🏆 المجموع الكلي: <span style='font-size:1.3rem;'>{g.get('perf', 0)}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-        with tabs[3]:
-            st.markdown("#### 🏆 لوحة الشرف (أفضل 10)")
-            df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-            top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
-            for i, (_, row) in enumerate(top_10.iterrows(), 1):
-                icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
-                is_me_style = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
-                st.markdown(f"""<div class="mobile-card" style="{is_me_style}">{icon} {row['name']} <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span></div>""", unsafe_allow_html=True)
-
-        with tabs[4]:
-            st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_info_v4_merged"):
-                new_mail = st.text_input("📧 البريد الإلكتروني", my_info.get('الإيميل', ''))
-                new_phone = st.text_input("📱 رقم الجوال", my_info.get('الجوال', ''))
-                if st.form_submit_button("💾 حفظ البيانات المحدثة"):
-                    try:
-                        ws_st = sh.worksheet("students")
-                        ids = [str(x).split('.')[0] for x in ws_st.col_values(1)]
-                        if student_id in ids:
-                            r_idx = ids.index(student_id) + 1
-                            ws_st.update_cell(r_idx, 6, new_mail); ws_st.update_cell(r_idx, 7, new_phone)
-                            st.success("✅ تم التحديث بنجاح!"); st.cache_data.clear()
-                    except: st.error("❌ فشل التحديث حالياً.")
-            st.divider()
-            if st.button("🚪 تسجيل الخروج الآمن", type="primary", use_container_width=True):
-                st.session_state.role = None; st.session_state.username = None; st.rerun()
+    with tabs[3]:
+        st.button("🚪 تسجيل الخروج", on_click=lambda: st.session_state.update({"role": None}), use_container_width=True, type="primary")
 
     show_enhanced_footer()
