@@ -192,31 +192,57 @@ if st.session_state.role is None:
     show_footer()
 
 # ==========================================
-# 🔐 3. نظام الدخول
+# 🔐 1. نظام تسجيل الدخول الموحد (إصدار زر العودة الذكي)
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 دخول الطلاب", "👨‍💼 دخول المعلم"])
+    t1, t2 = st.tabs(["🎓 دخول الطلاب", "🔐 دخول الإدارة"])
+    
     with t1:
-        with st.form("st_log_v26"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
-            if st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True):
-                df_st = fetch_safe("students")
-                if not df_st.empty:
-                    df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                    if sid_in.split('.')[0] in df_st['clean_id'].values:
-                        st.session_state.username, st.session_state.role = sid_in.split('.')[0], "student"; st.rerun()
-                    else: st.error("❌ الرقم غير مسجل. تواصل مع معلمك.")
+        # قمنا بتعريف نموذج الدخول
+        with st.form("st_log_v3", clear_on_submit=False):
+            sid_in = st.text_input("🆔 الرقم الأكاديمي").strip()
+            submit_btn = st.form_submit_button("دخول الطلاب 🚀")
+            
+            if submit_btn:
+                if sid_in:
+                    df_st = fetch_safe("students")
+                    if not df_st.empty:
+                        # تنظيف الرقم المكتوب
+                        search_id = sid_in.split('.')[0]
+                        df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+                        
+                        if search_id in df_st['clean_id'].values:
+                            st.session_state.username = search_id
+                            st.session_state.role = "student"
+                            st.success("✅ جاري الدخول...")
+                            st.rerun()
+                        else:
+                            # هنا الحل: رسالة الخطأ مع زر العودة
+                            st.error(f"❌ الرقم ({sid_in}) غير مسجل في النظام.")
+                            st.info("💡 تأكد من كتابة الرقم بشكل صحيح أو تواصل مع الإدارة.")
+                else:
+                    st.warning("⚠️ يرجى إدخال الرقم الأكاديمي أولاً.")
+
+        # زر العودة يظهر خارج الفورم عند الحاجة لتحديث الحالة
+        if not st.session_state.role:
+             if st.button("🔄 تحديث الشاشة / محاولة مرة أخرى", use_container_width=True):
+                 st.rerun()
+
     with t2:
-        with st.form("admin_log_v26"):
-            u = st.text_input("👤 اسم المستخدم"); p = st.text_input("🔑 المرور", type="password")
-            if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
+        with st.form("admin_log_v3"):
+            u = st.text_input("👤 اسم المستخدم (الإدارة)")
+            p = st.text_input("🔑 كلمة المرور", type="password")
+            if st.form_submit_button("دخول الإدارة 🛠️"):
                 df_u = fetch_safe("users")
                 if not df_u.empty and u in df_u['username'].values:
                     user_data = df_u[df_u['username']==u].iloc[0]
+                    import hashlib
                     if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
-                        st.session_state.role, st.session_state.username = "teacher", u; st.rerun()
-                st.error("❌ بيانات خاطئة.")
-    show_footer()
+                        st.session_state.role = "teacher"
+                        st.session_state.username = u
+                        st.rerun()
+                st.error("❌ بيانات الدخول غير صحيحة.")
+    st.stop()
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
