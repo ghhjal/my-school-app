@@ -782,19 +782,19 @@ if st.session_state.role == "teacher":
 # 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة والمطورة)
 # ==========================================
 # ==========================================
-# 👨‍🎓 2. واجهة الطالب (النسخة النهائية المدمجة والنظيفة)
+# 👨‍🎓 2. واجهة الطالب (النسخة النهائية النظيفة والمصححة)
 # ==========================================
 if st.session_state.role == "student":
-    # 1. استرجاع وتطهير الرقم الأكاديمي لضمان المطابقة
+    # 1. استرجاع وتطهير الرقم الأكاديمي
     student_id = str(st.session_state.get('username', '')).strip()
     
-    # تحميل كافة الجداول الحقيقية من قوقل شيت
+    # تحميل كافة الجداول
     df_st = fetch_safe("students")
     df_gr = fetch_safe("grades")
     df_beh = fetch_safe("behavior")
     df_ann = fetch_safe("exams")
 
-    # 🛠️ البحث الدقيق عن بيانات الطالب
+    # البحث عن الطالب
     if not df_st.empty:
         df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
         my_info = df_st[df_st['clean_id'] == student_id]
@@ -807,32 +807,32 @@ if st.session_state.role == "student":
         s_class = str(s_data.get('class', 'غير محدد')).strip() 
         s_points = int(pd.to_numeric(s_data.get('النقاط', 0), errors='coerce') or 0)
         
-        # 🎨 تنسيق CSS (كتلة واحدة مدمجة وصحيحة)
+        # 🎨 تنسيق CSS (كتلة واحدة نظيفة بدون تكرار)
         st.markdown(f"""
             <style>
             /* تنسيق بطاقة الترحيب مع التصحيح (-20px) */
             .app-header {{ 
-                background: #ffffff; 
+                background: {card_bg}; 
                 padding: 20px; 
                 border-radius: 15px; 
                 border-right: 10px solid #1e3a8a; 
-                box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
-                margin-top: -20px; /* ✅ المسافة الصحيحة */
+                box-shadow: {shadow_val}; 
+                margin-top: -20px; /* ✅ المسافة الصحيحة لإنزال الترحيب */
                 text-align: right; 
-                border: 1px solid #ddd; 
+                border: 1px solid {border_color}; 
             }}
             .medal-flex {{ display: flex; justify-content: space-between; gap: 8px; margin: 15px 0; }}
-            .m-card {{ flex: 1; background: #ffffff; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }}
+            .m-card {{ flex: 1; background: {card_bg}; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid {border_color}; box-shadow: {shadow_val}; transition: 0.3s; }}
             .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }}
             .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 6px 12px rgba(217, 119, 6, 0.2); }}
             
-            .mobile-card {{ background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 12px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
+            .mobile-card {{ background: {card_bg}; color: {text_color}; padding: 18px; border-radius: 12px; border: 1.5px solid {border_color}; margin-bottom: 12px; font-weight: 800; box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
             .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }}
             </style>
             
             <div class="app-header">
                 <h2 style='margin:0; color:#1e3a8a;'>👋 مرحباً بك: {s_name}</h2>
-                <p style='margin:5px 0 0 0; color:#000; font-weight:900;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {student_id}</p>
+                <p style='margin:5px 0 0 0; color:{text_color}; font-weight:900;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {student_id}</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -854,9 +854,9 @@ if st.session_state.role == "student":
         # 🏅 الأوسمة والنقاط
         st.markdown(f"""
             <div class="medal-flex">
-                <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:#000;'>ذهبي</b></div>
-                <div class="m-card {'m-active' if s_points >= 50 else ''}">🥈<br><b style='color:#000;'>فضي</b></div>
-                <div class="m-card m-active">🥉<br><b style='color:#000;'>برونزي</b></div>
+                <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:{text_color};'>ذهبي</b></div>
+                <div class="m-card {'m-active' if s_points >= 50 else ''}">🥈<br><b style='color:{text_color};'>فضي</b></div>
+                <div class="m-card m-active">🥉<br><b style='color:{text_color};'>برونزي</b></div>
             </div>
             <div class="points-banner">
                 <p style='margin:0; font-size: 1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز</p>
@@ -877,7 +877,7 @@ if st.session_state.role == "student":
                         st.markdown(f"""
                             <div class="mobile-card">
                                 📢 {row.get('العنوان', 'تعميم جديد')} <br> 
-                                <small style='color:#555; font-weight:normal;'>📅 {row.get('التاريخ', '')}</small> <br> 
+                                <small style='color:{sub_text}; font-weight:normal;'>📅 {row.get('التاريخ', '')}</small> <br> 
                                 <div style='margin-top:5px; font-weight:normal; font-size:0.95rem;'>{row.get('الرابط', row.get('التفاصيل', ''))}</div>
                             </div>
                         """, unsafe_allow_html=True)
@@ -915,7 +915,7 @@ if st.session_state.role == "student":
                         <div class="mobile-card">📝 المشاركة والمهام: {g.get('p1', 0)}</div>
                         <div class="mobile-card">✍️ اختبار قصير: {g.get('p2', 0)}</div>
                         <div class="mobile-card" style="background:#f0fdf4; border-right-color:#10b981; border-width:2px;">
-                            🏆 المجموع الكلي: <span style='font-size:1.3rem;'>{g.get('perf', 0)}</span>
+                            🏆 المجموع الكلي: <span style='font-size:1.3rem; color:#000;'>{g.get('perf', 0)}</span>
                         </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -928,9 +928,12 @@ if st.session_state.role == "student":
             top_10 = df_st.sort_values(by="pts_num", ascending=False).head(10)
             for i, (_, row) in enumerate(top_10.iterrows(), 1):
                 icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
-                is_me_style = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
+                # تمييز الطالب الحالي بحدود ملونة
+                is_me_style = "border: 2px solid #1e3a8a;" if str(row['clean_id']) == student_id else ""
+                bg_style = "background: #eff6ff;" if str(row['clean_id']) == student_id and not st.session_state.theme_mode else ""
+                
                 st.markdown(f"""
-                    <div class="mobile-card" style="{is_me_style}">
+                    <div class="mobile-card" style="{is_me_style} {bg_style}">
                         <span style='font-size:1.2rem;'>{icon}</span> {row['name']} 
                         <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span>
                     </div>
