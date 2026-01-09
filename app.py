@@ -869,6 +869,9 @@ if st.session_state.role == "student":
                 
                 if st.form_submit_button("💾 حفظ التعديلات"):
                     try:
+                        # ✅ خطوة التصحيح: تنظيف الرقم وتنسيقه (966) قبل الحفظ
+                        final_phone = clean_phone_number(new_phone) if new_phone else ""
+
                         ws_st = sh.worksheet("students")
                         # البحث عن رقم السطر باستخدام المعرف
                         cell = ws_st.find(student_id)
@@ -883,7 +886,7 @@ if st.session_state.role == "student":
                                 
                                 # التحديث في الخلايا الصحيحة
                                 ws_st.update_cell(cell.row, col_mail, new_mail)
-                                ws_st.update_cell(cell.row, col_phone, new_phone)
+                                ws_st.update_cell(cell.row, col_phone, final_phone) # تم استخدام الرقم المنسق
                                 
                                 st.success("✅ تم تحديث بياناتك بنجاح!")
                                 st.cache_data.clear() # مسح الكاش لرؤية التغيير
