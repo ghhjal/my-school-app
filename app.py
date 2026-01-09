@@ -823,6 +823,29 @@ if st.session_state.role == "student":
             .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }}
             </style>
             
+            # 🎨 التنسيقات (تم تعديل margin-top لتنزيل الترحيب)
+        st.markdown(f"""
+            <style>
+            /* ✅ تم تعديل margin-top من -50px إلى -20px لإنزال البطاقة */
+            .app-header {{ 
+                background: #ffffff; 
+                padding: 20px; 
+                border-radius: 15px; 
+                border-right: 10px solid #1e3a8a; 
+                box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+                margin-top: -20px; 
+                text-align: right; 
+                border: 1px solid #ddd; 
+            }}
+            .medal-flex {{ display: flex; justify-content: space-between; gap: 8px; margin: 15px 0; }}
+            .m-card {{ flex: 1; background: #ffffff; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }}
+            .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }}
+            .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 6px 12px rgba(217, 119, 6, 0.2); }}
+            
+            .mobile-card {{ background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 12px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
+            .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }}
+            </style>
+            
             <div class="app-header">
                 <h2 style='margin:0; color:#1e3a8a;'>👋 مرحباً بك: {s_name}</h2>
                 <p style='margin:5px 0 0 0; color:#000; font-weight:900;'>🏫 الصف الدراسي: {s_class} | 🆔 الرقم: {student_id}</p>
