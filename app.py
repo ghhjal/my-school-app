@@ -1,32 +1,20 @@
 import streamlit as st
-import gspread
 import pandas as pd
-import hashlib
-import time
-import datetime
-import logging
-from google.oauth2.service_account import Credentials
+import gspread
 import urllib.parse
+import datetime
+import hashlib
 import io
+from google.oauth2.service_account import Credentials
 
-# --- 1. إعدادات النظام (يجب أن يكون أول أمر Streamlit) ---
+# ==========================================
+# ⚙️ 1. إعدادات النظام والاستقرار الأساسية
+# ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# إعدادات التسجيل
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
-
-# --- تهيئة القيم الافتراضية وذاكرة التبويبات (إصلاح IndentationError) ---
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = 0
-
-if "max_tasks" not in st.session_state:
-    st.session_state.max_tasks = 60
-
-if "max_quiz" not in st.session_state:
-    st.session_state.max_quiz = 40
-# الاتصال بـ Google Sheets
 @st.cache_resource
 def get_gspread_client():
+    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -34,74 +22,174 @@ def get_gspread_client():
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
     except Exception as e:
-        st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من Secrets.")
+        st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
         return None
 
+# تعريف العميل الأساسي
 sh = get_gspread_client()
 
-# --- 2. دوال معالجة البيانات (الذكاء البرمجي) ---
+# ==========================================
+# ⚙️ تأسيس النظام وتحميل الإعدادات
+# ==========================================
+if "max_tasks" not in st.session_state:
+    try:
+        df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
+        st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
+        st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
+        st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
+        
+        classes_raw = str(df_sett[df_sett['key'] == 'class_list']['value'].values[0])
+        st.session_state.class_options = [c.strip() for c in classes_raw.split(',')]
+        
+        stages_raw = str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0])
+        st.session_state.stage_options = [s.strip() for s in stages_raw.split(',')]
+        
+    except Exception as e:
+        st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
+        st.session_state.current_year = "1447هـ"
+        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
+        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
-@st.cache_data(ttl=30)
+if "role" not in st.session_state: st.session_state.role = None
+if "active_tab" not in st.session_state: st.session_state.active_tab = 0
+
+# ==========================================
+# 🧠 2. دوال معالجة البيانات الاحترافية
+# ==========================================
+
+@st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
-    """جلب البيانات مع ضمان تحويل المعرف (ID) لنص لمنع انهيار البرنامج"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
-        if not df.empty:
-            # الاعتماد على المعرف كـ نص لمنع فقدان الأصفار
+        if not df.empty: 
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
-    except:
+    except: 
         return pd.DataFrame()
 
-def get_col_idx(df, col_name):
-    """إيجاد رقم العمود بناءً على اسمه لضمان عدم تأثر الكود بتغيير الترتيب في الشيت"""
-    try:
-        return df.columns.get_loc(col_name) + 1
-    except:
-        return None
+def clean_phone_number(phone):
+    p = str(phone).strip().replace(" ", "")
+    if p.startswith("0"): p = p[1:]
+    if not p.startswith("966") and p != "": p = "966" + p
+    return p
 
-def dynamic_append_student(f_id, f_name, f_stage, f_year, f_class, f_email, f_phone):
-    """إضافة طالب بناءً على أسماء الأعمدة الفعلية لتجنب مشكلة إزاحة البيانات"""
+def safe_append_row(worksheet_name, data_dict):
     try:
-        ws = sh.worksheet("students")
+        ws = sh.worksheet(worksheet_name)
         headers = ws.row_values(1)
-        data_map = {
-            "id": str(f_id).strip(),
-            "name": f_name,
-            "class": f_class,
-            "year": f_year,
-            "sem": f_stage,
-            "الإيميل": f_email,
-            "الجوال": str(f_phone),
-            "النقاط": "0"
-        }
-        # بناء السطر بناءً على الترتيب الحقيقي للأعمدة في ملفك
-        new_row = [data_map.get(h, "") for h in headers]
-        ws.append_row(new_row)
+        row_to_append = [data_dict.get(h, "") for h in headers]
+        ws.append_row(row_to_append)
         return True
-    except:
+    except Exception as e:
+        st.error(f"⚠️ خطأ في الكتابة لجدول {worksheet_name}: {e}")
         return False
 
-# --- 3. التصميم البصري (CSS) ---
+def get_col_idx(df, col_name):
+    try: return df.columns.get_loc(col_name) + 1
+    except: return None
+
+def get_professional_msg(name, b_type, b_desc, date):
+    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n"
+           f"------------------\n"
+           f"👤 *الطالب:* {name}\n"
+           f"📍 *الملاحظة:* {b_type}\n"
+           f"📝 *التفاصيل:* {b_desc if b_desc else 'متابعة دورية'}\n"
+           f"📅 *التاريخ:* {date}\n"
+           f"------------------\n"
+           f"🏛️ *منصة زياد الذكية*")
+    return urllib.parse.quote(msg)
+
+# ==========================================
+# 🎨 3. التصميم البصري (تحديث نظام اللوجو والهوية)
+# ==========================================
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
-    .header-section { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin: -80px -20px 20px -20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-    .stButton>button { border-radius: 12px !important; font-weight: bold; width: 100%; height: 3.5em; }
-    div[data-testid="stForm"] { border-radius: 20px !important; padding: 25px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
+    
+    /* تنسيق الهيدر المطور (نظام اللوجو الجانبي) */
+    .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); /* تدرج ملكي */
+        padding: 40px 30px;
+        border-radius: 0 0 40px 40px;
+        margin: -80px -20px 35px -20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        color: white;
+    }
+    
+    .logo-icon {
+        font-size: 5.5rem;
+        margin-left: 30px;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .header-text h1 {
+        margin: 0;
+        font-size: 2.8rem;
+        font-weight: 900;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .header-text p {
+        margin: 10px 0 0 0;
+        font-size: 1.2rem;
+        color: #dbeafe;
+        font-weight: 700;
+    }
+
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+    }
+    
+    .stMetric { background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .footer-text { text-align: center; color: #666; padding: 20px; font-size: 0.9em; }
     </style>
-    <div class="header-section">
-        <h1>منصة زياد الذكية</h1>
-        <p>الإصدار الإداري المتكامل - 2026</p>
+    
+    <div class="header-container">
+        <div class="logo-icon">🎓</div>
+        <div class="header-text">
+            <h1>منصة الأستاذ زياد الذكية</h1>
+            <p>بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-if "role" not in st.session_state: st.session_state.role = None
+# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
+def show_footer():
+    st.markdown("---")
+    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    
+    col_tele, col_wa, col_mail = st.columns(3)
+    with col_tele:
+        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
+    with col_wa:
+        # يرجى وضع رقمك الحقيقي هنا
+        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
+    with col_mail:
+        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
+    
+    st.markdown("""
+        <div class="footer-text">
+            <hr style="border: 0.1px solid #eee;">
+            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
+            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
 
+# ---------------------------------------------------------
+# استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
+# ---------------------------------------------------------
+if st.session_state.role is None:
+    show_footer()
 # ==========================================
 # 🔐 نظام الدخول الموحد
 # ==========================================
