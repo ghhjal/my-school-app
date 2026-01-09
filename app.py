@@ -704,7 +704,7 @@ if st.session_state.role == "student":
                 <div class="m-card m-active">🥉<br><b style='color:#000;'>برونزي</b></div>
             </div>
             
-            # 📊 4. هيدر النقاط العملاق
+            # 📊 #
             <div class="points-banner">
                 <p style='margin:0; font-size: 1.1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز السلوكي</p>
                 <h1 style='margin:0; font-size: 4.5rem; font-weight: 900;'>{s_points}</h1>
