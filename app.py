@@ -104,34 +104,43 @@ if "role" not in st.session_state: st.session_state.role = None
 
 
 # ==========================================
-# 🔐 4. نظام تسجيل الدخول الموحد
+# 🔐 نظام الدخول الموحد
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 بوابة دخول الطلاب", "👨‍💼 لوحة تحكم المعلم"])
+    t1, t2 = st.tabs(["🎓 دخول الطلاب", "🔐 دخول الإدارة"])
     with t1:
-        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>أهلاً بك يا بطل.. أدخل رقمك الأكاديمي</h4>", unsafe_allow_html=True)
-        with st.form("st_log_v2026"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
-            if st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True):
+        with st.form("st_log"):
+            sid_input = st.text_input("🆔 الرقم الأكاديمي").strip()
+            if st.form_submit_button("دخول الطلاب 🚀"):
                 df_st = fetch_safe("students")
-                if not df_st.empty:
-                    df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
-                    if sid_in.split('.')[0] in df_st['clean_id'].values:
-                        st.session_state.username = sid_in.split('.')[0]; st.session_state.role = "student"; st.rerun()
-                    else: st.error("❌ الرقم غير مسجل. تواصل مع معلمك.")
+                if not df_st.empty and sid_input in df_st.iloc[:, 0].values:
+                    st.session_state.role = "student"; st.session_state.sid = sid_input; st.rerun()
+                else: st.error("عذراً، الرقم غير مسجل")
     with t2:
-        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>🔐 تسجيل دخول الإدارة</h4>", unsafe_allow_html=True)
-        with st.form("admin_log_v2026"):
-            u = st.text_input("👤 اسم المستخدم")
-            p = st.text_input("🔑 كلمة المرور", type="password")
-            if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
+        with st.form("te_log"):
+            u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
+            if st.form_submit_button("دخول الإدارة"):
                 df_u = fetch_safe("users")
-                if not df_u.empty and u in df_u['username'].values:
-                    user_data = df_u[df_u['username']==u].iloc[0]
-                    if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
-                        st.session_state.role = "teacher"; st.session_state.username = u; st.rerun()
-                st.error("❌ بيانات الدخول خاطئة.")
-    show_footer()
+                if not df_u.empty and u.strip() in df_u['username'].values:
+                    if hashlib.sha256(str.encode(p)).hexdigest() == df_u[df_u['username']==u.strip()].iloc[0]['password_hash']:
+                        st.session_state.role = "teacher"; st.rerun()
+                    else: st.error("كلمة المرور خاطئة")
+    st.stop()
+# --- كود الشاشة الرئيسية الذكي (يوضع بعد تسجيل الدخول مباشرة) ---
+df_ex = fetch_safe("exams")
+if not df_ex.empty:
+    # فلترة الإعلانات التي اخترت أنت عرضها في الرئيسية (العمود الخامس هو index 4)
+    # التأكد من وجود العمود الخامس أولاً لتجنب الأخطاء
+    if len(df_ex.columns) >= 5:
+        urgent_ann = df_ex[df_ex.iloc[:, 4] == "نعم"].iloc[-1:]
+        
+        if not urgent_ann.empty:
+            st.markdown(f"""
+                <div style="background: #fff5f5; border: 2px solid #feb2b2; padding: 20px; border-radius: 15px; margin-bottom: 25px; border-right: 10px solid #f56565;">
+                    <h3 style="color: #c53030; margin: 0;">📢 إعلان هام: {urgent_ann.iloc[0, 1]}</h3>
+                    <p style="color: #4a5568; margin: 10px 0;">{urgent_ann.iloc[0, 3]}</p>
+                </div>
+            """, unsafe_allow_html=True)
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
