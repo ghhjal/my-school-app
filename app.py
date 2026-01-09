@@ -274,7 +274,7 @@ if st.session_state.role == "teacher":
                     safe_append_row("students", {"id": id_1, "name": nm_1, "النقاط": "0"})
                     st.rerun()
     # ---------------------------------------------------------
-    # 📊 التبويب 1: التقييم والمتابعة (الإصدار المصحح والمتطابق مع الشيت)
+    # 📊 التبويب 1: التقييم والمتابعة (الإصدار المدمج والمنسق)
     # ---------------------------------------------------------
     with menu[1]:
         st.subheader("📊 مركز التقييم والمتابعة السلوكية")
@@ -289,7 +289,7 @@ if st.session_state.role == "teacher":
                 sid = st_list[sel]
                 # جلب بيانات الطالب بدقة
                 s_info = df_eval[df_eval.iloc[:, 0] == sid].iloc[0]
-                s_name = s_info['name'] # استخدام اسم العمود 'name' بدلاً من الفهرس
+                s_name = s_info['name'] 
                 
                 # جلب وتجهيز بيانات التواصل
                 cl_p = clean_phone_number(s_info.get('الجوال', ''))
@@ -297,7 +297,7 @@ if st.session_state.role == "teacher":
 
                 c_g, c_b = st.columns(2)
 
-                # --- 📝 رصد الدرجات (مشاركة واختبار) ---
+                # --- 📝 القسم الأيمن: رصد الدرجات ---
                 with c_g:
                     st.markdown("##### 📝 رصد الدرجات")
                     with st.form("grade_f_v26"):
@@ -305,7 +305,6 @@ if st.session_state.role == "teacher":
                         v_q = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100)
                         if st.form_submit_button("💾 حفظ الدرجات"):
                             if v_t <= st.session_state.max_tasks and v_q <= st.session_state.max_quiz:
-                                # مفاتيح الدرجات: student_id, p1, p2, perf, date
                                 grade_data = {
                                     "student_id": sid, 
                                     "p1": str(v_t), 
@@ -319,14 +318,16 @@ if st.session_state.role == "teacher":
                             else:
                                 st.error("⚠️ الدرجة المدخلة تتجاوز الحد المسموح.")
 
-                # --- 🎭 رصد السلوك (تصحيح أسماء الحقول) ---
+                # --- 🎭 القسم الأيسر: رصد السلوك (مع تحديث النقاط التلقائي) ---
                 with c_b:
                     st.markdown("##### 🎭 المتابعة السلوكية")
-                    with st.form("beh_f_v26", clear_on_submit=True):
+                    with st.form("beh_f_v26_auto", clear_on_submit=True):
+                        # القائمة تحتوي على القيم الرقمية
                         b_type = st.selectbox("نوع السلوك:", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص قلم (-5)", "🚫 سلبي (-10)"])
                         b_msg = st.text_area("الملاحظة")
-                        if st.form_submit_button("💾 تسجيل السلوك"):
-                            # ✅ التصحيح: استخدام المفاتيح المطابقة لملف الإكسل (student_id, date, type, note)
+                        
+                        if st.form_submit_button("💾 تسجيل وتحديث النقاط"):
+                            # 1. تسجيل الملاحظة في السجل
                             beh_data = {
                                 "student_id": sid, 
                                 "date": str(datetime.date.today()), 
@@ -334,19 +335,43 @@ if st.session_state.role == "teacher":
                                 "note": b_msg
                             }
                             if safe_append_row("behavior", beh_data):
-                                st.success("✅ تم تسجيل الملاحظة بنجاح")
+                                # 2. تحديث رصيد النقاط في جدول الطلاب تلقائياً
+                                try:
+                                    import re
+                                    # استخراج الرقم من النص (مثال: +10 من النص)
+                                    score_match = re.search(r'\(([\+\-]?\d+)\)', b_type)
+                                    score_change = int(score_match.group(1)) if score_match else 0
+                                    
+                                    if score_change != 0:
+                                        ws_st = sh.worksheet("students")
+                                        cell = ws_st.find(sid)
+                                        if cell:
+                                            headers = ws_st.row_values(1)
+                                            if 'النقاط' in headers:
+                                                col_idx = headers.index('النقاط') + 1
+                                                # قراءة القيمة الحالية
+                                                current_val = ws_st.cell(cell.row, col_idx).value
+                                                current_points = int(current_val) if current_val and str(current_val).isdigit() else 0
+                                                # حساب الجديد
+                                                new_total = current_points + score_change
+                                                # الحفظ
+                                                ws_st.update_cell(cell.row, col_idx, new_total)
+                                                st.toast(f"📈 تم تحديث الرصيد إلى: {new_total}")
+                                except Exception as e:
+                                    st.warning(f"تم التسجيل ولكن لم يتم تحديث النقاط: {e}")
+
+                                st.success("✅ تمت العملية بنجاح")
                                 st.cache_data.clear(); st.rerun()
 
-                # --- 📜 السجل التاريخي (تصحيح العرض) ---
+                # --- 📜 السجل التاريخي (أسفل الصفحة) ---
                 st.divider()
                 st.markdown(f"#### 📜 سجل ملاحظات الطالب: {s_name}")
                 df_beh = fetch_safe("behavior")
                 
-                # تصفية الملاحظات الخاصة بالطالب المحدد
                 if not df_beh.empty:
-                    # التأكد من اسم عمود المعرف في جدول السلوك (student_id)
-                    beh_id_col = 'student_id' if 'student_id' in df_beh.columns else df_beh.columns[0]
-                    my_beh = df_beh[df_beh[beh_id_col].astype(str) == str(sid)]
+                    # تحديد اسم عمود المعرف (student_id أو id)
+                    col_id = 'student_id' if 'student_id' in df_beh.columns else df_beh.columns[0]
+                    my_beh = df_beh[df_beh[col_id].astype(str) == str(sid)]
                 else:
                     my_beh = pd.DataFrame()
                 
@@ -355,25 +380,20 @@ if st.session_state.role == "teacher":
                         with st.container(border=True):
                             ct, cb = st.columns([3, 1.2]) 
                             with ct:
-                                # عرض التاريخ والنوع والملاحظة بناءً على أسماء الأعمدة الصحيحة
-                                date_val = r.get('date', '')
-                                type_val = r.get('type', '')
-                                note_val = r.get('note', '')
-                                
-                                st.write(f"📅 **{date_val}** | **{type_val}**")
-                                if note_val: st.caption(f"📝 {note_val}")
+                                d_val = r.get('date', '')
+                                t_val = r.get('type', '')
+                                n_val = r.get('note', '')
+                                st.write(f"📅 **{d_val}** | **{t_val}**")
+                                if n_val: st.caption(f"📝 {n_val}")
                             
                             with cb:
-                                # توليد وتشفير الرسالة الاحترافية
-                                m_enc = get_professional_msg(s_name, type_val, note_val, date_val)
-                                
-                                # أزرار التواصل تعمل الآن ببيانات صحيحة
+                                m_enc = get_professional_msg(s_name, t_val, n_val, d_val)
                                 st.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={cl_p}&text={m_enc}", use_container_width=True)
                                 st.link_button("📧 Email", f"mailto:{s_mail}?subject=تقرير متابعة: {s_name}&body={m_enc}", use_container_width=True)
                 else:
                     st.info("💡 لا توجد ملاحظات سابقة لهذا الطالب.")
         else:
-            st.info("💡 لا يوجد طلاب حالياً، يرجى إضافة طلاب من التبويب الأول.")
+            st.info("💡 لا يوجد طلاب حالياً.")
 
     # ---------------------------------------------------------
     # ---------------------------------------------------------
@@ -458,7 +478,7 @@ if st.session_state.role == "teacher":
         else:
             st.info("💡 لا توجد تنبيهات منشورة حالياً في قاعدة البيانات.")
     # ---------------------------------------------------------
-    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة النهائية 2026)
+    # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة النهائية الكاملة 2026)
     # ---------------------------------------------------------
     with menu[3]:
         st.subheader("⚙️ غرفة التحكم وإعدادات النظام")
@@ -475,13 +495,10 @@ if st.session_state.role == "teacher":
             if c2.button("🧹 تصفير نقاط جميع الطلاب", type="primary", use_container_width=True):
                 try:
                     ws_st = sh.worksheet("students")
-                    # جلب كل البيانات لحساب عدد الصفوف
                     all_data = ws_st.get_all_values()
                     if len(all_data) > 1:
                         row_count = len(all_data)
-                        # تجهيز قائمة من الأصفار لتغطية المجال من I2 إلى آخر صف
                         zero_fill = [[0]] * (row_count - 1)
-                        # التحديث دفعة واحدة (Batch Update) لتوفير الموارد
                         ws_st.update(range_name=f"I2:I{row_count}", values=zero_fill)
                         st.success("✅ تم تصفير نقاط جميع الطلاب بنجاح!")
                         st.cache_data.clear(); st.rerun()
@@ -490,17 +507,15 @@ if st.session_state.role == "teacher":
                 except Exception as e:
                     st.error(f"❌ حدث خطأ أثناء التصفير: {e}")
 
-        # 2. إدارة الثوابت (القوائم والدرجات) - تحديث فوري
+        # 2. تحديث القوائم والدرجات (ديناميكي)
         with st.expander("📝 تحديث القوائم والدرجات (ديناميكي)"):
-            st.info("💡 التعديلات هنا تنعكس فوراً على نموذج 'إضافة طالب' و 'رصد الدرجات'.")
+            st.info("💡 التعديلات هنا تنعكس فوراً على النظام.")
             
-            # أخذ القيم الحالية من الذاكرة
             c_y = st.text_input("🗓️ العام الدراسي الحالي:", st.session_state.current_year)
             
             c_cls, c_stg = st.columns(2)
-            # تحويل القوائم لنصوص للعرض في text_area
-            cls_txt = c_cls.text_area("🏫 قائمة الصفوف (افصل بفاصلة):", ", ".join(st.session_state.class_options))
-            stg_txt = c_stg.text_area("🎓 قائمة المراحل (افصل بفاصلة):", ", ".join(st.session_state.stage_options))
+            cls_txt = c_cls.text_area("🏫 الصفوف (افصل بفاصلة):", ", ".join(st.session_state.class_options))
+            stg_txt = c_stg.text_area("🎓 المراحل (افصل بفاصلة):", ", ".join(st.session_state.stage_options))
             
             c_mk, c_mq = st.columns(2)
             n_mt = c_mk.number_input("درجة المشاركة القصوى:", 0, 100, st.session_state.max_tasks)
@@ -509,45 +524,41 @@ if st.session_state.role == "teacher":
             if st.button("💾 حفظ الإعدادات وتحديث النظام"):
                 try:
                     ws_s = sh.worksheet("settings")
-                    # تحديث الخلايا في شيت الإعدادات (B2, B3, B4, B5, B6)
+                    # تحديث الخلايا دفعة واحدة
                     batch_updates = [
-                        {'range': 'B2', 'values': [[n_mt]]},
-                        {'range': 'B3', 'values': [[n_mq]]},
-                        {'range': 'B4', 'values': [[c_y]]},
-                        {'range': 'B5', 'values': [[cls_txt]]},
+                        {'range': 'B2', 'values': [[n_mt]]}, {'range': 'B3', 'values': [[n_mq]]},
+                        {'range': 'B4', 'values': [[c_y]]}, {'range': 'B5', 'values': [[cls_txt]]},
                         {'range': 'B6', 'values': [[stg_txt]]}
                     ]
                     ws_s.batch_update(batch_updates)
                     
-                    # ✅ تحديث الذاكرة الحية (Session State) فوراً
+                    # تحديث الذاكرة الحية
                     st.session_state.max_tasks = n_mt
                     st.session_state.max_quiz = n_mq
                     st.session_state.current_year = c_y
                     st.session_state.class_options = [x.strip() for x in cls_txt.split(',') if x.strip()]
                     st.session_state.stage_options = [x.strip() for x in stg_txt.split(',') if x.strip()]
                     
-                    st.success("✅ تم الحفظ! القوائم والدرجات محدثة الآن.")
-                    st.cache_data.clear() # مسح الكاش لضمان التحميل القادم
-                    st.rerun()
+                    st.success("✅ تم الحفظ وتحديث النظام بنجاح."); st.cache_data.clear(); st.rerun()
                 except Exception as e:
                     st.error(f"❌ خطأ في الحفظ: {e}")
 
-        # 3. المزامنة الذكية (Smart Sync) - المعالجة المتقدمة
+        # 3. المزامنة الذكية (الكود المطور والمدمج)
         with st.expander("📤 المزامنة الذكية (رفع ملفات Excel)"):
-            st.warning("⚠️ هذا الإجراء يقوم بتحديث البيانات الموجودة وإضافة الجديدة.")
+            st.info("💡 سيقوم النظام بتحديث البيانات وتجاهل الصفوف الفارغة.")
             up_file = st.file_uploader("اختر ملف الإكسل (xlsx)", type=['xlsx'])
             target_sheet = st.radio("الجدول المستهدف:", ["students", "grades"], horizontal=True)
             
             if st.button("🚀 بدء المزامنة"):
                 if up_file:
                     try:
-                        with st.status("⏳ جاري قراءة الملف ومعالجة البيانات...", expanded=True) as status:
-                            # قراءة الملف وتجاهل الصفوف الفارغة
+                        with st.status("⏳ جاري المعالجة...", expanded=True) as status:
+                            # قراءة الملف وتنظيفه
                             df_up = pd.read_excel(up_file, engine='openpyxl').fillna("")
                             df_up = df_up.dropna(how='all')
                             
                             ws = sh.worksheet(target_sheet)
-                            # جلب البيانات الحالية للمقارنة
+                            # جلب المعرفات الحالية للمقارنة
                             current_data = ws.get_all_records()
                             current_ids = [str(row.get('id', row.get('student_id', ''))) for row in current_data]
                             headers = ws.row_values(1)
@@ -556,63 +567,82 @@ if st.session_state.role == "teacher":
                             
                             for _, row in df_up.iterrows():
                                 d = row.to_dict()
-                                # توحيد اسم المعرف (id أو student_id)
+                                # توحيد اسم المعرف
                                 raw_id = str(d.get('student_id', d.get('id', ''))).strip()
-                                # إزالة الفواصل العشرية من الرقم الأكاديمي
-                                id_v = raw_id.split('.')[0]
+                                id_v = raw_id.split('.')[0] # إزالة الفواصل العشرية
                                 
                                 if not id_v or id_v == '0':
                                     skip_c += 1; continue
                                 
-                                # تجهيز البيانات حسب الجدول
+                                # تجهيز البيانات حسب نوع الجدول
                                 if target_sheet == "grades":
                                     p1 = int(pd.to_numeric(d.get('p1', 0), errors='coerce') or 0)
                                     p2 = int(pd.to_numeric(d.get('p2', 0), errors='coerce') or 0)
                                     d.update({"student_id": id_v, "p1": p1, "p2": p2, "perf": p1+p2, "date": str(datetime.date.today())})
-                                    # إزالة أي مفاتيح غير ضرورية
                                     if 'id' in d: del d['id']
                                 else:
                                     d['id'] = id_v
                                     if 'الجوال' in d: d['الجوال'] = clean_phone_number(d['الجوال'])
+                                    # ضمان وجود قيمة للنقاط
+                                    if 'النقاط' not in d or str(d.get('النقاط', '')).strip() == "": d['النقاط'] = 0
 
-                                # التحقق والتحديث
+                                # التحديث أو الإضافة
                                 if id_v in current_ids:
-                                    # تحديث (نبحث عن رقم الصف - تذكر أن البيانات تبدأ من الصف 2)
                                     row_idx = current_ids.index(id_v) + 2 
-                                    # بناء الصف بنفس ترتيب الأعمدة في الشيت
-                                    row_values = [str(d.get(h, "")) for h in headers]
-                                    ws.update(range_name=f"A{row_idx}", values=[row_values])
+                                    row_vals = [str(d.get(h, "")) for h in headers]
+                                    ws.update(range_name=f"A{row_idx}", values=[row_vals])
                                     up_c += 1
                                 else:
-                                    # إضافة جديد
-                                    row_values = [str(d.get(h, "")) for h in headers]
-                                    ws.append_row(row_values)
+                                    row_vals = [str(d.get(h, "")) for h in headers]
+                                    ws.append_row(row_vals)
                                     new_c += 1
                             
-                            status.update(label="✅ تمت المزامنة!", state="complete", expanded=False)
+                            status.update(label="✅ تمت العملية!", state="complete", expanded=False)
                         st.success(f"النتيجة: ✅ تحديث {up_c} | ➕ إضافة {new_c} | ⚠️ تجاهل {skip_c}")
                         st.cache_data.clear(); st.rerun()
                     except Exception as e:
-                        st.error(f"❌ حدث خطأ: {e}")
+                        st.error(f"❌ خطأ: {e}")
 
-        # 4. الأمان والنسخ الاحتياطي
-        with st.expander("🔐 الأمان والنسخ الاحتياطي"):
+        # 4. إدارة المستخدمين (تمت إعادة الميزة المفقودة)
+        with st.expander("🔐 إدارة المستخدمين (إضافة معلم/إداري)"):
+            with st.form("add_user_v26_final", clear_on_submit=True):
+                st.write("إضافة مستخدم جديد للنظام:")
+                new_u = st.text_input("👤 اسم المستخدم")
+                new_p = st.text_input("🔑 كلمة المرور", type="password")
+                
+                if st.form_submit_button("➕ إضافة المستخدم"):
+                    if new_u and new_p:
+                        # تشفير كلمة المرور قبل الحفظ
+                        h_p = hashlib.sha256(str.encode(new_p)).hexdigest()
+                        # الإضافة لجدول المستخدمين
+                        if safe_append_row("users", {"username": new_u, "password_hash": h_p, "role": "teacher"}):
+                            st.success(f"✅ تم إضافة المستخدم {new_u} بنجاح")
+                            st.cache_data.clear()
+                    else:
+                        st.warning("⚠️ يرجى إدخال الاسم وكلمة المرور")
+
+        # 5. الأمان والنسخ الاحتياطي
+        with st.expander("📂 النسخ الاحتياطي والقوالب"):
             t1, t2 = st.tabs(["تغيير الباسوورد", "تنزيل القوالب"])
             
             with t1:
-                with st.form("chg_pwd"):
+                with st.form("chg_pwd_main"):
                     np = st.text_input("كلمة المرور الجديدة", type="password")
                     if st.form_submit_button("تحديث"):
                         if np:
                             hp = hashlib.sha256(str.encode(np)).hexdigest()
-                            # تحديث الباسوورد للمستخدم الحالي فقط
-                            # (يتطلب منطق بحث عن المستخدم، هنا مثال مبسط)
-                            st.info("⚠️ هذه الميزة تتطلب صلاحيات خاصة")
+                            # تحديث للمستخدم الحالي (Admin كمثال)
+                            df_u = fetch_safe("users")
+                            curr_user = st.session_state.get('username', 'admin')
+                            if curr_user in df_u['username'].values:
+                                u_idx = df_u[df_u['username'] == curr_user].index[0] + 2
+                                sh.worksheet("users").update_cell(u_idx, 2, hp)
+                                st.success("✅ تم التغيير")
+                            else: st.error("المستخدم غير موجود")
             
             with t2:
-                # توليد قوالب الإكسل
                 b1 = io.BytesIO()
-                pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل"]).to_excel(b1, index=False)
+                pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط"]).to_excel(b1, index=False)
                 st.download_button("📥 قالب الطلاب", b1.getvalue(), "students_template.xlsx")
                 
                 b2 = io.BytesIO()
