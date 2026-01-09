@@ -163,27 +163,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
-def show_footer():
-    st.markdown("---")
-    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
-    
-    col_tele, col_wa, col_mail = st.columns(3)
-    with col_tele:
-        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
-    with col_wa:
-        # يرجى وضع رقمك الحقيقي هنا
-        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
-    with col_mail:
-        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
-    
-    st.markdown("""
-        <div class="footer-text">
-            <hr style="border: 0.1px solid #eee;">
-            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
-            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
-        </div>
-    """, unsafe_allow_html=True)
+
 
 
 
@@ -243,6 +223,27 @@ if st.session_state.role is None:
 # ---------------------------------------------------------
 # استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
 # ---------------------------------------------------------
+# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
+def show_footer():
+    st.markdown("---")
+    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    
+    col_tele, col_wa, col_mail = st.columns(3)
+    with col_tele:
+        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
+    with col_wa:
+        # يرجى وضع رقمك الحقيقي هنا
+        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
+    with col_mail:
+        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
+    
+    st.markdown("""
+        <div class="footer-text">
+            <hr style="border: 0.1px solid #eee;">
+            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
+            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
 if st.session_state.role is None:
     show_footer()
 # ==========================================
