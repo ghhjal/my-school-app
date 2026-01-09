@@ -278,50 +278,87 @@ if st.session_state.role == "teacher":
             
             st.divider()
     
-            # 2. نموذج إضافة طالب جديد (الربط الديناميكي)
-            with st.expander("➕ إضافة طالب جديد (تنسيق ديناميكي)"):
+            # 2. نموذج إضافة طالب جديد (تمت إضافة الحقول المفقودة)
+            with st.expander("➕ إضافة طالب جديد (تنسيق ديناميكي)", expanded=True):
                 with st.form("add_student_v2026_final", clear_on_submit=True):
-                    col1, col2 = st.columns(2)
-                    f_id = col1.text_input("🔢 الرقم الأكاديمي")
-                    f_name = col2.text_input("👤 الاسم الثلاثي")
+                    c1, c2 = st.columns(2)
+                    # استخدام مفاتيح واضحة للحفظ
+                    f_id = c1.text_input("🔢 الرقم الأكاديمي (id)")
+                    f_name = c2.text_input("👤 الاسم الثلاثي (name)")
                     
-                    col3, col4, col5 = st.columns(3)
-                    f_stage = col3.selectbox("🎓 المرحلة", st.session_state.get('stage_options', ['ابتدائي']))
-                    f_year = col4.text_input("🗓️ العام الدراسي", st.session_state.get('current_year', '1447هـ'))
-                    f_class = col5.selectbox("🏫 الصف", st.session_state.get('class_options', ['الأول']))
+                    c3, c4 = st.columns(2)
+                    f_class = c3.selectbox("🏫 الصف (class)", st.session_state.get('class_options', ['الأول']))
+                    f_year = c4.text_input("🗓️ العام الدراسي (year)", st.session_state.get('current_year', '1447هـ'))
                     
+                    # ✅ إعادة حقول التواصل التي كانت مفقودة
+                    c5, c6 = st.columns(2)
+                    f_phone = c5.text_input("📱 رقم الجوال (للتواصل)")
+                    f_mail = c6.text_input("📧 البريد الإلكتروني (اختياري)")
+                    
+                    # حقل مخفي للمرحلة (يمكن تثبيته أو جعله خياراً)
+                    f_stage = "ابتدائي" 
+
                     if st.form_submit_button("✅ اعتماد وحفظ الطالب"):
                         if f_id and f_name:
-                            f_phone = clean_phone_number(st.text_input("📱 الجوال")) 
-                            st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "النقاط": "0"}
+                            # تنظيف رقم الجوال قبل الحفظ
+                            clean_phone = clean_phone_number(f_phone) if f_phone else ""
+                            
+                            # 🛠️ خريطة البيانات (المفاتيح يجب أن تطابق ترويسة Google Sheet تماماً)
+                            # تأكد من أن الأعمدة في شيت 'students' هي: id, name, class, year, sem, الجوال, الإيميل, النقاط
+                            st_map = {
+                                "id": f_id.strip(),
+                                "name": f_name.strip(),
+                                "class": f_class,
+                                "year": f_year,
+                                "sem": f_stage,
+                                "الجوال": clean_phone,   # تم تصحيح الاسم ليطابق الشيت
+                                "الإيميل": f_mail.strip(), # تم تصحيح الاسم ليطابق الشيت
+                                "النقاط": "0"
+                            }
+                            
                             if safe_append_row("students", st_map):
-                                st.success(f"✅ تم إضافة {f_name}")
-                                st.cache_data.clear(); st.rerun()
-                        else: st.warning("⚠️ يرجى إكمال الاسم والرقم.")
+                                st.success(f"✅ تم إضافة الطالب: {f_name}")
+                                st.cache_data.clear()
+                                st.rerun()
+                        else:
+                            st.warning("⚠️ يرجى إكمال الحقول الأساسية (الرقم والاسم).")
     
-            # 3. عرض الطلاب ومحرك البحث الذكي (يجب أن يكون داخل الـ IF)
+            # 3. عرض الطلاب ومحرك البحث
             st.write("---")
             sq = st.text_input("🔍 محرك البحث الذكي (اكتب اسم الطالب أو رقمه):")
-            mask = df_st.iloc[:, 0].astype(str).str.contains(sq) | df_st.iloc[:, 1].astype(str).str.contains(sq)
-            st.dataframe(df_st[mask] if sq else df_st, use_container_width=True, hide_index=True)
+            if sq:
+                mask = df_st.iloc[:, 0].astype(str).str.contains(sq) | df_st.iloc[:, 1].astype(str).str.contains(sq)
+                st.dataframe(df_st[mask], use_container_width=True, hide_index=True)
+            else:
+                st.dataframe(df_st, use_container_width=True, hide_index=True)
     
-            # 4. منطقة الحذف والإدارة
+            # 4. منطقة الحذف
             with st.expander("🗑️ منطقة الحذف والإدارة النهائية"):
-                st.warning("⚠️ تنبيه: الحذف نهائي.")
+                st.warning("⚠️ تنبيه: الحذف نهائي ولا يمكن التراجع عنه.")
                 del_q = st.text_input("ابحث عن الطالب لحذفه:", key="del_search_main")
                 if del_q:
                     df_del = df_st[df_st.iloc[:, 0].astype(str).str.contains(del_q) | df_st.iloc[:, 1].astype(str).str.contains(del_q)]
                     for idx, row in df_del.iterrows():
                         ci, ca = st.columns([3, 1])
                         ci.write(f"👤 {row.iloc[1]} ({row.iloc[0]})")
-                        if ca.button(f"🗑️ حذف", key=f"del_final_{idx}"):
+                        if ca.button(f"🗑️ حذف نهائي", key=f"del_final_{idx}"):
+                            # الحذف يعتمد على رقم السطر في الشيت (index + 2)
                             sh.worksheet("students").delete_rows(int(idx) + 2)
-                            st.cache_data.clear(); st.rerun()
+                            st.success("✅ تم الحذف")
+                            st.cache_data.clear()
+                            st.rerun()
     
-        # 🏁 سطر الـ else متموضع بشكل صحيح الآن في نهاية التبويب
         else:
             st.warning("⚠️ قاعدة بيانات الطلاب فارغة حالياً.")
-            if st.button("🔄 تحديث الشاشة"): st.rerun()
+            # زر لإظهار النموذج حتى لو الجدول فارغ (لإضافة أول طالب)
+            with st.form("add_first_student"):
+                st.info("قم بإضافة أول طالب للنظام:")
+                id_1 = st.text_input("الرقم الأكاديمي")
+                name_1 = st.text_input("الاسم")
+                if st.form_submit_button("حفظ"):
+                    if id_1 and name_1:
+                        safe_append_row("students", {"id": id_1, "name": name_1, "النقاط": "0"})
+                        st.rerun()
     # ---------------------------------------------------------
     # 📊 التبويب 1: التقييم والمتابعة (النسخة الشاملة + أزرار التواصل)
     # ---------------------------------------------------------
