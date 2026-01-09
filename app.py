@@ -11,9 +11,25 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
+# تعريف الدوال الأساسية في البداية لتجنب أخطاء NameError
+def clean_phone_number(phone):
+    """تجهيز رقم الجوال للتواصل"""
+    p = str(phone).strip().replace(" ", "")
+    if p.startswith("0"): p = p[1:]
+    if not p.startswith("966") and p != "": p = "966" + p
+    return p
+
+def show_footer():
+    """عرض قنوات التواصل والحقوق في أسفل الصفحة"""
+    st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
+    c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
+    c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
+
 @st.cache_resource
 def get_gspread_client():
-    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -43,7 +59,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🧠 2. دوال معالجة البيانات الاحترافية
+# 🧠 2. دوال معالجة البيانات
 # ==========================================
 @st.cache_data(ttl=20)
 def fetch_safe(worksheet_name):
@@ -66,48 +82,39 @@ def safe_append_row(worksheet_name, data_dict):
     except: return False
 
 # ==========================================
-# 🎨 3. التصميم البصري الموحد (إصدار تصحيح القبعة والحقول)
+# 🎨 3. التصميم البصري (تصحيح الهيدر والحقول)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
     
-    .block-container { padding-top: 1.5rem; }
-    div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
+    .block-container { padding-top: 1rem; }
 
-    /* ✅ تعديل الهيدر: إنزال الهيدر قليلاً لتظهر القبعة بوضوح */
+    /* ✅ تحسين موقع القبعة: إنزال الهيدر قليلاً لتظهر بوضوح */
     .header-container {
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
         padding: 30px 20px; border-radius: 0 0 40px 40px; 
-        margin: -20px -20px 25px -20px; /* تم تقليل الهامش العلوي من -55 إلى -20 */
+        margin: -20px -20px 25px -20px; 
         box-shadow: 0 15px 20px rgba(0,0,0,0.15); color: white;
     }
-    
     .logo-icon { 
         font-size: 5rem; margin-left: 20px; 
         filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
         animation: float 3s ease-in-out infinite; 
     }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-    /* ✅ تمييز مكان إدخال البيانات والباسوورد بلون أزرق سماوي واضح */
+    /* ✅ تمييز مكان إدخال البيانات والباسوورد بلون سماوي واضح */
     div[data-baseweb="input"] {
-        background-color: #e0f2fe !important; /* لون سماوي فاتح */
-        border: 2px solid #0284c7 !important; /* حدود زرقاء قوية */
+        background-color: #e0f2fe !important; 
+        border: 2px solid #0284c7 !important; 
         border-radius: 12px !important;
-        transition: 0.3s;
     }
-    div[data-baseweb="input"]:focus-within {
-        border-color: #0369a1 !important;
-        box-shadow: 0 0 10px rgba(2, 132, 199, 0.3) !important;
-    }
-    input {
-        color: #0c4a6e !important;
-        font-weight: bold !important;
-    }
+    input { color: #0c4a6e !important; font-weight: bold !important; }
 
+    /* أزرار التواصل والحقوق */
     .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
     .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
     </style>
@@ -121,24 +128,15 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ✅ تعريف دالة الفوتر هنا لضمان عملها في كل مكان (حل مشكلة NameError)
-def show_footer():
-    st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
-    c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
-    c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
-
 # ==========================================
 # 🔐 4. نظام تسجيل الدخول الموحد
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 بوابة دخول الطلاب", "👨‍💼 لوحة تحكم المعلم"])
+    t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 لوحة تحكم المعلم"])
     with t1:
-        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>أهلاً بك يا بطل.. أدخل رقمك الأكاديمي</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>أهلاً بك يا بطل.. سجل دخولك برقمك الأكاديمي</h4>", unsafe_allow_html=True)
         with st.form("st_log_v2026"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
+            sid_in = st.text_input("🔢 الرقم الأكاديمي الموحد").strip()
             if st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True):
                 df_st = fetch_safe("students")
                 if not df_st.empty:
@@ -159,6 +157,8 @@ if st.session_state.role is None:
                         st.session_state.role = "teacher"; st.session_state.username = u; st.rerun()
                 st.error("❌ بيانات الدخول خاطئة.")
     show_footer()
+
+# (هنا يتم دمج واجهة الطالب والمعلم كما في الأكواد السابقة...)
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
