@@ -99,7 +99,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم البصري الموحد (تم ضبط موقع القبعة للأسفل)
+# 🎨 2. التصميم البصري الموحد (إصدار الأزرق الملكي والموقع الصحيح)
 # ==========================================
 st.markdown("""
     <style>
@@ -114,22 +114,30 @@ st.markdown("""
         flex-direction: row-reverse; 
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
-        padding: 60px 20px 40px 20px; /* زيادة الحشوة العلوية والسفلية */
+        /* ✅ العودة للون الأزرق الملكي الصافي */
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        
+        /* ✅ زيادة الحشوة العلوية لإنزال المحتوى للأسفل */
+        padding-top: 80px; 
+        padding-bottom: 40px;
+        padding-left: 20px;
+        padding-right: 20px;
+        
         border-radius: 0 0 35px 35px;
         margin-top: -60px; 
         margin-left: -5rem; 
         margin-right: -5rem;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         color: white;
         text-align: center;
     }
 
     .logo-icon {
-        font-size: 6rem; /* تكبير القبعة قليلاً */
+        font-size: 6rem;
         margin-right: 25px;
-        margin-top: 25px; /* ✅ تم إنزال القبعة للأسفل لتتوسط النص */
-        filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.4));
+        /* ✅ إنزال القبعة أكثر لتكون في المنتصف */
+        margin-top: 15px; 
+        filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.3));
         animation: float 3s ease-in-out infinite;
     }
 
@@ -137,38 +145,35 @@ st.markdown("""
         margin: 0;
         font-size: 3rem;
         font-weight: 900;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         line-height: 1.2;
     }
 
     .header-text p {
         margin: 5px 0 0 0;
-        color: #e2e8f0;
+        color: #dbeafe; /* لون سماوي فاتح جداً للنص الفرعي */
         font-size: 1.2rem;
         font-weight: bold;
-        opacity: 0.9;
     }
 
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-    /* --- تحسينات خاصة للجوال --- */
+    /* --- تحسينات الجوال --- */
     @media (max-width: 768px) {
         .header-container {
             flex-direction: column;
-            padding-top: 80px; /* مسافة أمان علوية للجوال */
+            /* ✅ مسافة أكبر في الجوال لمنع الاختفاء في الأعلى */
+            padding-top: 100px; 
             padding-bottom: 30px;
         }
         .logo-icon {
-            font-size: 4.5rem;
+            font-size: 5rem;
             margin-right: 0;
-            margin-top: 10px; /* ضبط المسافة في الجوال */
-            margin-bottom: 15px;
+            margin-top: 0;
+            margin-bottom: 10px;
         }
         .header-text h1 {
-            font-size: 2rem;
-        }
-        .header-text p {
-            font-size: 1rem;
+            font-size: 2.2rem;
         }
     }
 
