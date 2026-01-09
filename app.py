@@ -274,7 +274,7 @@ if st.session_state.role == "teacher":
                     safe_append_row("students", {"id": id_1, "name": nm_1, "النقاط": "0"})
                     st.rerun()
     # ---------------------------------------------------------
-    # 📊 التبويب 1: التقييم والمتابعة (الإصدار المدمج والمنسق)
+    # 📊 التبويب 1: التقييم والمتابعة (الإصدار المطور: تحديث + حذف + عرض)
     # ---------------------------------------------------------
     with menu[1]:
         st.subheader("📊 مركز التقييم والمتابعة السلوكية")
@@ -287,47 +287,82 @@ if st.session_state.role == "teacher":
             
             if sel:
                 sid = st_list[sel]
-                # جلب بيانات الطالب بدقة
                 s_info = df_eval[df_eval.iloc[:, 0] == sid].iloc[0]
                 s_name = s_info['name'] 
                 
-                # جلب وتجهيز بيانات التواصل
+                # بيانات التواصل
                 cl_p = clean_phone_number(s_info.get('الجوال', ''))
                 s_mail = s_info.get('الإيميل', '')
 
                 c_g, c_b = st.columns(2)
 
-                # --- 📝 القسم الأيمن: رصد الدرجات ---
+                # ==========================================
+                # 📝 القسم الأيمن: رصد وتحديث الدرجات
+                # ==========================================
                 with c_g:
-                    st.markdown("##### 📝 رصد الدرجات")
-                    with st.form("grade_f_v26"):
-                        v_t = st.number_input(f"المشاركة (الحد: {st.session_state.max_tasks})", 0, 100)
-                        v_q = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100)
-                        if st.form_submit_button("💾 حفظ الدرجات"):
-                            if v_t <= st.session_state.max_tasks and v_q <= st.session_state.max_quiz:
-                                grade_data = {
-                                    "student_id": sid, 
-                                    "p1": str(v_t), 
-                                    "p2": str(v_q), 
-                                    "perf": str(v_t+v_q), 
-                                    "date": str(datetime.date.today())
-                                }
-                                if safe_append_row("grades", grade_data):
-                                    st.success("✅ تم رصد الدرجات بنجاح")
-                                    st.cache_data.clear()
-                            else:
-                                st.error("⚠️ الدرجة المدخلة تتجاوز الحد المسموح.")
+                    st.markdown("##### 📝 رصد وتحديث الدرجات")
+                    
+                    # جلب الدرجات الحالية لعرضها في النموذج (اختياري، هنا نبدأ من الصفر أو نعرض القيمة)
+                    df_grades_curr = fetch_safe("grades")
+                    curr_p1 = 0; curr_p2 = 0
+                    if not df_grades_curr.empty:
+                        # البحث عن درجات الطالب
+                        g_row = df_grades_curr[df_grades_curr.iloc[:, 0] == sid]
+                        if not g_row.empty:
+                            curr_p1 = int(pd.to_numeric(g_row.iloc[0]['p1'], errors='coerce') or 0)
+                            curr_p2 = int(pd.to_numeric(g_row.iloc[0]['p2'], errors='coerce') or 0)
 
-                # --- 🎭 القسم الأيسر: رصد السلوك (مع تحديث النقاط التلقائي) ---
+                    with st.form("grade_f_v26"):
+                        # عرض الدرجات الحالية كقيم افتراضية
+                        v_t = st.number_input(f"المشاركة (الحد: {st.session_state.max_tasks})", 0, st.session_state.max_tasks, value=curr_p1)
+                        v_q = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, st.session_state.max_quiz, value=curr_p2)
+                        
+                        if st.form_submit_button("💾 تحديث الدرجات"):
+                            try:
+                                ws_gr = sh.worksheet("grades")
+                                cell = ws_gr.find(sid) # البحث عن الطالب
+                                
+                                total_perf = v_t + v_q
+                                # إذا وجدنا الطالب -> نحدث الصف
+                                if cell:
+                                    # نفترض ترتيب الأعمدة: student_id, p1, p2, perf, date
+                                    ws_gr.update_cell(cell.row, 2, v_t)      # p1
+                                    ws_gr.update_cell(cell.row, 3, v_q)      # p2
+                                    ws_gr.update_cell(cell.row, 4, total_perf) # perf
+                                    ws_gr.update_cell(cell.row, 5, str(datetime.date.today())) # date
+                                    st.success("✅ تم تحديث درجات الطالب بنجاح")
+                                else:
+                                    # إذا لم نجده -> نضيف صف جديد
+                                    new_row = [sid, v_t, v_q, total_perf, str(datetime.date.today())]
+                                    ws_gr.append_row(new_row)
+                                    st.success("✅ تم رصد الدرجات لأول مرة")
+                                
+                                st.cache_data.clear() # مسح الكاش لتحديث الجدول بالأسفل
+                            except Exception as e:
+                                st.error(f"❌ حدث خطأ: {e}")
+
+                    # 📊 عرض جدول الدرجات الحالي للطالب (للتأكد)
+                    st.caption("📋 الدرجات الحالية المسجلة في النظام:")
+                    if not df_grades_curr.empty:
+                        my_g_view = df_grades_curr[df_grades_curr.iloc[:, 0] == sid]
+                        if not my_g_view.empty:
+                            # عرض أنيق للدرجات
+                            g_data = my_g_view.iloc[0]
+                            st.info(f"📌 **المشاركة:** {g_data.get('p1')} | **الاختبار:** {g_data.get('p2')} | **المجموع:** {g_data.get('perf')}")
+                        else:
+                            st.warning("لم يتم رصد درجات لهذا الطالب بعد.")
+
+                # ==========================================
+                # 🎭 القسم الأيسر: سلوكيات + تحديث نقاط
+                # ==========================================
                 with c_b:
                     st.markdown("##### 🎭 المتابعة السلوكية")
                     with st.form("beh_f_v26_auto", clear_on_submit=True):
-                        # القائمة تحتوي على القيم الرقمية
                         b_type = st.selectbox("نوع السلوك:", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص قلم (-5)", "🚫 سلبي (-10)"])
                         b_msg = st.text_area("الملاحظة")
                         
                         if st.form_submit_button("💾 تسجيل وتحديث النقاط"):
-                            # 1. تسجيل الملاحظة في السجل
+                            # 1. تسجيل الملاحظة
                             beh_data = {
                                 "student_id": sid, 
                                 "date": str(datetime.date.today()), 
@@ -335,10 +370,9 @@ if st.session_state.role == "teacher":
                                 "note": b_msg
                             }
                             if safe_append_row("behavior", beh_data):
-                                # 2. تحديث رصيد النقاط في جدول الطلاب تلقائياً
+                                # 2. تحديث النقاط تلقائياً
                                 try:
                                     import re
-                                    # استخراج الرقم من النص (مثال: +10 من النص)
                                     score_match = re.search(r'\(([\+\-]?\d+)\)', b_type)
                                     score_change = int(score_match.group(1)) if score_match else 0
                                     
@@ -349,52 +383,64 @@ if st.session_state.role == "teacher":
                                             headers = ws_st.row_values(1)
                                             if 'النقاط' in headers:
                                                 col_idx = headers.index('النقاط') + 1
-                                                # قراءة القيمة الحالية
                                                 current_val = ws_st.cell(cell.row, col_idx).value
                                                 current_points = int(current_val) if current_val and str(current_val).isdigit() else 0
-                                                # حساب الجديد
                                                 new_total = current_points + score_change
-                                                # الحفظ
                                                 ws_st.update_cell(cell.row, col_idx, new_total)
-                                                st.toast(f"📈 تم تحديث الرصيد إلى: {new_total}")
+                                                st.toast(f"📈 الرصيد الجديد: {new_total}")
                                 except Exception as e:
-                                    st.warning(f"تم التسجيل ولكن لم يتم تحديث النقاط: {e}")
+                                    st.warning(f"تم التسجيل، خطأ في النقاط: {e}")
 
-                                st.success("✅ تمت العملية بنجاح")
+                                st.success("✅ تم الحفظ")
                                 st.cache_data.clear(); st.rerun()
 
-                # --- 📜 السجل التاريخي (أسفل الصفحة) ---
+                # ==========================================
+                # 📜 السجل التاريخي (مع زر الحذف)
+                # ==========================================
                 st.divider()
                 st.markdown(f"#### 📜 سجل ملاحظات الطالب: {s_name}")
                 df_beh = fetch_safe("behavior")
                 
                 if not df_beh.empty:
-                    # تحديد اسم عمود المعرف (student_id أو id)
+                    # فلترة ملاحظات الطالب
                     col_id = 'student_id' if 'student_id' in df_beh.columns else df_beh.columns[0]
+                    # نحتفظ بالـ index الأصلي للحذف
                     my_beh = df_beh[df_beh[col_id].astype(str) == str(sid)]
                 else:
                     my_beh = pd.DataFrame()
                 
                 if not my_beh.empty:
-                    for _, r in my_beh.iloc[::-1].iterrows():
+                    # التكرار مع الحفاظ على الفهرس (idx) لحذفه من الشيت
+                    for idx, r in my_beh.iterrows():
                         with st.container(border=True):
-                            ct, cb = st.columns([3, 1.2]) 
-                            with ct:
+                            c1, c2, c3 = st.columns([3, 1, 0.5]) 
+                            
+                            with c1:
                                 d_val = r.get('date', '')
                                 t_val = r.get('type', '')
                                 n_val = r.get('note', '')
-                                st.write(f"📅 **{d_val}** | **{t_val}**")
+                                st.markdown(f"**{t_val}** | 📅 {d_val}")
                                 if n_val: st.caption(f"📝 {n_val}")
                             
-                            with cb:
+                            with c2:
+                                # أزرار التواصل
                                 m_enc = get_professional_msg(s_name, t_val, n_val, d_val)
-                                st.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={cl_p}&text={m_enc}", use_container_width=True)
-                                st.link_button("📧 Email", f"mailto:{s_mail}?subject=تقرير متابعة: {s_name}&body={m_enc}", use_container_width=True)
+                                st.link_button("واتساب", f"https://api.whatsapp.com/send?phone={cl_p}&text={m_enc}", use_container_width=True)
+                            
+                            with c3:
+                                # 🗑️ زر الحذف (جديد)
+                                if st.button("🗑️", key=f"del_beh_{idx}"):
+                                    try:
+                                        # حذف الصف من الشيت (index + 2 لأن أول صف عناوين و index يبدأ من 0)
+                                        sh.worksheet("behavior").delete_rows(int(idx) + 2)
+                                        st.success("حُذفت")
+                                        st.cache_data.clear(); st.rerun()
+                                    except Exception as e:
+                                        st.error("خطأ")
                 else:
-                    st.info("💡 لا توجد ملاحظات سابقة لهذا الطالب.")
+                    st.info("💡 لا توجد ملاحظات مسجلة.")
         else:
-            st.info("💡 لا يوجد طلاب حالياً.")
-
+            st.info("💡 لا يوجد طلاب في قاعدة البيانات.")
     # ---------------------------------------------------------
     # ---------------------------------------------------------
     # 📢 التبويب 2: إدارة التنبيهات (النسخة الكاملة والمطورة 2026)
