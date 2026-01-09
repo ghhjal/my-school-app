@@ -1,19 +1,32 @@
 import streamlit as st
-import pandas as pd
 import gspread
-import urllib.parse
-import datetime
+import pandas as pd
 import hashlib
+import time
+import datetime
+import logging
 from google.oauth2.service_account import Credentials
+import urllib.parse
+import io
 
-# ==========================================
-# ⚙️ 1. إعدادات النظام والاستقرار الأساسية
-# ==========================================
+# --- 1. إعدادات النظام (يجب أن يكون أول أمر Streamlit) ---
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
+# إعدادات التسجيل
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(message)s')
+
+# --- تهيئة القيم الافتراضية وذاكرة التبويبات (إصلاح IndentationError) ---
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
+
+if "max_tasks" not in st.session_state:
+    st.session_state.max_tasks = 60
+
+if "max_quiz" not in st.session_state:
+    st.session_state.max_quiz = 40
+# الاتصال بـ Google Sheets
 @st.cache_resource
 def get_gspread_client():
-    """الاتصال الآمن بقاعدة بيانات Google Sheets"""
     try:
         creds = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -21,114 +34,74 @@ def get_gspread_client():
         )
         return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
     except Exception as e:
-        st.error(f"⚠️ فشل الاتصال بقاعدة البيانات: {e}")
+        st.error("⚠️ فشل الاتصال بقاعدة البيانات. تأكد من Secrets.")
         return None
 
 sh = get_gspread_client()
 
-# تحميل الإعدادات وتأسيس الـ Session State
-if "max_tasks" not in st.session_state:
-    try:
-        df_sett = pd.DataFrame(sh.worksheet("settings").get_all_records())
-        st.session_state.max_tasks = int(df_sett[df_sett['key'] == 'max_tasks']['value'].values[0])
-        st.session_state.max_quiz = int(df_sett[df_sett['key'] == 'max_quiz']['value'].values[0])
-        st.session_state.current_year = str(df_sett[df_sett['key'] == 'current_year']['value'].values[0])
-        st.session_state.class_options = [c.strip() for c in str(df_sett[df_sett['key'] == 'class_list']['value'].values[0]).split(',')]
-        st.session_state.stage_options = [s.strip() for s in str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0]).split(',')]
-    except:
-        st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
-        st.session_state.current_year, st.session_state.class_options, st.session_state.stage_options = "1447هـ", ["الأول", "الثاني"], ["ابتدائي"]
+# --- 2. دوال معالجة البيانات (الذكاء البرمجي) ---
 
-if "role" not in st.session_state: st.session_state.role = None
-if "username" not in st.session_state: st.session_state.username = None
-
-# ==========================================
-# 🧠 2. دوال معالجة البيانات الاحترافية
-# ==========================================
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=30)
 def fetch_safe(worksheet_name):
+    """جلب البيانات مع ضمان تحويل المعرف (ID) لنص لمنع انهيار البرنامج"""
     try:
         ws = sh.worksheet(worksheet_name)
         data = ws.get_all_values()
         if not data: return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
-        if not df.empty: 
+        if not df.empty:
+            # الاعتماد على المعرف كـ نص لمنع فقدان الأصفار
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
         return df
-    except: return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
-def safe_append_row(worksheet_name, data_dict):
+def get_col_idx(df, col_name):
+    """إيجاد رقم العمود بناءً على اسمه لضمان عدم تأثر الكود بتغيير الترتيب في الشيت"""
     try:
-        ws = sh.worksheet(worksheet_name)
-        headers = ws.row_values(1)
-        ws.append_row([data_dict.get(h, "") for h in headers])
-        return True
-    except: return False
+        return df.columns.get_loc(col_name) + 1
+    except:
+        return None
 
-# ==========================================
-# 🎨 3. التصميم البصري الموحد (إصدار تصحيح القبعة والحقول)
-# ==========================================
+def dynamic_append_student(f_id, f_name, f_stage, f_year, f_class, f_email, f_phone):
+    """إضافة طالب بناءً على أسماء الأعمدة الفعلية لتجنب مشكلة إزاحة البيانات"""
+    try:
+        ws = sh.worksheet("students")
+        headers = ws.row_values(1)
+        data_map = {
+            "id": str(f_id).strip(),
+            "name": f_name,
+            "class": f_class,
+            "year": f_year,
+            "sem": f_stage,
+            "الإيميل": f_email,
+            "الجوال": str(f_phone),
+            "النقاط": "0"
+        }
+        # بناء السطر بناءً على الترتيب الحقيقي للأعمدة في ملفك
+        new_row = [data_map.get(h, "") for h in headers]
+        ws.append_row(new_row)
+        return True
+    except:
+        return False
+
+# --- 3. التصميم البصري (CSS) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
-    
-    .block-container { padding-top: 1.5rem; }
-    div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
-
-    /* ✅ تعديل الهيدر: إنزال الهيدر قليلاً لتظهر القبعة بوضوح */
-    .header-container {
-        display: flex; align-items: center; justify-content: center;
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 30px 20px; border-radius: 0 0 40px 40px; 
-        margin: -20px -20px 25px -20px; /* تم تقليل الهامش العلوي من -55 إلى -20 */
-        box-shadow: 0 15px 20px rgba(0,0,0,0.15); color: white;
-    }
-    
-    .logo-icon { 
-        font-size: 5rem; margin-left: 20px; 
-        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
-        animation: float 3s ease-in-out infinite; 
-    }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-
-    /* ✅ تمييز مكان إدخال البيانات والباسوورد بلون أزرق سماوي واضح */
-    div[data-baseweb="input"] {
-        background-color: #e0f2fe !important; /* لون سماوي فاتح */
-        border: 2px solid #0284c7 !important; /* حدود زرقاء قوية */
-        border-radius: 12px !important;
-        transition: 0.3s;
-    }
-    div[data-baseweb="input"]:focus-within {
-        border-color: #0369a1 !important;
-        box-shadow: 0 0 10px rgba(2, 132, 199, 0.3) !important;
-    }
-    input {
-        color: #0c4a6e !important;
-        font-weight: bold !important;
-    }
-
-    .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
-    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+    html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; }
+    .header-section { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px; border-radius: 0 0 30px 30px; color: white; text-align: center; margin: -80px -20px 20px -20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    .stButton>button { border-radius: 12px !important; font-weight: bold; width: 100%; height: 3.5em; }
+    div[data-testid="stForm"] { border-radius: 20px !important; padding: 25px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     </style>
-
-    <div class="header-container">
-        <div class="logo-icon">🎓</div>
-        <div class="header-text" style="text-align:right;">
-            <h1 style="margin:0; font-size:2.4rem; font-weight:900;">منصة الأستاذ زياد الذكية</h1>
-            <p style="margin:5px 0 0 0; color:#dbeafe; font-size:1.1rem;">بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
-        </div>
+    <div class="header-section">
+        <h1>منصة زياد الذكية</h1>
+        <p>الإصدار الإداري المتكامل - 2026</p>
     </div>
 """, unsafe_allow_html=True)
 
-# ✅ تعريف دالة الفوتر هنا لضمان عملها في كل مكان (حل مشكلة NameError)
-def show_footer():
-    st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
-    c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
-    c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
+if "role" not in st.session_state: st.session_state.role = None
+
 
 # ==========================================
 # 🔐 4. نظام تسجيل الدخول الموحد
