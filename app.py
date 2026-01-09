@@ -360,7 +360,7 @@ if st.session_state.role == "teacher":
                     safe_append_row("students", {"id": id_1, "name": nm_1, "النقاط": "0"})
                     st.rerun()
     # ---------------------------------------------------------
-    # 📊 التبويب 1: التقييم والمتابعة (النسخة الشاملة + أزرار التواصل)
+    # 📊 التبويب 1: التقييم والمتابعة (الإصدار المصحح والمتطابق مع الشيت)
     # ---------------------------------------------------------
     with menu[1]:
         st.subheader("📊 مركز التقييم والمتابعة السلوكية")
@@ -373,12 +373,13 @@ if st.session_state.role == "teacher":
             
             if sel:
                 sid = st_list[sel]
+                # جلب بيانات الطالب بدقة
                 s_info = df_eval[df_eval.iloc[:, 0] == sid].iloc[0]
-                s_name = s_info.iloc[1]
+                s_name = s_info['name'] # استخدام اسم العمود 'name' بدلاً من الفهرس
                 
-                # جلب بيانات التواصل وتنسيقها
-                cl_p = clean_phone_number(s_info['الجوال'])
-                s_mail = s_info['الإيميل']
+                # جلب وتجهيز بيانات التواصل
+                cl_p = clean_phone_number(s_info.get('الجوال', ''))
+                s_mail = s_info.get('الإيميل', '')
 
                 c_g, c_b = st.columns(2)
 
@@ -390,43 +391,70 @@ if st.session_state.role == "teacher":
                         v_q = st.number_input(f"الاختبار (الحد: {st.session_state.max_quiz})", 0, 100)
                         if st.form_submit_button("💾 حفظ الدرجات"):
                             if v_t <= st.session_state.max_tasks and v_q <= st.session_state.max_quiz:
-                                safe_append_row("grades", {"id": sid, "tasks": v_t, "quiz": v_q, "total": v_t+v_q, "date": str(datetime.date.today())})
-                                st.success("✅ تم رصد الدرجات بنجاح")
-                                st.cache_data.clear()
+                                # مفاتيح الدرجات: student_id, p1, p2, perf, date
+                                grade_data = {
+                                    "student_id": sid, 
+                                    "p1": str(v_t), 
+                                    "p2": str(v_q), 
+                                    "perf": str(v_t+v_q), 
+                                    "date": str(datetime.date.today())
+                                }
+                                if safe_append_row("grades", grade_data):
+                                    st.success("✅ تم رصد الدرجات بنجاح")
+                                    st.cache_data.clear()
+                            else:
+                                st.error("⚠️ الدرجة المدخلة تتجاوز الحد المسموح.")
 
-                # --- 🎭 رصد السلوك (7 حالات) ---
+                # --- 🎭 رصد السلوك (تصحيح أسماء الحقول) ---
                 with c_b:
                     st.markdown("##### 🎭 المتابعة السلوكية")
                     with st.form("beh_f_v26", clear_on_submit=True):
                         b_type = st.selectbox("نوع السلوك:", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص قلم (-5)", "🚫 سلبي (-10)"])
                         b_msg = st.text_area("الملاحظة")
                         if st.form_submit_button("💾 تسجيل السلوك"):
-                            safe_append_row("behavior", {"id": sid, "date": str(datetime.date.today()), "type": b_type, "note": b_msg})
-                            st.success("✅ تم تسجيل الملاحظة وتحديث النقاط")
-                            st.cache_data.clear(); st.rerun()
+                            # ✅ التصحيح: استخدام المفاتيح المطابقة لملف الإكسل (student_id, date, type, note)
+                            beh_data = {
+                                "student_id": sid, 
+                                "date": str(datetime.date.today()), 
+                                "type": b_type, 
+                                "note": b_msg
+                            }
+                            if safe_append_row("behavior", beh_data):
+                                st.success("✅ تم تسجيل الملاحظة بنجاح")
+                                st.cache_data.clear(); st.rerun()
 
-                # --- 📜 السجل التاريخي مع أزرار (الواتساب + الإيميل) ---
+                # --- 📜 السجل التاريخي (تصحيح العرض) ---
                 st.divider()
                 st.markdown(f"#### 📜 سجل ملاحظات الطالب: {s_name}")
                 df_beh = fetch_safe("behavior")
-                my_beh = df_beh[df_beh.iloc[:, 0] == sid]
+                
+                # تصفية الملاحظات الخاصة بالطالب المحدد
+                if not df_beh.empty:
+                    # التأكد من اسم عمود المعرف في جدول السلوك (student_id)
+                    beh_id_col = 'student_id' if 'student_id' in df_beh.columns else df_beh.columns[0]
+                    my_beh = df_beh[df_beh[beh_id_col].astype(str) == str(sid)]
+                else:
+                    my_beh = pd.DataFrame()
                 
                 if not my_beh.empty:
                     for _, r in my_beh.iloc[::-1].iterrows():
                         with st.container(border=True):
-                            ct, cb = st.columns([3, 1.2]) # توزيع المساحة للأزرار
+                            ct, cb = st.columns([3, 1.2]) 
                             with ct:
-                                st.write(f"📅 **{r.iloc[1]}** | **{r.iloc[2]}**")
-                                if r.iloc[3]: st.caption(f"📝 {r.iloc[3]}")
+                                # عرض التاريخ والنوع والملاحظة بناءً على أسماء الأعمدة الصحيحة
+                                date_val = r.get('date', '')
+                                type_val = r.get('type', '')
+                                note_val = r.get('note', '')
+                                
+                                st.write(f"📅 **{date_val}** | **{type_val}**")
+                                if note_val: st.caption(f"📝 {note_val}")
                             
                             with cb:
                                 # توليد وتشفير الرسالة الاحترافية
-                                m_enc = get_professional_msg(s_name, r.iloc[2], r.iloc[3], r.iloc[1])
+                                m_enc = get_professional_msg(s_name, type_val, note_val, date_val)
                                 
-                                # ✅ زر الواتساب
+                                # أزرار التواصل تعمل الآن ببيانات صحيحة
                                 st.link_button("📲 WhatsApp", f"https://api.whatsapp.com/send?phone={cl_p}&text={m_enc}", use_container_width=True)
-                                
-                                # ✅ زر الإيميل (الذي تمت إعادته)
                                 st.link_button("📧 Email", f"mailto:{s_mail}?subject=تقرير متابعة: {s_name}&body={m_enc}", use_container_width=True)
                 else:
                     st.info("💡 لا توجد ملاحظات سابقة لهذا الطالب.")
