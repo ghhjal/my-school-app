@@ -12,10 +12,10 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# --- [دوال الخدمات الأساسية - التعريف في القمة لمنع الأخطاء] ---
+# --- [دوال الخدمات الأساسية - التعريف في القمة لمنع أخطاء NameError] ---
 
 def clean_phone_number(phone):
-    """تجهيز رقم الجوال بصيغة دولية"""
+    """تطهير رقم الجوال للصيغة الدولية"""
     p = str(phone).strip().replace(" ", "")
     if p.startswith("0"): p = p[1:]
     if not p.startswith("966") and p != "": p = "966" + p
@@ -34,13 +34,13 @@ def get_professional_msg(name, b_type, b_desc, date):
     return urllib.parse.quote(msg)
 
 def show_footer():
-    """دالة الفوتر الموحدة"""
+    """عرض قنوات التواصل والحقوق (حل خطأ NameError في الصور)"""
     st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
-    c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
-    c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
+    c1.markdown('<a href="https://t.me/ziad" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
+    c2.markdown('<a href="https://wa.me/9665" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
+    c3.markdown('<a href="mailto:ziad@email.com" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية | تم التطوير بكل فخر</p>", unsafe_allow_html=True)
 
 @st.cache_resource
 def get_gspread_client():
@@ -69,7 +69,7 @@ def safe_append_row(worksheet_name, data_dict):
         ws.append_row(row_to_append); return True
     except: return False
 
-# --- [تأسيس الجلسة وتحميل الإعدادات] ---
+# --- [تأسيس الجلسة وحل خطأ AttributeError في صورة 0c6fde] ---
 
 if "max_tasks" not in st.session_state:
     try:
@@ -80,34 +80,40 @@ if "max_tasks" not in st.session_state:
         st.session_state.class_options = [c.strip() for c in str(df_sett[df_sett['key'] == 'class_list']['value'].values[0]).split(',')]
         st.session_state.stage_options = [s.strip() for s in str(df_sett[df_sett['key'] == 'stage_list']['value'].values[0]).split(',')]
     except:
+        # قيم افتراضية لضمان عمل النماذج في حال فشل السحابة
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
-        st.session_state.current_year, st.session_state.class_options = "1447هـ", ["الأول", "الثاني"]
+        st.session_state.current_year = "1447هـ"
+        st.session_state.class_options = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"]
+        st.session_state.stage_options = ["ابتدائي", "متوسط", "ثانوي"]
 
 if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم البصري الموحد
+# 🎨 2. التصميم البصري (ضبط القبعة والحقول)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
-    .block-container { padding-top: 1.5rem; }
     
-    /* الهيدر الملكي مع تعديل القبعة */
+    .block-container { padding-top: 1.5rem; }
+    div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
+
+    /* الهيدر الملكي: إنزاله قليلاً لظهور القبعة كاملة */
     .header-container { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 20px; border-radius: 0 0 40px 40px; margin: -40px -20px 25px -20px; box-shadow: 0 15px 20px rgba(0,0,0,0.15); color: white; }
     .logo-icon { font-size: 5rem; margin-left: 20px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); animation: float 3s ease-in-out infinite; }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 
-    /* تمييز حقول الإدخال */
+    /* تمييز حقول الإدخال والباسوورد بلون سماوي واضح */
     div[data-baseweb="input"] { background-color: #f0f9ff !important; border: 2px solid #3b82f6 !important; border-radius: 12px !important; }
     input { color: #1e3a8a !important; font-weight: bold !important; }
 
-    /* البطاقات والأوسمة */
-    .app-header { background: #ffffff; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-top: -50px; text-align: right; border: 1px solid #ddd; }
+    /* بطاقات واجهة الطالب والأوسمة */
+    .app-header { background: #ffffff; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-top: -50px; }
     .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; }
-    .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; }
+    .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; box-shadow: 0 8px 15px rgba(217,119,6,0.3); }
+
     .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
     .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
     </style>
@@ -116,7 +122,7 @@ st.markdown("""
         <div class="logo-icon">🎓</div>
         <div class="header-text" style="text-align:right;">
             <h1 style="margin:0; font-size:2.4rem; font-weight:900;">منصة الأستاذ زياد الذكية</h1>
-            <p style="margin:5px 0 0 0; color:#dbeafe;">بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+            <p style="margin:5px 0 0 0; color:#dbeafe; font-size:1.1rem;">بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -125,7 +131,7 @@ st.markdown("""
 # 🔐 3. نظام الدخول
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 لوحة المعلم"])
+    t1, t2 = st.tabs(["🎓 دخول الطلاب", "👨‍💼 دخول المعلم"])
     with t1:
         with st.form("st_log_v26"):
             sid_in = st.text_input("🆔 الرقم الأكاديمي الموحد").strip()
@@ -135,10 +141,10 @@ if st.session_state.role is None:
                     df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
                     if sid_in.split('.')[0] in df_st['clean_id'].values:
                         st.session_state.username, st.session_state.role = sid_in.split('.')[0], "student"; st.rerun()
-                    else: st.error("❌ الرقم غير مسجل.")
+                    else: st.error("❌ الرقم غير مسجل. تواصل مع معلمك.")
     with t2:
         with st.form("admin_log_v26"):
-            u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
+            u = st.text_input("👤 اسم المستخدم"); p = st.text_input("🔑 المرور", type="password")
             if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
                 df_u = fetch_safe("users")
                 if not df_u.empty and u in df_u['username'].values:
