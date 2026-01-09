@@ -66,41 +66,54 @@ def safe_append_row(worksheet_name, data_dict):
     except: return False
 
 # ==========================================
-# 🎨 3. التصميم البصري الموحد (CSS)
+# 🎨 3. التصميم البصري المطور (إصدار 2026)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
     
-    .block-container { padding-top: 1.5rem; }
-    div[data-testid="stVerticalBlock"] > div { margin-top: -0.8rem; }
+    .block-container { padding-top: 1rem; padding-bottom: 2rem; }
+    div[data-testid="stVerticalBlock"] > div { margin-top: -0.5rem; }
 
-    /* الهيدر الملكي مع القبعة المتحركة */
+    /* الهيدر الملكي: ضبط الهامش لظهور القبعة كاملاً */
     .header-container {
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 35px 20px; border-radius: 0 0 40px 40px; margin: -55px -20px 25px -20px;
+        padding: 30px 20px; border-radius: 0 0 40px 40px; 
+        margin: -45px -20px 25px -20px; 
         box-shadow: 0 15px 20px rgba(0,0,0,0.15); color: white;
     }
-    .logo-icon { font-size: 5rem; margin-left: 20px; animation: float 3s ease-in-out infinite; }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    .logo-icon { font-size: 5rem; margin-left: 20px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    /* تمييز حقول الإدخال والباسوورد */
+    div[data-baseweb="input"] {
+        background-color: #f0f9ff !important; 
+        border: 2px solid #3b82f6 !important; 
+        border-radius: 12px !important;
+    }
+    input { color: #1e3a8a !important; font-weight: bold !important; }
 
     /* شريط الأخبار المتحرك */
-    .marquee-container { background: #1e3a8a; color: white; padding: 10px 0; border-radius: 8px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }
+    .marquee-container { background: #1e3a8a; color: white; padding: 10px 0; border-radius: 10px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }
     .marquee-text { display: inline-block; animation: marquee 30s linear infinite; font-weight: 900; font-size: 1.1rem; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-    /* بطاقات واجهة الطالب والأوسمة */
+    /* البطاقات والأوسمة */
     .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .urgent-msg { background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }
     .medal-flex { display: flex; justify-content: space-between; gap: 8px; margin: 20px 0; }
-    .m-card { flex: 1; background: white; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .m-card { flex: 1; background: white; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid #f1f5f9; }
     .m-active { border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }
     .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; box-shadow: 0 8px 15px rgba(217, 119, 6, 0.3); }
 
-    /* أزرار التواصل */
-    .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
+    /* أزرار التواصل كأزرار حقيقية */
+    .contact-btn {
+        display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0;
+        border-radius: 12px; color: #1e3a8a !important; text-decoration: none;
+        font-weight: bold; text-align: center; width: 100%; transition: 0.3s;
+    }
     .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
     </style>
 
@@ -113,40 +126,51 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-def show_enhanced_footer():
+# دالة الفوتر (التواصل والحقوق)
+def show_footer_complete():
     st.markdown("<br><h3 style='text-align:center; color:#1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     c1.markdown('<a href="#" class="contact-btn">📢 تليجرام الإدارة 👉</a>', unsafe_allow_html=True)
     c2.markdown('<a href="#" class="contact-btn">💬 واتساب المعلم 👉</a>', unsafe_allow_html=True)
     c3.markdown('<a href="#" class="contact-btn">📧 البريد الإلكتروني 👉</a>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#888; font-size:0.8rem; margin-top:20px;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style='text-align:center; color:#888; font-size:0.9rem; margin-top:30px;'>
+            <hr style='border:0; border-top:1px solid #eee;'>
+            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
+            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 4. نظام تسجيل الدخول الموحد
+# 🔐 4. نظام تسجيل الدخول
 # ==========================================
 if st.session_state.role is None:
-    t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 لوحة المعلم"])
+    t1, t2 = st.tabs(["🎓 بوابة دخول الطلاب", "👨‍💼 لوحة تحكم المعلم"])
     with t1:
+        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>👋 أهلاً بك يا بطل.. سجل دخولك</h4>", unsafe_allow_html=True)
         with st.form("st_log_v2026"):
-            sid_in = st.text_input("🆔 الرقم الأكاديمي").strip()
+            sid_in = st.text_input("🔢 الرقم الأكاديمي الموحد").strip()
             if st.form_submit_button("انطلق للمنصة 🚀", use_container_width=True):
                 df_st = fetch_safe("students")
                 if not df_st.empty:
                     df_st['clean_id'] = df_st.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
                     if sid_in.split('.')[0] in df_st['clean_id'].values:
-                        st.session_state.username = sid_in.split('.')[0]; st.session_state.role = "student"; st.rerun()
-                    else: st.error("❌ الرقم غير مسجل.")
+                        st.session_state.username = sid_in.split('.')[0]
+                        st.session_state.role = "student"; st.rerun()
+                    else: st.error("❌ الرقم غير مسجل. تواصل مع معلمك.")
     with t2:
+        st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>🔐 تسجيل دخول الإدارة</h4>", unsafe_allow_html=True)
         with st.form("admin_log_v2026"):
-            u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
-            if st.form_submit_button("دخول الإدارة 🛠️", use_container_width=True):
+            u = st.text_input("👤 اسم المستخدم الإداري")
+            p = st.text_input("🔑 كلمة المرور", type="password")
+            if st.form_submit_button("دخول لوحة التحكم 🛠️", use_container_width=True):
                 df_u = fetch_safe("users")
                 if not df_u.empty and u in df_u['username'].values:
                     user_data = df_u[df_u['username']==u].iloc[0]
                     if hashlib.sha256(str.encode(p)).hexdigest() == user_data['password_hash']:
                         st.session_state.role = "teacher"; st.session_state.username = u; st.rerun()
-                st.error("❌ بيانات خاطئة.")
-    show_enhanced_footer()
+                st.error("❌ بيانات الدخول خاطئة.")
+    show_footer_complete()
     
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
