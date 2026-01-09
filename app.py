@@ -392,60 +392,60 @@ if st.session_state.role == "teacher":
 
     # ---------------------------------------------------------
     # ---------------------------------------------------------
-# 📢 التبويب 2: إدارة التنبيهات (النسخة المدمجة والكاملة)
-# ---------------------------------------------------------
-with menu[2]:
-    st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
-    
-    # 1. نموذج نشر تنبيه جديد
-    with st.form("admin_announcement_final_merged", clear_on_submit=True):
-        a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
-        a_details = st.text_area("📄 تفاصيل التعميم (تظهر للطالب)")
+    # 📢 التبويب 2: إدارة التنبيهات (النسخة المدمجة والكاملة)
+    # ---------------------------------------------------------
+    with menu[2]:
+        st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
         
-        c1, c2 = st.columns(2)
-        is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)")
-        target_list = ["الكل"] + st.session_state.get('class_options', [])
-        a_target = c2.selectbox("🎯 الفئة المستهدفة:", target_list)
-        
-        if st.form_submit_button("📣 نشر وبث التنبيه"):
-            if a_title and a_details:
-                # الربط بأسماء الحقول لضمان الاستقرار
-                new_row = {
-                    "الصف": a_target,
-                    "العنوان": a_title,
-                    "التاريخ": str(datetime.date.today()),
-                    "الرابط": a_details,
-                    "عاجل": "نعم" if is_urgent else "لا"
-                }
-                if safe_append_row("exams", new_row):
-                    st.success(f"✅ تم النشر بنجاح لـ {a_target}")
-                    st.cache_data.clear(); st.rerun()
-            else:
-                st.warning("⚠️ يرجى إكمال العنوان والتفاصيل.")
-
-    st.divider()
+        # 1. نموذج نشر تنبيه جديد
+        with st.form("admin_announcement_final_merged", clear_on_submit=True):
+            a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
+            a_details = st.text_area("📄 تفاصيل التعميم (تظهر للطالب)")
+            
+            c1, c2 = st.columns(2)
+            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)")
+            target_list = ["الكل"] + st.session_state.get('class_options', [])
+            a_target = c2.selectbox("🎯 الفئة المستهدفة:", target_list)
+            
+            if st.form_submit_button("📣 نشر وبث التنبيه"):
+                if a_title and a_details:
+                    # الربط بأسماء الحقول لضمان الاستقرار
+                    new_row = {
+                        "الصف": a_target,
+                        "العنوان": a_title,
+                        "التاريخ": str(datetime.date.today()),
+                        "الرابط": a_details,
+                        "عاجل": "نعم" if is_urgent else "لا"
+                    }
+                    if safe_append_row("exams", new_row):
+                        st.success(f"✅ تم النشر بنجاح لـ {a_target}")
+                        st.cache_data.clear(); st.rerun()
+                else:
+                    st.warning("⚠️ يرجى إكمال العنوان والتفاصيل.")
     
-    # 2. سجل التعميمات (بث الواتساب + الحذف)
-    st.markdown("#### 📜 سجل التعميمات المرسلة وإدارة البث")
-    df_ann = fetch_safe("exams")
-    if not df_ann.empty:
-        for idx, row in df_ann.iloc[::-1].iterrows():
-            with st.container(border=True):
-                col_txt, col_btn = st.columns([3, 1])
-                with col_txt:
-                    pfx = "🚨 [هام] " if str(row.get('عاجل', 'لا')).strip() == "نعم" else "📢 "
-                    st.write(f"{pfx} **{row.get('العنوان')}** | 🎯 لـ: {row.get('الصف')}")
-                    st.caption(f"📝 {row.get('الرابط')}")
-                
-                with col_btn:
-                    # زر بث الواتساب الاحترافي
-                    w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
-                    st.link_button("👥 بث واتساب", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
+        st.divider()
+        
+        # 2. سجل التعميمات (بث الواتساب + الحذف)
+        st.markdown("#### 📜 سجل التعميمات المرسلة وإدارة البث")
+        df_ann = fetch_safe("exams")
+        if not df_ann.empty:
+            for idx, row in df_ann.iloc[::-1].iterrows():
+                with st.container(border=True):
+                    col_txt, col_btn = st.columns([3, 1])
+                    with col_txt:
+                        pfx = "🚨 [هام] " if str(row.get('عاجل', 'لا')).strip() == "نعم" else "📢 "
+                        st.write(f"{pfx} **{row.get('العنوان')}** | 🎯 لـ: {row.get('الصف')}")
+                        st.caption(f"📝 {row.get('الرابط')}")
                     
-                    # زر الحذف النهائي
-                    if st.button("🗑️ حذف", key=f"del_ann_{idx}", use_container_width=True):
-                        sh.worksheet("exams").delete_rows(int(idx) + 2)
-                        st.success("✅ تم الحذف"); st.cache_data.clear(); st.rerun()
+                    with col_btn:
+                        # زر بث الواتساب الاحترافي
+                        w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
+                        st.link_button("👥 بث واتساب", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
+                        
+                        # زر الحذف النهائي
+                        if st.button("🗑️ حذف", key=f"del_ann_{idx}", use_container_width=True):
+                            sh.worksheet("exams").delete_rows(int(idx) + 2)
+                            st.success("✅ تم الحذف"); st.cache_data.clear(); st.rerun()
     # ---------------------------------------------------------
     # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة والمدمجة 2026)
     # ---------------------------------------------------------
