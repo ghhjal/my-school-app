@@ -99,7 +99,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم البصري الموحد (إصدار الوضوح التام للجوال والحاسوب)
+# 🎨 2. التصميم البصري الموحد (تم ضبط موقع القبعة للأسفل)
 # ==========================================
 st.markdown("""
     <style>
@@ -111,18 +111,14 @@ st.markdown("""
     /* --- تنسيق الهيدر (رأس الصفحة) --- */
     .header-container {
         display: flex;
-        flex-direction: row-reverse; /* لترتيب القبعة يسار والنص يمين */
+        flex-direction: row-reverse; 
         align-items: center;
         justify-content: center;
-        /* تدرج لوني أعمق لزيادة وضوح النص الأبيض */
         background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
-        /* بديل أزرق ملكي إذا كنت تفضله: */
-        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-        
-        padding: 50px 20px 30px 20px; /* زيادة الحشوة العلوية لمنع القص */
+        padding: 60px 20px 40px 20px; /* زيادة الحشوة العلوية والسفلية */
         border-radius: 0 0 35px 35px;
-        margin-top: -60px; /* سحب الهيدر للأعلى لتغطية الفراغ الأبيض */
-        margin-left: -5rem; /* توسيع العرض ليشمل كامل الشاشة */
+        margin-top: -60px; 
+        margin-left: -5rem; 
         margin-right: -5rem;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         color: white;
@@ -130,62 +126,63 @@ st.markdown("""
     }
 
     .logo-icon {
-        font-size: 5.5rem;
-        margin-right: 20px;
-        filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.4)); /* ظل قوي للقبعة لتبرز */
+        font-size: 6rem; /* تكبير القبعة قليلاً */
+        margin-right: 25px;
+        margin-top: 25px; /* ✅ تم إنزال القبعة للأسفل لتتوسط النص */
+        filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.4));
         animation: float 3s ease-in-out infinite;
     }
 
     .header-text h1 {
         margin: 0;
-        font-size: 2.8rem;
+        font-size: 3rem;
         font-weight: 900;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3); /* ظل للنص لزيادة الوضوح */
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         line-height: 1.2;
     }
 
     .header-text p {
         margin: 5px 0 0 0;
         color: #e2e8f0;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         font-weight: bold;
+        opacity: 0.9;
     }
 
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-    /* --- تحسينات خاصة للجوال (Mobile Responsive) --- */
+    /* --- تحسينات خاصة للجوال --- */
     @media (max-width: 768px) {
         .header-container {
-            flex-direction: column; /* ترتيب العناصر فوق بعض في الجوال */
-            padding-top: 70px; /* مسافة إضافية في الأعلى للجوال */
-            margin-top: -50px;
-            margin-left: -1rem;
-            margin-right: -1rem;
+            flex-direction: column;
+            padding-top: 80px; /* مسافة أمان علوية للجوال */
+            padding-bottom: 30px;
         }
         .logo-icon {
-            font-size: 4rem; /* تصغير القبعة قليلاً للجوال */
+            font-size: 4.5rem;
             margin-right: 0;
-            margin-bottom: 10px;
+            margin-top: 10px; /* ضبط المسافة في الجوال */
+            margin-bottom: 15px;
         }
         .header-text h1 {
-            font-size: 1.8rem; /* تصغير الخط ليتناسب مع شاشة الجوال */
+            font-size: 2rem;
         }
         .header-text p {
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
     }
 
-    /* --- بقية التنسيقات (الحقول والبطاقات) --- */
+    /* --- بقية التنسيقات --- */
     div[data-baseweb="input"] { 
         background-color: #f0f9ff !important; 
         border: 2px solid #3b82f6 !important; 
         border-radius: 12px !important; 
-        height: 50px; /* زيادة ارتفاع الحقل لسهولة اللمس في الجوال */
+        height: 50px;
     }
     input { color: #1e3a8a !important; font-weight: bold !important; font-size: 1.1rem !important; }
 
     .contact-btn { 
-        display: block; /* جعل الأزرار تأخذ كامل العرض في الجوال */
+        display: block; 
         padding: 12px; 
         background: white; 
         border: 2px solid #e2e8f0; 
