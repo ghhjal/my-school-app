@@ -778,27 +778,51 @@ if st.session_state.role == "student":
                     </div>
                 """, unsafe_allow_html=True)
 
-        # --- تبويب الإعدادات (تحديث الملف + الخروج) ---
+        # ---------------------------------------------------------
+        # ⚙️ تبويب 4: إعدادات الحساب (تحديث البيانات الشخصية)
+        # ---------------------------------------------------------
         with tabs[4]:
-            st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_info_final_merged"):
-                new_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
-                new_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
-                if st.form_submit_button("💾 حفظ البيانات المحدثة"):
+            st.markdown("#### ⚙️ تحديث بيانات التواصل")
+            with st.form("up_info_student_v26"):
+                # عرض البيانات الحالية
+                current_mail = s_data.get('الإيميل', '')
+                current_phone = s_data.get('الجوال', '')
+                
+                new_mail = st.text_input("📧 البريد الإلكتروني", value=current_mail)
+                new_phone = st.text_input("📱 رقم الجوال", value=current_phone)
+                
+                if st.form_submit_button("💾 حفظ التعديلات"):
                     try:
                         ws_st = sh.worksheet("students")
-                        ids = [str(x).split('.')[0] for x in ws_st.col_values(1)]
-                        if student_id in ids:
-                            r_idx = ids.index(student_id) + 1
-                            ws_st.update_cell(r_idx, 6, new_mail); ws_st.update_cell(r_idx, 7, new_phone)
-                            st.success("✅ تم تحديث بياناتك بنجاح!"); st.cache_data.clear()
-                    except: 
-                        st.error("❌ فشل التحديث حالياً، يرجى المحاولة لاحقاً.")
+                        # البحث عن رقم السطر باستخدام المعرف
+                        cell = ws_st.find(student_id)
+                        if cell:
+                            # تحديد أرقام أعمدة الجوال والإيميل ديناميكياً
+                            headers = ws_st.row_values(1)
+                            
+                            # البحث عن موقع عمود 'الإيميل' و 'الجوال'
+                            if 'الإيميل' in headers and 'الجوال' in headers:
+                                col_mail = headers.index('الإيميل') + 1
+                                col_phone = headers.index('الجوال') + 1
+                                
+                                # التحديث في الخلايا الصحيحة
+                                ws_st.update_cell(cell.row, col_mail, new_mail)
+                                ws_st.update_cell(cell.row, col_phone, new_phone)
+                                
+                                st.success("✅ تم تحديث بياناتك بنجاح!")
+                                st.cache_data.clear() # مسح الكاش لرؤية التغيير
+                            else:
+                                st.error("⚠️ لم يتم العثور على أعمدة 'الجوال' أو 'الإيميل' في الجدول.")
+                        else:
+                            st.error("❌ لم يتم العثور على سجلك في قاعدة البيانات.")
+                    except Exception as e: 
+                        st.error(f"❌ حدث خطأ: {e}")
             
             st.divider()
-            if st.button("🚪 تسجيل الخروج الآمن من المنصة", type="primary", use_container_width=True):
-                st.session_state.role = None; st.session_state.username = None; st.rerun()
-
+            if st.button("🚪 تسجيل الخروج الآمن", type="primary", use_container_width=True):
+                st.session_state.role = None
+                st.session_state.username = None
+                st.rerun()
     else: 
         # رسالة الخطأ عند عدم العثور على الطالب
         st.error(f"⚠️ عذراً، الرقم الأكاديمي ({student_id}) غير مسجل في النظام.")
