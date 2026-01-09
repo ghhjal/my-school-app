@@ -99,36 +99,112 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم البصري الموحد
+# 🎨 2. التصميم البصري الموحد (إصدار الوضوح التام للجوال والحاسوب)
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     html, body, [data-testid="stAppViewContainer"] { font-family: 'Cairo', sans-serif; direction: RTL; text-align: right; background-color: #f8fafc; }
-    .block-container { padding-top: 1.5rem; }
     
-    /* الهيدر والقبعة */
-    .header-container { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 20px; border-radius: 0 0 40px 40px; margin: -40px -20px 25px -20px; box-shadow: 0 15px 20px rgba(0,0,0,0.15); color: white; }
-    .logo-icon { font-size: 5rem; margin-left: 20px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); animation: float 3s ease-in-out infinite; }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    .block-container { padding-top: 0rem; padding-bottom: 5rem; }
+    
+    /* --- تنسيق الهيدر (رأس الصفحة) --- */
+    .header-container {
+        display: flex;
+        flex-direction: row-reverse; /* لترتيب القبعة يسار والنص يمين */
+        align-items: center;
+        justify-content: center;
+        /* تدرج لوني أعمق لزيادة وضوح النص الأبيض */
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
+        /* بديل أزرق ملكي إذا كنت تفضله: */
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        
+        padding: 50px 20px 30px 20px; /* زيادة الحشوة العلوية لمنع القص */
+        border-radius: 0 0 35px 35px;
+        margin-top: -60px; /* سحب الهيدر للأعلى لتغطية الفراغ الأبيض */
+        margin-left: -5rem; /* توسيع العرض ليشمل كامل الشاشة */
+        margin-right: -5rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        color: white;
+        text-align: center;
+    }
 
-    /* حقول الإدخال */
-    div[data-baseweb="input"] { background-color: #f0f9ff !important; border: 2px solid #3b82f6 !important; border-radius: 12px !important; }
-    input { color: #1e3a8a !important; font-weight: bold !important; }
+    .logo-icon {
+        font-size: 5.5rem;
+        margin-right: 20px;
+        filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.4)); /* ظل قوي للقبعة لتبرز */
+        animation: float 3s ease-in-out infinite;
+    }
 
-    /* البطاقات */
-    .app-header { background: #ffffff; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-top: -50px; }
-    .mobile-card { background: white; color: black !important; padding: 18px; border-radius: 15px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; border-right: 10px solid #1e3a8a; }
-    .points-banner { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 25px; text-align: center; margin-bottom: 25px; }
-    .contact-btn { display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; color: #1e3a8a !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; transition: 0.3s; }
-    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-3px); }
+    .header-text h1 {
+        margin: 0;
+        font-size: 2.8rem;
+        font-weight: 900;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3); /* ظل للنص لزيادة الوضوح */
+        line-height: 1.2;
+    }
+
+    .header-text p {
+        margin: 5px 0 0 0;
+        color: #e2e8f0;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    /* --- تحسينات خاصة للجوال (Mobile Responsive) --- */
+    @media (max-width: 768px) {
+        .header-container {
+            flex-direction: column; /* ترتيب العناصر فوق بعض في الجوال */
+            padding-top: 70px; /* مسافة إضافية في الأعلى للجوال */
+            margin-top: -50px;
+            margin-left: -1rem;
+            margin-right: -1rem;
+        }
+        .logo-icon {
+            font-size: 4rem; /* تصغير القبعة قليلاً للجوال */
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+        .header-text h1 {
+            font-size: 1.8rem; /* تصغير الخط ليتناسب مع شاشة الجوال */
+        }
+        .header-text p {
+            font-size: 0.9rem;
+        }
+    }
+
+    /* --- بقية التنسيقات (الحقول والبطاقات) --- */
+    div[data-baseweb="input"] { 
+        background-color: #f0f9ff !important; 
+        border: 2px solid #3b82f6 !important; 
+        border-radius: 12px !important; 
+        height: 50px; /* زيادة ارتفاع الحقل لسهولة اللمس في الجوال */
+    }
+    input { color: #1e3a8a !important; font-weight: bold !important; font-size: 1.1rem !important; }
+
+    .contact-btn { 
+        display: block; /* جعل الأزرار تأخذ كامل العرض في الجوال */
+        padding: 12px; 
+        background: white; 
+        border: 2px solid #e2e8f0; 
+        border-radius: 12px; 
+        color: #1e3a8a !important; 
+        text-decoration: none; 
+        font-weight: bold; 
+        text-align: center; 
+        margin-bottom: 10px;
+        transition: 0.3s; 
+    }
+    .contact-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-2px); }
     </style>
 
     <div class="header-container">
         <div class="logo-icon">🎓</div>
-        <div class="header-text" style="text-align:right;">
-            <h1 style="margin:0; font-size:2.4rem; font-weight:900;">منصة الأستاذ زياد الذكية</h1>
-            <p style="margin:5px 0 0 0; color:#dbeafe; font-size:1.1rem;">بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+        <div class="header-text">
+            <h1>منصة الأستاذ زياد الذكية</h1>
+            <p>بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
