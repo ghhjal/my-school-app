@@ -324,96 +324,38 @@ if st.session_state.role == "teacher":
 
 # ---------------------------------------------------------
 # ==========================================
-# 👨‍💼 6. واجهة المعلم (الإدارة والتحكم الشامل)
+# 👨‍💼 6. واجهة المعلم الكاملة (الإدارة)
 # ==========================================
 elif st.session_state.role == "teacher":
-    # تعريف التبويبات (يجب أن يتم تعريفها مرة واحدة فقط)
     menu = st.tabs(["👥 الطلاب", "📊 الدرجات", "📢 التنبيهات", "⚙️ الإعدادات"])
-    
-    # --- التبويب 0: إدارة الطلاب (سيتم دمج كودك هنا لاحقاً) ---
-    with menu[0]:
-        st.info("👥 قسم إدارة بيانات الطلاب - قيد التشغيل")
-        # ضع كود الطلاب هنا
-
-    # --- التبويب 1: رصد الدرجات (سيتم دمج كودك هنا لاحقاً) ---
-    with menu[1]:
-        st.info("📊 قسم رصد وإدارة الدرجات - قيد التشغيل")
-        # ضع كود الدرجات هنا
-
-    # --- التبويب 2: إدارة التنبيهات (تم إصلاح الربط) ---
     with menu[2]:
-        st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
-        
-        with st.form("admin_announcement_v2026", clear_on_submit=True):
-            a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
-            a_details = st.text_area("📄 تفاصيل التعميم (تظهر للطالب)")
-            
+        st.subheader("📢 إدارة التنبيهات والتعميمات")
+        with st.form("admin_ann_v2026", clear_on_submit=True):
+            a_title = st.text_input("📝 العنوان"); a_details = st.text_area("📄 التفاصيل")
             c1, c2 = st.columns(2)
-            is_urgent = c1.checkbox("🌟 عاجل (يظهر في قمة شاشة الطالب)")
-            # جلب الخيارات من session_state لضمان عدم حدوث KeyError
-            target_list = ["الكل"] + st.session_state.get('class_options', ["الأول", "الثاني"])
-            target = c2.selectbox("🎯 الفئة المستهدفة:", target_list)
-            
-            if st.form_submit_button("📣 نشر وتعميم وبث الآن"):
-                if a_title and a_details:
-                    ann_data = {
-                        "الصف": target,
-                        "عاجل": "نعم" if is_urgent else "لا",
-                        "العنوان": a_title,
-                        "التاريخ": str(datetime.date.today()),
-                        "الرابط": a_details
-                    }
-                    if safe_append_row("exams", ann_data):
-                        st.success(f"✅ تم نشر التعميم لـ {target}")
-                        st.cache_data.clear()
-                        st.rerun()
-                else:
-                    st.warning("⚠️ أكمل العنوان والتفاصيل.")
-
+            is_urgent = c1.checkbox("🌟 عاجل (في القمة)"); target = c2.selectbox("🎯 الفئة:", ["الكل"] + st.session_state.class_options)
+            if st.form_submit_button("📣 نشر وتعميم وبث"):
+                ann_data = {"الصف": target, "عاجل": "نعم" if is_urgent else "لا", "العنوان": a_title, "التاريخ": str(datetime.date.today()), "الرابط": a_details}
+                if safe_append_row("exams", ann_data):
+                    st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
         st.divider()
-        
-        # سجل التنبيهات المحدث
-        st.markdown("#### 📜 سجل التعميمات وإدارة البث")
         df_ann = fetch_safe("exams")
         if not df_ann.empty:
             for idx, row in df_ann.iloc[::-1].iterrows():
                 with st.container(border=True):
                     col_txt, col_btn = st.columns([3, 1])
                     with col_txt:
-                        pfx = "🚨 [عاجل] " if str(row.get('عاجل', 'لا')).strip() == "نعم" else "📢 "
-                        st.markdown(f"<b style='color:#1e3a8a; font-size:1.1rem;'>{pfx}{row.get('العنوان', 'عنوان')}</b>", unsafe_allow_html=True)
-                        st.caption(f"🎯 لـ: {row.get('الصف', 'الكل')} | 📅 {row.get('التاريخ', '')}")
-                        st.write(f"📝 {row.get('الرابط', '')}")
-                    
+                        pfx = "🚨 [عاجل] " if str(row.get('عاجل')).strip() == "نعم" else "📢 "
+                        st.markdown(f"<b style='color:#1e3a8a;'>{pfx}{row.get('العنوان')}</b>", unsafe_allow_html=True)
+                        st.caption(f"🎯 لـ: {row.get('الصف')} | 📅 {row.get('التاريخ')}")
                     with col_btn:
-                        # ✅ ميزة بث الواتساب الاحترافي
                         w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
-                        st.link_button("👥 بث واتساب", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
-                        
-                        # ✅ ميزة الحذف النهائي
-                        if st.button("🗑️ حذف", key=f"del_ann_{idx}", use_container_width=True):
-                            sh.worksheet("exams").delete_rows(int(idx) + 2)
-                            st.success("✅ تم الحذف")
-                            st.cache_data.clear()
-                            st.rerun()
-        else:
-            st.info("💡 لا توجد تعميمات في السجل حالياً.")
-
-    # --- التبويب 3: الإعدادات والخروج ---
+                        st.link_button("👥 بث", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
+                        if st.button("🗑️", key=f"del_{idx}", use_container_width=True):
+                            sh.worksheet("exams").delete_rows(int(idx) + 2); st.cache_data.clear(); st.rerun()
     with menu[3]:
-        st.subheader("⚙️ إعدادات الإدارة")
-        st.info(f"🗓️ العام الدراسي الحالي: {st.session_state.get('current_year', '1447هـ')}")
-        
-        st.divider()
-        if st.button("🚪 تسجيل خروج الإدارة", type="primary", use_container_width=True):
-            st.session_state.role = None
-            st.session_state.username = None
-            st.rerun()
-
-    # زر الخروج الجانبي (لضمان الوصول السريع)
-    if st.sidebar.button("🚪 تسجيل الخروج الآمن", key="admin_side_logout"):
-        st.session_state.role = None
-        st.rerun()
+        if st.button("🚪 تسجيل الخروج", type="primary", use_container_width=True):
+            st.session_state.role = None; st.rerun()
     # ---------------------------------------------------------
     # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة والمدمجة 2026)
     # ---------------------------------------------------------
