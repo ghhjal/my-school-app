@@ -163,10 +163,36 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
+def show_footer():
+    st.markdown("---")
+    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
+    
+    col_tele, col_wa, col_mail = st.columns(3)
+    with col_tele:
+        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
+    with col_wa:
+        # يرجى وضع رقمك الحقيقي هنا
+        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
+    with col_mail:
+        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
+    
+    st.markdown("""
+        <div class="footer-text">
+            <hr style="border: 0.1px solid #eee;">
+            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
+            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-
-
-
+# ---------------------------------------------------------
+# استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
+# ---------------------------------------------------------
+if st.session_state.role is None:
+    show_footer()
+# ==========================================
+# 🔐 4. نظام الدخول
+# ==========================================
 # ==========================================
 # 🔐 1. نظام تسجيل الدخول الموحد (إصدار زر العودة الذكي)
 # ==========================================
@@ -219,40 +245,18 @@ if st.session_state.role is None:
                         st.rerun()
                 st.error("❌ بيانات الدخول غير صحيحة.")
     st.stop()
-  #;;;;;;;;;;;;;;;;;;;;;;#
-# ---------------------------------------------------------
-# استدعاء الحقوق والتواصل في الواجهة (تظهر للجميع قبل الدخول)
-# ---------------------------------------------------------
-# دالة عرض قنوات التواصل والحقوق (تُستدعى في الواجهة الرئيسية)
-def show_footer():
-    st.markdown("---")
-    st.markdown("<h3 style='text-align: center; color: #1e40af;'>📱 قنوات التواصل والدعم الفني</h3>", unsafe_allow_html=True)
     
-    col_tele, col_wa, col_mail = st.columns(3)
-    with col_tele:
-        st.link_button("📢 قناة تليجرام", "https://t.me/YourUsername", use_container_width=True)
-    with col_wa:
-        # يرجى وضع رقمك الحقيقي هنا
-        st.link_button("💬 واتساب الدعم", "https://wa.me/966500000000", use_container_width=True)
-    with col_mail:
-        st.link_button("📧 البريد الإلكتروني", "mailto:your-email@gmail.com", use_container_width=True)
-    
-    st.markdown("""
-        <div class="footer-text">
-            <hr style="border: 0.1px solid #eee;">
-            <p><strong>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</strong></p>
-            <p>تم التطوير بكل فخر بواسطة الأستاذ زياد</p>
-        </div>
-    """, unsafe_allow_html=True)
-if st.session_state.role is None:
-    show_footer()
 # ==========================================
 # 👨‍🏫 واجهة المعلم الرئيسية (دمج شامل ومستقر)
 # ==========================================
 if st.session_state.role == "teacher":
     # 1. إنشاء التبويبات الخمسة (مُزاحة بـ Tab واحدة عن الـ if)
     menu = st.tabs(["👥 الطلاب", "📊 التقييم والمتابعة", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
-         
+
+    
+    # ---------------------------------------------------------
+    # 👥 التبويب 0: إدارة قاعدة بيانات الطلاب (الإصدار المصحح 2026)
+    # ---------------------------------------------------------
     # ---------------------------------------------------------
     # 👥 التبويب 0: إدارة قاعدة بيانات الطلاب (الإصدار المصحح والمستقر)
     # ---------------------------------------------------------
@@ -394,60 +398,86 @@ if st.session_state.role == "teacher":
 
     # ---------------------------------------------------------
     # ---------------------------------------------------------
-    # 📢 التبويب 2: إدارة التنبيهات (النسخة المدمجة والكاملة)
+    # 📢 التبويب 2: إدارة التنبيهات (النسخة الكاملة والمطورة 2026)
     # ---------------------------------------------------------
     with menu[2]:
         st.subheader("📢 إدارة التنبيهات والتعميمات العامة")
         
-        # 1. نموذج نشر تنبيه جديد
-        with st.form("admin_announcement_final_merged", clear_on_submit=True):
+        # 1. نموذج نشر تنبيه جديد (ربط ذكي مع الشاشة الرئيسية)
+        with st.form("admin_announcement_final_v2026", clear_on_submit=True):
             a_title = st.text_input("📝 عنوان التنبيه / الإعلان")
             a_details = st.text_area("📄 تفاصيل التعميم (تظهر للطالب)")
             
             c1, c2 = st.columns(2)
-            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه هام)")
-            target_list = ["الكل"] + st.session_state.get('class_options', [])
+            # ميزة العرض في الشاشة الرئيسية
+            is_urgent = c1.checkbox("🌟 عرض في الشاشة الرئيسية (تنبيه عاجل)")
+            
+            # جلب قائمة الصفوف ديناميكياً من الإعدادات
+            target_list = ["الكل"] + st.session_state.get('class_options', ["الصف الأول", "الصف الثاني"])
             a_target = c2.selectbox("🎯 الفئة المستهدفة:", target_list)
             
-            if st.form_submit_button("📣 نشر وبث التنبيه"):
+            if st.form_submit_button("📣 نشر وبث التنبيه الآن"):
                 if a_title and a_details:
-                    # الربط بأسماء الحقول لضمان الاستقرار
-                    new_row = {
+                    # تحضير البيانات لضمان عدم حدوث IndexError (الربط بأسماء الحقول)
+                    ann_data = {
                         "الصف": a_target,
+                        "عاجل": "نعم" if is_urgent else "لا",
                         "العنوان": a_title,
                         "التاريخ": str(datetime.date.today()),
-                        "الرابط": a_details,
-                        "عاجل": "نعم" if is_urgent else "لا"
+                        "الرابط": a_details # حقل التفاصيل
                     }
-                    if safe_append_row("exams", new_row):
+                    
+                    if safe_append_row("exams", ann_data):
                         st.success(f"✅ تم النشر بنجاح لـ {a_target}")
-                        st.cache_data.clear(); st.rerun()
+                        st.cache_data.clear()
+                        st.rerun()
                 else:
-                    st.warning("⚠️ يرجى إكمال العنوان والتفاصيل.")
+                    st.warning("⚠️ يرجى كتابة العنوان والتفاصيل قبل النشر.")
     
         st.divider()
         
-        # 2. سجل التعميمات (بث الواتساب + الحذف)
+        # 2. سجل التعميمات المرسلة وإدارة البث والحذف
         st.markdown("#### 📜 سجل التعميمات المرسلة وإدارة البث")
         df_ann = fetch_safe("exams")
+        
         if not df_ann.empty:
+            # عرض التنبيهات من الأحدث للأقدم
             for idx, row in df_ann.iloc[::-1].iterrows():
                 with st.container(border=True):
                     col_txt, col_btn = st.columns([3, 1])
+                    
                     with col_txt:
-                        pfx = "🚨 [هام] " if str(row.get('عاجل', 'لا')).strip() == "نعم" else "📢 "
-                        st.write(f"{pfx} **{row.get('العنوان')}** | 🎯 لـ: {row.get('الصف')}")
-                        st.caption(f"📝 {row.get('الرابط')}")
+                        # تمييز التنبيه العاجل بصرياً
+                        is_urgent_val = str(row.get('عاجل', 'لا')).strip()
+                        pfx = "🚨 [هام جداً] " if is_urgent_val == "نعم" else "📢 "
+                        
+                        st.markdown(f"<b style='color:#1e3a8a; font-size:1.1rem;'>{pfx} {row.get('العنوان', '')}</b>", unsafe_allow_html=True)
+                        st.caption(f"🎯 لـ: {row.get('الصف', 'الكل')} | 📅 {row.get('التاريخ', '')}")
+                        st.write(f"📝 {row.get('الرابط', row.get('details', ''))}")
                     
                     with col_btn:
-                        # زر بث الواتساب الاحترافي
-                        w_msg = urllib.parse.quote(f"📢 *تنبيه من منصة زياد*\n📌 *{row.get('العنوان')}*\n📝 {row.get('الرابط')}")
-                        st.link_button("👥 بث واتساب", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
+                        # ✅ ميزة بث الواتساب (تجهيز رسالة احترافية للمجموعات)
+                        w_msg = urllib.parse.quote(
+                            f"📢 *تنبيه من منصة زياد الذكية*\n"
+                            f"------------------\n"
+                            f"📌 *{row.get('العنوان')}*\n"
+                            f"📝 {row.get('الرابط')}\n"
+                            f"------------------"
+                        )
+                        st.link_button("👥 بث للواتساب", f"https://api.whatsapp.com/send?text={w_msg}", use_container_width=True)
                         
-                        # زر الحذف النهائي
-                        if st.button("🗑️ حذف", key=f"del_ann_{idx}", use_container_width=True):
-                            sh.worksheet("exams").delete_rows(int(idx) + 2)
-                            st.success("✅ تم الحذف"); st.cache_data.clear(); st.rerun()
+                        # ✅ ميزة الحذف النهائي من قوقل شيت
+                        if st.button("🗑️ حذف التنبيه", key=f"del_ann_{idx}", use_container_width=True):
+                            try:
+                                # حذف السطر (المؤشر + 2 لتعويض الترويسة وبدء الفهرس من 0)
+                                sh.worksheet("exams").delete_rows(int(idx) + 2)
+                                st.success("✅ تم الحذف بنجاح")
+                                st.cache_data.clear()
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ فشل الحذف: {e}")
+        else:
+            st.info("💡 لا توجد تنبيهات منشورة حالياً في قاعدة البيانات.")
     # ---------------------------------------------------------
     # ⚙️ التبويب 3: الإعدادات والتحكم الشامل (النسخة المكتملة والمدمجة 2026)
     # ---------------------------------------------------------
@@ -623,6 +653,9 @@ if st.session_state.role == "teacher":
         if st.button("🚪 تأكيد تسجيل الخروج"):
             st.session_state.role = None; st.rerun()
 # ==========================================
+# 👨‍🎓 6. واجهة الطالب (النسخة الذهبية المكتملة والمطورة)
+# ==========================================
+# ==========================================
 # 👨‍🎓 2. واجهة الطالب (إصدار الاستقرار والتباين العالي المدمج)
 # ==========================================
 if st.session_state.role == "student":
@@ -662,11 +695,6 @@ if st.session_state.role == "student":
             /* تباين عالي: نصوص سوداء عريضة جداً للجوال لضمان الوضوح */
             .mobile-card {{ background: #ffffff; color: #000000 !important; padding: 18px; border-radius: 12px; border: 1.5px solid #000; margin-bottom: 12px; font-weight: 800; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
             .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.1); }}
-            
-            /* شريط الأخبار المتحرك الذكي */
-            .marquee-container {{ background: #1e3a8a; color: white; padding: 10px 0; border-radius: 10px; margin: 10px 0; overflow: hidden; white-space: nowrap; border: 1px solid #3b82f6; }}
-            .marquee-text {{ display: inline-block; animation: marquee 25s linear infinite; font-weight: 900; }}
-            @keyframes marquee {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
             </style>
             
             <div class="app-header">
@@ -675,22 +703,17 @@ if st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # 🚨 1. شريط الأخبار المتحرك (Marquee) - يظهر تحت الترحيب مباشرة
+        # --- 🚨 [موقع الشاشة الرئيسية] التنبيه العاجل (مفلتر بالصف وبالحالة) ---
         if not df_ann.empty:
-            scrolling_filter = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])].tail(3)
-            if not scrolling_filter.empty:
-                news_ticker = " 🌟 | ".join(scrolling_filter['العنوان'].tolist())
-                st.markdown(f'<div class="marquee-container"><div class="marquee-text">📢 آخر الأخبار: {news_ticker} 🌟</div></div>', unsafe_allow_html=True)
-
-        # 🚨 2. الإعلان العاجل الثابت (للأهمية القصوى)
-        if not df_ann.empty:
+            # التحقق من وجود الحقول لتجنب KeyError
             if 'عاجل' in df_ann.columns and 'الصف' in df_ann.columns:
                 df_ann['عاجل'] = df_ann['عاجل'].astype(str).str.strip()
                 df_ann['الصف'] = df_ann['الصف'].astype(str).str.strip()
                 
+                # فلترة ذكية: يظهر التنبيه العاجل (نعم) الموجه لصف الطالب أو للكل
                 urgent = df_ann[(df_ann['عاجل'] == 'نعم') & (df_ann['الصف'].isin(['الكل', s_class]))]
                 if not urgent.empty:
-                    u = urgent.tail(1).iloc[0]
+                    u = urgent.tail(1).iloc[0] # عرض أحدث تنبيه عاجل
                     st.markdown(f"""
                         <div class="urgent-msg">
                             🌟 تنبيه هام لـ {s_class}: {u.get('العنوان', 'تنبيه جديد')} <br>
@@ -698,39 +721,44 @@ if st.session_state.role == "student":
                         </div>
                     """, unsafe_allow_html=True)
 
-        # 🏅 3. الأوسمة الأفقية (كما في الكود الأصلي)
+        # 🏅 2. الأوسمة الأفقية ورصيد النقاط
         st.markdown(f"""
             <div class="medal-flex">
                 <div class="m-card {'m-active' if s_points >= 100 else ''}">🥇<br><b style='color:#000;'>ذهبي</b></div>
                 <div class="m-card {'m-active' if s_points >= 50 else ''}">🥈<br><b style='color:#000;'>فضي</b></div>
                 <div class="m-card m-active">🥉<br><b style='color:#000;'>برونزي</b></div>
             </div>
-            
-            # 📊 #
             <div class="points-banner">
-                <p style='margin:0; font-size: 1.1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز السلوكي</p>
-                <h1 style='margin:0; font-size: 4.5rem; font-weight: 900;'>{s_points}</h1>
+                <p style='margin:0; font-size: 1rem; opacity:0.9; font-weight:bold;'>رصيد نقاط التميز</p>
+                <h1 style='margin:0; font-size: 4rem; font-weight: 900;'>{s_points}</h1>
             </div>
         """, unsafe_allow_html=True)
 
-        # 📱 5. التبويبات المدمجة (نظام الفلترة المطور)
+        # 📱 3. التبويبات المدمجة (نظام الفلترة المطور بأسماء الحقول)
         tabs = st.tabs(["📢 التنبيهات", "📝 الملاحظات", "📊 درجاتي", "🏆 المتصدرين", "⚙️ الإعدادات"])
 
+        # --- تبويب التنبيهات (الفلترة بناءً على حقل الصف - الربط بالأسماء) ---
         with tabs[0]:
             st.markdown(f"#### 📢 سجل تعميمات {s_class}")
             if not df_ann.empty and 'الصف' in df_ann.columns:
+                # يظهر للطالب التنبيهات الموجهة لصفه المسجل فقط أو للكل
                 student_ann = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_class])]
                 if not student_ann.empty:
+                    # عرض التعميمات من الأحدث للأقدم
                     for _, row in student_ann.iloc[::-1].iterrows(): 
                         st.markdown(f"""
                             <div class="mobile-card">
-                                📢 {row.get('العنوان', 'تعميم')} <br> 
+                                📢 {row.get('العنوان', 'تعميم جديد')} <br> 
                                 <small style='color:#555; font-weight:normal;'>📅 {row.get('التاريخ', '')}</small> <br> 
                                 <div style='margin-top:5px; font-weight:normal; font-size:0.95rem;'>{row.get('الرابط', row.get('التفاصيل', ''))}</div>
                             </div>
                         """, unsafe_allow_html=True)
-                else: st.info(f"💡 لا توجد تنبيهات جديدة لـ {s_class}.")
+                else: 
+                    st.info(f"💡 لا توجد تنبيهات جديدة لـ {s_class} حالياً.")
+            else: 
+                st.info("💡 سجل التنبيهات فارغ حالياً.")
 
+        # --- تبويب الملاحظات (تباين عالي للجوال) ---
         with tabs[1]:
             st.markdown("#### 📝 ملاحظات المعلم")
             if not df_beh.empty:
@@ -738,9 +766,16 @@ if st.session_state.role == "student":
                 my_notes = df_beh[df_beh['clean_id'] == student_id]
                 if not my_notes.empty:
                     for _, n in my_notes.iterrows():
-                        st.markdown(f"""<div class="mobile-card" style="border-right-color:#e53e3e;">📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> <small style="font-weight:normal;">📅 {n.get('date', '')}</small></div>""", unsafe_allow_html=True)
-                else: st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
+                        st.markdown(f"""
+                            <div class="mobile-card" style="border-right-color:#e53e3e;">
+                                📌 {n.get('type', 'تنبيه')}: {n.get('desc', '')} <br> 
+                                <small style="font-weight:normal;">📅 {n.get('date', '')}</small>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else: 
+                    st.success("🌟 سجلّك مثالي وخالٍ من الملاحظات السلبية.")
 
+        # --- تبويب درجاتي (المسميات العربية الصافية) ---
         with tabs[2]:
             st.markdown("#### 📊 نتائج الاختبارات والمهام")
             if not df_gr.empty:
@@ -756,6 +791,7 @@ if st.session_state.role == "student":
                         </div>
                     """, unsafe_allow_html=True)
 
+        # --- تبويب المتصدرين (بطاقات تنافسية) ---
         with tabs[3]:
             st.markdown("#### 🏆 لوحة الشرف (أفضل 10 طلاب)")
             df_st['pts_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
@@ -763,11 +799,17 @@ if st.session_state.role == "student":
             for i, (_, row) in enumerate(top_10.iterrows(), 1):
                 icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else str(i)
                 is_me_style = "border: 2px solid #1e3a8a; background: #eff6ff;" if str(row['clean_id']) == student_id else ""
-                st.markdown(f"""<div class="mobile-card" style="{is_me_style}"><span style='font-size:1.2rem;'>{icon}</span> {row['name']} <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span></div>""", unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div class="mobile-card" style="{is_me_style}">
+                        <span style='font-size:1.2rem;'>{icon}</span> {row['name']} 
+                        <span style='float:left; color:#f59e0b;'>{int(row['pts_num'])} ن</span>
+                    </div>
+                """, unsafe_allow_html=True)
 
+        # --- تبويب الإعدادات (تحديث الملف + الخروج) ---
         with tabs[4]:
             st.markdown("#### ⚙️ إعدادات الحساب")
-            with st.form("up_info_final"):
+            with st.form("up_info_final_merged"):
                 new_mail = st.text_input("📧 البريد الإلكتروني", s_data.get('الإيميل', ''))
                 new_phone = st.text_input("📱 رقم الجوال", s_data.get('الجوال', ''))
                 if st.form_submit_button("💾 حفظ البيانات المحدثة"):
@@ -777,14 +819,18 @@ if st.session_state.role == "student":
                         if student_id in ids:
                             r_idx = ids.index(student_id) + 1
                             ws_st.update_cell(r_idx, 6, new_mail); ws_st.update_cell(r_idx, 7, new_phone)
-                            st.success("✅ تم التحديث بنجاح!"); st.cache_data.clear()
-                    except: st.error("❌ فشل التحديث حالياً.")
+                            st.success("✅ تم تحديث بياناتك بنجاح!"); st.cache_data.clear()
+                    except: 
+                        st.error("❌ فشل التحديث حالياً، يرجى المحاولة لاحقاً.")
+            
             st.divider()
-            if st.button("🚪 تسجيل الخروج الآمن", type="primary", use_container_width=True):
+            if st.button("🚪 تسجيل الخروج الآمن من المنصة", type="primary", use_container_width=True):
                 st.session_state.role = None; st.session_state.username = None; st.rerun()
 
     else: 
+        # رسالة الخطأ عند عدم العثور على الطالب
         st.error(f"⚠️ عذراً، الرقم الأكاديمي ({student_id}) غير مسجل في النظام.")
-        if st.button("🔄 العودة لمحاولة الدخول برقم آخر"): st.rerun()
+        if st.button("🔄 العودة لمحاولة الدخول برقم آخر"): 
+            st.rerun()
 
     show_footer() # إظهار الحقوق والتواصل في أسفل الصفحة
