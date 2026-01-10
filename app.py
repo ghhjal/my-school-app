@@ -11,38 +11,18 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 # ⚙️ 1. إعدادات النظام
 # ==========================================
-st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
+st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🌗 إعدادات الوضع الداكن ---
-if "theme_mode" not in st.session_state:
-    st.session_state.theme_mode = False 
-
-with st.sidebar:
-    st.session_state.theme_mode = st.toggle("🌙 الوضع الداكن", value=st.session_state.theme_mode)
-
-# ألوان عالية التباين (High Contrast) لضمان الوضوح في الجوال
-if st.session_state.theme_mode:
-    # الوضع الليلي
-    main_bg = "#0e1117"
-    card_bg = "#262730"
-    text_color = "#ffffff"
-    sub_text = "#cccccc" # تفتيح النص الفرعي ليبرز
-    border_color = "#666666" # حدود واضحة
-    input_bg = "#1e1e1e"
-    input_text = "#ffffff"
-    header_grad = "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
-    shadow_val = "0 4px 6px rgba(255,255,255,0.1)"
-else:
-    # الوضع النهاري (تعديل الألوان لتكون غامقة وواضحة)
-    main_bg = "#f8fafc"
-    card_bg = "#ffffff"
-    text_color = "#000000" # أسود صريح
-    sub_text = "#333333"   # رمادي غامق جداً
-    border_color = "#1e3a8a" # أزرق غامق للحدود
-    input_bg = "#ffffff"   # خلفية بيضاء للحقل لزيادة التباين
-    input_text = "#000000" # نص أسود
-    header_grad = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)"
-    shadow_val = "0 4px 10px rgba(0,0,0,0.15)"
+# --- 🎨 تعريف الألوان (الوضع النهاري الثابت) ---
+main_bg = "#f8fafc"        # خلفية الصفحة (أبيض مائل للأزرق الخفيف جداً)
+card_bg = "#ffffff"        # خلفية البطاقات (أبيض ناصع)
+text_color = "#000000"     # أسود حالك
+sub_text = "#333333"       # رمادي غامق
+border_color = "#1e3a8a"   # أزرق ملكي للحدود
+input_bg = "#ffffff"       # خلفية الحقول (أبيض)
+input_text = "#000000"     # نص الحقول (أسود)
+header_grad = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)"
+shadow_val = "0 4px 10px rgba(0,0,0,0.1)"
 
 # --- [الدوال المساعدة] ---
 def clean_phone_number(phone):
@@ -108,12 +88,19 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS عالي التباين والوضوح)
+# 🎨 2. التصميم (CSS معدل للحقول البيضاء)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-    html, body, [data-testid="stAppViewContainer"] {{ font-family: 'Cairo'; direction: RTL; text-align: right; background-color: {main_bg} !important; color: {text_color} !important; }}
+    
+    /* إخفاء القائمة الجانبية تماماً */
+    section[data-testid="stSidebar"] {{ display: none; }}
+    
+    html, body, [data-testid="stAppViewContainer"] {{ 
+        font-family: 'Cairo'; direction: RTL; text-align: right; 
+        background-color: {main_bg} !important; color: {text_color} !important; 
+    }}
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; }}
     
     /* الهيدر */
@@ -135,14 +122,22 @@ st.markdown(f"""
         .header-text h1 {{ font-size: 2.2rem; }}
     }}
 
-    /* تحسين وضوح الحقول والمسميات */
+    /* ✅✅✅ إصلاح ألوان الحقول (أبيض وأسود) ✅✅✅ */
     div[data-baseweb="input"] {{ 
-        background-color: {input_bg} !important; 
+        background-color: #ffffff !important; /* خلفية بيضاء */
         border: 2px solid {border_color} !important; 
         border-radius: 12px; height: 50px; 
     }}
-    input {{ color: {input_text} !important; font-weight: 900 !important; font-size: 1.1rem !important; }}
-    label {{ color: {text_color} !important; font-weight: 900 !important; font-size: 1rem !important; }} /* توضيح المسميات */
+    input {{ 
+        color: #000000 !important; /* نص أسود */
+        font-weight: 900 !important; 
+        font-size: 1.1rem !important; 
+        -webkit-text-fill-color: #000000 !important;
+    }}
+    /* إصلاح القوائم المنسدلة */
+    div[data-baseweb="select"] {{ background-color: #ffffff !important; color: #000000 !important; }}
+    div[data-baseweb="base-input"] {{ background-color: #ffffff !important; }}
+    label {{ color: #000000 !important; font-weight: 800 !important; font-size: 1rem !important; }} 
     
     .contact-btn {{ display: block; padding: 12px; background: {card_bg}; border: 2px solid {border_color}; border-radius: 12px; color: {text_color} !important; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 10px; transition: 0.3s; }}
     .contact-btn:hover {{ background: #eff6ff; border-color: #3b82f6; transform: translateY(-2px); color: #1e3a8a !important; }}
@@ -153,12 +148,10 @@ st.markdown(f"""
     .m-card {{ flex: 1; background: {card_bg}; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid {border_color}; box-shadow: {shadow_val}; }}
     .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; color: #000 !important; }}
     .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
-    
-    /* زيادة سماكة الحدود والخطوط في بطاقات الجوال */
     .mobile-card {{ 
         background: {card_bg}; color: {text_color}; 
         padding: 18px; border-radius: 12px; 
-        border: 2px solid {border_color}; /* زيادة سماكة الإطار */
+        border: 2px solid {border_color}; 
         margin-bottom: 12px; font-weight: 800; 
         box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; font-size: 1.1rem; 
     }}
@@ -452,16 +445,17 @@ elif st.session_state.role == "student":
         s_nm = s_dat.get('name', 'طالب'); s_cls = str(s_dat.get('class', '')).strip()
         pts = int(pd.to_numeric(s_dat.get('النقاط', 0), errors='coerce') or 0)
 
-        st.markdown(f"""
-            <div class="app-header"><h2>👋 مرحباً: {s_nm}</h2><p>🏫 {s_cls} | 🆔 {sid}</p></div>
-        """, unsafe_allow_html=True)
-
+        # ✅ التنبيه العاجل (مكانه الجديد بالأعلى)
         if not df_ann.empty:
             df_ann['عاجل'] = df_ann['عاجل'].astype(str).str.strip(); df_ann['الصف'] = df_ann['الصف'].astype(str).str.strip()
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
             if not urg.empty:
                 u = urg.tail(1).iloc[0]
                 st.markdown(f"<div class='urgent-msg'>🚨 {u.get('العنوان')}<br><small>{u.get('الرابط')}</small></div>", unsafe_allow_html=True)
+
+        st.markdown(f"""
+            <div class="app-header"><h2>👋 مرحباً: {s_nm}</h2><p>🏫 {s_cls} | 🆔 {sid}</p></div>
+        """, unsafe_allow_html=True)
 
         st.markdown(f"""
             <div class="medal-flex">
@@ -520,8 +514,8 @@ elif st.session_state.role == "student":
                             if 'الإيميل' in h and 'الجوال' in h:
                                 ws.update_cell(c.row, h.index('الإيميل')+1, nm)
                                 ws.update_cell(c.row, h.index('الجوال')+1, fp)
-                                st.success("✅ تم التحديث بنجاح")
-                                st.toast("تم حفظ البيانات", icon="✅")
+                                st.success("✅ تم تحديث بياناتك بنجاح")
+                                st.toast("تم الحفظ بنجاح", icon="✅")
                                 st.cache_data.clear()
                             else: st.error("خطأ في الجدول")
                     except Exception as e: st.error(f"خطأ: {e}")
