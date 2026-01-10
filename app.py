@@ -13,14 +13,14 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان (الوضع النهاري الثابت) ---
-main_bg = "#f8fafc"        # خلفية الصفحة (أبيض مائل للأزرق الخفيف جداً)
-card_bg = "#ffffff"        # خلفية البطاقات (أبيض ناصع)
-text_color = "#000000"     # أسود حالك
-sub_text = "#333333"       # رمادي غامق
-border_color = "#1e3a8a"   # أزرق ملكي للحدود
-input_bg = "#ffffff"       # خلفية الحقول (أبيض)
-input_text = "#000000"     # نص الحقول (أسود)
+# --- 🎨 تعريف الألوان (الوضع النهاري عالي التباين) ---
+main_bg = "#f8fafc"        
+card_bg = "#ffffff"        
+text_color = "#000000"     
+sub_text = "#333333"       
+border_color = "#1e3a8a"   
+input_bg = "#ffffff"       
+input_text = "#000000"     
 header_grad = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)"
 shadow_val = "0 4px 10px rgba(0,0,0,0.1)"
 
@@ -88,13 +88,12 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS معدل للحقول البيضاء)
+# 🎨 2. التصميم (CSS معدل للأزرار الزرقاء الواضحة)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     
-    /* إخفاء القائمة الجانبية تماماً */
     section[data-testid="stSidebar"] {{ display: none; }}
     
     html, body, [data-testid="stAppViewContainer"] {{ 
@@ -122,22 +121,28 @@ st.markdown(f"""
         .header-text h1 {{ font-size: 2.2rem; }}
     }}
 
-    /* ✅✅✅ إصلاح ألوان الحقول (أبيض وأسود) ✅✅✅ */
-    div[data-baseweb="input"] {{ 
-        background-color: #ffffff !important; /* خلفية بيضاء */
-        border: 2px solid {border_color} !important; 
-        border-radius: 12px; height: 50px; 
-    }}
-    input {{ 
-        color: #000000 !important; /* نص أسود */
-        font-weight: 900 !important; 
-        font-size: 1.1rem !important; 
-        -webkit-text-fill-color: #000000 !important;
-    }}
-    /* إصلاح القوائم المنسدلة */
+    /* ألوان الحقول */
+    div[data-baseweb="input"] {{ background-color: #ffffff !important; border: 2px solid {border_color} !important; border-radius: 12px; height: 50px; }}
+    input {{ color: #000000 !important; font-weight: 900 !important; font-size: 1.1rem !important; -webkit-text-fill-color: #000000 !important; }}
     div[data-baseweb="select"] {{ background-color: #ffffff !important; color: #000000 !important; }}
     div[data-baseweb="base-input"] {{ background-color: #ffffff !important; }}
     label {{ color: #000000 !important; font-weight: 800 !important; font-size: 1rem !important; }} 
+    
+    /* تنسيق الأزرار الخاصة (أزرق غامق وواضح) */
+    div.stButton > button {{
+        background-color: white !important;
+        color: #1e3a8a !important; /* نص أزرق غامق */
+        border: 2px solid #1e3a8a !important;
+        font-weight: 900 !important;
+        font-size: 1.1rem !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        transition: 0.3s;
+    }}
+    div.stButton > button:hover {{
+        background-color: #1e3a8a !important;
+        color: white !important;
+    }}
     
     .contact-btn {{ display: block; padding: 12px; background: {card_bg}; border: 2px solid {border_color}; border-radius: 12px; color: {text_color} !important; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 10px; transition: 0.3s; }}
     .contact-btn:hover {{ background: #eff6ff; border-color: #3b82f6; transform: translateY(-2px); color: #1e3a8a !important; }}
@@ -148,6 +153,7 @@ st.markdown(f"""
     .m-card {{ flex: 1; background: {card_bg}; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid {border_color}; box-shadow: {shadow_val}; }}
     .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; color: #000 !important; }}
     .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
+    
     .mobile-card {{ 
         background: {card_bg}; color: {text_color}; 
         padding: 18px; border-radius: 12px; 
@@ -502,26 +508,29 @@ elif st.session_state.role == "student":
 
         with tabs[4]:
             st.write("#### ⚙️ تحديث البيانات")
-            with st.form("up_me"):
-                nm = st.text_input("📧 إيميل", s_dat.get('الإيميل',''))
-                np = st.text_input("📱 جوال", s_dat.get('الجوال',''))
-                if st.form_submit_button("💾 حفظ"):
-                    try:
-                        fp = clean_phone_number(np) if np else ""
-                        ws = sh.worksheet("students"); c = ws.find(sid)
-                        if c:
-                            h = ws.row_values(1)
-                            if 'الإيميل' in h and 'الجوال' in h:
-                                ws.update_cell(c.row, h.index('الإيميل')+1, nm)
-                                ws.update_cell(c.row, h.index('الجوال')+1, fp)
-                                st.success("✅ تم تحديث بياناتك بنجاح")
-                                st.toast("تم الحفظ بنجاح", icon="✅")
-                                st.cache_data.clear()
-                            else: st.error("خطأ في الجدول")
-                    except Exception as e: st.error(f"خطأ: {e}")
+            # استبدال st.form لإتاحة الأزرار الجانبية
+            nm = st.text_input("📧 إيميل", s_dat.get('الإيميل',''))
+            np = st.text_input("📱 جوال", s_dat.get('الجوال',''))
             
-            st.divider()
-            if st.button("🚪 خروج"): st.session_state.role = None; st.rerun()
+            st.write("")
+            c1, c2 = st.columns(2)
+            if c1.button("💾 حفظ التعديلات", use_container_width=True):
+                try:
+                    fp = clean_phone_number(np) if np else ""
+                    ws = sh.worksheet("students"); c = ws.find(sid)
+                    if c:
+                        h = ws.row_values(1)
+                        if 'الإيميل' in h and 'الجوال' in h:
+                            ws.update_cell(c.row, h.index('الإيميل')+1, nm)
+                            ws.update_cell(c.row, h.index('الجوال')+1, fp)
+                            st.success("✅ تم تحديث بياناتك بنجاح")
+                            st.toast("تم الحفظ بنجاح", icon="✅")
+                            # لا نقوم بعمل st.rerun() هنا لكي تظهر الرسالة
+                        else: st.error("خطأ في الجدول")
+                except Exception as e: st.error(f"خطأ: {e}")
+            
+            if c2.button("🚪 خروج", type="primary", use_container_width=True):
+                st.session_state.role = None; st.rerun()
 
     else: st.error("غير مسجل"); st.button("عودة", on_click=st.rerun)
     
