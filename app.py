@@ -38,9 +38,9 @@ def get_professional_msg(name, b_type, b_desc, date):
 def show_footer():
     st.markdown("<br><hr>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.link_button("📢 تليجرام الإدارة", "#", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "#", use_container_width=True)
-    c3.link_button("📧 البريد الإلكتروني", "#", use_container_width=True)
+    c1.link_button("📢 تليجرام الإدارة", "@ZiyadAlmoami", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "966534900049", use_container_width=True)
+    c3.link_button("📧 البريد الإلكتروني", "ziad.platform.alerts@gmail.com", use_container_width=True)
     st.markdown(f"<p style='text-align:center; color:{sub_text}; margin-top:20px; font-size:0.8rem;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
 
 @st.cache_resource
@@ -168,8 +168,8 @@ st.markdown(f"""
     <div class="header-container">
         <div class="logo-icon">🎓</div>
         <div class="header-text">
-            <h1>منصة الأستاذ زياد الذكية</h1>
-            <p>بوابة التعليم المتطورة والإدارة الشاملة - 2026</p>
+            <h1>منصة زياد الذكية</h1>
+            <p>نظام متابعة الطلاب والتواصل مع أولياء الأمور - 2026</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
