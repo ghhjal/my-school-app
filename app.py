@@ -39,9 +39,9 @@ def show_footer():
     st.markdown("<br><hr>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     # روابط التواصل (استبدل # بالروابط الحقيقية)
-    c1.link_button("📢 تليجرام الإدارة", "https://t.me/username", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "https://wa.me/966500000000", use_container_width=True)
-    c3.link_button("📧 البريد الإلكتروني", "mailto:email@school.com", use_container_width=True)
+    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoamri", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
+    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alers@gmail.com", use_container_width=True)
     st.markdown(f"<p style='text-align:center; color:{sub_text}; margin-top:20px; font-size:0.8rem;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
 
 @st.cache_resource
