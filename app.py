@@ -38,10 +38,9 @@ def get_professional_msg(name, b_type, b_desc, date):
 def show_footer():
     st.markdown("<br><hr>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    # روابط التواصل (استبدل # بالروابط الحقيقية)
-    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoamri", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alers@gmail.com", use_container_width=True)
+    c1.link_button("📢 تليجرام الإدارة", "#", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "#", use_container_width=True)
+    c3.link_button("📧 البريد الإلكتروني", "#", use_container_width=True)
     st.markdown(f"<p style='text-align:center; color:{sub_text}; margin-top:20px; font-size:0.8rem;'>© 2026 جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية</p>", unsafe_allow_html=True)
 
 @st.cache_resource
@@ -79,7 +78,6 @@ if "class_options" not in st.session_state:
         st.session_state.max_quiz = int(s_map.get('max_quiz', 40))
         st.session_state.current_year = str(s_map.get('current_year', '1447هـ'))
         st.session_state.class_options = [x.strip() for x in str(s_map.get('class_list', 'الأول')).split(',') if x.strip()]
-        # التأكد من وجود مفتاح المراحل
         st.session_state.stage_options = [x.strip() for x in str(s_map.get('stage_list', 'ابتدائي')).split(',') if x.strip()]
     except:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
@@ -90,7 +88,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم CSS
+# 🎨 2. التصميم (CSS)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -115,10 +113,8 @@ st.markdown(f"""
     .header-text h1 {{ margin: 0; font-size: 3rem; font-weight: 900; color: #fff !important; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }}
     .header-text p {{ margin: 5px 0 0 0; color: #dbeafe; font-size: 1.2rem; font-weight: bold; }}
     
-    /* تأثير الوميض للتنبيهات */
     @keyframes blinker {{ 50% {{ opacity: 0.6; transform: scale(0.98); }} }}
     .urgent-anim {{ animation: blinker 1.5s linear infinite; border: 2px solid red !important; background-color: #fff5f5 !important; }}
-
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
 
     @media (max-width: 768px) {{
@@ -133,7 +129,6 @@ st.markdown(f"""
     div[data-baseweb="base-input"] {{ background-color: #ffffff !important; }}
     label {{ color: #000000 !important; font-weight: 800 !important; font-size: 1rem !important; }} 
     
-    /* تنسيق الأزرار */
     div.stButton > button {{
         background-color: white !important;
         color: #1e3a8a !important; 
@@ -146,13 +141,7 @@ st.markdown(f"""
         width: 100%;
     }}
     div.stButton > button:hover {{ background-color: #1e3a8a !important; color: white !important; }}
-    
-    /* أزرار الدخول (Primary) */
-    button[kind="primary"] {{
-        background-color: #1e3a8a !important;
-        color: white !important;
-        border: none !important;
-    }}
+    button[kind="primary"] {{ background-color: #1e3a8a !important; color: white !important; border: none !important; }}
 
     .app-header {{ background: {card_bg}; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: {shadow_val}; margin-top: -20px; border: 1px solid {border_color}; text-align: right !important; direction: rtl !important; }}
     .medal-flex {{ display: flex; gap: 8px; margin: 15px 0; direction: rtl; }}
@@ -170,12 +159,7 @@ st.markdown(f"""
     }}
     
     .leaderboard-row {{ display: flex; justify-content: space-between; align-items: center; direction: rtl; }}
-    
-    .urgent-msg {{ 
-        border: 2px solid #e53e3e; color: #c53030 !important; 
-        padding: 15px; border-radius: 12px; margin-bottom: 20px; 
-        text-align: center; font-weight: 900; direction: rtl; 
-    }}
+    .urgent-msg {{ border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; direction: rtl; }}
     
     h1, h2, h3, h4, h5, h6, p, span, div {{ color: {text_color}; }}
     small {{ color: {sub_text} !important; font-weight: bold; }}
@@ -198,7 +182,6 @@ if st.session_state.role is None:
     with t1:
         with st.form("st_login"):
             sid = st.text_input("🆔 الرقم الأكاديمي").strip()
-            # زر مميز (Primary)
             if st.form_submit_button("دخول 🚀", type="primary", use_container_width=True):
                 df = fetch_safe("students")
                 if not df.empty:
@@ -211,7 +194,6 @@ if st.session_state.role is None:
     with t2:
         with st.form("tr_login"):
             u = st.text_input("👤 المستخدم"); p = st.text_input("🔑 المرور", type="password")
-            # زر مميز (Primary)
             if st.form_submit_button("دخول 🛠️", type="primary", use_container_width=True):
                 df = fetch_safe("users")
                 if not df.empty and u in df['username'].values:
@@ -347,7 +329,6 @@ elif st.session_state.role == "teacher":
                             with kc1: st.write(f"**{r.get('type')}** | {r.get('date')}"); st.caption(r.get('note'))
                             with kc2: 
                                 lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
-                                # أزرار تواصل متعددة
                                 c_wa, c_em = st.columns(2)
                                 c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
                                 c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
@@ -370,9 +351,15 @@ elif st.session_state.role == "teacher":
             with st.container(border=True):
                 kc1, kc2 = st.columns([3, 1])
                 kc1.write(f"**{r.get('العنوان')}** ({r.get('الصف')})"); kc1.caption(r.get('الرابط'))
-                # زر إرسال للمجموعة
-                grp_msg = urllib.parse.quote(f"*{r.get('العنوان')}*\n{r.get('الرابط')}")
-                kc2.link_button("📲 إرسال مجموعة", f"https://api.whatsapp.com/send?text={grp_msg}", use_container_width=True)
+                # زر نشر مجموعة بتنسيق احترافي
+                msg_text = (f"📢 *تعميم هام من منصة الأستاذ زياد*\n"
+                            f"━━━━━━━━━━━━\n"
+                            f"📌 *العنوان:* {r.get('العنوان')}\n"
+                            f"📄 *التفاصيل:* {r.get('الرابط')}\n"
+                            f"📅 *التاريخ:* {r.get('التاريخ')}\n"
+                            f"━━━━━━━━━━━━")
+                grp_msg = urllib.parse.quote(msg_text)
+                kc2.link_button("📲 نشر للمجموعة", f"https://api.whatsapp.com/send?text={grp_msg}", use_container_width=True)
                 if kc2.button("🗑️ حذف", key=f"da{i}"):
                     sh.worksheet("exams").delete_rows(int(i)+2); st.rerun()
 
@@ -394,13 +381,13 @@ elif st.session_state.role == "teacher":
             mq = st.number_input("اختبار", 0, 100, st.session_state.max_quiz)
             if st.button("💾 حفظ الإعدادات", type="primary"):
                 ws = sh.worksheet("settings")
-                # إصلاح مشكلة حفظ المراحل بإضافة المفاتيح صراحة
+                # إصلاح مشكلة حفظ المراحل
                 batch_updates = [
                     {'range': 'A2:B2', 'values': [['max_tasks', mt]]},
                     {'range': 'A3:B3', 'values': [['max_quiz', mq]]},
                     {'range': 'A4:B4', 'values': [['current_year', cy]]},
                     {'range': 'A5:B5', 'values': [['class_list', cls]]},
-                    {'range': 'A6:B6', 'values': [['stage_list', stg]]} # إجبار الكتابة في السطر 6
+                    {'range': 'A6:B6', 'values': [['stage_list', stg]]} 
                 ]
                 ws.batch_update(batch_updates)
                 st.session_state.max_tasks = mt; st.session_state.max_quiz = mq
@@ -556,7 +543,6 @@ elif st.session_state.role == "student":
                         if 'الإيميل' in h and 'الجوال' in h:
                             ws.update_cell(c.row, h.index('الإيميل')+1, nm)
                             ws.update_cell(c.row, h.index('الجوال')+1, fp)
-                            # ✅ رسالة نجاح واضحة
                             st.success("✅ تم تحديث بياناتك بنجاح")
                             st.toast("تم الحفظ بنجاح", icon="✅")
                         else: st.error("خطأ في الجدول")
