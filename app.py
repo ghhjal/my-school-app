@@ -88,7 +88,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS معدل للأزرار الزرقاء الواضحة)
+# 🎨 2. التصميم (CSS يدعم العربية RTL بقوة)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -96,9 +96,13 @@ st.markdown(f"""
     
     section[data-testid="stSidebar"] {{ display: none; }}
     
+    /* فرض الاتجاه من اليمين لليسار على كامل الصفحة */
     html, body, [data-testid="stAppViewContainer"] {{ 
-        font-family: 'Cairo'; direction: RTL; text-align: right; 
-        background-color: {main_bg} !important; color: {text_color} !important; 
+        font-family: 'Cairo', sans-serif; 
+        direction: rtl !important; 
+        text-align: right !important; 
+        background-color: {main_bg} !important; 
+        color: {text_color} !important; 
     }}
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; }}
     
@@ -121,23 +125,24 @@ st.markdown(f"""
         .header-text h1 {{ font-size: 2.2rem; }}
     }}
 
-    /* ألوان الحقول */
+    /* ألوان الحقول ووضوحها */
     div[data-baseweb="input"] {{ background-color: #ffffff !important; border: 2px solid {border_color} !important; border-radius: 12px; height: 50px; }}
-    input {{ color: #000000 !important; font-weight: 900 !important; font-size: 1.1rem !important; -webkit-text-fill-color: #000000 !important; }}
-    div[data-baseweb="select"] {{ background-color: #ffffff !important; color: #000000 !important; }}
+    input {{ color: #000000 !important; font-weight: 900 !important; font-size: 1.1rem !important; -webkit-text-fill-color: #000000 !important; text-align: right !important; direction: rtl !important; }}
+    div[data-baseweb="select"] {{ background-color: #ffffff !important; color: #000000 !important; direction: rtl !important; text-align: right !important; }}
     div[data-baseweb="base-input"] {{ background-color: #ffffff !important; }}
-    label {{ color: #000000 !important; font-weight: 800 !important; font-size: 1rem !important; }} 
+    label {{ color: #000000 !important; font-weight: 800 !important; font-size: 1rem !important; text-align: right !important; display: block; }} 
     
-    /* تنسيق الأزرار الخاصة (أزرق غامق وواضح) */
+    /* تنسيق الأزرار (حفظ / خروج) */
     div.stButton > button {{
         background-color: white !important;
-        color: #1e3a8a !important; /* نص أزرق غامق */
+        color: #1e3a8a !important; 
         border: 2px solid #1e3a8a !important;
         font-weight: 900 !important;
         font-size: 1.1rem !important;
         border-radius: 12px !important;
         padding: 10px 20px !important;
         transition: 0.3s;
+        width: 100%; /* ملء العرض في الجوال */
     }}
     div.stButton > button:hover {{
         background-color: #1e3a8a !important;
@@ -147,9 +152,13 @@ st.markdown(f"""
     .contact-btn {{ display: block; padding: 12px; background: {card_bg}; border: 2px solid {border_color}; border-radius: 12px; color: {text_color} !important; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 10px; transition: 0.3s; }}
     .contact-btn:hover {{ background: #eff6ff; border-color: #3b82f6; transform: translateY(-2px); color: #1e3a8a !important; }}
     
-    /* بطاقات الطالب */
-    .app-header {{ background: {card_bg}; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: {shadow_val}; margin-top: -20px; border: 1px solid {border_color}; }}
-    .medal-flex {{ display: flex; gap: 8px; margin: 15px 0; }}
+    /* بطاقات الطالب (RTL) */
+    .app-header {{ 
+        background: {card_bg}; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; 
+        box-shadow: {shadow_val}; margin-top: -20px; border: 1px solid {border_color};
+        text-align: right !important; direction: rtl !important;
+    }}
+    .medal-flex {{ display: flex; gap: 8px; margin: 15px 0; direction: rtl; }}
     .m-card {{ flex: 1; background: {card_bg}; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid {border_color}; box-shadow: {shadow_val}; }}
     .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; color: #000 !important; }}
     .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
@@ -159,9 +168,17 @@ st.markdown(f"""
         padding: 18px; border-radius: 12px; 
         border: 2px solid {border_color}; 
         margin-bottom: 12px; font-weight: 800; 
-        box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; font-size: 1.1rem; 
+        box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; 
+        font-size: 1.1rem;
+        text-align: right !important; direction: rtl !important; /* فرض العربية */
     }}
-    .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; }}
+    
+    /* تنسيق خاص لبطاقة المتصدرين لتكون مرتبة */
+    .leaderboard-row {{
+        display: flex; justify-content: space-between; align-items: center; direction: rtl;
+    }}
+    
+    .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; direction: rtl; }}
     
     h1, h2, h3, h4, h5, h6, p, span, div {{ color: {text_color}; }}
     small {{ color: {sub_text} !important; font-weight: bold; }}
@@ -451,7 +468,7 @@ elif st.session_state.role == "student":
         s_nm = s_dat.get('name', 'طالب'); s_cls = str(s_dat.get('class', '')).strip()
         pts = int(pd.to_numeric(s_dat.get('النقاط', 0), errors='coerce') or 0)
 
-        # ✅ التنبيه العاجل (مكانه الجديد بالأعلى)
+        # التنبيه العاجل (بالأعلى)
         if not df_ann.empty:
             df_ann['عاجل'] = df_ann['عاجل'].astype(str).str.strip(); df_ann['الصف'] = df_ann['الصف'].astype(str).str.strip()
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
@@ -504,11 +521,16 @@ elif st.session_state.role == "student":
             for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
                 ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else str(i)
                 sty = "border:2px solid #1e3a8a" if str(r['clean_id']) == sid else ""
-                st.markdown(f"<div class='mobile-card' style='{sty}'><span>{ic}</span> {r['name']} <span style='float:left;color:#f59e0b'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div class='mobile-card leaderboard-row' style='{sty}'>
+                        <span>{ic}</span>
+                        <span>{r['name']}</span>
+                        <span style='color:#f59e0b; font-weight:900;'>{int(r['p_num'])} ن</span>
+                    </div>
+                """, unsafe_allow_html=True)
 
         with tabs[4]:
             st.write("#### ⚙️ تحديث البيانات")
-            # استبدال st.form لإتاحة الأزرار الجانبية
             nm = st.text_input("📧 إيميل", s_dat.get('الإيميل',''))
             np = st.text_input("📱 جوال", s_dat.get('الجوال',''))
             
@@ -525,7 +547,6 @@ elif st.session_state.role == "student":
                             ws.update_cell(c.row, h.index('الجوال')+1, fp)
                             st.success("✅ تم تحديث بياناتك بنجاح")
                             st.toast("تم الحفظ بنجاح", icon="✅")
-                            # لا نقوم بعمل st.rerun() هنا لكي تظهر الرسالة
                         else: st.error("خطأ في الجدول")
                 except Exception as e: st.error(f"خطأ: {e}")
             
