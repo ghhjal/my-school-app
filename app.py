@@ -13,25 +13,36 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide")
 
-# --- 🌗 الوضع الداكن ---
+# --- 🌗 إعدادات الوضع الداكن ---
 if "theme_mode" not in st.session_state:
     st.session_state.theme_mode = False 
 
 with st.sidebar:
     st.session_state.theme_mode = st.toggle("🌙 الوضع الداكن", value=st.session_state.theme_mode)
 
+# ألوان عالية التباين (High Contrast) لضمان الوضوح في الجوال
 if st.session_state.theme_mode:
-    main_bg, card_bg, text_color = "#0e1117", "#262730", "#ffffff"
-    sub_text, border_color = "#a0a0a0", "#444444"
-    input_bg, input_text = "#1e1e1e", "#ffffff"
+    # الوضع الليلي
+    main_bg = "#0e1117"
+    card_bg = "#262730"
+    text_color = "#ffffff"
+    sub_text = "#cccccc" # تفتيح النص الفرعي ليبرز
+    border_color = "#666666" # حدود واضحة
+    input_bg = "#1e1e1e"
+    input_text = "#ffffff"
     header_grad = "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
-    shadow_val = "0 4px 6px rgba(255,255,255,0.05)"
+    shadow_val = "0 4px 6px rgba(255,255,255,0.1)"
 else:
-    main_bg, card_bg, text_color = "#f8fafc", "#ffffff", "#000000"
-    sub_text, border_color = "#555555", "#ddd"
-    input_bg, input_text = "#f0f9ff", "#1e3a8a"
+    # الوضع النهاري (تعديل الألوان لتكون غامقة وواضحة)
+    main_bg = "#f8fafc"
+    card_bg = "#ffffff"
+    text_color = "#000000" # أسود صريح
+    sub_text = "#333333"   # رمادي غامق جداً
+    border_color = "#1e3a8a" # أزرق غامق للحدود
+    input_bg = "#ffffff"   # خلفية بيضاء للحقل لزيادة التباين
+    input_text = "#000000" # نص أسود
     header_grad = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)"
-    shadow_val = "0 4px 6px rgba(0,0,0,0.1)"
+    shadow_val = "0 4px 10px rgba(0,0,0,0.15)"
 
 # --- [الدوال المساعدة] ---
 def clean_phone_number(phone):
@@ -41,7 +52,7 @@ def clean_phone_number(phone):
     return p
 
 def get_professional_msg(name, b_type, b_desc, date):
-    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n📝 *التفاصيل:* {b_desc}\n📅 *التاريخ:* {date}")
+    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n📝 *التفاصيل:* {b_desc if b_desc else 'متابعة'}\n📅 *التاريخ:* {date}")
     return urllib.parse.quote(msg)
 
 def show_footer():
@@ -97,7 +108,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم CSS
+# 🎨 2. التصميم (CSS عالي التباين والوضوح)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -105,6 +116,7 @@ st.markdown(f"""
     html, body, [data-testid="stAppViewContainer"] {{ font-family: 'Cairo'; direction: RTL; text-align: right; background-color: {main_bg} !important; color: {text_color} !important; }}
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; }}
     
+    /* الهيدر */
     .header-container {{
         display: flex; flex-direction: row-reverse; align-items: center; justify-content: center;
         background: {header_grad};
@@ -123,20 +135,37 @@ st.markdown(f"""
         .header-text h1 {{ font-size: 2.2rem; }}
     }}
 
-    div[data-baseweb="input"] {{ background-color: {input_bg} !important; border: 2px solid {border_color} !important; border-radius: 12px; height: 50px; }}
-    input {{ color: {input_text} !important; font-weight: bold !important; font-size: 1.1rem !important; }}
+    /* تحسين وضوح الحقول والمسميات */
+    div[data-baseweb="input"] {{ 
+        background-color: {input_bg} !important; 
+        border: 2px solid {border_color} !important; 
+        border-radius: 12px; height: 50px; 
+    }}
+    input {{ color: {input_text} !important; font-weight: 900 !important; font-size: 1.1rem !important; }}
+    label {{ color: {text_color} !important; font-weight: 900 !important; font-size: 1rem !important; }} /* توضيح المسميات */
+    
     .contact-btn {{ display: block; padding: 12px; background: {card_bg}; border: 2px solid {border_color}; border-radius: 12px; color: {text_color} !important; text-decoration: none; font-weight: bold; text-align: center; margin-bottom: 10px; transition: 0.3s; }}
     .contact-btn:hover {{ background: #eff6ff; border-color: #3b82f6; transform: translateY(-2px); color: #1e3a8a !important; }}
     
+    /* بطاقات الطالب */
     .app-header {{ background: {card_bg}; padding: 20px; border-radius: 15px; border-right: 10px solid #1e3a8a; box-shadow: {shadow_val}; margin-top: -20px; border: 1px solid {border_color}; }}
     .medal-flex {{ display: flex; gap: 8px; margin: 15px 0; }}
     .m-card {{ flex: 1; background: {card_bg}; padding: 15px 5px; border-radius: 15px; text-align: center; border: 2px solid {border_color}; box-shadow: {shadow_val}; }}
-    .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; }}
+    .m-active {{ border-color: #f59e0b !important; background: #fffbeb !important; box-shadow: 0 4px 8px rgba(245,158,11,0.2) !important; color: #000 !important; }}
     .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; }}
-    .mobile-card {{ background: {card_bg}; color: {text_color}; padding: 18px; border-radius: 12px; border: 1.5px solid {border_color}; margin-bottom: 12px; font-weight: 800; box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; font-size: 1.1rem; }}
+    
+    /* زيادة سماكة الحدود والخطوط في بطاقات الجوال */
+    .mobile-card {{ 
+        background: {card_bg}; color: {text_color}; 
+        padding: 18px; border-radius: 12px; 
+        border: 2px solid {border_color}; /* زيادة سماكة الإطار */
+        margin-bottom: 12px; font-weight: 800; 
+        box-shadow: {shadow_val}; border-right: 8px solid #1e3a8a; font-size: 1.1rem; 
+    }}
     .urgent-msg {{ background: #fff5f5; border: 2px solid #e53e3e; color: #c53030 !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 900; }}
-    h1, h2, h3, h4, h5, h6, p, span, div, label {{ color: {text_color}; }}
-    small {{ color: {sub_text} !important; }}
+    
+    h1, h2, h3, h4, h5, h6, p, span, div {{ color: {text_color}; }}
+    small {{ color: {sub_text} !important; font-weight: bold; }}
     </style>
 
     <div class="header-container">
@@ -183,7 +212,7 @@ if st.session_state.role is None:
 elif st.session_state.role == "teacher":
     menu = st.tabs(["👥 الطلاب", "📊 التقييم", "📢 التنبيهات", "⚙️ الإعدادات", "🚗 خروج"])
 
-    # --- 👥 الطلاب (تم إصلاح مشكلة التكرار) ---
+    # --- 👥 الطلاب ---
     with menu[0]:
         st.subheader("👥 إدارة الطلاب")
         df_st = fetch_safe("students")
@@ -212,15 +241,15 @@ elif st.session_state.role == "teacher":
                     
                     if st.form_submit_button("✅ حفظ"):
                         if f_id and f_name:
-                            # ✅ التحقق من التكرار
+                            # منع التكرار
                             if f_id.strip() in df_st['clean_id'].values:
-                                st.error("⚠️ هذا الرقم الأكاديمي مسجل مسبقاً للطالب: " + df_st[df_st['clean_id']==f_id.strip()].iloc[0]['name'])
+                                st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً!")
                             else:
                                 cl_p = clean_phone_number(f_phone) if f_phone else ""
                                 st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الجوال": cl_p, "الإيميل": f_mail.strip(), "النقاط": "0"}
                                 if safe_append_row("students", st_map):
                                     st.success("✅ تم الحفظ"); st.cache_data.clear(); st.rerun()
-                        else: st.warning("أدخل الرقم والاسم")
+                        else: st.warning("أكمل البيانات")
             
             st.write("---")
             sq = st.text_input("🔍 بحث:")
@@ -261,22 +290,22 @@ elif st.session_state.role == "teacher":
                     with st.form("gr_upd"):
                         v1 = st.number_input("مشاركة", 0, st.session_state.max_tasks, cur_p1)
                         v2 = st.number_input("اختبار", 0, st.session_state.max_quiz, cur_p2)
-                        if st.form_submit_button("تحديث الدرجات"):
+                        if st.form_submit_button("💾 تحديث الدرجات"):
                             ws = sh.worksheet("grades"); cell = ws.find(sid); tot = v1+v2
                             if cell:
                                 ws.update_cell(cell.row, 2, v1); ws.update_cell(cell.row, 3, v2)
                                 ws.update_cell(cell.row, 4, tot); ws.update_cell(cell.row, 5, str(datetime.date.today()))
                             else: ws.append_row([sid, v1, v2, tot, str(datetime.date.today())])
-                            st.success("تم التحديث"); st.cache_data.clear(); st.rerun()
+                            st.success("✅ تم التحديث"); st.cache_data.clear(); st.rerun()
                     
-                    st.caption(f"الحالي: مشاركة {cur_p1} | اختبار {cur_p2}")
+                    st.caption(f"الدرجات الحالية: مشاركة {cur_p1} | اختبار {cur_p2}")
 
                 with c2:
                     st.markdown("##### 🎭 السلوك")
                     with st.form("beh_add"):
                         bt = st.selectbox("نوع", ["🌟 متميز (+10)", "✅ إيجابي (+5)", "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🚫 سلبي (-10)"])
                         bn = st.text_area("ملاحظة")
-                        if st.form_submit_button("تسجيل وتحديث النقاط"):
+                        if st.form_submit_button("💾 تسجيل وتحديث النقاط"):
                             safe_append_row("behavior", {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn})
                             match = re.search(r'\(([\+\-]?\d+)\)', bt)
                             chg = int(match.group(1)) if match else 0
@@ -289,8 +318,8 @@ elif st.session_state.role == "teacher":
                                         cur = ws.cell(c.row, idx).value
                                         new_val = (int(cur) if cur and str(cur).isdigit() else 0) + chg
                                         ws.update_cell(c.row, idx, new_val)
-                                        st.toast(f"الرصيد الجديد: {new_val}")
-                            st.success("تم"); st.cache_data.clear(); st.rerun()
+                                        st.toast(f"📈 الرصيد الجديد: {new_val}")
+                            st.success("✅ تم"); st.cache_data.clear(); st.rerun()
 
                 st.divider()
                 df_b = fetch_safe("behavior")
@@ -300,10 +329,10 @@ elif st.session_state.role == "teacher":
                     for i, r in my_b.iterrows():
                         with st.container(border=True):
                             kc1, kc2, kc3 = st.columns([3, 1, 0.5])
-                            with kc1: st.write(f"{r.get('type')} | {r.get('date')}"); st.caption(r.get('note'))
+                            with kc1: st.write(f"**{r.get('type')}** | {r.get('date')}"); st.caption(r.get('note'))
                             with kc2: 
                                 lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
-                                st.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
+                                st.link_button("📲 واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
                             with kc3:
                                 if st.button("🗑️", key=f"dl{i}"):
                                     sh.worksheet("behavior").delete_rows(int(i)+2); st.success("حُذف"); st.cache_data.clear(); st.rerun()
@@ -314,7 +343,7 @@ elif st.session_state.role == "teacher":
         with st.form("ann_add"):
             at = st.text_input("العنوان"); ad = st.text_area("التفاصيل"); au = st.checkbox("عاجل")
             atg = st.selectbox("الفئة", ["الكل"] + st.session_state.class_options)
-            if st.form_submit_button("نشر"):
+            if st.form_submit_button("📣 نشر"):
                 safe_append_row("exams", {"الصف": atg, "عاجل": "نعم" if au else "لا", "العنوان": at, "التاريخ": str(datetime.date.today()), "الرابط": ad})
                 st.success("✅ تم"); st.cache_data.clear(); st.rerun()
         st.divider()
@@ -323,16 +352,16 @@ elif st.session_state.role == "teacher":
             with st.container(border=True):
                 kc1, kc2 = st.columns([3, 1])
                 kc1.write(f"**{r.get('العنوان')}** ({r.get('الصف')})"); kc1.caption(r.get('الرابط'))
-                if kc2.button("حذف", key=f"da{i}"):
+                if kc2.button("🗑️ حذف", key=f"da{i}"):
                     sh.worksheet("exams").delete_rows(int(i)+2); st.rerun()
 
-    # --- ⚙️ الإعدادات (تمت إضافة القوالب وتغيير كلمة المرور) ---
+    # --- ⚙️ الإعدادات ---
     with menu[3]:
         st.subheader("⚙️ الإعدادات")
         
         with st.expander("🛠️ صيانة وتصفير", expanded=True):
-            if st.button("تحديث النظام"): st.cache_data.clear(); st.rerun()
-            if st.button("تصفير نقاط الطلاب"):
+            if st.button("🔄 تحديث النظام"): st.cache_data.clear(); st.rerun()
+            if st.button("🧹 تصفير نقاط الطلاب"):
                 ws = sh.worksheet("students"); d = ws.get_all_values()
                 if len(d)>1: ws.update(f"I2:I{len(d)}", [[0]]*(len(d)-1)); st.success("تم التصفير")
 
@@ -342,7 +371,7 @@ elif st.session_state.role == "teacher":
             stg = st.text_area("مراحل", ",".join(st.session_state.stage_options))
             mt = st.number_input("مشاركة", 0, 100, st.session_state.max_tasks)
             mq = st.number_input("اختبار", 0, 100, st.session_state.max_quiz)
-            if st.button("حفظ الإعدادات"):
+            if st.button("💾 حفظ الإعدادات"):
                 ws = sh.worksheet("settings")
                 ws.batch_update([{'range': 'B2', 'values': [[mt]]}, {'range': 'B3', 'values': [[mq]]}, 
                                  {'range': 'B4', 'values': [[cy]]}, {'range': 'B5', 'values': [[cls]]}, 
@@ -351,12 +380,12 @@ elif st.session_state.role == "teacher":
                 st.session_state.current_year = cy
                 st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                 st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
-                st.success("تم"); st.cache_data.clear(); st.rerun()
+                st.success("تم الحفظ"); st.cache_data.clear(); st.rerun()
 
         with st.expander("📤 مزامنة (Excel)"):
             up = st.file_uploader("ملف", type=['xlsx'])
             ts = st.radio("الجدول", ["students", "grades"], horizontal=True)
-            if st.button("مزامنة") and up:
+            if st.button("🚀 بدء المزامنة") and up:
                 df = pd.read_excel(up).fillna("").dropna(how='all')
                 ws = sh.worksheet(ts); cur = ws.get_all_records()
                 cids = [str(r.get('id', r.get('student_id', ''))) for r in cur]
@@ -376,34 +405,31 @@ elif st.session_state.role == "teacher":
                     else: ws.append_row([str(d.get(k,"")) for k in hd])
                 st.success("تمت المزامنة"); st.cache_data.clear(); st.rerun()
 
-        # ✅ إضافة قسم تنزيل القوالب
         with st.expander("📥 تنزيل القوالب"):
             b1 = io.BytesIO()
             pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط"]).to_excel(b1, index=False)
             st.download_button("قالب الطلاب", b1.getvalue(), "students_template.xlsx")
-            
             b2 = io.BytesIO()
             pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
             st.download_button("قالب الدرجات", b2.getvalue(), "grades_template.xlsx")
 
-        # ✅ إضافة قسم إدارة المستخدمين
-        with st.expander("🔐 المستخدمين وتغيير كلمة المرور"):
-            t1, t2 = st.tabs(["إضافة مستخدم", "تغيير كلمة المرور"])
+        with st.expander("🔐 المستخدمين"):
+            t1, t2 = st.tabs(["إضافة مستخدم", "تغيير المرور"])
             with t1:
                 with st.form("add_u"):
-                    nu = st.text_input("اسم"); np = st.text_input("الباسورد", type="password")
+                    nu = st.text_input("الاسم"); np = st.text_input("الباسورد", type="password")
                     if st.form_submit_button("إضافة"):
                         safe_append_row("users", {"username": nu, "password_hash": hashlib.sha256(np.encode()).hexdigest(), "role": "teacher"})
                         st.success("تم")
             with t2:
                 with st.form("chg_pass"):
-                    npwd = st.text_input("كلمة المرور الجديدة", type="password")
+                    npwd = st.text_input("الجديدة", type="password")
                     if st.form_submit_button("تغيير"):
                         df_u = fetch_safe("users")
                         if st.session_state.username in df_u['username'].values:
                             idx = df_u[df_u['username']==st.session_state.username].index[0] + 2
                             sh.worksheet("users").update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
-                            st.success("تم التغيير")
+                            st.success("تم")
 
     with menu[4]:
         if st.button("خروج"): st.session_state.role = None; st.rerun()
@@ -428,12 +454,6 @@ elif st.session_state.role == "student":
 
         st.markdown(f"""
             <div class="app-header"><h2>👋 مرحباً: {s_nm}</h2><p>🏫 {s_cls} | 🆔 {sid}</p></div>
-            <div class="medal-flex">
-                <div class="m-card {'m-active' if pts>=100 else ''}">🥇<br><b>ذهبي</b></div>
-                <div class="m-card {'m-active' if pts>=50 else ''}">🥈<br><b>فضي</b></div>
-                <div class="m-card m-active">🥉<br><b>برونزي</b></div>
-            </div>
-            <div class="points-banner"><p>النقاط</p><h1>{pts}</h1></div>
         """, unsafe_allow_html=True)
 
         if not df_ann.empty:
@@ -441,7 +461,16 @@ elif st.session_state.role == "student":
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
             if not urg.empty:
                 u = urg.tail(1).iloc[0]
-                st.markdown(f"<div class='urgent-msg'>🚨 {u.get('العنوان')}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='urgent-msg'>🚨 {u.get('العنوان')}<br><small>{u.get('الرابط')}</small></div>", unsafe_allow_html=True)
+
+        st.markdown(f"""
+            <div class="medal-flex">
+                <div class="m-card {'m-active' if pts>=100 else ''}">🥇<br><b>ذهبي</b></div>
+                <div class="m-card {'m-active' if pts>=50 else ''}">🥈<br><b>فضي</b></div>
+                <div class="m-card m-active">🥉<br><b>برونزي</b></div>
+            </div>
+            <div class="points-banner"><p>النقاط</p><h1>{pts}</h1></div>
+        """, unsafe_allow_html=True)
 
         tabs = st.tabs(["📢 تنبيهات", "📝 ملاحظات", "📊 درجات", "🏆 المتصدرين", "⚙️ حسابي"])
 
@@ -477,11 +506,12 @@ elif st.session_state.role == "student":
                 sty = "border:2px solid #1e3a8a" if str(r['clean_id']) == sid else ""
                 st.markdown(f"<div class='mobile-card' style='{sty}'><span>{ic}</span> {r['name']} <span style='float:left;color:#f59e0b'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
 
-        # ✅ إصلاح تحديث الحساب
         with tabs[4]:
+            st.write("#### ⚙️ تحديث البيانات")
             with st.form("up_me"):
-                nm = st.text_input("إيميل", s_dat.get('الإيميل','')); np = st.text_input("جوال", s_dat.get('الجوال',''))
-                if st.form_submit_button("حفظ"):
+                nm = st.text_input("📧 إيميل", s_dat.get('الإيميل',''))
+                np = st.text_input("📱 جوال", s_dat.get('الجوال',''))
+                if st.form_submit_button("💾 حفظ"):
                     try:
                         fp = clean_phone_number(np) if np else ""
                         ws = sh.worksheet("students"); c = ws.find(sid)
@@ -490,12 +520,14 @@ elif st.session_state.role == "student":
                             if 'الإيميل' in h and 'الجوال' in h:
                                 ws.update_cell(c.row, h.index('الإيميل')+1, nm)
                                 ws.update_cell(c.row, h.index('الجوال')+1, fp)
-                                st.success("تم"); st.cache_data.clear(); st.rerun()
+                                st.success("✅ تم التحديث بنجاح")
+                                st.toast("تم حفظ البيانات", icon="✅")
+                                st.cache_data.clear()
                             else: st.error("خطأ في الجدول")
                     except Exception as e: st.error(f"خطأ: {e}")
             
             st.divider()
-            if st.button("خروج"): st.session_state.role = None; st.rerun()
+            if st.button("🚪 خروج"): st.session_state.role = None; st.rerun()
 
     else: st.error("غير مسجل"); st.button("عودة", on_click=st.rerun)
     
