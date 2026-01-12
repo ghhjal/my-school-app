@@ -14,16 +14,16 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
 # --- 🎨 تعريف الألوان (ثيم البنفسجي الملكي - Indigo) ---
-main_bg = "#f5f3ff"        # خلفية بنفسجي فاتح جداً (ضبابي)
+main_bg = "#f5f3ff"        # خلفية بنفسجي فاتح جداً
 card_bg = "#ffffff"        # خلفية البطاقات
-text_color = "#1e1b4b"     # لون نص كحلي/بنفسجي غامق جداً
+text_color = "#1e1b4b"     # لون العناوين والنصوص العامة
 sub_text = "#6b7280"       # لون نص فرعي
-border_color = "#e0e7ff"   # لون حدود بنفسجي باهت
+border_color = "#e0e7ff"   # لون حدود
 
-# تغيير الألوان الأساسية للبنفسجي
-primary_color = "#4f46e5"  # اللون الأساسي (Indigo)
-accent_color = "#818cf8"   # لون التمييز (Indigo فاتح)
-header_grad = "linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)" # تدرج من الإنديجو للبنفسجي
+# الألوان الأساسية
+primary_color = "#4f46e5"  # اللون الأساسي
+accent_color = "#818cf8"   # لون التمييز
+header_grad = "linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)"
 shadow_val = "0 4px 6px -1px rgba(67, 56, 202, 0.1), 0 2px 4px -1px rgba(67, 56, 202, 0.06)"
 
 # --- [الدوال المساعدة] ---
@@ -94,7 +94,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS - Royal Purple Theme)
+# 🎨 2. التصميم (CSS - Fixed Inputs)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -112,13 +112,13 @@ st.markdown(f"""
     
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; max-width: 1000px; }}
     
-    /* --- الهيدر البنفسجي --- */
+    /* --- الهيدر --- */
     .header-container {{
         background: {header_grad};
         padding: 80px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
-        box-shadow: 0 10px 30px -10px rgba(67, 56, 202, 0.5); /* ظل بنفسجي */
+        box-shadow: 0 10px 30px -10px rgba(67, 56, 202, 0.5);
         color: white; text-align: center;
         position: relative; overflow: visible;
     }}
@@ -132,15 +132,38 @@ st.markdown(f"""
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
     .header-text p {{ margin: 5px 0 0 0; color: #e0e7ff; font-size: 1.1rem; font-weight: 500; }}
     
-    /* --- الحقول والأزرار --- */
-    div[data-baseweb="input"] {{ background-color: #ffffff !important; border-radius: 16px !important; height: 55px; border: 1px solid #c7d2fe !important; }}
-    input {{ font-weight: 700 !important; font-size: 1.1rem !important; color: {text_color} !important; }}
+    /* --- إصلاح الحقول (Inputs) --- */
+    /* غلاف الحقل */
+    div[data-baseweb="input"] {{ 
+        background-color: #ffffff !important; 
+        border-radius: 16px !important; 
+        height: 55px; 
+        border: 2px solid #c7d2fe !important; /* حدود بنفسجي فاتح */
+        color: #000000 !important;
+    }}
     
+    /* النص داخل الحقل */
+    input {{ 
+        font-weight: 700 !important; 
+        font-size: 1.1rem !important; 
+        color: #000000 !important; /* لون أسود إجباري */
+        -webkit-text-fill-color: #000000 !important; /* للمتصفحات */
+        background-color: transparent !important;
+        caret-color: {primary_color} !important; /* لون المؤشر */
+    }}
+    
+    /* القوائم المنسدلة */
+    div[data-baseweb="select"] {{
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }}
+    
+    /* الأزرار */
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 16px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); /* ظل زر متوهج */
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
         transition: transform 0.2s; width: 100%; height: 55px;
     }}
     div.stButton > button:active {{ transform: scale(0.98); }}
@@ -163,7 +186,7 @@ st.markdown(f"""
         text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
     }}
     
-    /* بطاقة الترحيب البنفسجية */
+    /* بطاقة الترحيب */
     .welcome-card {{
         background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%);
         color: white; padding: 20px; border-radius: 24px;
