@@ -13,18 +13,18 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان (الوضع النهاري عالي التباين) ---
-main_bg = "#f8fafc"        # خلفية عامة (رمادي فاتح جداً مريح للعين)
-card_bg = "#ffffff"        # خلفية البطاقات
-text_color = "#0f172a"     # لون النص (كحلي غامق جداً للقراءة)
-sub_text = "#64748b"       # لون النص الفرعي
-border_color = "#e2e8f0"   # لون الحدود
-primary_color = "#1e3a8a"  # اللون الأساسي (أزرق ملكي)
-accent_color = "#3b82f6"   # لون التمييز (أزرق سماوي)
-header_grad = "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)" # تدرج الهيدر
+# --- 🎨 تعريف الألوان ---
+main_bg = "#f8fafc"
+card_bg = "#ffffff"
+text_color = "#0f172a"
+sub_text = "#64748b"
+border_color = "#e2e8f0"
+primary_color = "#1e3a8a"
+accent_color = "#3b82f6"
+header_grad = "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)"
 shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
 
-# --- [الدوال المساعدة - لم يتم تغيير المنطق] ---
+# --- [الدوال المساعدة] ---
 def clean_phone_number(phone):
     p = str(phone).strip().replace(" ", "")
     if p.startswith("0"): p = p[1:]
@@ -98,145 +98,99 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
     
-    /* إخفاء عناصر ستريم ليت الافتراضية */
     section[data-testid="stSidebar"] {{ display: none; }}
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     
-    /* التنسيق العام */
     html, body, [data-testid="stAppViewContainer"] {{ 
         font-family: 'Tajawal', sans-serif !important; 
-        direction: RTL; 
-        text-align: right; 
-        background-color: {main_bg} !important; 
-        color: {text_color} !important; 
+        direction: RTL; text-align: right; 
+        background-color: {main_bg} !important; color: {text_color} !important; 
     }}
     
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; max-width: 1000px; }}
     
-    /* --- الهيدر الاحترافي --- */
+    /* --- الهيدر (تم تعديل المسافة العلوية) --- */
     .header-container {{
         background: {header_grad};
-        padding: 60px 20px 40px 20px;
+        padding: 80px 20px 40px 20px; /* زيادة المسافة العلوية لمنع القص */
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
         box-shadow: 0 10px 30px -10px rgba(30, 58, 138, 0.5);
-        color: white;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
+        color: white; text-align: center;
+        position: relative; overflow: visible; /* السماح للعناصر بالخروج */
     }}
     
-    .header-content {{ position: relative; z-index: 2; }}
-    
     .logo-icon {{ 
-        font-size: 5rem; 
-        margin-bottom: 15px; 
-        display: inline-block;
+        font-size: 5rem; margin-bottom: 15px; display: inline-block;
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         animation: float 4s ease-in-out infinite;
     }}
     
-    .header-text h1 {{ 
-        margin: 0; 
-        font-size: 2.5rem; 
-        font-weight: 900; 
-        color: #fff !important; 
-        letter-spacing: -1px;
-    }}
+    .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
     .header-text p {{ margin: 5px 0 0 0; color: #bfdbfe; font-size: 1.1rem; font-weight: 500; }}
     
     /* --- الحقول والأزرار --- */
-    div[data-baseweb="input"] {{ 
-        background-color: #ffffff !important; 
-        border: 1px solid #cbd5e1 !important; 
-        border-radius: 16px !important; 
-        height: 55px; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    }}
-    
+    div[data-baseweb="input"] {{ background-color: #ffffff !important; border-radius: 16px !important; height: 55px; border: 1px solid #cbd5e1 !important; }}
     input {{ font-weight: 700 !important; font-size: 1.1rem !important; }}
     
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
-        color: white !important;
-        border: none !important;
-        font-weight: 800 !important;
-        font-size: 1.1rem !important;
-        border-radius: 16px !important;
-        padding: 12px 20px !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        transition: transform 0.2s, box-shadow 0.2s;
-        width: 100%;
-        height: 55px;
+        color: white !important; border: none !important; font-weight: 800 !important;
+        font-size: 1.1rem !important; border-radius: 16px !important; padding: 12px 20px !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: transform 0.2s; width: 100%; height: 55px;
     }}
-    
-    div.stButton > button:active {{ transform: scale(0.98); box-shadow: none; }}
+    div.stButton > button:active {{ transform: scale(0.98); }}
     button[kind="secondary"] {{ background: #f1f5f9 !important; color: #334155 !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }}
 
-    /* --- البطاقات والعناصر --- */
-    .app-card {{
-        background: {card_bg};
-        padding: 20px;
-        border-radius: 24px;
-        box-shadow: {shadow_val};
-        border: 1px solid #f1f5f9;
-        margin-bottom: 15px;
-    }}
+    .app-card {{ background: {card_bg}; padding: 20px; border-radius: 24px; box-shadow: {shadow_val}; border: 1px solid #f1f5f9; margin-bottom: 15px; }}
 
+    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
-    .stTabs [data-baseweb="tab"] {{
-        height: 50px; background-color: white; border-radius: 12px; border: 1px solid #e2e8f0;
-        color: #64748b; font-weight: bold; flex: 1; justify-content: center;
-    }}
-    .stTabs [aria-selected="true"] {{
-        background-color: {primary_color} !important; color: white !important; border: none !important;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-    }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b; font-weight: bold; flex: 1; justify-content: center; }}
+    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }}
 
-    /* --- عناصر الطالب الخاصة --- */
+    /* --- عناصر الطالب --- */
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
-    .m-card {{ 
-        flex: 1; background: white; padding: 15px 5px; border-radius: 20px; 
-        text-align: center; border: 1px solid #e2e8f0; box-shadow: {shadow_val};
-        transition: transform 0.3s;
-    }}
-    .m-active {{ 
-        border: 2px solid #f59e0b !important; 
-        background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; 
-        transform: translateY(-5px);
-    }}
+    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 20px; text-align: center; border: 1px solid #e2e8f0; box-shadow: {shadow_val}; transition: transform 0.3s; }}
+    .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; transform: translateY(-5px); }}
     
     .points-banner {{ 
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-        color: white; padding: 25px; border-radius: 24px; 
-        text-align: center; margin-bottom: 25px;
-        box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; 
+        text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
+    }}
+    
+    /* بطاقة الترحيب */
+    .welcome-card {{
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white; padding: 20px; border-radius: 24px;
+        margin-bottom: 15px; box-shadow: 0 8px 16px -4px rgba(30, 58, 138, 0.4);
         position: relative; overflow: hidden;
     }}
     
-    .mobile-list-item {{
-        background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px;
-        border: 1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-        display: flex; align-items: center; justify-content: space-between;
-    }}
+    .mobile-list-item {{ background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; }}
 
     /* Animations */
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
-    @keyframes blinker {{ 50% {{ opacity: 0.8; }} }}
+    
+    /* وميض قوي للإعلان العاجل */
+    @keyframes pulse-red {{
+        0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }}
+        70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.02); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }}
+    }}
     
     .urgent-box {{
         background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c;
         padding: 15px; border-radius: 16px; text-align: center; 
-        animation: blinker 2s infinite; font-weight: bold; margin-bottom: 20px;
+        animation: pulse-red 2s infinite; /* تفعيل الوميض */
+        font-weight: bold; margin-bottom: 25px;
     }}
 
-    /* Media Queries */
     @media (max-width: 768px) {{
-        .header-container {{ padding: 50px 20px 30px 20px; border-radius: 0 0 30px 30px; }}
+        .header-container {{ padding: 70px 20px 30px 20px; }}
         .header-text h1 {{ font-size: 1.8rem; }}
         .logo-icon {{ font-size: 4rem; }}
-        div.stButton > button {{ font-size: 1rem !important; }}
     }}
     </style>
 
@@ -255,7 +209,7 @@ st.markdown(f"""
 # 🔐 3. نظام الدخول
 # ==========================================
 if st.session_state.role is None:
-    c1, c2 = st.columns([1, 10]) # Centering logic hack
+    c1, c2 = st.columns([1, 10]) 
     t1, t2 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم"])
     
     with t1:
@@ -302,7 +256,6 @@ elif st.session_state.role == "teacher":
         if not df_st.empty:
             df_st['clean_id'] = df_st.iloc[:,0].astype(str).str.split('.').str[0].str.strip()
             
-            # Cards for stats
             c1, c2, c3 = st.columns(3)
             with c1: st.markdown(f"<div class='app-card' style='text-align:center'><h4>الطلاب</h4><h2>{len(df_st)}</h2></div>", unsafe_allow_html=True)
             with c2: st.markdown(f"<div class='app-card' style='text-align:center'><h4>الفصول</h4><h2>{len(df_st.iloc[:,2].unique()) if len(df_st.columns)>2 else 0}</h2></div>", unsafe_allow_html=True)
@@ -412,7 +365,8 @@ elif st.session_state.role == "teacher":
                 if not df_b.empty:
                     cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
                     my_b = df_b[df_b[cid].astype(str) == str(sid)]
-                    for i, r in my_b.iterrows():
+                    # عكس الترتيب هنا أيضاً للمعلم
+                    for i, r in my_b.iloc[::-1].iterrows():
                         with st.container():
                             st.markdown(f"""
                             <div class="mobile-list-item">
@@ -581,7 +535,7 @@ elif st.session_state.role == "student":
         s_nm = s_dat.get('name', 'طالب'); s_cls = str(s_dat.get('class', '')).strip()
         pts = int(pd.to_numeric(s_dat.get('النقاط', 0), errors='coerce') or 0)
 
-        # ✅ التنبيه العاجل
+        # ✅ التنبيه العاجل مع وميض
         if not df_ann.empty:
             df_ann['عاجل'] = df_ann['عاجل'].astype(str).str.strip(); df_ann['الصف'] = df_ann['الصف'].astype(str).str.strip()
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
@@ -589,10 +543,18 @@ elif st.session_state.role == "student":
                 u = urg.tail(1).iloc[0]
                 st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{u.get('الرابط')}</small></div>", unsafe_allow_html=True)
 
+        # بطاقة الترحيب (تصميم جديد كبطاقة هوية)
         st.markdown(f"""
-            <div style="text-align:center; margin-bottom:20px;">
-                <h2 style="margin:0;">👋 أهلاً بك {s_nm}</h2>
-                <p style="color:#64748b; margin:0;">{s_cls} | ID: {sid}</p>
+            <div class="welcome-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2>
+                        <p style="color:#dbeafe; margin:5px 0 0 0;">{s_cls}</p>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;">
+                        <span style="font-weight:bold; font-size:0.9rem;">ID: {sid}</span>
+                    </div>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -620,6 +582,7 @@ elif st.session_state.role == "student":
             st.caption("التعاميم والتنبيهات")
             if not df_ann.empty:
                 anns = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_cls])]
+                # تم عكس الترتيب للأحدث
                 for _, r in anns.iloc[::-1].iterrows():
                     st.markdown(f"""
                     <div class='mobile-list-item'>
@@ -639,7 +602,8 @@ elif st.session_state.role == "student":
                 df_beh['clean_id'] = df_beh.iloc[:,0].astype(str).str.split('.').str[0]
                 nts = df_beh[df_beh['clean_id']==sid]
                 if not nts.empty:
-                    for _, n in nts.iterrows():
+                    # تم عكس الترتيب (الأحدث أولاً)
+                    for _, n in nts.iloc[::-1].iterrows():
                         color = "#ef4444" if "سلبي" in str(n.get('type')) else "#1e3a8a"
                         st.markdown(f"""
                         <div class='mobile-list-item' style='border-right: 4px solid {color};'>
