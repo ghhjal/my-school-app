@@ -13,16 +13,14 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان (ثيم البنفسجي الملكي - Indigo) ---
-main_bg = "#f5f3ff"        # خلفية بنفسجي فاتح جداً
-card_bg = "#ffffff"        # خلفية البطاقات
-text_color = "#1e1b4b"     # لون العناوين والنصوص العامة
-sub_text = "#6b7280"       # لون نص فرعي
-border_color = "#e0e7ff"   # لون حدود
-
-# الألوان الأساسية
-primary_color = "#4f46e5"  # اللون الأساسي
-accent_color = "#818cf8"   # لون التمييز
+# --- 🎨 تعريف الألوان (ثيم البنفسجي الملكي) ---
+main_bg = "#f5f3ff"
+card_bg = "#ffffff"
+text_color = "#1e1b4b"
+sub_text = "#6b7280"
+border_color = "#e0e7ff"
+primary_color = "#4f46e5"
+accent_color = "#818cf8"
 header_grad = "linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)"
 shadow_val = "0 4px 6px -1px rgba(67, 56, 202, 0.1), 0 2px 4px -1px rgba(67, 56, 202, 0.06)"
 
@@ -94,7 +92,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS - Fixed Inputs)
+# 🎨 2. التصميم (CSS - FORCE LIGHT INPUTS)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -132,33 +130,34 @@ st.markdown(f"""
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
     .header-text p {{ margin: 5px 0 0 0; color: #e0e7ff; font-size: 1.1rem; font-weight: 500; }}
     
-    /* --- إصلاح الحقول (Inputs) --- */
-    /* غلاف الحقل */
+    /* --- [تعديل جذري] إصلاح الحقول السوداء --- */
+    
+    /* 1. إجبار الغلاف الخارجي للحقل على اللون الأبيض */
     div[data-baseweb="input"] {{ 
         background-color: #ffffff !important; 
+        background: #ffffff !important;
         border-radius: 16px !important; 
         height: 55px; 
-        border: 2px solid #c7d2fe !important; /* حدود بنفسجي فاتح */
-        color: #000000 !important;
+        border: 2px solid #c7d2fe !important;
     }}
     
-    /* النص داخل الحقل */
+    /* 2. إجبار النص والمدخلات الداخلية على اللون الأسود */
     input {{ 
-        font-weight: 700 !important; 
-        font-size: 1.1rem !important; 
-        color: #000000 !important; /* لون أسود إجباري */
-        -webkit-text-fill-color: #000000 !important; /* للمتصفحات */
+        color: #000000 !important; 
+        -webkit-text-fill-color: #000000 !important; /* مهم جداً للموبايل */
+        caret-color: #4f46e5 !important;
         background-color: transparent !important;
-        caret-color: {primary_color} !important; /* لون المؤشر */
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
     }}
     
-    /* القوائم المنسدلة */
-    div[data-baseweb="select"] {{
+    /* 3. إصلاح القوائم المنسدلة */
+    div[data-baseweb="select"] > div {{
         background-color: #ffffff !important;
         color: #000000 !important;
     }}
     
-    /* الأزرار */
+    /* 4. تعديل الأزرار */
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
@@ -167,49 +166,29 @@ st.markdown(f"""
         transition: transform 0.2s; width: 100%; height: 55px;
     }}
     div.stButton > button:active {{ transform: scale(0.98); }}
-    button[kind="secondary"] {{ background: #f5f3ff !important; color: {text_color} !important; box-shadow: none !important; border: 1px solid #c7d2fe !important; }}
-
+    
     .app-card {{ background: {card_bg}; padding: 20px; border-radius: 24px; box-shadow: {shadow_val}; border: 1px solid #e0e7ff; margin-bottom: 15px; }}
-
+    
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
     .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: white; border-radius: 12px; border: 1px solid #e0e7ff; color: #6b7280; font-weight: bold; flex: 1; justify-content: center; }}
     .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); }}
 
-    /* --- عناصر الطالب --- */
-    .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
-    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 20px; text-align: center; border: 1px solid #e0e7ff; box-shadow: {shadow_val}; transition: transform 0.3s; }}
-    .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; transform: translateY(-5px); }}
-    
-    .points-banner {{ 
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; 
-        text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
-    }}
-    
-    /* بطاقة الترحيب */
-    .welcome-card {{
-        background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%);
-        color: white; padding: 20px; border-radius: 24px;
-        margin-bottom: 15px; box-shadow: 0 8px 16px -4px rgba(67, 56, 202, 0.4);
-        position: relative; overflow: hidden;
-    }}
-    
+    /* --- Mobile List & Elements --- */
     .mobile-list-item {{ background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #e0e7ff; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; }}
+    
+    .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
+    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 20px; text-align: center; border: 1px solid #e0e7ff; box-shadow: {shadow_val}; }}
+    .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; }}
+    
+    .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; text-align: center; margin-bottom: 25px; }}
+    
+    .welcome-card {{ background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 24px; margin-bottom: 15px; }}
 
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
+    @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
     
-    @keyframes pulse-red {{
-        0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }}
-        70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.02); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }}
-    }}
-    
-    .urgent-box {{
-        background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c;
-        padding: 15px; border-radius: 16px; text-align: center; 
-        animation: pulse-red 2s infinite;
-        font-weight: bold; margin-bottom: 25px;
-    }}
+    .urgent-box {{ background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c; padding: 15px; border-radius: 16px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
         .header-container {{ padding: 70px 20px 30px 20px; }}
