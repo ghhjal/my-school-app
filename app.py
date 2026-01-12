@@ -13,7 +13,7 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان (ثيم البنفسجي الملكي) ---
+# --- 🎨 تعريف الألوان (ثيم البنفسجي مع حقول محايدة) ---
 main_bg = "#f5f3ff"
 card_bg = "#ffffff"
 text_color = "#1e1b4b"
@@ -92,7 +92,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS - FORCE LIGHT INPUTS)
+# 🎨 2. التصميم (CSS - Neutral Inputs Fix)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -130,34 +130,39 @@ st.markdown(f"""
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
     .header-text p {{ margin: 5px 0 0 0; color: #e0e7ff; font-size: 1.1rem; font-weight: 500; }}
     
-    /* --- [تعديل جذري] إصلاح الحقول السوداء --- */
+    /* --- [الحل الجذري] الحقول المحايدة (Neutral Fields) --- */
     
-    /* 1. إجبار الغلاف الخارجي للحقل على اللون الأبيض */
-    div[data-baseweb="input"] {{ 
-        background-color: #ffffff !important; 
-        background: #ffffff !important;
+    /* الغلاف الخارجي للحقل: رمادي فاتح وليس أبيض ناصع */
+    div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
+        background-color: #f1f5f9 !important; /* Slate-100 */
+        border: 2px solid #cbd5e1 !important; /* Slate-300 */
         border-radius: 16px !important; 
         height: 55px; 
-        border: 2px solid #c7d2fe !important;
     }}
     
-    /* 2. إجبار النص والمدخلات الداخلية على اللون الأسود */
-    input {{ 
-        color: #000000 !important; 
-        -webkit-text-fill-color: #000000 !important; /* مهم جداً للموبايل */
-        caret-color: #4f46e5 !important;
+    /* النص داخل الحقل: كحلي غامق جداً */
+    input, textarea, select {{ 
+        color: #0f172a !important; /* Slate-900 (كحلي مسود) */
+        -webkit-text-fill-color: #0f172a !important; /* تجاوز إعدادات الجوال */
+        caret-color: {primary_color} !important;
         background-color: transparent !important;
         font-weight: 700 !important;
         font-size: 1.1rem !important;
     }}
     
-    /* 3. إصلاح القوائم المنسدلة */
-    div[data-baseweb="select"] > div {{
-        background-color: #ffffff !important;
-        color: #000000 !important;
+    /* النص المؤقت (Placeholder) */
+    ::placeholder {{
+        color: #64748b !important; /* Slate-500 */
+        opacity: 1 !important; /* تجاوز شفافية فايرفوكس */
+        -webkit-text-fill-color: #64748b !important;
     }}
     
-    /* 4. تعديل الأزرار */
+    /* القائمة المنسدلة من الداخل */
+    div[data-baseweb="select"] div {{
+        color: #0f172a !important;
+    }}
+    
+    /* الأزرار */
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
@@ -171,7 +176,7 @@ st.markdown(f"""
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
-    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: white; border-radius: 12px; border: 1px solid #e0e7ff; color: #6b7280; font-weight: bold; flex: 1; justify-content: center; }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b; font-weight: bold; flex: 1; justify-content: center; }}
     .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); }}
 
     /* --- Mobile List & Elements --- */
