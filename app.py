@@ -206,7 +206,7 @@ st.markdown(f"""
         <div class="header-content">
             <div class="logo-icon">🎓</div>
             <div class="header-text">
-                <h1>منصة الأستاذ زياد</h1>
+                <h1>منصة زياد الذكية</h1>
                 <p>بوابة التعليم الذكية 2026</p>
             </div>
         </div>
