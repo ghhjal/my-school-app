@@ -56,7 +56,8 @@ def get_gspread_client():
 
 sh = get_gspread_client()
 
-@st.cache_data(ttl=10)
+# ✅ تم تعديل الكاش هنا إلى 300 ثانية (5 دقائق)
+@st.cache_data(ttl=300)
 def fetch_safe(worksheet_name):
     try:
         ws = sh.worksheet(worksheet_name); data = ws.get_all_values()
@@ -132,37 +133,32 @@ st.markdown(f"""
     
     /* --- [الحل الجذري] الحقول المحايدة (Neutral Fields) --- */
     
-    /* الغلاف الخارجي للحقل: رمادي فاتح وليس أبيض ناصع */
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
-        background-color: #f1f5f9 !important; /* Slate-100 */
-        border: 2px solid #cbd5e1 !important; /* Slate-300 */
+        background-color: #f1f5f9 !important; 
+        border: 2px solid #cbd5e1 !important; 
         border-radius: 16px !important; 
         height: 55px; 
     }}
     
-    /* النص داخل الحقل: كحلي غامق جداً */
     input, textarea, select {{ 
-        color: #0f172a !important; /* Slate-900 (كحلي مسود) */
-        -webkit-text-fill-color: #0f172a !important; /* تجاوز إعدادات الجوال */
+        color: #0f172a !important; 
+        -webkit-text-fill-color: #0f172a !important; 
         caret-color: {primary_color} !important;
         background-color: transparent !important;
         font-weight: 700 !important;
         font-size: 1.1rem !important;
     }}
     
-    /* النص المؤقت (Placeholder) */
     ::placeholder {{
-        color: #64748b !important; /* Slate-500 */
-        opacity: 1 !important; /* تجاوز شفافية فايرفوكس */
+        color: #64748b !important; 
+        opacity: 1 !important; 
         -webkit-text-fill-color: #64748b !important;
     }}
     
-    /* القائمة المنسدلة من الداخل */
     div[data-baseweb="select"] div {{
         color: #0f172a !important;
     }}
     
-    /* الأزرار */
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
@@ -174,12 +170,10 @@ st.markdown(f"""
     
     .app-card {{ background: {card_bg}; padding: 20px; border-radius: 24px; box-shadow: {shadow_val}; border: 1px solid #e0e7ff; margin-bottom: 15px; }}
     
-    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
     .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b; font-weight: bold; flex: 1; justify-content: center; }}
     .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); }}
 
-    /* --- Mobile List & Elements --- */
     .mobile-list-item {{ background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #e0e7ff; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; }}
     
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
@@ -206,7 +200,7 @@ st.markdown(f"""
         <div class="header-content">
             <div class="logo-icon">🎓</div>
             <div class="header-text">
-                <h1>منصة زياد الذكية</h1>
+                <h1>منصة الأستاذ زياد</h1>
                 <p>بوابة التعليم الذكية 2026</p>
             </div>
         </div>
