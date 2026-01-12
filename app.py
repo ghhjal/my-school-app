@@ -43,9 +43,9 @@ def show_footer():
     </div>
     """, unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.link_button("📢 تليجرام الإدارة", "#", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "#", use_container_width=True)
-    c3.link_button("📧 الدعم الفني", "#", use_container_width=True)
+    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
+    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
 @st.cache_resource
 def get_gspread_client():
