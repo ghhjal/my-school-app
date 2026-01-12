@@ -13,15 +13,16 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان ---
-main_bg = "#f8fafc"
-card_bg = "#ffffff"
-text_color = "#0f172a"
-sub_text = "#64748b"
-border_color = "#e2e8f0"
-primary_color = "#1e3a8a"
-accent_color = "#3b82f6"
-header_grad = "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)"
+# --- 🎨 تعريف الألوان (ثيم الأخضر الزمردي) ---
+main_bg = "#f8fafc"        # خلفية فاتحة
+card_bg = "#ffffff"        # خلفية البطاقات
+text_color = "#064e3b"     # لون النص (أخضر غامق جداً للقراءة)
+sub_text = "#64748b"       # لون النص الفرعي (رمادي)
+border_color = "#e2e8f0"   # لون الحدود
+# تغيير الألوان الأساسية للأخضر
+primary_color = "#065f46"  # اللون الأساسي (أخضر زمردي غامق)
+accent_color = "#10b981"   # لون التمييز (أخضر فاتح حيوي)
+header_grad = "linear-gradient(135deg, #065f46 0%, #34d399 100%)" # تدرج الهيدر الأخضر
 shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
 
 # --- [الدوال المساعدة] ---
@@ -92,7 +93,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS - Modern Theme)
+# 🎨 2. التصميم (CSS - Modern Green Theme)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -110,15 +111,15 @@ st.markdown(f"""
     
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; max-width: 1000px; }}
     
-    /* --- الهيدر (تم تعديل المسافة العلوية) --- */
+    /* --- الهيدر الأخضر --- */
     .header-container {{
         background: {header_grad};
-        padding: 80px 20px 40px 20px; /* زيادة المسافة العلوية لمنع القص */
+        padding: 80px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
-        box-shadow: 0 10px 30px -10px rgba(30, 58, 138, 0.5);
+        box-shadow: 0 10px 30px -10px rgba(6, 95, 70, 0.5); /* ظل أخضر */
         color: white; text-align: center;
-        position: relative; overflow: visible; /* السماح للعناصر بالخروج */
+        position: relative; overflow: visible;
     }}
     
     .logo-icon {{ 
@@ -128,43 +129,45 @@ st.markdown(f"""
     }}
     
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
-    .header-text p {{ margin: 5px 0 0 0; color: #bfdbfe; font-size: 1.1rem; font-weight: 500; }}
+    .header-text p {{ margin: 5px 0 0 0; color: #d1fae5; font-size: 1.1rem; font-weight: 500; }} /* نص أخضر فاتح */
     
     /* --- الحقول والأزرار --- */
     div[data-baseweb="input"] {{ background-color: #ffffff !important; border-radius: 16px !important; height: 55px; border: 1px solid #cbd5e1 !important; }}
-    input {{ font-weight: 700 !important; font-size: 1.1rem !important; }}
+    input {{ font-weight: 700 !important; font-size: 1.1rem !important; color: {text_color} !important; }}
     
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 16px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: transform 0.2s; width: 100%; height: 55px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); /* ظل زر أخضر */
+        transition: transform 0.2s; width: 100%; height: 55px;
     }}
     div.stButton > button:active {{ transform: scale(0.98); }}
-    button[kind="secondary"] {{ background: #f1f5f9 !important; color: #334155 !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }}
+    button[kind="secondary"] {{ background: #f1f5f9 !important; color: {text_color} !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }}
 
     .app-card {{ background: {card_bg}; padding: 20px; border-radius: 24px; box-shadow: {shadow_val}; border: 1px solid #f1f5f9; margin-bottom: 15px; }}
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
     .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b; font-weight: bold; flex: 1; justify-content: center; }}
-    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }}
+    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }}
 
     /* --- عناصر الطالب --- */
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
     .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 20px; text-align: center; border: 1px solid #e2e8f0; box-shadow: {shadow_val}; transition: transform 0.3s; }}
     .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; transform: translateY(-5px); }}
     
+    /* بنر النقاط (يبقى ذهبي/برتقالي للتمييز) */
     .points-banner {{ 
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; 
         text-align: center; margin-bottom: 25px; box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
     }}
     
-    /* بطاقة الترحيب */
+    /* بطاقة الترحيب الخضراء */
     .welcome-card {{
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #065f46 0%, #34d399 100%);
         color: white; padding: 20px; border-radius: 24px;
-        margin-bottom: 15px; box-shadow: 0 8px 16px -4px rgba(30, 58, 138, 0.4);
+        margin-bottom: 15px; box-shadow: 0 8px 16px -4px rgba(6, 95, 70, 0.4);
         position: relative; overflow: hidden;
     }}
     
@@ -173,7 +176,6 @@ st.markdown(f"""
     /* Animations */
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     
-    /* وميض قوي للإعلان العاجل */
     @keyframes pulse-red {{
         0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }}
         70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.02); }}
@@ -183,7 +185,7 @@ st.markdown(f"""
     .urgent-box {{
         background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c;
         padding: 15px; border-radius: 16px; text-align: center; 
-        animation: pulse-red 2s infinite; /* تفعيل الوميض */
+        animation: pulse-red 2s infinite;
         font-weight: bold; margin-bottom: 25px;
     }}
 
@@ -365,7 +367,6 @@ elif st.session_state.role == "teacher":
                 if not df_b.empty:
                     cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
                     my_b = df_b[df_b[cid].astype(str) == str(sid)]
-                    # عكس الترتيب هنا أيضاً للمعلم
                     for i, r in my_b.iloc[::-1].iterrows():
                         with st.container():
                             st.markdown(f"""
@@ -543,13 +544,13 @@ elif st.session_state.role == "student":
                 u = urg.tail(1).iloc[0]
                 st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{u.get('الرابط')}</small></div>", unsafe_allow_html=True)
 
-        # بطاقة الترحيب (تصميم جديد كبطاقة هوية)
+        # بطاقة الترحيب (تصميم جديد كبطاقة هوية خضراء)
         st.markdown(f"""
             <div class="welcome-card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2>
-                        <p style="color:#dbeafe; margin:5px 0 0 0;">{s_cls}</p>
+                        <p style="color:#d1fae5; margin:5px 0 0 0;">{s_cls}</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;">
                         <span style="font-weight:bold; font-size:0.9rem;">ID: {sid}</span>
@@ -558,7 +559,7 @@ elif st.session_state.role == "student":
             </div>
         """, unsafe_allow_html=True)
 
-        # بنر النقاط الذهبي
+        # بنر النقاط الذهبي (يبقى كما هو للتمييز)
         st.markdown(f"""
             <div class="points-banner">
                 <p style="margin:0; opacity:0.9; font-size:0.9rem;">رصيد النقاط الحالي</p>
@@ -604,7 +605,8 @@ elif st.session_state.role == "student":
                 if not nts.empty:
                     # تم عكس الترتيب (الأحدث أولاً)
                     for _, n in nts.iloc[::-1].iterrows():
-                        color = "#ef4444" if "سلبي" in str(n.get('type')) else "#1e3a8a"
+                        # تغيير لون الملاحظة الإيجابية للأخضر
+                        color = "#ef4444" if "سلبي" in str(n.get('type')) else "#065f46"
                         st.markdown(f"""
                         <div class='mobile-list-item' style='border-right: 4px solid {color};'>
                             <div>
@@ -622,12 +624,13 @@ elif st.session_state.role == "student":
                 grs = df_gr[df_gr['clean_id']==sid]
                 if not grs.empty:
                     g = grs.iloc[0]
+                    # استخدام الأخضر الفاتح لتمييز الدرجة النهائية
                     st.markdown(f"""
                     <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')}</b></div>
                     <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')}</b></div>
-                    <div class='mobile-list-item' style='background:#f0fdf4; border-color:#bbf7d0;'>
-                        <span style="color:#166534; font-weight:bold;">🏆 المجموع النهائي</span>
-                        <b style="color:#166534; font-size:1.2rem;">{g.get('perf')}</b>
+                    <div class='mobile-list-item' style='background:#ecfdf5; border-color:#6ee7b7;'>
+                        <span style="color:#065f46; font-weight:bold;">🏆 المجموع النهائي</span>
+                        <b style="color:#065f46; font-size:1.2rem;">{g.get('perf')}</b>
                     </div>
                     """, unsafe_allow_html=True)
                 else: st.info("لم يتم رصد درجات بعد")
@@ -638,7 +641,8 @@ elif st.session_state.role == "student":
             for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
                 ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                 is_me = str(r['clean_id']) == sid
-                sty = "border:2px solid #3b82f6; background:#eff6ff;" if is_me else ""
+                # تمييز الطالب الحالي باللون الأخضر
+                sty = "border:2px solid #10b981; background:#ecfdf5;" if is_me else ""
                 st.markdown(f"""
                     <div class='mobile-list-item' style='{sty}'>
                         <div style="display:flex; align-items:center; gap:10px;">
