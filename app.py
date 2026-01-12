@@ -43,9 +43,9 @@ def show_footer():
     </div>
     """, unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
+    c1.link_button("📢 تليجرام الإدارة", "#", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "#", use_container_width=True)
+    c3.link_button("📧 الدعم الفني", "#", use_container_width=True)
 
 @st.cache_resource
 def get_gspread_client():
@@ -56,7 +56,7 @@ def get_gspread_client():
 
 sh = get_gspread_client()
 
-# ✅ تم تعديل الكاش هنا إلى 300 ثانية (5 دقائق)
+# ✅ الكاش لمدة 5 دقائق (300 ثانية) لتخفيف الضغط
 @st.cache_data(ttl=300)
 def fetch_safe(worksheet_name):
     try:
@@ -93,7 +93,7 @@ if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
 # ==========================================
-# 🎨 2. التصميم (CSS - Neutral Inputs Fix)
+# 🎨 2. التصميم (CSS)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -111,7 +111,6 @@ st.markdown(f"""
     
     .block-container {{ padding-top: 0rem; padding-bottom: 5rem; max-width: 1000px; }}
     
-    /* --- الهيدر --- */
     .header-container {{
         background: {header_grad};
         padding: 80px 20px 40px 20px;
@@ -131,40 +130,22 @@ st.markdown(f"""
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
     .header-text p {{ margin: 5px 0 0 0; color: #e0e7ff; font-size: 1.1rem; font-weight: 500; }}
     
-    /* --- [الحل الجذري] الحقول المحايدة (Neutral Fields) --- */
-    
+    /* --- إصلاح الحقول (Neutral) --- */
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
-        background-color: #f1f5f9 !important; 
-        border: 2px solid #cbd5e1 !important; 
-        border-radius: 16px !important; 
-        height: 55px; 
+        background-color: #f1f5f9 !important; border: 2px solid #cbd5e1 !important; border-radius: 16px !important; height: 55px; 
     }}
-    
     input, textarea, select {{ 
-        color: #0f172a !important; 
-        -webkit-text-fill-color: #0f172a !important; 
-        caret-color: {primary_color} !important;
-        background-color: transparent !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
+        color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; caret-color: {primary_color} !important;
+        background-color: transparent !important; font-weight: 700 !important; font-size: 1.1rem !important;
     }}
-    
-    ::placeholder {{
-        color: #64748b !important; 
-        opacity: 1 !important; 
-        -webkit-text-fill-color: #64748b !important;
-    }}
-    
-    div[data-baseweb="select"] div {{
-        color: #0f172a !important;
-    }}
+    ::placeholder {{ color: #64748b !important; opacity: 1 !important; -webkit-text-fill-color: #64748b !important; }}
+    div[data-baseweb="select"] div {{ color: #0f172a !important; }}
     
     div.stButton > button {{
         background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 16px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-        transition: transform 0.2s; width: 100%; height: 55px;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); transition: transform 0.2s; width: 100%; height: 55px;
     }}
     div.stButton > button:active {{ transform: scale(0.98); }}
     
@@ -181,12 +162,10 @@ st.markdown(f"""
     .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; }}
     
     .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; text-align: center; margin-bottom: 25px; }}
-    
     .welcome-card {{ background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 24px; margin-bottom: 15px; }}
 
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
-    
     .urgent-box {{ background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c; padding: 15px; border-radius: 16px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
@@ -464,28 +443,65 @@ elif st.session_state.role == "teacher":
                 st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
                 st.success("تم الحفظ بنجاح"); st.cache_data.clear(); st.rerun()
 
-        with st.expander("📤 استيراد وتصدير (Excel)"):
+        # ✅✅✅ هنا الكود الجديد والمطور (Batch Sync) ✅✅✅
+        with st.expander("📤 مزامنة (Excel) - استيراد ذكي"):
             up = st.file_uploader("رفع ملف Excel", type=['xlsx'])
             ts = st.radio("نوع البيانات", ["students", "grades"], horizontal=True, format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات")
-            if st.button("🚀 بدء المزامنة", type="primary") and up:
-                df = pd.read_excel(up).fillna("").dropna(how='all')
-                ws = sh.worksheet(ts); cur = ws.get_all_records()
-                cids = [str(r.get('id', r.get('student_id', ''))) for r in cur]
-                hd = ws.row_values(1)
-                for _, r in df.iterrows():
-                    d = r.to_dict(); raw = str(d.get('student_id', d.get('id', ''))).strip().split('.')[0]
-                    if not raw or raw=='0': continue
-                    
-                    if ts == "grades":
-                        d.update({"student_id": raw, "p1": int(d.get('p1',0)), "p2": int(d.get('p2',0)), "perf": int(d.get('p1',0))+int(d.get('p2',0)), "date": str(datetime.date.today())})
-                        if 'id' in d: del d['id']
-                    else:
-                        d['id'] = raw; d['الجوال'] = clean_phone_number(d.get('الجوال',''))
-                        if 'النقاط' not in d or str(d.get('النقاط', '')).strip() == "": d['النقاط'] = 0
-                    
-                    if raw in cids: ws.update(f"A{cids.index(raw)+2}", [[str(d.get(k,"")) for k in hd]])
-                    else: ws.append_row([str(d.get(k,"")) for k in hd])
-                st.success("تمت المزامنة بنجاح"); st.cache_data.clear(); st.rerun()
+            
+            if st.button("🚀 بدء المزامنة السريعة", type="primary") and up:
+                try:
+                    with st.spinner('جاري معالجة البيانات...'):
+                        df = pd.read_excel(up).fillna("").dropna(how='all')
+                        ws = sh.worksheet(ts)
+                        
+                        # 1. جلب البيانات الحالية مرة واحدة (لتجنب التكرار)
+                        existing_data = ws.get_all_records()
+                        existing_ids = set(str(r.get('id', r.get('student_id', ''))).strip().split('.')[0] for r in existing_data)
+                        
+                        hd = ws.row_values(1) # رؤوس الأعمدة
+                        new_rows_to_append = [] # قائمة لتجميع الطلاب الجدد
+                        
+                        # شريط تقدم
+                        progress_bar = st.progress(0)
+                        
+                        for idx, row in df.iterrows():
+                            d = row.to_dict()
+                            raw_id = str(d.get('student_id', d.get('id', ''))).strip().split('.')[0]
+                            if not raw_id or raw_id == '0' or raw_id.lower() == 'nan': continue
+                            
+                            if ts == "grades":
+                                d.update({
+                                    "student_id": raw_id, 
+                                    "p1": int(d.get('p1',0)), 
+                                    "p2": int(d.get('p2',0)), 
+                                    "perf": int(d.get('p1',0))+int(d.get('p2',0)), 
+                                    "date": str(datetime.date.today())
+                                })
+                                if 'id' in d: del d['id']
+                            else: # students
+                                d['id'] = raw_id
+                                d['الجوال'] = clean_phone_number(d.get('الجوال',''))
+                                if 'النقاط' not in d or str(d.get('النقاط', '')).strip() == "": d['النقاط'] = 0
+
+                            row_values = [str(d.get(k, "")) for k in hd]
+
+                            # إضافة فقط إذا لم يكن موجوداً
+                            if raw_id not in existing_ids:
+                                new_rows_to_append.append(row_values)
+                            
+                            progress_bar.progress(min((idx + 1) / len(df), 1.0))
+
+                        # إرسال دفعة واحدة
+                        if new_rows_to_append:
+                            ws.append_rows(new_rows_to_append)
+                            st.success(f"✅ تم إضافة {len(new_rows_to_append)} طالب جديد دفعة واحدة!")
+                        else:
+                            st.info("لا توجد بيانات جديدة للإضافة.")
+                            
+                        st.cache_data.clear()
+                        
+                except Exception as e:
+                    st.error(f"حدث خطأ: {e}")
             
             st.divider()
             c1, c2 = st.columns(2)
@@ -542,7 +558,7 @@ elif st.session_state.role == "student":
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
             if not urg.empty:
                 u = urg.tail(1).iloc[0]
-                st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{u.get('الرابط')}</small></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{u.get('الابط')}</small></div>", unsafe_allow_html=True)
 
         # بطاقة الترحيب (تصميم جديد كبطاقة هوية بنفسجية)
         st.markdown(f"""
