@@ -367,47 +367,69 @@ elif st.session_state.role == "teacher":
     # 📢 التنبيهات
     with menu[2]:
         st.markdown("### 📢 لوحة الإعلانات والتعاميم")
+        
+        # دالة الحذف (تضمن تنفيذ العملية قبل التحديث)
+        def perform_delete(row_index):
+            try:
+                sh.worksheet("exams").delete_rows(int(row_index) + 2)
+                st.cache_data.clear()
+                st.toast("✅ تم حذف التنبيه بنجاح")
+            except Exception as e:
+                st.toast(f"❌ حدث خطأ: {e}")
+
         with st.form("ann_add"):
             c1, c2 = st.columns([3, 1])
             at = c1.text_input("عنوان الإعلان")
             atg = c2.selectbox("الفئة المستهدفة", ["الكل"] + st.session_state.class_options)
             ad = st.text_area("نص الإعلان أو الرابط")
-            au = st.checkbox("🔥 تعميم عاجل (يظهر بشكل بارز)")
+            au = c1.checkbox("🔥 تعميم عاجل (يظهر بوميض)")
             
             if st.form_submit_button("📣 نشر التعميم", type="primary"):
                 safe_append_row("exams", {"الصف": atg, "عاجل": "نعم" if au else "لا", "العنوان": at, "التاريخ": str(datetime.date.today()), "الرابط": ad})
                 st.success("✅ تم النشر"); st.cache_data.clear(); st.rerun()
         
         st.divider()
+        
         df_a = fetch_safe("exams")
-        for i, r in df_a.iloc[::-1].iterrows():
-            with st.container():
-                is_urgent = r.get('عاجل') == 'نعم'
-                border_style = "2px solid #ef4444" if is_urgent else "1px solid #e0e7ff"
-                bg_style = "#fef2f2" if is_urgent else "#ffffff"
-                
-                st.markdown(f"""
-                <div style="background:{bg_style}; border:{border_style}; border-radius:12px; padding:15px; margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <h4 style="margin:0">{r.get('العنوان')}</h4>
-                        <span style="background:white; padding:2px 8px; border-radius:8px; font-size:0.8rem">{r.get('التاريخ')}</span>
+        if not df_a.empty:
+            # العرض
+            for i, r in df_a.iloc[::-1].iterrows():
+                with st.container():
+                    is_urgent = str(r.get('عاجل')).strip() == 'نعم'
+                    
+                    # تنسيق الوميض (CSS Animation) إذا كان عاجل
+                    anim_class = "urgent-anim" if is_urgent else ""
+                    border_style = "2px solid #ef4444" if is_urgent else "1px solid #e0e7ff"
+                    bg_style = "#fef2f2" if is_urgent else "#ffffff"
+                    
+                    st.markdown(f"""
+                    <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:12px; padding:15px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <h4 style="margin:0; color:#000;">{r.get('العنوان')}</h4>
+                            <span style="background:white; padding:2px 8px; border-radius:8px; font-size:0.8rem; color:#555;">{r.get('التاريخ')}</span>
+                        </div>
+                        <p style="margin:5px 0 0 0; color:#475569">{r.get('الرابط')}</p>
+                        <small style="color:#1e3a8a; font-weight:bold;">🎯 الفئة: {r.get('الصف')}</small>
                     </div>
-                    <p style="margin:5px 0 0 0; color:#475569">{r.get('الرابط')}</p>
-                    <small>الفئة: {r.get('الصف')}</small>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                kc1, kc2 = st.columns([1, 4])
-                msg_text = (f"📢 *تعميم هام من منصة الأستاذ زياد*\n"
-                            f"━━━━━━━━━━━━\n"
-                            f"📌 *العنوان:* {r.get('العنوان')}\n"
-                            f"📄 *التفاصيل:* {r.get('الرابط')}\n"
-                            f"📅 *التاريخ:* {r.get('التاريخ')}\n"
-                            f"━━━━━━━━━━━━")
-                grp_msg = urllib.parse.quote(msg_text)
-                kc2.link_button("📲 مشاركة عبر واتساب", f"https://api.whatsapp.com/send?text={grp_msg}", use_container_width=True)
-                if kc1.button("🗑️", key=f"da{i}"):
-                    sh.worksheet("exams").delete_rows(int(i)+2); st.rerun()
+                    """, unsafe_allow_html=True)
+                    
+                    kc1, kc2 = st.columns([1, 4])
+                    
+                    # تجهيز رسالة الواتساب
+                    msg_text = (f"📢 *تعميم هام من منصة الأستاذ زياد*\n"
+                                f"━━━━━━━━━━━━\n"
+                                f"📌 *العنوان:* {r.get('العنوان')}\n"
+                                f"📄 *التفاصيل:* {r.get('الرابط')}\n"
+                                f"📅 *التاريخ:* {r.get('التاريخ')}\n"
+                                f"━━━━━━━━━━━━")
+                    grp_msg = urllib.parse.quote(msg_text)
+                    
+                    kc2.link_button("📲 مشاركة عبر واتساب", f"https://api.whatsapp.com/send?text={grp_msg}", use_container_width=True)
+                    
+                    # ✅ زر الحذف المصحح (استخدام on_click)
+                    kc1.button("🗑️ حذف", key=f"del_btn_unique_{i}", type="secondary", on_click=perform_delete, args=(i,), use_container_width=True)
+        else:
+            st.info("💡 لا توجد تنبيهات منشورة حالياً.")
 
     # --- ⚙️ الإعدادات ---
     with menu[3]:
