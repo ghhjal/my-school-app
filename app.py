@@ -558,7 +558,18 @@ elif st.session_state.role == "student":
             urg = df_ann[(df_ann['عاجل']=='نعم') & (df_ann['الصف'].isin(['الكل', s_cls]))]
             if not urg.empty:
                 u = urg.tail(1).iloc[0]
-                st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{u.get('الابط')}</small></div>", unsafe_allow_html=True)
+                # Fix: Check if 'الرابط' exists and is not 'None' or empty
+                link_text = u.get('الرابط', '')
+                if link_text and str(link_text).lower() != 'none':
+                     # Make link clickable if it's a URL, otherwise just display text
+                    if str(link_text).startswith('http'):
+                         link_display = f"<a href='{link_text}' target='_blank' style='color:#7f1d1d; text-decoration:underline;'>اضغط هنا</a>"
+                    else:
+                        link_display = str(link_text)
+                else:
+                    link_display = ""
+                
+                st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{link_display}</small></div>", unsafe_allow_html=True)
 
         # بطاقة الترحيب (تصميم جديد كبطاقة هوية بنفسجية)
         st.markdown(f"""
@@ -601,6 +612,16 @@ elif st.session_state.role == "student":
                 anns = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_cls])]
                 # تم عكس الترتيب للأحدث
                 for _, r in anns.iloc[::-1].iterrows():
+                    # Fix: Handle link display in tabs
+                    row_link = r.get('الرابط', '')
+                    if row_link and str(row_link).lower() != 'none':
+                         if str(row_link).startswith('http'):
+                             row_link_display = f"<a href='{row_link}' target='_blank' style='color:#4b5563; text-decoration:underline;'>اضغط هنا للفتح</a>"
+                         else:
+                             row_link_display = str(row_link)
+                    else:
+                        row_link_display = ""
+
                     st.markdown(f"""
                     <div class='mobile-list-item'>
                         <div style="width:100%">
@@ -608,7 +629,7 @@ elif st.session_state.role == "student":
                                 <b>📢 {r.get('العنوان')}</b>
                                 <small style="background:#f5f3ff; color:#4338ca; padding:2px 6px; border-radius:4px;">{r.get('التاريخ')}</small>
                             </div>
-                            <span style="color:#4b5563; font-size:0.9rem;">{r.get('الرابط')}</span>
+                            <span style="color:#4b5563; font-size:0.9rem;">{row_link_display}</span>
                         </div>
                     </div>""", unsafe_allow_html=True)
             else: st.info("لا يوجد تنبيهات حالياً")
