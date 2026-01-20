@@ -431,16 +431,53 @@ elif st.session_state.role == "teacher":
         else:
             st.info("💡 لا توجد تنبيهات منشورة حالياً.")
 
-    # --- ⚙️ الإعدادات ---
+    # --- ⚙️ الإعدادات (الكود المطور مع النسخ الاحتياطي والمزامنة السريعة) ---
     with menu[3]:
-        st.markdown("### ⚙️ إعدادات النظام")
+        st.subheader("⚙️ إعدادات النظام")
         
-        with st.expander("🛠️ أدوات الصيانة", expanded=True):
+        with st.expander("🛠️ أدوات الصيانة والنسخ الاحتياطي", expanded=True):
             c1, c2 = st.columns(2)
-            if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True): st.cache_data.clear(); st.rerun()
+            if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True): 
+                st.cache_data.clear(); st.rerun()
+            
             if c2.button("🧹 تصفير جميع النقاط", use_container_width=True):
-                ws = sh.worksheet("students"); d = ws.get_all_values()
-                if len(d)>1: ws.update(f"I2:I{len(d)}", [[0]]*(len(d)-1)); st.success("تم تصفير النقاط")
+                try:
+                    ws = sh.worksheet("students"); d = ws.get_all_values()
+                    if len(d) > 1: 
+                        ws.update(range_name=f"I2:I{len(d)}", values=[[0]]*(len(d)-1))
+                        st.success("✅ تم تصفير جميع النقاط")
+                except Exception as e: st.error(f"خطأ: {e}")
+
+            st.divider()
+            st.markdown("##### 📥 تنزيل نسخة كاملة من البيانات (Backup)")
+            
+            # زر تنزيل بيانات الطلاب كاملة
+            df_st_full = fetch_safe("students")
+            if not df_st_full.empty:
+                b_st = io.BytesIO()
+                with pd.ExcelWriter(b_st, engine='xlsxwriter') as writer:
+                    df_st_full.to_excel(writer, index=False, sheet_name='Students')
+                st.download_button(
+                    label="📂 تنزيل بيانات الطلاب (Excel)",
+                    data=b_st.getvalue(),
+                    file_name=f"students_backup_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            
+            # زر تنزيل الدرجات كاملة
+            df_gr_full = fetch_safe("grades")
+            if not df_gr_full.empty:
+                b_gr = io.BytesIO()
+                with pd.ExcelWriter(b_gr, engine='xlsxwriter') as writer:
+                    df_gr_full.to_excel(writer, index=False, sheet_name='Grades')
+                st.download_button(
+                    label="📊 تنزيل سجل الدرجات (Excel)",
+                    data=b_gr.getvalue(),
+                    file_name=f"grades_backup_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
 
         with st.expander("📝 تهيئة الصفوف والدرجات"):
             cy = st.text_input("العام الدراسي", st.session_state.current_year)
@@ -449,6 +486,7 @@ elif st.session_state.role == "teacher":
             c1, c2 = st.columns(2)
             mt = c1.number_input("الدرجة العظمى (مشاركة)", 0, 100, st.session_state.max_tasks)
             mq = c2.number_input("الدرجة العظمى (اختبار)", 0, 100, st.session_state.max_quiz)
+            
             if st.button("💾 حفظ الإعدادات", type="primary"):
                 ws = sh.worksheet("settings")
                 batch_updates = [
@@ -459,38 +497,42 @@ elif st.session_state.role == "teacher":
                     {'range': 'A6:B6', 'values': [['stage_list', stg]]} 
                 ]
                 ws.batch_update(batch_updates)
+                
+                # تحديث الذاكرة الحية
                 st.session_state.max_tasks = mt; st.session_state.max_quiz = mq
                 st.session_state.current_year = cy
                 st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                 st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
-                st.success("تم الحفظ بنجاح"); st.cache_data.clear(); st.rerun()
+                st.success("✅ تم الحفظ بنجاح"); st.cache_data.clear(); st.rerun()
 
-        # ✅✅✅ هنا الكود الجديد والمطور (Batch Sync) ✅✅✅
-        with st.expander("📤 مزامنة (Excel) - استيراد ذكي"):
+        # ✅ المزامنة السريعة (Batch Upload)
+        with st.expander("📤 استيراد البيانات (Excel) - سريع"):
             up = st.file_uploader("رفع ملف Excel", type=['xlsx'])
             ts = st.radio("نوع البيانات", ["students", "grades"], horizontal=True, format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات")
             
             if st.button("🚀 بدء المزامنة السريعة", type="primary") and up:
                 try:
-                    with st.spinner('جاري معالجة البيانات...'):
+                    with st.spinner('جاري معالجة ورفع البيانات دفعة واحدة...'):
                         df = pd.read_excel(up).fillna("").dropna(how='all')
                         ws = sh.worksheet(ts)
                         
-                        # 1. جلب البيانات الحالية مرة واحدة (لتجنب التكرار)
+                        # 1. جلب البيانات الحالية (لمنع التكرار)
                         existing_data = ws.get_all_records()
                         existing_ids = set(str(r.get('id', r.get('student_id', ''))).strip().split('.')[0] for r in existing_data)
                         
                         hd = ws.row_values(1) # رؤوس الأعمدة
-                        new_rows_to_append = [] # قائمة لتجميع الطلاب الجدد
+                        new_rows_to_append = [] # قائمة التجميع
                         
-                        # شريط تقدم
+                        # شريط التقدم
                         progress_bar = st.progress(0)
                         
                         for idx, row in df.iterrows():
                             d = row.to_dict()
+                            # تنظيف المعرف
                             raw_id = str(d.get('student_id', d.get('id', ''))).strip().split('.')[0]
                             if not raw_id or raw_id == '0' or raw_id.lower() == 'nan': continue
                             
+                            # معالجة البيانات
                             if ts == "grades":
                                 d.update({
                                     "student_id": raw_id, 
@@ -505,34 +547,37 @@ elif st.session_state.role == "teacher":
                                 d['الجوال'] = clean_phone_number(d.get('الجوال',''))
                                 if 'النقاط' not in d or str(d.get('النقاط', '')).strip() == "": d['النقاط'] = 0
 
+                            # تحويل الصف لقائمة حسب ترتيب الأعمدة في الشيت
                             row_values = [str(d.get(k, "")) for k in hd]
 
-                            # إضافة فقط إذا لم يكن موجوداً
+                            # إضافة للقائمة إذا لم يكن موجوداً
                             if raw_id not in existing_ids:
                                 new_rows_to_append.append(row_values)
                             
                             progress_bar.progress(min((idx + 1) / len(df), 1.0))
 
-                        # إرسال دفعة واحدة
+                        # 2. الإضافة دفعة واحدة (أسرع بكثير)
                         if new_rows_to_append:
                             ws.append_rows(new_rows_to_append)
-                            st.success(f"✅ تم إضافة {len(new_rows_to_append)} طالب جديد دفعة واحدة!")
+                            st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح!")
                         else:
-                            st.info("لا توجد بيانات جديدة للإضافة.")
+                            st.info("💡 جميع البيانات موجودة مسبقاً، لم يتم إضافة جديد.")
                             
                         st.cache_data.clear()
                         
                 except Exception as e:
-                    st.error(f"حدث خطأ: {e}")
+                    st.error(f"حدث خطأ أثناء المزامنة: {e}")
             
             st.divider()
+            # أزرار تنزيل القوالب الفارغة
             c1, c2 = st.columns(2)
             b1 = io.BytesIO()
             pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط"]).to_excel(b1, index=False)
-            c1.download_button("📥 قالب الطلاب", b1.getvalue(), "students_template.xlsx", use_container_width=True)
+            c1.download_button("📥 قالب فارغ (طلاب)", b1.getvalue(), "students_template.xlsx", use_container_width=True)
+            
             b2 = io.BytesIO()
             pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
-            c2.download_button("📥 قالب الدرجات", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
+            c2.download_button("📥 قالب فارغ (درجات)", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
 
         with st.expander("🔐 إدارة المعلمين"):
             t1, t2 = st.tabs(["إضافة مستخدم", "تغيير كلمة المرور"])
