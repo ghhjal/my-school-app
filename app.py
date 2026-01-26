@@ -472,11 +472,12 @@ elif st.session_state.role == "teacher":
         else:
             st.info("💡 لا توجد تنبيهات منشورة حالياً.")
 
-    # --- ⚙️ الإعدادات (الكود المطور مع النسخ الاحتياطي والمزامنة السريعة) ---
+    # --- ⚙️ الإعدادات (الكود المدمج والنهائي) ---
     with menu[3]:
         st.subheader("⚙️ إعدادات النظام")
         
         with st.expander("🛠️ أدوات الصيانة والنسخ الاحتياطي", expanded=True):
+            # أزرار الصيانة الأساسية
             c1, c2 = st.columns(2)
             if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True): 
                 st.cache_data.clear(); st.rerun()
@@ -488,6 +489,48 @@ elif st.session_state.role == "teacher":
                         ws.update(range_name=f"I2:I{len(d)}", values=[[0]]*(len(d)-1))
                         st.success("✅ تم تصفير جميع النقاط")
                 except Exception as e: st.error(f"خطأ: {e}")
+
+            # ✅ زر إعادة الاحتساب (الكود الجديد المدمج)
+            if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
+                try:
+                    with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
+                        # 1. جلب البيانات
+                        df_beh = fetch_safe("behavior")
+                        ws_st = sh.worksheet("students")
+                        students_data = ws_st.get_all_records()
+                        
+                        # 2. تجميع النقاط الحقيقية
+                        true_scores = {}
+                        if not df_beh.empty:
+                            for _, row in df_beh.iterrows():
+                                raw_id = str(row.get('student_id', row.get('id', ''))).strip().split('.')[0]
+                                if not raw_id: continue
+                                # استخراج القيمة
+                                b_type = str(row.get('type', ''))
+                                match = re.search(r'\(([\+\-]?\d+)\)', b_type)
+                                if match:
+                                    val = int(match.group(1))
+                                    true_scores[raw_id] = true_scores.get(raw_id, 0) + val
+                        
+                        # 3. تحديث جدول الطلاب
+                        headers = ws_st.row_values(1)
+                        if 'النقاط' in headers:
+                            col_idx = headers.index('النقاط') + 1
+                            new_values = []
+                            for st_row in students_data:
+                                sid = str(st_row.get('id', '')).strip().split('.')[0]
+                                correct_score = true_scores.get(sid, 0)
+                                new_values.append([correct_score])
+                            
+                            # التحديث دفعة واحدة
+                            from gspread.utils import rowcol_to_a1
+                            start_cell = rowcol_to_a1(2, col_idx)
+                            end_cell = rowcol_to_a1(len(new_values) + 1, col_idx)
+                            ws_st.update(f"{start_cell}:{end_cell}", new_values)
+                            st.success("✅ تم تصحيح جميع الأرصدة بناءً على سجل السلوك!")
+                            st.cache_data.clear()
+                        else: st.error("لم يتم العثور على عمود 'النقاط'")
+                except Exception as e: st.error(f"حدث خطأ: {e}")
 
             st.divider()
             st.markdown("##### 📥 تنزيل نسخة كاملة من البيانات (Backup)")
