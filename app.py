@@ -295,6 +295,8 @@ elif st.session_state.role == "teacher":
                 s_eml = s_inf.get('الإيميل', '')
                 
                 c1, c2 = st.columns(2)
+                
+                # --- القسم الأيمن: الدرجات ---
                 with c1:
                     st.container(border=True)
                     st.markdown("##### 📝 رصد الدرجات")
@@ -319,6 +321,7 @@ elif st.session_state.role == "teacher":
                     
                     st.caption(f"📊 المجموع الحالي: {cur_p1 + cur_p2}")
 
+                # --- القسم الأيسر: السلوك (تم إصلاح الجمع والطرح) ---
                 with c2:
                     st.container(border=True)
                     st.markdown("##### 🎭 السلوك والملاحظات")
@@ -335,31 +338,58 @@ elif st.session_state.role == "teacher":
                             "🚫 سلبي (-10)"
                         ])
                         bn = st.text_area("تفاصيل الملاحظة")
+                        
                         if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
+                            # 1. تسجيل العملية في السجل
                             safe_append_row("behavior", {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn})
+                            
+                            # 2. استخراج الرقم (موجب أو سالب)
                             match = re.search(r'\(([\+\-]?\d+)\)', bt)
                             chg = int(match.group(1)) if match else 0
+                            
+                            # 3. تحديث رصيد الطالب (المنطق المصحح)
                             if chg != 0:
-                                ws = sh.worksheet("students"); c = ws.find(sid)
-                                if c:
-                                    h = ws.row_values(1)
-                                    if 'النقاط' in h:
-                                        idx = h.index('النقاط') + 1
-                                        cur = ws.cell(c.row, idx).value
-                                        new_val = (int(cur) if cur and str(cur).isdigit() else 0) + chg
-                                        ws.update_cell(c.row, idx, new_val)
-                                        st.toast(f"📈 الرصيد الجديد: {new_val}", icon="💰")
+                                try:
+                                    ws = sh.worksheet("students"); c = ws.find(sid)
+                                    if c:
+                                        h = ws.row_values(1)
+                                        if 'النقاط' in h:
+                                            idx = h.index('النقاط') + 1
+                                            cur_val_raw = ws.cell(c.row, idx).value
+                                            
+                                            # ✅ التصحيح: تحويل آمن للأرقام السالبة والموجبة
+                                            try:
+                                                current_points = int(cur_val_raw)
+                                            except (ValueError, TypeError):
+                                                current_points = 0
+                                            
+                                            new_val = current_points + chg
+                                            ws.update_cell(c.row, idx, new_val)
+                                            st.toast(f"📈 الرصيد الجديد: {new_val}", icon="💰")
+                                except Exception as e:
+                                    st.error(f"حدث خطأ في التحديث: {e}")
+
                             st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
 
                 st.markdown("#### 📜 سجل السلوك الأخير")
+                
+                # دالة حذف السلوك
+                def delete_behavior(row_idx):
+                    try:
+                        sh.worksheet("behavior").delete_rows(int(row_idx) + 2)
+                        st.cache_data.clear()
+                    except: pass
+
                 df_b = fetch_safe("behavior")
                 if not df_b.empty:
                     cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
                     my_b = df_b[df_b[cid].astype(str) == str(sid)]
                     for i, r in my_b.iloc[::-1].iterrows():
                         with st.container():
+                            # تنسيق القائمة
+                            color = "#ef4444" if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else "#10b981"
                             st.markdown(f"""
-                            <div class="mobile-list-item">
+                            <div class="mobile-list-item" style="border-right: 4px solid {color}">
                                 <div>
                                     <b>{r.get('type')}</b> | <small>{r.get('date')}</small><br>
                                     <span style="color:#6b7280">{r.get('note')}</span>
@@ -371,8 +401,9 @@ elif st.session_state.role == "teacher":
                             lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
                             c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
                             c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
-                            if c_del.button("❌", key=f"dl{i}"):
-                                sh.worksheet("behavior").delete_rows(int(i)+2); st.success("حُذف"); st.cache_data.clear(); st.rerun()
+                            
+                            # زر الحذف الآمن
+                            c_del.button("❌", key=f"dl_beh_{i}", on_click=delete_behavior, args=(i,))
 
     # 📢 التنبيهات
     with menu[2]:
