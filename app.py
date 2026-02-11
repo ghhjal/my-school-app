@@ -231,56 +231,140 @@ elif st.session_state.role == "teacher":
     menu = st.tabs(["👥 الطلاب", "📊 التقييم", "📢 التنبيهات", "⚙️ الإعدادات", "🛑 خروج"])
 
     # --- 👥 الطلاب ---
+    # --- 👥 الطلاب والتقارير ---
     with menu[0]:
-        st.markdown("### 👥 سجل الطلاب")
+        st.subheader("👥 إدارة الطلاب والتقارير")
         df_st = fetch_safe("students")
+        
         if not df_st.empty:
             df_st['clean_id'] = df_st.iloc[:,0].astype(str).str.split('.').str[0].str.strip()
-            
-            c1, c2, c3 = st.columns(3)
-            with c1: st.markdown(f"<div class='app-card' style='text-align:center'><h4>الطلاب</h4><h2>{len(df_st)}</h2></div>", unsafe_allow_html=True)
-            with c2: st.markdown(f"<div class='app-card' style='text-align:center'><h4>الفصول</h4><h2>{len(df_st.iloc[:,2].unique()) if len(df_st.columns)>2 else 0}</h2></div>", unsafe_allow_html=True)
             df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-            with c3: st.markdown(f"<div class='app-card' style='text-align:center'><h4>متوسط النقاط</h4><h2>{round(df_st['النقاط'].mean(), 1)}</h2></div>", unsafe_allow_html=True)
+            
+            # ✅ إنشاء تبويبات فرعية داخل قسم الطلاب
+            sub_tabs = st.tabs(["📋 قائمة الطلاب", "🏆 لوحة الشرف (أفضل 10)", "📑 تقرير الطالب الشامل"])
+            
+            # --- 1. قائمة الطلاب ---
+            with sub_tabs[0]:
+                c1, c2, c3 = st.columns(3)
+                c1.metric("العدد الإجمالي", len(df_st))
+                c2.metric("الفصول", len(df_st.iloc[:,2].unique()) if len(df_st.columns)>2 else 0)
+                c3.metric("متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+                st.divider()
 
-            with st.expander("➕ تسجيل طالب جديد", expanded=False):
-                with st.form("add_st_v26", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    f_id = c1.text_input("🔢 الرقم الأكاديمي")
-                    f_name = c2.text_input("👤 اسم الطالب")
-                    c3, c4, c5 = st.columns(3)
-                    f_class = c3.selectbox("الصف", st.session_state.class_options)
-                    f_stage = c4.selectbox("المرحلة", st.session_state.stage_options)
-                    f_year = c5.text_input("العام الدراسي", st.session_state.current_year)
-                    c6, c7 = st.columns(2)
-                    f_phone = c6.text_input("📱 رقم الجوال")
-                    f_mail = c7.text_input("📧 البريد الإلكتروني")
+                with st.expander("➕ إضافة طالب جديد", expanded=False):
+                    with st.form("add_st_v26", clear_on_submit=True):
+                        c1, c2 = st.columns(2)
+                        f_id = c1.text_input("🔢 الرقم الأكاديمي")
+                        f_name = c2.text_input("👤 الاسم")
+                        c3, c4, c5 = st.columns(3)
+                        f_class = c3.selectbox("الصف", st.session_state.class_options)
+                        f_stage = c4.selectbox("المرحلة", st.session_state.stage_options)
+                        f_year = c5.text_input("العام", st.session_state.current_year)
+                        c6, c7 = st.columns(2)
+                        f_phone = c6.text_input("📱 الجوال")
+                        f_mail = c7.text_input("📧 الإيميل")
+                        
+                        if st.form_submit_button("✅ حفظ", type="primary"):
+                            if f_id and f_name:
+                                if f_id.strip() in df_st['clean_id'].values:
+                                    st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً!")
+                                else:
+                                    cl_p = clean_phone_number(f_phone) if f_phone else ""
+                                    st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الجوال": cl_p, "الإيميل": f_mail.strip(), "النقاط": "0"}
+                                    if safe_append_row("students", st_map):
+                                        st.success("✅ تم الحفظ"); st.cache_data.clear(); st.rerun()
+                            else: st.warning("أكمل البيانات")
+                
+                st.write("---")
+                sq = st.text_input("🔍 بحث في القائمة:")
+                if sq: st.dataframe(df_st[df_st.iloc[:,0].str.contains(sq)|df_st.iloc[:,1].str.contains(sq)], use_container_width=True, hide_index=True)
+                else: st.dataframe(df_st, use_container_width=True, hide_index=True)
+
+                with st.expander("🗑️ حذف طالب"):
+                    dq = st.text_input("بحث للحذف:", key="dq")
+                    if dq:
+                        for i, r in df_st[df_st.iloc[:,0].str.contains(dq)|df_st.iloc[:,1].str.contains(dq)].iterrows():
+                            if st.button(f"حذف {r.iloc[1]}", key=f"d{i}"):
+                                sh.worksheet("students").delete_rows(int(i)+2); st.success("تم"); st.cache_data.clear(); st.rerun()
+            
+            # --- 2. لوحة الشرف (أفضل 10) ---
+            with sub_tabs[1]:
+                st.markdown("#### 🌟 أفضل 10 طلاب على مستوى المنصة")
+                top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
+                
+                for i, (_, r) in enumerate(top_10.iterrows(), 1):
+                    ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                    border_color = "#f59e0b" if i<=3 else "#cbd5e1"
+                    st.markdown(f"""
+                        <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                            <div style='display:flex; align-items:center; gap:15px;'>
+                                <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
+                                <div>
+                                    <b style='font-size:1.1rem; color:#1e3a8a;'>{r['name']}</b><br>
+                                    <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r['clean_id']}</small>
+                                </div>
+                            </div>
+                            <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
+                                {int(r['النقاط'])} نقطة
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+            
+            # --- 3. تقرير شامل للطالب ---
+            with sub_tabs[2]:
+                st.markdown("#### 📑 التقرير الشامل المفصل")
+                st_dict = {f"{r['name']} ({r['clean_id']})": r['clean_id'] for _, r in df_st.iterrows()}
+                sel_rep = st.selectbox("🔍 ابحث عن الطالب لاستخراج التقرير:", [""] + list(st_dict.keys()), key="rep_sel")
+                
+                if sel_rep:
+                    sid = st_dict[sel_rep]
+                    s_inf = df_st[df_st['clean_id'] == sid].iloc[0]
+                    
+                    st.markdown("---")
+                    # 1️⃣ بطاقة بيانات الطالب الأساسية
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.info(f"👤 الاسم:\n\n**{s_inf['name']}**")
+                    c2.success(f"🆔 الرقم الأكاديمي:\n\n**{sid}**")
+                    c3.warning(f"🏫 الصف:\n\n**{s_inf.get('class', 'غير محدد')}**")
+                    c4.error(f"🌟 إجمالي النقاط:\n\n**{int(s_inf['النقاط'])}**")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
-                    if st.form_submit_button("✅ حفظ البيانات", type="primary"):
-                        if f_id and f_name:
-                            if f_id.strip() in df_st['clean_id'].values:
-                                st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً!")
-                            else:
-                                cl_p = clean_phone_number(f_phone) if f_phone else ""
-                                st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الجوال": cl_p, "الإيميل": f_mail.strip(), "النقاط": "0"}
-                                if safe_append_row("students", st_map):
-                                    st.success("✅ تم الحفظ بنجاح"); st.cache_data.clear(); st.rerun()
-                        else: st.warning("الرجاء إكمال البيانات الأساسية")
-            
-            st.divider()
-            sq = st.text_input("🔍 بحث عن طالب (بالاسم أو الرقم):")
-            if sq: st.dataframe(df_st[df_st.iloc[:,0].str.contains(sq)|df_st.iloc[:,1].str.contains(sq)], use_container_width=True, hide_index=True)
-            else: st.dataframe(df_st, use_container_width=True, hide_index=True)
+                    
+                    # 2️⃣ الدرجات الأكاديمية
+                    st.markdown("##### 📊 الدرجات الأكاديمية")
+                    df_g = fetch_safe("grades")
+                    if not df_g.empty:
+                        df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
+                        my_g = df_g[df_g['clean_id'] == sid]
+                        if not my_g.empty:
+                            g_inf = my_g.iloc[0]
+                            k1, k2, k3 = st.columns(3)
+                            k1.metric("📝 المشاركة والواجبات", g_inf.get('p1', 0))
+                            k2.metric("✍️ الاختبارات", g_inf.get('p2', 0))
+                            k3.metric("🏆 المجموع الكلي", g_inf.get('perf', 0))
+                        else:
+                            st.info("لم يتم رصد درجات أكاديمية لهذا الطالب بعد.")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    
+                    # 3️⃣ سجل السلوك والملاحظات
+                    st.markdown("##### 📜 سجل الملاحظات والسلوك التفصيلي")
+                    df_b = fetch_safe("behavior")
+                    if not df_b.empty:
+                        df_b['clean_id'] = df_b.iloc[:,0].astype(str).str.split('.').str[0]
+                        my_b = df_b[df_b['clean_id'] == sid]
+                        
+                        if not my_b.empty:
+                            # إعادة تسمية الأعمدة لعرضها بشكل جميل بالعربية
+                            display_df = my_b[['date', 'type', 'note']].rename(columns={'date':'📅 التاريخ', 'type':'🎯 نوع السلوك', 'note':'📝 التفاصيل'})
+                            st.dataframe(display_df, use_container_width=True, hide_index=True)
+                        else:
+                            st.success("✨ سجله نظيف، لا توجد ملاحظات مسجلة في السجل.")
+                    else:
+                        st.info("سجل السلوك فارغ تماماً في المنصة.")
 
-            with st.expander("🗑️ حذف طالب"):
-                dq = st.text_input("أدخل اسم أو رقم الطالب للحذف:", key="dq")
-                if dq:
-                    for i, r in df_st[df_st.iloc[:,0].str.contains(dq)|df_st.iloc[:,1].str.contains(dq)].iterrows():
-                        if st.button(f"🗑️ حذف السجل: {r.iloc[1]}", key=f"d{i}"):
-                            sh.worksheet("students").delete_rows(int(i)+2); st.success("تم الحذف"); st.cache_data.clear(); st.rerun()
-        else: st.info("قاعدة البيانات فارغة حالياً")
-
+        else:
+            st.info("💡 لم يتم إضافة أي طلاب بعد.")
     # 📊 التقييم
     with menu[1]:
         st.markdown("### 📊 التقييم والمتابعة")
