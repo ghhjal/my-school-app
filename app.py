@@ -310,7 +310,7 @@ elif st.session_state.role == "teacher":
                         </div>
                     """, unsafe_allow_html=True)
             
-            # --- 3. تقرير الطالب الشامل (معدل لإضافة الطباعة) ---
+            # --- 3. تقرير الطالب الشامل (التصميم العصري الجديد) ---
             with sub_tabs[2]:
                 st.markdown("#### 📑 التقرير الشامل المفصل")
                 st_dict = {f"{r['name']} ({r['clean_id']})": r['clean_id'] for _, r in df_st.iterrows()}
@@ -331,8 +331,8 @@ elif st.session_state.role == "teacher":
                     st.markdown("<br>", unsafe_allow_html=True)
                     
                     # متغيرات لتخزين كود HTML للتقرير
-                    grades_html_table = "<p style='text-align:center; color:#777;'>لا توجد درجات مرصودة لهذا الطالب.</p>"
-                    behavior_html_table = "<p style='text-align:center; color:#777;'>سجل السلوك نظيف.</p>"
+                    grades_html_table = "<div style='text-align:center; padding:20px; color:#64748b;'>لا توجد درجات مرصودة لهذا الطالب.</div>"
+                    behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748b;'>✨ سجل السلوك نظيف.</div>"
 
                     # --- معالجة الدرجات ---
                     st.markdown("##### 📊 الدرجات الأكاديمية")
@@ -349,16 +349,16 @@ elif st.session_state.role == "teacher":
                             
                             # تحضير جدول الدرجات للطباعة
                             grades_html_table = f"""
-                            <table style="width:100%; border-collapse: collapse; margin-top:10px; font-family: sans-serif;">
-                                <tr style="background-color: #f8f9fa;">
-                                    <th style="border: 1px solid #dee2e6; padding: 12px;">المشاركة والواجبات</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 12px;">الاختبارات</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 12px;">المجموع الكلي</th>
+                            <table>
+                                <tr>
+                                    <th>المشاركة والواجبات</th>
+                                    <th>الاختبارات</th>
+                                    <th>المجموع الكلي</th>
                                 </tr>
                                 <tr>
-                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center;">{g_inf.get('p1', 0)}</td>
-                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center;">{g_inf.get('p2', 0)}</td>
-                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center; font-weight:bold;">{g_inf.get('perf', 0)}</td>
+                                    <td style="text-align: center;">{g_inf.get('p1', 0)}</td>
+                                    <td style="text-align: center;">{g_inf.get('p2', 0)}</td>
+                                    <td style="text-align: center; font-weight:bold; color:#1e40af;">{g_inf.get('perf', 0)}</td>
                                 </tr>
                             </table>
                             """
@@ -383,17 +383,17 @@ elif st.session_state.role == "teacher":
                             for _, r_b in display_df.iterrows():
                                 rows_html += f"""
                                 <tr>
-                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['📅 التاريخ']}</td>
-                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['🎯 نوع السلوك']}</td>
-                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['📝 التفاصيل']}</td>
+                                    <td>{r_b['📅 التاريخ']}</td>
+                                    <td>{r_b['🎯 نوع السلوك']}</td>
+                                    <td>{r_b['📝 التفاصيل']}</td>
                                 </tr>
                                 """
                             behavior_html_table = f"""
-                            <table style="width:100%; border-collapse: collapse; margin-top:10px; font-family: sans-serif;">
-                                <tr style="background-color: #f8f9fa;">
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">التاريخ</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">نوع السلوك</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">التفاصيل</th>
+                            <table>
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>نوع السلوك</th>
+                                    <th>التفاصيل</th>
                                 </tr>
                                 {rows_html}
                             </table>
@@ -406,46 +406,125 @@ elif st.session_state.role == "teacher":
                     # --- 🖨️ إنشاء زر الطباعة ---
                     st.divider()
                     
-                    # تصميم التقرير HTML
+                    # تصميم التقرير HTML (النسخة العصرية)
                     final_report = f"""
                     <!DOCTYPE html>
                     <html dir="rtl" lang="ar">
                     <head>
                         <meta charset="UTF-8">
                         <title>تقرير الطالب: {s_inf['name']}</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
                         <style>
-                            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; }}
-                            .header {{ text-align: center; border-bottom: 3px solid #0056b3; padding-bottom: 20px; margin-bottom: 30px; }}
-                            .student-card {{ background-color: #f1f3f5; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px; }}
-                            .student-card div {{ margin: 5px 0; font-size: 16px; }}
-                            h3 {{ color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }}
-                            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-                            th {{ background-color: #e9ecef; color: #495057; font-weight: bold; text-align: right; }}
-                            th, td {{ padding: 10px; border: 1px solid #dee2e6; }}
+                            body {{ 
+                                font-family: 'Cairo', sans-serif; 
+                                background-color: #f8fafc; 
+                                padding: 20px; 
+                                color: #334155; 
+                                line-height: 1.6;
+                            }}
+                            .container {{ 
+                                max-width: 800px; 
+                                margin: 0 auto; 
+                                background: #ffffff; 
+                                padding: 40px; 
+                                border-radius: 16px; 
+                                box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+                            }}
+                            .banner {{ 
+                                background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
+                                color: white; 
+                                text-align: center; 
+                                padding: 15px; 
+                                border-radius: 12px; 
+                                margin-bottom: 30px; 
+                                font-weight: 800; 
+                                font-size: 24px; 
+                                letter-spacing: 1px; 
+                                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+                            }}
+                            .header {{ text-align: center; margin-bottom: 30px; }}
+                            .header h1 {{ color: #0f172a; margin-bottom: 5px; font-weight: 800; font-size: 28px; }}
+                            .header p {{ color: #64748b; font-size: 14px; margin-top: 0; }}
+                            .student-card {{ 
+                                background: linear-gradient(to left, #eff6ff, #ffffff); 
+                                border-right: 5px solid #3b82f6; 
+                                padding: 25px; 
+                                border-radius: 12px; 
+                                margin-bottom: 40px; 
+                                display: grid; 
+                                grid-template-columns: 1fr 1fr; 
+                                gap: 15px; 
+                                box-shadow: 0 2px 10px rgba(0,0,0,0.03); 
+                            }}
+                            .student-card h2 {{ grid-column: 1 / -1; margin-top: 0; color: #1e40af; border-bottom: 1px dashed #bfdbfe; padding-bottom: 15px; margin-bottom: 10px; }}
+                            .student-card .info-item {{ font-size: 16px; }}
+                            .student-card .info-item span {{ font-weight: 800; color: #475569; margin-left: 5px; }}
+                            h3 {{ color: #4338ca; display: flex; align-items: center; gap: 10px; margin-top: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }}
+                            .table-container {{ overflow: hidden; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 20px; border: 1px solid #e2e8f0; }}
+                            table {{ width: 100%; border-collapse: collapse; background: #fff; text-align: right; }}
+                            th {{ background-color: #f8fafc; color: #334155; font-weight: 800; padding: 15px; border-bottom: 2px solid #e2e8f0; }}
+                            td {{ padding: 15px; border-bottom: 1px solid #f1f5f9; color: #475569; font-weight: 600; }}
+                            tr:last-child td {{ border-bottom: none; }}
+                            tr:nth-child(even) {{ background-color: #f8fafc; }}
+                            .footer-sigs {{ 
+                                margin-top: 60px; 
+                                display: flex; 
+                                justify-content: space-between; 
+                                align-items: center; 
+                                padding-top: 30px; 
+                                border-top: 2px dashed #cbd5e1; 
+                                color: #334155; 
+                                font-weight: 800; 
+                            }}
+                            .footer-sigs > div {{ text-align: center; flex: 1; }}
+                            .sig-line {{ margin-top: 30px; color: #94a3b8; font-weight: normal; }}
+                            @media print {{
+                                body {{ background: white; padding: 0; }}
+                                .container {{ box-shadow: none; padding: 0; max-width: 100%; border: none; }}
+                                .banner, th, .student-card {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                            }}
                         </style>
                     </head>
                     <body>
-                        <div class="header">
-                            <h1>تقرير متابعة طالب</h1>
-                            <p style="color:#666;">تاريخ التقرير: {pd.Timestamp.now().strftime('%Y-%m-%d')}</p>
-                        </div>
-                        
-                        <div class="student-card">
-                            <h2 style="margin-top:0;">👤 {s_inf['name']}</h2>
-                            <div><strong>🆔 الرقم الأكاديمي:</strong> {sid}</div>
-                            <div><strong>🏫 الصف:</strong> {s_inf.get('class', 'غير محدد')}</div>
-                            <div><strong>⭐ نقاط التميز:</strong> {int(s_inf['النقاط'])}</div>
-                        </div>
-                        
-                        <h3>📊 الأداء الأكاديمي</h3>
-                        {grades_html_table}
-                        
-                        <h3>📜 سجل السلوك والملاحظات</h3>
-                        {behavior_html_table}
-                        
-                        <div style="margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 10px; display: flex; justify-content: space-between;">
-                            <div><strong>توقيع المرشد الطلابي:</strong> ..........................</div>
-                            <div><strong>ختم المدرسة:</strong></div>
+                        <div class="container">
+                            <div class="banner">✨ منصة زياد الذكية ✨</div>
+                            
+                            <div class="header">
+                                <h1>تقرير متابعة طالب</h1>
+                                <p>تاريخ استخراج التقرير: {pd.Timestamp.now().strftime('%Y-%m-%d')}</p>
+                            </div>
+                            
+                            <div class="student-card">
+                                <h2>👤 {s_inf['name']}</h2>
+                                <div class="info-item"><span>🆔 الرقم الأكاديمي:</span> {sid}</div>
+                                <div class="info-item"><span>🏫 الصف:</span> {s_inf.get('class', 'غير محدد')}</div>
+                                <div class="info-item"><span>⭐ نقاط التميز:</span> <span style="color:#d97706; font-size:1.2em;">{int(s_inf['النقاط'])}</span></div>
+                            </div>
+                            
+                            <h3>📊 الأداء الأكاديمي</h3>
+                            <div class="table-container">
+                                {grades_html_table}
+                            </div>
+                            
+                            <h3>📜 سجل السلوك والملاحظات</h3>
+                            <div class="table-container">
+                                {behavior_html_table}
+                            </div>
+                            
+                            <div class="footer-sigs">
+                                <div>
+                                    توقيع المرشد الطلابي
+                                    <div class="sig-line">.................................</div>
+                                </div>
+                                <div>
+                                    المعلم
+                                    <div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div>
+                                </div>
+                                <div>
+                                    ختم المدرسة
+                                    <div class="sig-line">.................................</div>
+                                </div>
+                            </div>
                         </div>
                     </body>
                     </html>
@@ -454,14 +533,14 @@ elif st.session_state.role == "teacher":
                     col_btn1, col_btn2 = st.columns([1, 4])
                     with col_btn1:
                         st.download_button(
-                            label="🖨️ تحميل التقرير (HTML)",
+                            label="🖨️ تحميل التقرير (عصري)",
                             data=final_report,
                             file_name=f"Report_{sid}_{s_inf['name']}.html",
                             mime="text/html",
                             type="primary"
                         )
                     with col_btn2:
-                        st.caption("👈 اضغط للتحميل، ثم افتح الملف واضغط Ctrl+P للطباعة.")
+                        st.caption("👈 التصميم الجديد جاهز! حمل الملف واضغط Ctrl+P للطباعة (تأكد من تفعيل 'Background graphics' في إعدادات الطباعة لتظهر الألوان).")
 
         else:
             st.info("💡 لم يتم إضافة أي طلاب بعد.")
