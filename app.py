@@ -310,7 +310,7 @@ elif st.session_state.role == "teacher":
                         </div>
                     """, unsafe_allow_html=True)
             
-            # --- 3. تقرير شامل للطالب ---
+            # --- 3. تقرير الطالب الشامل (معدل لإضافة الطباعة) ---
             with sub_tabs[2]:
                 st.markdown("#### 📑 التقرير الشامل المفصل")
                 st_dict = {f"{r['name']} ({r['clean_id']})": r['clean_id'] for _, r in df_st.iterrows()}
@@ -321,7 +321,7 @@ elif st.session_state.role == "teacher":
                     s_inf = df_st[df_st['clean_id'] == sid].iloc[0]
                     
                     st.markdown("---")
-                    # 1️⃣ بطاقة بيانات الطالب الأساسية
+                    # عرض البيانات الأساسية
                     c1, c2, c3, c4 = st.columns(4)
                     c1.info(f"👤 الاسم:\n\n**{s_inf['name']}**")
                     c2.success(f"🆔 الرقم الأكاديمي:\n\n**{sid}**")
@@ -330,7 +330,11 @@ elif st.session_state.role == "teacher":
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # 2️⃣ الدرجات الأكاديمية
+                    # متغيرات لتخزين كود HTML للتقرير
+                    grades_html_table = "<p style='text-align:center; color:#777;'>لا توجد درجات مرصودة لهذا الطالب.</p>"
+                    behavior_html_table = "<p style='text-align:center; color:#777;'>سجل السلوك نظيف.</p>"
+
+                    # --- معالجة الدرجات ---
                     st.markdown("##### 📊 الدرجات الأكاديمية")
                     df_g = fetch_safe("grades")
                     if not df_g.empty:
@@ -342,12 +346,28 @@ elif st.session_state.role == "teacher":
                             k1.metric("📝 المشاركة والواجبات", g_inf.get('p1', 0))
                             k2.metric("✍️ الاختبارات", g_inf.get('p2', 0))
                             k3.metric("🏆 المجموع الكلي", g_inf.get('perf', 0))
+                            
+                            # تحضير جدول الدرجات للطباعة
+                            grades_html_table = f"""
+                            <table style="width:100%; border-collapse: collapse; margin-top:10px; font-family: sans-serif;">
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="border: 1px solid #dee2e6; padding: 12px;">المشاركة والواجبات</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 12px;">الاختبارات</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 12px;">المجموع الكلي</th>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center;">{g_inf.get('p1', 0)}</td>
+                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center;">{g_inf.get('p2', 0)}</td>
+                                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center; font-weight:bold;">{g_inf.get('perf', 0)}</td>
+                                </tr>
+                            </table>
+                            """
                         else:
                             st.info("لم يتم رصد درجات أكاديمية لهذا الطالب بعد.")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # 3️⃣ سجل السلوك والملاحظات
+                    # --- معالجة السلوك ---
                     st.markdown("##### 📜 سجل الملاحظات والسلوك التفصيلي")
                     df_b = fetch_safe("behavior")
                     if not df_b.empty:
@@ -355,13 +375,93 @@ elif st.session_state.role == "teacher":
                         my_b = df_b[df_b['clean_id'] == sid]
                         
                         if not my_b.empty:
-                            # إعادة تسمية الأعمدة لعرضها بشكل جميل بالعربية
                             display_df = my_b[['date', 'type', 'note']].rename(columns={'date':'📅 التاريخ', 'type':'🎯 نوع السلوك', 'note':'📝 التفاصيل'})
                             st.dataframe(display_df, use_container_width=True, hide_index=True)
+                            
+                            # تحضير جدول السلوك للطباعة
+                            rows_html = ""
+                            for _, r_b in display_df.iterrows():
+                                rows_html += f"""
+                                <tr>
+                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['📅 التاريخ']}</td>
+                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['🎯 نوع السلوك']}</td>
+                                    <td style="border: 1px solid #dee2e6; padding: 8px;">{r_b['📝 التفاصيل']}</td>
+                                </tr>
+                                """
+                            behavior_html_table = f"""
+                            <table style="width:100%; border-collapse: collapse; margin-top:10px; font-family: sans-serif;">
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">التاريخ</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">نوع السلوك</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">التفاصيل</th>
+                                </tr>
+                                {rows_html}
+                            </table>
+                            """
                         else:
                             st.success("✨ سجله نظيف، لا توجد ملاحظات مسجلة في السجل.")
                     else:
                         st.info("سجل السلوك فارغ تماماً في المنصة.")
+
+                    # --- 🖨️ إنشاء زر الطباعة ---
+                    st.divider()
+                    
+                    # تصميم التقرير HTML
+                    final_report = f"""
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>تقرير الطالب: {s_inf['name']}</title>
+                        <style>
+                            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; }}
+                            .header {{ text-align: center; border-bottom: 3px solid #0056b3; padding-bottom: 20px; margin-bottom: 30px; }}
+                            .student-card {{ background-color: #f1f3f5; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px; }}
+                            .student-card div {{ margin: 5px 0; font-size: 16px; }}
+                            h3 {{ color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }}
+                            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                            th {{ background-color: #e9ecef; color: #495057; font-weight: bold; text-align: right; }}
+                            th, td {{ padding: 10px; border: 1px solid #dee2e6; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>تقرير متابعة طالب</h1>
+                            <p style="color:#666;">تاريخ التقرير: {pd.Timestamp.now().strftime('%Y-%m-%d')}</p>
+                        </div>
+                        
+                        <div class="student-card">
+                            <h2 style="margin-top:0;">👤 {s_inf['name']}</h2>
+                            <div><strong>🆔 الرقم الأكاديمي:</strong> {sid}</div>
+                            <div><strong>🏫 الصف:</strong> {s_inf.get('class', 'غير محدد')}</div>
+                            <div><strong>⭐ نقاط التميز:</strong> {int(s_inf['النقاط'])}</div>
+                        </div>
+                        
+                        <h3>📊 الأداء الأكاديمي</h3>
+                        {grades_html_table}
+                        
+                        <h3>📜 سجل السلوك والملاحظات</h3>
+                        {behavior_html_table}
+                        
+                        <div style="margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 10px; display: flex; justify-content: space-between;">
+                            <div><strong>توقيع المرشد الطلابي:</strong> ..........................</div>
+                            <div><strong>ختم المدرسة:</strong></div>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    col_btn1, col_btn2 = st.columns([1, 4])
+                    with col_btn1:
+                        st.download_button(
+                            label="🖨️ تحميل التقرير (HTML)",
+                            data=final_report,
+                            file_name=f"Report_{sid}_{s_inf['name']}.html",
+                            mime="text/html",
+                            type="primary"
+                        )
+                    with col_btn2:
+                        st.caption("👈 اضغط للتحميل، ثم افتح الملف واضغط Ctrl+P للطباعة.")
 
         else:
             st.info("💡 لم يتم إضافة أي طلاب بعد.")
