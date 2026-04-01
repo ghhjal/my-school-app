@@ -558,7 +558,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                     <div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div>
                                 </div>
                                 <div>
-                                    ختم المدرسة
+                                    وكيل المدرسة
                                     <div class="sig-line">.................................</div>
                                 </div>
                             </div>
