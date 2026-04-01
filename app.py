@@ -236,7 +236,7 @@ if st.session_state.role is None:
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("👁️ دخول الإشراف", type="primary", use_container_width=True):
                 # حساب إدارة افتراضي ثابت (البيانات مخفية في الكود فقط)
-                if u_admin == "admin" and p_admin == "0000":
+                if u_admin == "admin" and p_ad == "13579":
                     st.session_state.username = "الإدارة"
                     st.session_state.role = "viewer"
                     st.rerun()
