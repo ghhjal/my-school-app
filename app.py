@@ -191,7 +191,6 @@ st.markdown(f"""
 # ==========================================
 if st.session_state.role is None:
     c1, c2 = st.columns([1, 10]) 
-    # إضافة تبويب المشاهد (الإدارة) هنا
     t1, t2, t3 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم", "🏫 بوابة الإدارة (مشاهد)"])
     
     with t1:
@@ -209,11 +208,12 @@ if st.session_state.role is None:
                         st.session_state.role = "student"
                         st.rerun()
                     else: st.error("⚠️ الرقم غير مسجل في النظام")
+                    
     with t2:
         st.markdown("<br>", unsafe_allow_html=True)
         with st.form("tr_login"):
             st.markdown("<h4 style='text-align:center; margin-bottom:20px;'>تسجيل دخول المعلم</h4>", unsafe_allow_html=True)
-            u = st.text_input("اسم المستخدم", placeholder="User"); 
+            u = st.text_input("اسم المستخدم", placeholder="User")
             p = st.text_input("كلمة المرور", type="password", placeholder="******")
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("🛠️ دخول لوحة التحكم", type="primary", use_container_width=True):
@@ -221,27 +221,43 @@ if st.session_state.role is None:
                 if not df.empty and u in df['username'].values:
                     ud = df[df['username']==u].iloc[0]
                     if hashlib.sha256(p.encode()).hexdigest() == ud['password_hash']:
-                        st.session_state.username = u; st.session_state.role = "teacher"; st.rerun()
-                st.error("❌ بيانات الدخول غير صحيحة")
-    
+                        # التأكد من أن الصلاحية هي "معلم" أو غير محددة (للتوافق مع الحسابات القديمة)
+                        if ud.get('role', 'teacher') in ['teacher', '']:
+                            st.session_state.username = u
+                            st.session_state.role = "teacher"
+                            st.rerun()
+                        else:
+                            st.error("❌ هذا الحساب لا يملك صلاحية المعلم.")
+                    else:
+                        st.error("❌ كلمة المرور غير صحيحة.")
+                else:
+                    st.error("❌ اسم المستخدم غير موجود.")
+                    
     with t3:
         st.markdown("<br>", unsafe_allow_html=True)
         with st.form("admin_login"):
             st.markdown("<h4 style='text-align:center; margin-bottom:20px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
-            
-            # تم تعديل الـ placeholder لإخفاء بيانات الدخول
             u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
             p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-            
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("👁️ دخول الإشراف", type="primary", use_container_width=True):
-                # حساب إدارة افتراضي ثابت (البيانات مخفية في الكود فقط)
-                if u_admin == "admin" and p_ad == "13579":
-                    st.session_state.username = "الإدارة"
-                    st.session_state.role = "viewer"
-                    st.rerun()
+                df_u = fetch_safe("users")
+                if not df_u.empty and u_admin in df_u['username'].values:
+                    ud = df_u[df_u['username']==u_admin].iloc[0]
+                    if hashlib.sha256(p_admin.encode()).hexdigest() == ud['password_hash']:
+                        # التأكد من أن الصلاحية هي "مشاهد" (viewer)
+                        if ud.get('role', '') == 'viewer':
+                            st.session_state.username = u_admin
+                            st.session_state.role = "viewer"
+                            st.rerun()
+                        else:
+                            st.error("❌ هذا الحساب لا يملك صلاحية الإدارة (قراءة فقط).")
+                    else:
+                        st.error("❌ كلمة المرور غير صحيحة.")
                 else:
-                    st.error("❌ بيانات الدخول غير صحيحة")
+                    st.error("❌ بيانات الدخول غير صحيحة.")
+                    
+    show_footer()
 
 # ==========================================
 # 👨‍🏫 4. واجهة المعلم / الإدارة (مشاهد)
@@ -898,23 +914,60 @@ elif st.session_state.role in ["teacher", "viewer"]:
                 pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
                 c2.download_button("📥 قالب فارغ (درجات)", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
 
-            with st.expander("🔐 إدارة المعلمين"):
-                t1, t2 = st.tabs(["إضافة مستخدم", "تغيير كلمة المرور"])
+            with st.expander("🔐 إدارة المستخدمين (معلمين / إدارة)"):
+                t1, t2, t3 = st.tabs(["➕ إضافة مستخدم", "🔑 تعديل كلمة المرور", "🗑️ حذف مستخدم"])
+                
                 with t1:
                     with st.form("add_u"):
-                        nu = st.text_input("اسم المستخدم الجديد"); np = st.text_input("كلمة المرور", type="password")
-                        if st.form_submit_button("إضافة معلم"):
-                            safe_append_row("users", {"username": nu, "password_hash": hashlib.sha256(np.encode()).hexdigest(), "role": "teacher"})
-                            st.success("تمت الإضافة")
+                        nu = st.text_input("اسم المستخدم الجديد")
+                        np = st.text_input("كلمة المرور", type="password")
+                        nrole_label = st.selectbox("نوع الحساب والصلاحية", ["👨‍🏫 معلم (صلاحيات كاملة)", "👁️ إدارة (مشاهد وقراءة فقط)"])
+                        
+                        if st.form_submit_button("إضافة المستخدم", type="primary"):
+                            if nu and np:
+                                role_val = "teacher" if "معلم" in nrole_label else "viewer"
+                                safe_append_row("users", {"username": nu, "password_hash": hashlib.sha256(np.encode()).hexdigest(), "role": role_val})
+                                st.success(f"✅ تمت إضافة الحساب ({nu}) بنجاح كـ {role_val}.")
+                                st.cache_data.clear()
+                            else:
+                                st.warning("الرجاء إكمال اسم المستخدم وكلمة المرور.")
+                
                 with t2:
                     with st.form("chg_pass"):
-                        npwd = st.text_input("كلمة المرور الجديدة", type="password")
-                        if st.form_submit_button("تغيير"):
-                            df_u = fetch_safe("users")
-                            if st.session_state.username in df_u['username'].values:
-                                idx = df_u[df_u['username']==st.session_state.username].index[0] + 2
-                                sh.worksheet("users").update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
-                                st.success("تم التغيير بنجاح")
+                        df_u_edit = fetch_safe("users")
+                        if not df_u_edit.empty:
+                            target_u = st.selectbox("اختر المستخدم المراد تعديل رقمه السري:", df_u_edit['username'].tolist())
+                            npwd = st.text_input("كلمة المرور الجديدة", type="password")
+                            
+                            if st.form_submit_button("تحديث كلمة المرور", type="primary"):
+                                if npwd:
+                                    idx = df_u_edit[df_u_edit['username']==target_u].index[0] + 2
+                                    sh.worksheet("users").update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
+                                    st.success(f"✅ تم تحديث كلمة مرور المستخدم ({target_u}) بنجاح.")
+                                    st.cache_data.clear()
+                                else:
+                                    st.warning("الرجاء إدخال كلمة المرور الجديدة.")
+                        else:
+                            st.info("لا يوجد مستخدمين بعد.")
+                            
+                with t3:
+                    df_u_del = fetch_safe("users")
+                    if not df_u_del.empty:
+                        del_u = st.selectbox("اختر المستخدم المراد حذفه:", [""] + df_u_del['username'].tolist())
+                        if st.button("🗑️ حذف المستخدم نهائياً", type="primary"):
+                            if del_u:
+                                if del_u == st.session_state.username:
+                                    st.error("⚠️ لا يمكنك حذف حسابك الحالي أثناء استخدامك له!")
+                                else:
+                                    idx = df_u_del[df_u_del['username']==del_u].index[0] + 2
+                                    sh.worksheet("users").delete_rows(int(idx))
+                                    st.success(f"✅ تم حذف المستخدم ({del_u}) نهائياً.")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                            else:
+                                st.warning("الرجاء اختيار مستخدم للحذف.")
+                    else:
+                        st.info("لا يوجد مستخدمين.")
 
     with tab_logout:
         st.markdown("<br><br>", unsafe_allow_html=True)
