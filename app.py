@@ -47,6 +47,14 @@ def show_footer():
     c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
     c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
+# 🚀 دالة جديدة: تسوية النصوص العربية لتسهيل البحث (إلغاء الفروقات بين أ، إ، ا، ة، ه، ي، ى)
+def normalize_arabic(text):
+    if not isinstance(text, str): text = str(text)
+    text = re.sub(r'[أإآ]', 'ا', text)
+    text = re.sub(r'ة', 'ه', text)
+    text = re.sub(r'ى', 'ي', text)
+    return text
+
 @st.cache_resource
 def get_gspread_client():
     try:
@@ -319,16 +327,25 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 else: st.warning("أكمل البيانات")
                 
                 st.write("---")
+                
+                # 🚀 تطبيق البحث الذكي بعد إضافة دالة normalize_arabic
                 sq = st.text_input("🔍 بحث في القائمة:")
-                if sq: st.dataframe(df_st[df_st.iloc[:,0].str.contains(sq)|df_st.iloc[:,1].str.contains(sq)], use_container_width=True, hide_index=True)
-                else: st.dataframe(df_st, use_container_width=True, hide_index=True)
+                if sq: 
+                    norm_sq = normalize_arabic(sq)
+                    # البحث في العمود الأول (ID) وفي العمود الثاني (Name) بعد تسوية النص
+                    mask = df_st.iloc[:,0].astype(str).str.contains(norm_sq) | df_st.iloc[:,1].astype(str).apply(normalize_arabic).str.contains(norm_sq)
+                    st.dataframe(df_st[mask], use_container_width=True, hide_index=True)
+                else: 
+                    st.dataframe(df_st, use_container_width=True, hide_index=True)
 
-                # إخفاء فورم الحذف عن المشاهد
+                # إخفاء فورم الحذف عن المشاهد مع تفعيل البحث الذكي
                 if st.session_state.role == "teacher":
                     with st.expander("🗑️ حذف طالب"):
                         dq = st.text_input("بحث للحذف:", key="dq")
                         if dq:
-                            for i, r in df_st[df_st.iloc[:,0].str.contains(dq)|df_st.iloc[:,1].str.contains(dq)].iterrows():
+                            norm_dq = normalize_arabic(dq)
+                            mask = df_st.iloc[:,0].astype(str).str.contains(norm_dq) | df_st.iloc[:,1].astype(str).apply(normalize_arabic).str.contains(norm_dq)
+                            for i, r in df_st[mask].iterrows():
                                 if st.button(f"حذف {r.iloc[1]}", key=f"d{i}"):
                                     sh.worksheet("students").delete_rows(int(i)+2); st.success("تم"); st.cache_data.clear(); st.rerun()
             
@@ -550,7 +567,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                             
                             <div class="footer-sigs">
                                 <div>
-                                     المرشد الطلابي
+                                    توقيع المرشد الطلابي
                                     <div class="sig-line">.................................</div>
                                 </div>
                                 <div>
@@ -558,7 +575,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                     <div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div>
                                 </div>
                                 <div>
-                                    وكيل المدرسة
+                                    ختم المدرسة
                                     <div class="sig-line">.................................</div>
                                 </div>
                             </div>
