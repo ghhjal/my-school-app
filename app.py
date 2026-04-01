@@ -228,19 +228,20 @@ if st.session_state.role is None:
         st.markdown("<br>", unsafe_allow_html=True)
         with st.form("admin_login"):
             st.markdown("<h4 style='text-align:center; margin-bottom:20px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
-            u_admin = st.text_input("اسم المستخدم", placeholder="admin")
-            p_admin = st.text_input("كلمة المرور", type="password", placeholder="0000")
+            
+            # تم تعديل الـ placeholder لإخفاء بيانات الدخول
+            u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
+            p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+            
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("👁️ دخول الإشراف", type="primary", use_container_width=True):
-                # حساب إدارة افتراضي ثابت (يمكن تغييره لاحقاً)
+                # حساب إدارة افتراضي ثابت (البيانات مخفية في الكود فقط)
                 if u_admin == "admin" and p_admin == "0000":
                     st.session_state.username = "الإدارة"
                     st.session_state.role = "viewer"
                     st.rerun()
                 else:
                     st.error("❌ بيانات الدخول غير صحيحة")
-                    
-    show_footer()
 
 # ==========================================
 # 👨‍🏫 4. واجهة المعلم / الإدارة (مشاهد)
