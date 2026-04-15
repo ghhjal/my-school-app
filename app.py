@@ -1109,12 +1109,44 @@ elif st.session_state.role == "student":
                 grs = df_gr[df_gr['clean_id']==sid]
                 if not grs.empty:
                     g = grs.iloc[0]
+                    # حساب الدرجة العظمى الكلية من الإعدادات
+                    max_total = st.session_state.max_tasks + st.session_state.max_quiz
+                    perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
+                    
+                    # حساب النسبة المئوية
+                    if max_total > 0:
+                        percentage = (perf_score / max_total) * 100
+                    else:
+                        percentage = 0
+                    
+                    # تحديد اللقب التحفيزي بناءً على النسبة المئوية
+                    if percentage >= 90:
+                        title = "🌟 أسطورة المنصة"
+                        title_color = "#d97706" # ذهبي
+                    elif percentage >= 80:
+                        title = "🚀 بطل مبدع"
+                        title_color = "#4338ca" # بنفسجي غامق
+                    elif percentage >= 70:
+                        title = "👍 متألق ومجتهد"
+                        title_color = "#059669" # أخضر
+                    elif percentage >= 60:
+                        title = "💪 واصل تقدمك"
+                        title_color = "#2563eb" # أزرق
+                    else:
+                        title = "🌱 أنت قادر على الأفضل"
+                        title_color = "#64748b" # رمادي
+
                     st.markdown(f"""
-                    <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')}</b></div>
-                    <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')}</b></div>
-                    <div class='mobile-list-item' style='background:#eef2ff; border-color:#818cf8;'>
-                        <span style="color:#4338ca; font-weight:bold;">🏆 المجموع النهائي</span>
-                        <b style="color:#4338ca; font-size:1.2rem;">{g.get('perf')}</b>
+                    <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')} / {st.session_state.max_tasks}</b></div>
+                    <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
+                    <div class='mobile-list-item' style='background:#eef2ff; border-color:#818cf8; display:flex; flex-direction:column; align-items:flex-start;'>
+                        <div style="width:100%; display:flex; justify-content:space-between;">
+                            <span style="color:#4338ca; font-weight:bold;">🏆 المجموع النهائي</span>
+                            <b style="color:#4338ca; font-size:1.2rem;">{perf_score} / {max_total}</b>
+                        </div>
+                        <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
+                            {title}
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                 else: st.info("لم يتم رصد درجات بعد")
