@@ -862,7 +862,7 @@ elif st.session_state.role == "student":
                 grs = df_gr[df_gr['clean_id']==sid]
                 if not grs.empty:
                     g = grs.iloc[0]
-                    # 🚀 حساب النسبة واختيار اللقب التحفيزي
+                    # حساب النسبة واختيار اللقب التحفيزي
                     max_total = st.session_state.max_tasks + st.session_state.max_quiz
                     perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
                     percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
@@ -885,35 +885,108 @@ elif st.session_state.role == "student":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+
+                    # 🚀 الميزة الجديدة: إظهار شهادة التفوق فقط لمن حصل على 90% فما فوق
+                    if percentage >= 90:
+                        st.divider()
+                        st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
+                        
+                        # تصميم الشهادة الاحترافي (HTML/CSS)
+                        certificate_html = f"""
+                        <!DOCTYPE html>
+                        <html dir="rtl" lang="ar">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>شهادة تفوق - {s_nm}</title>
+                            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                            <style>
+                                body {{
+                                    font-family: 'Cairo', sans-serif;
+                                    background-color: #f8fafc;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    min-height: 100vh;
+                                    margin: 0;
+                                }}
+                                .cert-wrapper {{
+                                    width: 297mm; /* A4 Landscape width */
+                                    height: 210mm; /* A4 Landscape height */
+                                    background-color: white;
+                                    padding: 20mm;
+                                    box-sizing: border-box;
+                                    position: relative;
+                                    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                                }}
+                                .cert-border {{
+                                    border: 15px solid #1e3a8a;
+                                    height: 100%;
+                                    box-sizing: border-box;
+                                    position: relative;
+                                    background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
+                                    background-size: 20px 20px;
+                                }}
+                                .cert-inner-border {{
+                                    border: 3px double #d97706;
+                                    position: absolute;
+                                    top: 10px; bottom: 10px; right: 10px; left: 10px;
+                                    padding: 30px;
+                                    text-align: center;
+                                }}
+                                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 10px 0 20px 0; }}
+                                h2 {{ font-size: 35px; color: #1e3a8a; margin-top: 0; }}
+                                p {{ font-size: 26px; color: #334155; line-height: 2; margin: 30px 50px; }}
+                                .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; }}
+                                .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; margin-top: 60px; padding: 0 50px; }}
+                                .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; }}
+                                .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
+                                
+                                /* إعدادات الطباعة الأفقية */
+                                @media print {{
+                                    @page {{ size: A4 landscape; margin: 0; }}
+                                    body {{ background: white; }}
+                                    .cert-wrapper {{ box-shadow: none; width: 100%; height: 100vh; padding: 10mm; }}
+                                    .cert-border {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                }}
+                            </style>
+                        </head>
+                        <body>
+                            <div class="cert-wrapper">
+                                <div class="cert-border">
+                                    <div class="cert-inner-border">
+                                        <h1>شهادة شكر وتقدير</h1>
+                                        <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
+                                        <p>
+                                            يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
+                                            <br><span class="student-name">{s_nm}</span><br>
+                                            وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
+                                            <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
+                                        </p>
+                                        <div class="footer-section">
+                                            <div class="signature">
+                                                توقيع المعلم<br>
+                                                <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
+                                            </div>
+                                            <div class="seal">ختم التميز</div>
+                                            <div class="signature">
+                                                تاريخ الإصدار<br>
+                                                <span style="color:#475569;">{datetime.date.today().strftime('%Y-%m-%d')}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                        """
+                        
+                        st.download_button(
+                            label="📜 استخراج وطباعة شهادة التفوق",
+                            data=certificate_html,
+                            file_name=f"Certificate_{sid}.html",
+                            mime="text/html",
+                            type="primary",
+                            use_container_width=True
+                        )
+
                 else: st.info("لم يتم رصد درجات بعد")
-
-        with tabs[3]: 
-            st.caption("لوحة الشرف (أفضل 10 طلاب)")
-            df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-            for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
-                ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                sty = "border:2px solid #818cf8; background:#eef2ff;" if str(r['clean_id']) == sid else ""
-                st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:#f59e0b; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
-
-        with tabs[4]:
-            st.caption("إدارة الملف الشخصي")
-            with st.form("my_profile"):
-                nm = st.text_input("📧 البريد الإلكتروني", s_dat.get('الإيميل',''))
-                np = st.text_input("📱 رقم الجوال", s_dat.get('الجوال',''))
-                if st.form_submit_button("💾 تحديث بياناتي", type="primary", use_container_width=True):
-                    try:
-                        fp = clean_phone_number(np) if np else ""
-                        ws = sh.worksheet("students"); c = ws.find(sid)
-                        if c:
-                            h = ws.row_values(1)
-                            if 'الإيميل' in h and 'الجوال' in h:
-                                ws.update_cell(c.row, h.index('الإيميل')+1, nm); ws.update_cell(c.row, h.index('الجوال')+1, fp); st.success("✅ تم التحديث")
-                            else: st.error("خطأ هيكلي")
-                    except Exception as e: st.error(f"خطأ: {e}")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🚪 تسجيل الخروج", type="secondary", use_container_width=True): st.session_state.role = None; st.rerun()
-
-    else: st.error("عذراً، لم يتم العثور على بياناتك"); st.button("العودة للقائمة الرئيسية", on_click=st.rerun)
-    
-    show_footer()
