@@ -990,3 +990,34 @@ elif st.session_state.role == "student":
                         )
 
                 else: st.info("لم يتم رصد درجات بعد")
+
+        with tabs[3]: 
+            st.caption("لوحة الشرف (أفضل 10 طلاب)")
+            df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+            for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
+                ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                sty = "border:2px solid #818cf8; background:#eef2ff;" if str(r['clean_id']) == sid else ""
+                st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:#f59e0b; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
+
+        with tabs[4]:
+            st.caption("إدارة الملف الشخصي")
+            with st.form("my_profile"):
+                nm = st.text_input("📧 البريد الإلكتروني", s_dat.get('الإيميل',''))
+                np = st.text_input("📱 رقم الجوال", s_dat.get('الجوال',''))
+                if st.form_submit_button("💾 تحديث بياناتي", type="primary", use_container_width=True):
+                    try:
+                        fp = clean_phone_number(np) if np else ""
+                        ws = sh.worksheet("students"); c = ws.find(sid)
+                        if c:
+                            h = ws.row_values(1)
+                            if 'الإيميل' in h and 'الجوال' in h:
+                                ws.update_cell(c.row, h.index('الإيميل')+1, nm); ws.update_cell(c.row, h.index('الجوال')+1, fp); st.success("✅ تم التحديث")
+                            else: st.error("خطأ هيكلي")
+                    except Exception as e: st.error(f"خطأ: {e}")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🚪 تسجيل الخروج", type="secondary", use_container_width=True): st.session_state.role = None; st.rerun()
+
+    else: st.error("عذراً، لم يتم العثور على بياناتك"); st.button("العودة للقائمة الرئيسية", on_click=st.rerun)
+    
+    show_footer()
