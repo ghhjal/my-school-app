@@ -528,7 +528,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                             <h3>📜 سجل السلوك والملاحظات</h3>
                             <div class="table-container">{behavior_html_table}</div>
                             <div class="footer-sigs">
-                                <div>توقيع المرشد الطلابي<div class="sig-line">.................................</div></div>
+                                <div>الموجه الطلابي<div class="sig-line">.................................</div></div>
                                 <div>المعلم<div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div></div>
                                 <div>وكيل شؤون الطلاب<div class="sig-line">.................................</div></div>
                             </div>
