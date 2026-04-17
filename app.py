@@ -932,6 +932,7 @@ elif st.session_state.role == "student":
                         st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
                         
                         # تصميم الشهادة الاحترافي (HTML/CSS)
+                        # تصميم الشهادة الاحترافي (محدث ليطابق الطباعة 100%)
                         certificate_html = f"""
                         <!DOCTYPE html>
                         <html dir="rtl" lang="ar">
@@ -940,6 +941,7 @@ elif st.session_state.role == "student":
                             <title>شهادة تفوق - {s_nm}</title>
                             <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                             <style>
+                                * {{ box-sizing: border-box; }}
                                 body {{
                                     font-family: 'Cairo', sans-serif;
                                     background-color: #f8fafc;
@@ -950,43 +952,46 @@ elif st.session_state.role == "student":
                                     margin: 0;
                                 }}
                                 .cert-wrapper {{
-                                    width: 297mm; /* A4 Landscape width */
-                                    height: 210mm; /* A4 Landscape height */
+                                    width: 297mm;
+                                    height: 210mm;
                                     background-color: white;
-                                    padding: 20mm;
-                                    box-sizing: border-box;
-                                    position: relative;
+                                    padding: 15mm;
                                     box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                                 }}
                                 .cert-border {{
                                     border: 15px solid #1e3a8a;
                                     height: 100%;
-                                    box-sizing: border-box;
-                                    position: relative;
+                                    width: 100%;
+                                    padding: 10px;
                                     background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
                                     background-size: 20px 20px;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
                                 }}
                                 .cert-inner-border {{
                                     border: 3px double #d97706;
-                                    position: absolute;
-                                    top: 10px; bottom: 10px; right: 10px; left: 10px;
+                                    height: 100%;
+                                    width: 100%;
                                     padding: 30px;
                                     text-align: center;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: space-between;
                                 }}
-                                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 10px 0 20px 0; }}
-                                h2 {{ font-size: 35px; color: #1e3a8a; margin-top: 0; }}
-                                p {{ font-size: 26px; color: #334155; line-height: 2; margin: 30px 50px; }}
-                                .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; }}
-                                .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; margin-top: 60px; padding: 0 50px; }}
-                                .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; }}
+                                .cert-content {{ flex-grow: 1; }}
+                                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 0 0 15px 0; }}
+                                h2 {{ font-size: 35px; color: #1e3a8a; margin: 0 0 20px 0; }}
+                                p {{ font-size: 26px; color: #334155; line-height: 1.8; margin: 0 50px; }}
+                                .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; display: inline-block; margin: 15px 0; }}
+                                .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 40px; margin-bottom: 10px; }}
+                                .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; line-height: 1.5; }}
                                 .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
                                 
-                                /* إعدادات الطباعة الأفقية */
+                                /* 🚀 إعدادات الطباعة الدقيقة */
                                 @media print {{
-                                    @page {{ size: A4 landscape; margin: 0; }}
-                                    body {{ background: white; }}
-                                    .cert-wrapper {{ box-shadow: none; width: 100%; height: 100vh; padding: 10mm; }}
-                                    .cert-border {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                    @page {{ size: A4 landscape; margin: 0mm; }}
+                                    body {{ min-height: auto; background-color: white; align-items: flex-start; justify-content: flex-start; }}
+                                    .cert-wrapper {{ box-shadow: none; width: 297mm; height: 210mm; padding: 10mm; page-break-after: avoid; }}
                                 }}
                             </style>
                         </head>
@@ -994,23 +999,25 @@ elif st.session_state.role == "student":
                             <div class="cert-wrapper">
                                 <div class="cert-border">
                                     <div class="cert-inner-border">
-                                        <h1>شهادة شكر وتقدير</h1>
-                                        <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
-                                        <p>
-                                            يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
-                                            <br><span class="student-name">{s_nm}</span><br>
-                                            وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
-                                            <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
-                                        </p>
+                                        <div class="cert-content">
+                                            <h1>شهادة شكر وتقدير</h1>
+                                            <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
+                                            <p>
+                                                يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
+                                                <br><span class="student-name">{s_nm}</span><br>
+                                                وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
+                                                <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
+                                            </p>
+                                        </div>
                                         <div class="footer-section">
-                                            <div class="signature">
-                                                توقيع المعلم<br>
-                                                <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
-                                            </div>
-                                            <div class="seal">ختم التميز</div>
                                             <div class="signature">
                                                 تاريخ الإصدار<br>
                                                 <span style="color:#475569;">{datetime.date.today().strftime('%Y-%m-%d')}</span>
+                                            </div>
+                                            <div class="seal">ختم التميز</div>
+                                            <div class="signature">
+                                                توقيع المعلم<br>
+                                                <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
                                             </div>
                                         </div>
                                     </div>
