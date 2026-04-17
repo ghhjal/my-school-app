@@ -530,7 +530,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                             <div class="footer-sigs">
                                 <div>توقيع المرشد الطلابي<div class="sig-line">.................................</div></div>
                                 <div>المعلم<div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div></div>
-                                <div>ختم المدرسة<div class="sig-line">.................................</div></div>
+                                <div>وكيل شؤون الطلاب<div class="sig-line">.................................</div></div>
                             </div>
                         </div>
                     </body>
