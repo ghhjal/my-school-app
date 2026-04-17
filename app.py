@@ -301,7 +301,8 @@ elif st.session_state.role in ["teacher", "viewer"]:
             df_st['clean_id'] = df_st.iloc[:,0].astype(str).str.split('.').str[0].str.strip()
             df_st['النقاط'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
             
-            sub_tabs = st.tabs(["📋 قائمة الطلاب", "🏆 لوحة الشرف (أفضل 10)", "📑 تقرير الطالب الشامل"])
+            # 🚀 تم إضافة التبويب الجديد "المتفوقين" هنا
+            sub_tabs = st.tabs(["📋 قائمة الطلاب", "🏆 لوحة الشرف (نقاط)", "🌟 المتفوقين (90%+)", "📑 تقرير الطالب الشامل"])
             
             # --- 1. قائمة الطلاب ---
             with sub_tabs[0]:
@@ -338,7 +339,6 @@ elif st.session_state.role in ["teacher", "viewer"]:
                 
                 st.write("---")
                 
-                # 🚀 البحث الذكي المحدث
                 sq = st.text_input("🔍 بحث في القائمة:")
                 if sq: 
                     norm_sq = normalize_arabic(sq)
@@ -357,9 +357,9 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 if st.button(f"حذف {r.iloc[1]}", key=f"d{i}"):
                                     sh.worksheet("students").delete_rows(int(i)+2); st.success("تم"); st.cache_data.clear(); st.rerun()
             
-            # --- 2. لوحة الشرف (أفضل 10) ---
+            # --- 2. لوحة الشرف (النقاط والسلوك) ---
             with sub_tabs[1]:
-                st.markdown("#### 🌟 أفضل 10 طلاب على مستوى المنصة")
+                st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                 top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
                 for i, (_, r) in enumerate(top_10.iterrows(), 1):
                     ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
@@ -378,9 +378,51 @@ elif st.session_state.role in ["teacher", "viewer"]:
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
-            
-            # --- 3. تقرير الطالب الشامل ---
+
+            # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
             with sub_tabs[2]:
+                st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
+                df_g = fetch_safe("grades")
+                
+                if not df_g.empty and not df_st.empty:
+                    df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
+                    # دمج جدول الدرجات مع جدول الطلاب لجلب الأسماء
+                    merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
+                    
+                    if not merged_df.empty:
+                        max_total = st.session_state.max_tasks + st.session_state.max_quiz
+                        if max_total > 0:
+                            merged_df['perf_num'] = pd.to_numeric(merged_df['perf'], errors='coerce').fillna(0)
+                            merged_df['percentage'] = (merged_df['perf_num'] / max_total) * 100
+                            
+                            # فلترة من حصل على 90% فأكثر وترتيبهم
+                            top_academic = merged_df[merged_df['percentage'] >= 90].sort_values('percentage', ascending=False)
+                            
+                            if not top_academic.empty:
+                                for i, (_, r) in enumerate(top_academic.iterrows(), 1):
+                                    st.markdown(f"""
+                                        <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                                            <div style='display:flex; align-items:center; gap:15px;'>
+                                                <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>🎓</span>
+                                                <div>
+                                                    <b style='font-size:1.1rem; color:#064e3b;'>{r['name']}</b><br>
+                                                    <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r['clean_id']}</small>
+                                                </div>
+                                            </div>
+                                            <div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900; font-size:1.2rem;'>
+                                                {int(r['percentage'])}%
+                                            </div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                            else:
+                                st.info("لم يصل أحد لنسبة 90% حتى الآن. بانتظار إبداعات الأبطال!")
+                    else:
+                        st.info("لا توجد درجات مطابقة للطلاب.")
+                else:
+                    st.info("لم يتم رصد درجات بعد.")
+
+            # --- 4. تقرير الطالب الشامل ---
+            with sub_tabs[3]:
                 st.markdown("#### 📑 التقرير الشامل المفصل")
                 st_dict = {f"{r['name']} ({r['clean_id']})": r['clean_id'] for _, r in df_st.iterrows()}
                 sel_rep = st.selectbox("🔍 ابحث عن الطالب لاستخراج التقرير:", [""] + list(st_dict.keys()), key="rep_sel")
@@ -498,8 +540,6 @@ elif st.session_state.role in ["teacher", "viewer"]:
                     with col_btn1:
                         st.download_button(label="🖨️ تحميل التقرير (عصري)", data=final_report, file_name=f"Report_{sid}_{s_inf['name']}.html", mime="text/html", type="primary")
                     with col_btn2: st.caption("👈 التصميم الجديد جاهز! حمل الملف واضغط Ctrl+P للطباعة.")
-
-        else: st.info("💡 لم يتم إضافة أي طلاب بعد.")
             
     # 📊 التقييم
     with tab_eval:
