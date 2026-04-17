@@ -933,11 +933,13 @@ elif st.session_state.role == "student":
                         
                         # تصميم الشهادة الاحترافي (HTML/CSS)
                         # تصميم الشهادة الاحترافي (محدث ليطابق الطباعة 100%)
+                        # تصميم الشهادة الاحترافي (محدث ومقوى ليتناسب مع طباعة الآيفون والجوالات)
                         certificate_html = f"""
                         <!DOCTYPE html>
                         <html dir="rtl" lang="ar">
                         <head>
                             <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
                             <title>شهادة تفوق - {s_nm}</title>
                             <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                             <style>
@@ -950,6 +952,8 @@ elif st.session_state.role == "student":
                                     align-items: center;
                                     min-height: 100vh;
                                     margin: 0;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
                                 }}
                                 .cert-wrapper {{
                                     width: 297mm;
@@ -965,8 +969,6 @@ elif st.session_state.role == "student":
                                     padding: 10px;
                                     background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
                                     background-size: 20px 20px;
-                                    -webkit-print-color-adjust: exact !important;
-                                    print-color-adjust: exact !important;
                                 }}
                                 .cert-inner-border {{
                                     border: 3px double #d97706;
@@ -987,15 +989,64 @@ elif st.session_state.role == "student":
                                 .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; line-height: 1.5; }}
                                 .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
                                 
-                                /* 🚀 إعدادات الطباعة الدقيقة */
+                                .mobile-print-tip {{
+                                    display: none;
+                                }}
+
+                                /* 🚀 إعدادات الطباعة الصارمة جداً */
                                 @media print {{
-                                    @page {{ size: A4 landscape; margin: 0mm; }}
-                                    body {{ min-height: auto; background-color: white; align-items: flex-start; justify-content: flex-start; }}
-                                    .cert-wrapper {{ box-shadow: none; width: 297mm; height: 210mm; padding: 10mm; page-break-after: avoid; }}
+                                    @page {{ 
+                                        size: A4 landscape !important; 
+                                        margin: 0mm !important; 
+                                    }}
+                                    html, body {{ 
+                                        width: 297mm !important; 
+                                        height: 210mm !important; 
+                                        min-width: 297mm !important; 
+                                        min-height: 210mm !important; 
+                                        margin: 0 !important; 
+                                        padding: 0 !important; 
+                                        background-color: white !important; 
+                                    }}
+                                    .cert-wrapper {{ 
+                                        width: 100% !important; 
+                                        height: 100% !important; 
+                                        padding: 10mm !important; 
+                                        margin: 0 !important; 
+                                        box-shadow: none !important; 
+                                        page-break-after: avoid !important;
+                                        page-break-inside: avoid !important;
+                                    }}
+                                    /* إخفاء نص المساعدة عند الطباعة */
+                                    .mobile-print-tip {{ display: none !important; }}
+                                }}
+                                
+                                /* إظهار نص المساعدة فقط على الشاشات الصغيرة (الجوالات) قبل الطباعة */
+                                @media screen and (max-width: 768px) {{
+                                    .mobile-print-tip {{
+                                        display: block;
+                                        background-color: #fffbeb;
+                                        color: #b45309;
+                                        text-align: center;
+                                        padding: 15px;
+                                        font-size: 16px;
+                                        font-weight: bold;
+                                        border-bottom: 2px solid #f59e0b;
+                                        margin-bottom: 10px;
+                                    }}
+                                    .cert-wrapper {{
+                                        transform: scale(0.3); /* تصغير وهمي لتظهر الشهادة كاملة بشاشة الجوال */
+                                        transform-origin: top center;
+                                        margin-bottom: -150mm;
+                                    }}
                                 }}
                             </style>
                         </head>
                         <body>
+                            <div class="mobile-print-tip">
+                                📱 ملاحظة للطباعة من الجوال: عند ظهور خيارات الطباعة، يرجى سحب الخيارات للأعلى وتغيير [الاتجاه] إلى [أفقي - Landscape] لطباعة الشهادة بشكل صحيح.
+                            </div>
+
                             <div class="cert-wrapper">
                                 <div class="cert-border">
                                     <div class="cert-inner-border">
