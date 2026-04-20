@@ -7,7 +7,6 @@ import hashlib
 import io
 import re
 from google.oauth2.service_account import Credentials
-ب
 # ==========================================
 # ⚙️ 1. إعدادات النظام
 # ==========================================
