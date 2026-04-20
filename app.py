@@ -542,99 +542,198 @@ elif st.session_state.role in ["teacher", "viewer"]:
                     with col_btn2: st.caption("👈 التصميم الجديد جاهز! حمل الملف واضغط Ctrl+P للطباعة.")
             
     # 📊 التقييم
+    # 📊 التقييم والمتابعة (فردي وجماعي)
     with tab_eval:
         st.markdown("### 📊 التقييم والمتابعة")
-        df_ev = fetch_safe("students")
-        if not df_ev.empty:
-            st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev.iterrows()}
-            sel = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()))
-            if sel:
-                sid = st_dict[sel]
-                s_inf = df_ev[df_ev.iloc[:,0] == sid].iloc[0]
-                s_nm = s_inf['name']; clp = clean_phone_number(s_inf.get('الجوال','')); s_eml = s_inf.get('الإيميل', '')
-                c1, c2 = st.columns(2)
-                
-                # --- رصد الدرجات ---
-                with c1:
-                    st.container(border=True)
-                    st.markdown("##### 📝 رصد الدرجات")
-                    df_g = fetch_safe("grades")
-                    cur_p1 = 0; cur_p2 = 0
-                    if not df_g.empty:
-                        gr = df_g[df_g.iloc[:,0]==sid]
-                        if not gr.empty:
-                            cur_p1 = int(pd.to_numeric(gr.iloc[0]['p1'], errors='coerce') or 0)
-                            cur_p2 = int(pd.to_numeric(gr.iloc[0]['p2'], errors='coerce') or 0)
+        
+        # 🚀 تقسيم التقييم إلى فردي وجماعي
+        eval_tabs = st.tabs(["👤 التقييم الفردي", "👥 الرصد الجماعي السريع"])
+        
+        # --- 1. التقييم الفردي (الكود السابق) ---
+        with eval_tabs[0]:
+            df_ev = fetch_safe("students")
+            if not df_ev.empty:
+                st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev.iterrows()}
+                sel = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()), key="single_eval_sel")
+                if sel:
+                    sid = st_dict[sel]
+                    s_inf = df_ev[df_ev.iloc[:,0] == sid].iloc[0]
+                    s_nm = s_inf['name']; clp = clean_phone_number(s_inf.get('الجوال','')); s_eml = s_inf.get('الإيميل', '')
+                    c1, c2 = st.columns(2)
                     
-                    if st.session_state.role == "teacher":
-                        with st.form("gr_upd"):
-                            v1 = st.number_input("درجة المشاركة", 0, st.session_state.max_tasks, cur_p1)
-                            v2 = st.number_input("درجة الاختبار", 0, st.session_state.max_quiz, cur_p2)
-                            if st.form_submit_button("💾 حفظ الدرجات", type="primary"):
-                                ws = sh.worksheet("grades"); cell = ws.find(sid); tot = v1+v2
-                                if cell:
-                                    ws.update_cell(cell.row, 2, v1); ws.update_cell(cell.row, 3, v2)
-                                    ws.update_cell(cell.row, 4, tot); ws.update_cell(cell.row, 5, str(datetime.date.today()))
-                                else: ws.append_row([sid, v1, v2, tot, str(datetime.date.today())])
-                                st.success("✅ تم التحديث"); st.cache_data.clear(); st.rerun()
-                    else: st.info("💡 وضع القراءة فقط: للإطلاع فقط.")
-                    st.caption(f"📊 المجموع الحالي: {cur_p1 + cur_p2}")
+                    # رصد الدرجات
+                    with c1:
+                        st.container(border=True)
+                        st.markdown("##### 📝 رصد الدرجات")
+                        df_g = fetch_safe("grades")
+                        cur_p1 = 0; cur_p2 = 0
+                        if not df_g.empty:
+                            gr = df_g[df_g.iloc[:,0]==sid]
+                            if not gr.empty:
+                                cur_p1 = int(pd.to_numeric(gr.iloc[0]['p1'], errors='coerce') or 0)
+                                cur_p2 = int(pd.to_numeric(gr.iloc[0]['p2'], errors='coerce') or 0)
+                        
+                        if st.session_state.role == "teacher":
+                            with st.form("gr_upd"):
+                                v1 = st.number_input("درجة المشاركة", 0, st.session_state.max_tasks, cur_p1)
+                                v2 = st.number_input("درجة الاختبار", 0, st.session_state.max_quiz, cur_p2)
+                                if st.form_submit_button("💾 حفظ الدرجات", type="primary"):
+                                    ws = sh.worksheet("grades"); cell = ws.find(sid); tot = v1+v2
+                                    if cell:
+                                        ws.update_cell(cell.row, 2, v1); ws.update_cell(cell.row, 3, v2)
+                                        ws.update_cell(cell.row, 4, tot); ws.update_cell(cell.row, 5, str(datetime.date.today()))
+                                    else: ws.append_row([sid, v1, v2, tot, str(datetime.date.today())])
+                                    st.success("✅ تم التحديث"); st.cache_data.clear(); st.rerun()
+                        else: st.info("💡 وضع القراءة فقط.")
+                        st.caption(f"📊 المجموع الحالي: {cur_p1 + cur_p2}")
 
-                # --- السلوك ---
-                with c2:
-                    st.container(border=True)
-                    st.markdown("##### 🎭 السلوك والملاحظات")
-                    if st.session_state.role == "teacher":
-                        with st.form("beh_add"):
-                            bt = st.selectbox("نوع السلوك", [
+                    # السلوك الفردي
+                    with c2:
+                        st.container(border=True)
+                        st.markdown("##### 🎭 السلوك والملاحظات")
+                        if st.session_state.role == "teacher":
+                            with st.form("beh_add"):
+                                bt = st.selectbox("نوع السلوك", [
+                                    "🌟 متميز (+10)", "✅ إيجابي (+5)", "📝 حل الواجب (+5)", "🎯 أداء المهمة (+10)", "📂 ملف الإنجاز (+10)", 
+                                    "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص أدوات الكتابة (-5)", "💤 النوم داخل الفصل (-3)", 
+                                    "🏃 تأخر عن الحصة (-5)", "❌ عدم إحضار ملف الإنجاز (-10)", "🚫 سلبي (-10)"
+                                ])
+                                bn = st.text_area("تفاصيل الملاحظة")
+                                if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
+                                    safe_append_row("behavior", {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn})
+                                    match = re.search(r'\(([\+\-]?\d+)\)', bt)
+                                    chg = int(match.group(1)) if match else 0
+                                    if chg != 0:
+                                        try:
+                                            ws = sh.worksheet("students"); c = ws.find(sid)
+                                            if c:
+                                                h = ws.row_values(1)
+                                                if 'النقاط' in h:
+                                                    idx = h.index('النقاط') + 1
+                                                    cur_val_raw = ws.cell(c.row, idx).value
+                                                    current_points = int(cur_val_raw) if pd.notna(cur_val_raw) else 0
+                                                    new_val = current_points + chg
+                                                    ws.update_cell(c.row, idx, new_val)
+                                                    st.toast(f"📈 الرصيد الجديد: {new_val}", icon="💰")
+                                        except Exception as e: st.error(f"حدث خطأ في التحديث: {e}")
+                                    st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
+                        else: st.info("💡 وضع القراءة فقط.")
+
+                    st.markdown("#### 📜 سجل السلوك الأخير")
+                    def delete_behavior(row_idx):
+                        try: sh.worksheet("behavior").delete_rows(int(row_idx) + 2); st.cache_data.clear()
+                        except: pass
+
+                    df_b = fetch_safe("behavior")
+                    if not df_b.empty:
+                        cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
+                        my_b = df_b[df_b[cid].astype(str) == str(sid)]
+                        for i, r in my_b.iloc[::-1].iterrows():
+                            with st.container():
+                                color = "#ef4444" if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else "#10b981"
+                                st.markdown(f"""
+                                <div class="mobile-list-item" style="border-right: 4px solid {color}">
+                                    <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#6b7280">{r.get('note')}</span></div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                c_del, c_wa, c_em = st.columns([0.5, 1, 1])
+                                lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
+                                c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
+                                c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
+                                if st.session_state.role == "teacher": c_del.button("❌", key=f"dl_beh_{i}", on_click=delete_behavior, args=(i,))
+
+        # --- 2. الرصد الجماعي السريع (الميزة الجديدة) ---
+        with eval_tabs[1]:
+            if st.session_state.role == "teacher":
+                st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات")
+                st.info("💡 اختر الصف، وحدد الملاحظات للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة.")
+                
+                bulk_class = st.selectbox("🎯 اختر الصف للرصد الجماعي:", st.session_state.class_options, key="bulk_class_sel")
+                df_st_bulk = fetch_safe("students")
+                
+                if not df_st_bulk.empty:
+                    # جلب طلاب الصف المحدد فقط
+                    df_st_bulk['clean_class'] = df_st_bulk.iloc[:, 2].astype(str).str.strip()
+                    class_students = df_st_bulk[df_st_bulk['clean_class'] == bulk_class.strip()]
+                    
+                    if not class_students.empty:
+                        with st.form("bulk_behavior_form"):
+                            beh_options = [
+                                "--- بدون ملاحظة ---",
                                 "🌟 متميز (+10)", "✅ إيجابي (+5)", "📝 حل الواجب (+5)", "🎯 أداء المهمة (+10)", "📂 ملف الإنجاز (+10)", 
                                 "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص أدوات الكتابة (-5)", "💤 النوم داخل الفصل (-3)", 
                                 "🏃 تأخر عن الحصة (-5)", "❌ عدم إحضار ملف الإنجاز (-10)", "🚫 سلبي (-10)"
-                            ])
-                            bn = st.text_area("تفاصيل الملاحظة")
-                            if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
-                                safe_append_row("behavior", {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn})
-                                match = re.search(r'\(([\+\-]?\d+)\)', bt)
-                                chg = int(match.group(1)) if match else 0
-                                if chg != 0:
+                            ]
+                            
+                            bulk_data = {}
+                            
+                            # عرض الطلاب بشكل مرتب
+                            st.markdown("<hr style='margin:10px 0'>", unsafe_allow_html=True)
+                            col_n, col_b, col_t = st.columns([1.5, 2, 2])
+                            col_n.markdown("**👤 اسم الطالب**"); col_b.markdown("**🎭 السلوك**"); col_t.markdown("**📝 ملاحظة (اختياري)**")
+                            st.markdown("<hr style='margin:10px 0'>", unsafe_allow_html=True)
+
+                            for _, row in class_students.iterrows():
+                                sid_b = str(row.iloc[0]).split('.')[0].strip()
+                                sname_b = row.iloc[1]
+                                
+                                c1, c2, c3 = st.columns([1.5, 2, 2])
+                                c1.markdown(f"<div style='padding-top:15px;'>{sname_b}</div>", unsafe_allow_html=True)
+                                b_type = c2.selectbox("السلوك", beh_options, key=f"b_type_{sid_b}", label_visibility="collapsed")
+                                b_note = c3.text_input("تفاصيل", key=f"b_note_{sid_b}", label_visibility="collapsed", placeholder="أضف تفاصيل...")
+                                
+                                bulk_data[sid_b] = {"type": b_type, "note": b_note}
+                                st.markdown("<div style='border-bottom: 1px dashed #e0e7ff; margin: 5px 0;'></div>", unsafe_allow_html=True)
+
+                            if st.form_submit_button("🚀 حفظ الرصد الجماعي للجميع", type="primary"):
+                                behavior_rows_to_add = []
+                                point_updates = {}
+                                
+                                # تجميع البيانات
+                                for sid_key, data in bulk_data.items():
+                                    if data["type"] != "--- بدون ملاحظة ---":
+                                        behavior_rows_to_add.append([sid_key, str(datetime.date.today()), data["type"], data["note"]])
+                                        match = re.search(r'\(([\+\-]?\d+)\)', data["type"])
+                                        if match:
+                                            point_updates[sid_key] = int(match.group(1))
+
+                                if behavior_rows_to_add:
                                     try:
-                                        ws = sh.worksheet("students"); c = ws.find(sid)
-                                        if c:
-                                            h = ws.row_values(1)
-                                            if 'النقاط' in h:
-                                                idx = h.index('النقاط') + 1
-                                                cur_val_raw = ws.cell(c.row, idx).value
-                                                current_points = int(cur_val_raw) if pd.notna(cur_val_raw) else 0
-                                                new_val = current_points + chg
-                                                ws.update_cell(c.row, idx, new_val)
-                                                st.toast(f"📈 الرصيد الجديد: {new_val}", icon="💰")
-                                    except Exception as e: st.error(f"حدث خطأ في التحديث: {e}")
-                                st.success("✅ تم التسجيل"); st.cache_data.clear(); st.rerun()
-                    else: st.info("💡 وضع القراءة فقط.")
-
-                st.markdown("#### 📜 سجل السلوك الأخير")
-                def delete_behavior(row_idx):
-                    try: sh.worksheet("behavior").delete_rows(int(row_idx) + 2); st.cache_data.clear()
-                    except: pass
-
-                df_b = fetch_safe("behavior")
-                if not df_b.empty:
-                    cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
-                    my_b = df_b[df_b[cid].astype(str) == str(sid)]
-                    for i, r in my_b.iloc[::-1].iterrows():
-                        with st.container():
-                            color = "#ef4444" if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else "#10b981"
-                            st.markdown(f"""
-                            <div class="mobile-list-item" style="border-right: 4px solid {color}">
-                                <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#6b7280">{r.get('note')}</span></div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            c_del, c_wa, c_em = st.columns([0.5, 1, 1])
-                            lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
-                            c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
-                            c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
-                            if st.session_state.role == "teacher": c_del.button("❌", key=f"dl_beh_{i}", on_click=delete_behavior, args=(i,))
-
+                                        with st.spinner("جاري حفظ الرصد الجماعي وتحديث النقاط..."):
+                                            # 1. إضافة الملاحظات دفعة واحدة (API سريع)
+                                            sh.worksheet("behavior").append_rows(behavior_rows_to_add)
+                                            
+                                            # 2. تحديث النقاط دفعة واحدة باستخدام update_cells (API صاروخي)
+                                            ws_st = sh.worksheet("students")
+                                            all_st = ws_st.get_all_records()
+                                            headers = ws_st.row_values(1)
+                                            
+                                            if 'النقاط' in headers:
+                                                p_idx = headers.index('النقاط') + 1
+                                                from gspread import Cell
+                                                cells_to_update = []
+                                                
+                                                for i, r in enumerate(all_st):
+                                                    st_id = str(r.get('id', '')).split('.')[0].strip()
+                                                    if st_id in point_updates:
+                                                        cur_p = int(pd.to_numeric(r.get('النقاط', 0), errors='coerce') or 0)
+                                                        new_p = cur_p + point_updates[st_id]
+                                                        cells_to_update.append(Cell(row=i+2, col=p_idx, value=new_p))
+                                                
+                                                if cells_to_update:
+                                                    ws_st.update_cells(cells_to_update)
+                                            
+                                        st.success(f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة وتحديث نقاط الطلاب.")
+                                        st.cache_data.clear()
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
+                                else:
+                                    st.warning("⚠️ لم تقم باختيار أي سلوك لأي طالب ليتم حفظه.")
+                    else:
+                        st.info("لا يوجد طلاب مسجلين في هذا الصف.")
+            else:
+                st.info("💡 وضع القراءة فقط.")
     # 📢 التنبيهات
     with tab_alerts:
         st.markdown("### 📢 لوحة الإعلانات والتعاميم")
