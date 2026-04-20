@@ -657,7 +657,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                     class_students = df_st_bulk[df_st_bulk['clean_class'] == bulk_class.strip()]
                     
                     if not class_students.empty:
-                        with st.form("bulk_behavior_form"):
+                        with st.form("bulk_behavior_form", clear_on_submit=True):
                             beh_options = [
                                 "--- بدون ملاحظة ---",
                                 "🌟 متميز (+10)", "✅ إيجابي (+5)", "📝 حل الواجب (+5)", "🎯 أداء المهمة (+10)", "📂 ملف الإنجاز (+10)", 
