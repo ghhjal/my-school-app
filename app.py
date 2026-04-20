@@ -850,10 +850,16 @@ elif st.session_state.role in ["teacher", "viewer"]:
                     if 'db_loaded' in st.session_state:
                         del st.session_state['db_loaded']
                     st.rerun()
+                    
                 if c2.button("🧹 تصفير جميع النقاط", use_container_width=True):
                     try:
                         ws = sh.worksheet("students"); d = ws.get_all_values()
-                        if len(d) > 1: ws.update(range_name=f"I2:I{len(d)}", values=[[0]]*(len(d)-1)); st.success("✅ تم تصفير جميع النقاط")
+                        if len(d) > 1: 
+                            ws.update(range_name=f"I2:I{len(d)}", values=[[0]]*(len(d)-1))
+                            st.success("✅ تم تصفير جميع النقاط")
+                            # مسح الذاكرة ليتم تحديث الأرقام على الشاشة
+                            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                            st.cache_data.clear(); st.rerun()
                     except Exception as e: st.error(f"خطأ: {e}")
 
                 if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
@@ -875,7 +881,9 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                     new_values.append([true_scores.get(sid_v, 0)])
                                 from gspread.utils import rowcol_to_a1
                                 ws_st.update(f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}", new_values)
-                                st.success("✅ تم تصحيح جميع الأرصدة بنجاح!"); st.cache_data.clear()
+                                st.success("✅ تم تصحيح جميع الأرصدة بنجاح!")
+                                if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                st.cache_data.clear(); st.rerun()
                             else: st.error("لم يتم العثور على عمود 'النقاط'")
                     except Exception as e: st.error(f"حدث خطأ: {e}")
 
@@ -909,7 +917,9 @@ elif st.session_state.role in ["teacher", "viewer"]:
                     st.session_state.max_tasks = mt; st.session_state.max_quiz = mq; st.session_state.current_year = cy
                     st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                     st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
-                    st.success("✅ تم الحفظ بنجاح"); st.cache_data.clear(); st.rerun()
+                    st.success("✅ تم الحفظ بنجاح")
+                    if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                    st.cache_data.clear(); st.rerun()
 
             with st.expander("📤 استيراد البيانات (Excel) - سريع"):
                 up = st.file_uploader("رفع ملف Excel", type=['xlsx'])
@@ -934,9 +944,13 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 if raw_id not in existing_ids: new_rows_to_append.append([str(d.get(k, "")) for k in hd])
                                 progress_bar.progress(min((idx + 1) / len(df), 1.0))
 
-                            if new_rows_to_append: ws.append_rows(new_rows_to_append); st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح!")
-                            else: st.info("💡 جميع البيانات موجودة مسبقاً، لم يتم إضافة جديد.")
-                            st.cache_data.clear()
+                            if new_rows_to_append: 
+                                ws.append_rows(new_rows_to_append)
+                                st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح!")
+                            else: 
+                                st.info("💡 جميع البيانات موجودة مسبقاً، لم يتم إضافة جديد.")
+                            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                            st.cache_data.clear(); st.rerun()
                     except Exception as e: st.error(f"حدث خطأ أثناء المزامنة: {e}")
             
                 st.divider(); c1, c2 = st.columns(2)
@@ -945,7 +959,6 @@ elif st.session_state.role in ["teacher", "viewer"]:
                 b2 = io.BytesIO(); pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
                 c2.download_button("📥 قالب فارغ (درجات)", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
 
-            # 👇👇 تم دمج كود مدقق البيانات هنا بنجاح 👇👇
             with st.expander("🔍 مدقق رصد الدرجات (كشف النواقص)", expanded=False):
                 st.markdown("##### قائمة الطلاب الذين لم يتم رصد درجاتهم بعد")
                 
@@ -993,7 +1006,6 @@ elif st.session_state.role in ["teacher", "viewer"]:
                         st.success("✅ جميع الطلاب المسجلين تم رصد درجاتهم بنجاح!")
                 else:
                     st.info("لا توجد بيانات طلاب للتدقيق.")
-            # 👆👆 نهاية كود مدقق البيانات 👆👆
 
             with st.expander("🔐 إدارة المستخدمين (معلمين / إدارة)"):
                 t1, t2, t3 = st.tabs(["➕ إضافة مستخدم", "🔑 تعديل كلمة المرور", "🗑️ حذف مستخدم"])
@@ -1005,7 +1017,8 @@ elif st.session_state.role in ["teacher", "viewer"]:
                             if nu and np:
                                 role_val = "teacher" if "معلم" in nrole_label else "viewer"
                                 safe_append_row("users", {"username": nu, "password_hash": hashlib.sha256(np.encode()).hexdigest(), "role": role_val})
-                                st.success(f"✅ تمت إضافة الحساب ({nu}) بنجاح كـ {role_val}."); st.cache_data.clear()
+                                st.success(f"✅ تمت إضافة الحساب ({nu}) بنجاح كـ {role_val}.")
+                                st.cache_data.clear()
                             else: st.warning("الرجاء إكمال البيانات.")
                 with t2:
                     with st.form("chg_pass"):
@@ -1017,7 +1030,8 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 if npwd:
                                     idx = df_u_edit[df_u_edit['username']==target_u].index[0] + 2
                                     sh.worksheet("users").update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
-                                    st.success(f"✅ تم تحديث كلمة المرور لـ ({target_u})."); st.cache_data.clear()
+                                    st.success(f"✅ تم تحديث كلمة المرور لـ ({target_u}).")
+                                    st.cache_data.clear()
                                 else: st.warning("الرجاء إدخال كلمة المرور الجديدة.")
                         else: st.info("لا يوجد مستخدمين بعد.")
                 with t3:
@@ -1029,12 +1043,16 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 if del_u == st.session_state.username: st.error("⚠️ لا يمكنك حذف حسابك الحالي!")
                                 else:
                                     idx = df_u_del[df_u_del['username']==del_u].index[0] + 2
-                                    sh.worksheet("users").delete_rows(int(idx)); st.success(f"✅ تم حذف المستخدم ({del_u})."); st.cache_data.clear(); st.rerun()
+                                    sh.worksheet("users").delete_rows(int(idx)); st.success(f"✅ تم حذف المستخدم ({del_u}).")
+                                    st.cache_data.clear(); st.rerun()
                             else: st.warning("الرجاء اختيار مستخدم للحذف.")
 
     with tab_logout:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("تسجيل الخروج من لوحة التحكم", type="secondary"): st.session_state.role = None; st.rerun()
+        if st.button("تسجيل الخروج من لوحة التحكم", type="secondary"): 
+            st.session_state.role = None
+            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+            st.rerun()
             
     show_footer()
 
