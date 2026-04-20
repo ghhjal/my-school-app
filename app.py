@@ -778,6 +778,56 @@ elif st.session_state.role in ["teacher", "viewer"]:
                 b2 = io.BytesIO(); pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
                 c2.download_button("📥 قالب فارغ (درجات)", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
 
+            # 👇👇 تم دمج كود مدقق البيانات هنا بنجاح 👇👇
+            with st.expander("🔍 مدقق رصد الدرجات (كشف النواقص)", expanded=False):
+                st.markdown("##### قائمة الطلاب الذين لم يتم رصد درجاتهم بعد")
+                
+                df_st_audit = fetch_safe("students")
+                df_gr_audit = fetch_safe("grades")
+                
+                if not df_st_audit.empty:
+                    df_st_audit['clean_id'] = df_st_audit.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+                    
+                    if not df_gr_audit.empty:
+                        df_gr_audit['clean_id'] = df_gr_audit.iloc[:, 0].astype(str).str.strip().str.split('.').str[0]
+                        audit_merge = pd.merge(
+                            df_st_audit[['clean_id', 'name', 'class', 'sem']], 
+                            df_gr_audit[['clean_id', 'perf']], 
+                            on='clean_id', 
+                            how='left'
+                        )
+                        missing_grades = audit_merge[audit_merge['perf'].isna()]
+                    else:
+                        missing_grades = df_st_audit[['clean_id', 'name', 'class', 'sem']]
+
+                    if not missing_grades.empty:
+                        st.warning(f"⚠️ يوجد {len(missing_grades)} طالب لم ترصد لهم درجات.")
+                        display_missing = missing_grades[['clean_id', 'name', 'class', 'sem']].rename(columns={
+                            'clean_id': 'الرقم الأكاديمي',
+                            'name': 'اسم الطالب',
+                            'class': 'الصف',
+                            'sem': 'المرحلة'
+                        })
+                        
+                        st.dataframe(display_missing, use_container_width=True, hide_index=True)
+                        
+                        b_audit = io.BytesIO()
+                        with pd.ExcelWriter(b_audit, engine='xlsxwriter') as writer:
+                            display_missing.to_excel(writer, index=False, sheet_name='Missing_Grades')
+                        
+                        st.download_button(
+                            label="📥 تحميل قائمة النواقص للطباعة",
+                            data=b_audit.getvalue(),
+                            file_name=f"missing_grades_{datetime.date.today()}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        st.success("✅ جميع الطلاب المسجلين تم رصد درجاتهم بنجاح!")
+                else:
+                    st.info("لا توجد بيانات طلاب للتدقيق.")
+            # 👆👆 نهاية كود مدقق البيانات 👆👆
+
             with st.expander("🔐 إدارة المستخدمين (معلمين / إدارة)"):
                 t1, t2, t3 = st.tabs(["➕ إضافة مستخدم", "🔑 تعديل كلمة المرور", "🗑️ حذف مستخدم"])
                 with t1:
