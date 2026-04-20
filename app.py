@@ -617,7 +617,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                                     ws.update_cell(c.row, idx, new_val)
                                                     
                                                     # 3. ⚡ السحر: تحديث نقاط الطالب في الذاكرة المحلية
-                                                    st.session_state.df_students.loc[student_idx, 'النقاط'] = new_val
+                                                    st.session_state.df_students.loc[student_idx, 'النقاط'] = str(new_val)
                                         except Exception as e: st.error(f"خطأ: {e}")
                                     
                                     # ❌ تم حذف st.rerun() و st.cache_data.clear() تماماً!
