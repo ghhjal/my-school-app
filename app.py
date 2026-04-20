@@ -844,7 +844,11 @@ elif st.session_state.role in ["teacher", "viewer"]:
             st.subheader("⚙️ إعدادات النظام")
             with st.expander("🛠️ أدوات الصيانة والنسخ الاحتياطي", expanded=True):
                 c1, c2 = st.columns(2)
-                if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True): st.cache_data.clear(); st.rerun()
+                if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True):
+                    st.cache_data.clear()
+                    if 'db_loaded' in st.session_state:
+                        del st.session_state.db_loaded # 👈 أضف هذا السطر ليمسح المخزن المحلي أيضاً
+                    st.rerun()
                 if c2.button("🧹 تصفير جميع النقاط", use_container_width=True):
                     try:
                         ws = sh.worksheet("students"); d = ws.get_all_values()
