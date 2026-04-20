@@ -660,9 +660,9 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                         
                                     # 2. ⚡ تحديث الذاكرة المحلية للدرجات
                                     if grade_idx is not None:
-                                        st.session_state.df_grades.loc[grade_idx, 'p1'] = v1
-                                        st.session_state.df_grades.loc[grade_idx, 'p2'] = v2
-                                        st.session_state.df_grades.loc[grade_idx, 'perf'] = tot
+                                        st.session_state.df_grades.loc[grade_idx, 'p1'] = str(v1)
+                                        st.session_state.df_grades.loc[grade_idx, 'p2'] = str(v2)
+                                        st.session_state.df_grades.loc[grade_idx, 'perf'] = str(tot)
                                     else:
                                         new_row = pd.DataFrame([[sid, v1, v2, tot, str(datetime.date.today()), sid]], columns=df_g.columns)
                                         st.session_state.df_grades = pd.concat([st.session_state.df_grades, new_row], ignore_index=True)
