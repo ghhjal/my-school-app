@@ -556,27 +556,34 @@ elif st.session_state.role in ["teacher", "viewer"]:
         eval_tabs = st.tabs(["👤 التقييم الفردي", "👥 الرصد الجماعي السريع"])
         
         # --- 1. التقييم الفردي (محدث بنظام الذاكرة المؤقتة لتسريع الأداء) ---
+        # --- 1. التقييم الفردي (صاروخي: يقرأ من الذاكرة المحلية وبدون إعادة تحميل الصفحة) ---
         with eval_tabs[0]:
-            # تهيئة سلة المهملات (Buffer) في الذاكرة المؤقتة إذا لم تكن موجودة
-            if 'pending_behaviors' not in st.session_state:
-                st.session_state.pending_behaviors = []
+            # ⚡ 1. القراءة من الذاكرة المحلية فوراً (0 ثانية)
+            df_ev = st.session_state.df_students
             
-            df_ev = fetch_safe("students")
             if not df_ev.empty:
                 st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev.iterrows()}
                 sel = st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()), key="single_eval_sel")
                 
                 if sel:
                     sid = str(st_dict[sel]).strip().split('.')[0]
-                    s_inf = df_ev[df_ev.iloc[:,0].astype(str).str.split('.').str[0] == sid].iloc[0]
-                    s_nm = s_inf['name']; clp = clean_phone_number(s_inf.get('الجوال','')); s_eml = s_inf.get('الإيميل', '')
+                    
+                    # البحث عن فهرس (Index) الطالب في الذاكرة لتسهيل التحديث لاحقاً
+                    student_idx = df_ev[df_ev.iloc[:,0].astype(str).str.split('.').str[0] == sid].index[0]
+                    s_inf = df_ev.loc[student_idx]
+                    
+                    s_nm = s_inf['name']
+                    clp = clean_phone_number(s_inf.get('الجوال',''))
+                    s_eml = s_inf.get('الإيميل', '')
+                    current_points = int(pd.to_numeric(s_inf.get('النقاط', 0), errors='coerce') or 0)
                     
                     c1, c2 = st.columns(2)
                     
-                    # --- قسم السلوك الفردي (يعمل بنظام الـ Buffer السريع) ---
+                    # --- قسم السلوك الفردي ---
                     with c2:
                         st.container(border=True)
-                        st.markdown("##### 🎭 السلوك والملاحظات (سريع)")
+                        # ⚡ عرض النقاط مباشرة من الذاكرة
+                        st.markdown(f"##### 🎭 السلوك (الرصيد: {current_points} نقطة)")
                         if st.session_state.role == "teacher":
                             with st.form("beh_add", clear_on_submit=True):
                                 bt = st.selectbox("نوع السلوك", [
@@ -586,104 +593,118 @@ elif st.session_state.role in ["teacher", "viewer"]:
                                 ])
                                 bn = st.text_area("تفاصيل الملاحظة")
                                 
-                                if st.form_submit_button("💾 تسجيل (في الذاكرة المؤقتة)", type="primary"):
-                                    # إضافة السلوك للسلة بدون الاتصال بجوجل!
-                                    st.session_state.pending_behaviors.append({
-                                        "student_id": sid, "name": s_nm, "date": str(datetime.date.today()), 
-                                        "type": bt, "note": bn
-                                    })
-                                    # استخدام التنبيه اللطيف بدل إعادة تحميل الصفحة
-                                    st.toast(f"✅ تم إضافة ملاحظة ({bt}) للطالب {s_nm} في الذاكرة المؤقتة.", icon="🛒")
+                                if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
+                                    new_b_row = {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn}
+                                    
+                                    # 1. إرسال السلوك لجوجل شيت في الخلفية
+                                    safe_append_row("behavior", new_b_row)
+                                    
+                                    # 2. ⚡ السحر: إضافة السلوك للذاكرة المحلية ليظهر بالأسفل فوراً
+                                    new_b_df = pd.DataFrame([new_b_row])
+                                    st.session_state.df_behavior = pd.concat([st.session_state.df_behavior, new_b_df], ignore_index=True)
+                                    
+                                    match = re.search(r'\(([\+\-]?\d+)\)', bt)
+                                    chg = int(match.group(1)) if match else 0
+                                    if chg != 0:
+                                        try:
+                                            # تحديث جوجل شيت للنقاط
+                                            ws = sh.worksheet("students"); c = ws.find(sid)
+                                            if c:
+                                                h = ws.row_values(1)
+                                                if 'النقاط' in h:
+                                                    idx = h.index('النقاط') + 1
+                                                    new_val = current_points + chg
+                                                    ws.update_cell(c.row, idx, new_val)
+                                                    
+                                                    # 3. ⚡ السحر: تحديث نقاط الطالب في الذاكرة المحلية
+                                                    st.session_state.df_students.loc[student_idx, 'النقاط'] = new_val
+                                        except Exception as e: st.error(f"خطأ: {e}")
+                                    
+                                    # ❌ تم حذف st.rerun() و st.cache_data.clear() تماماً!
+                                    st.toast(f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!", icon="🎉")
                         else: st.info("💡 وضع القراءة فقط.")
 
                     # --- قسم الدرجات الأكاديمية ---
                     with c1:
                         st.container(border=True)
                         st.markdown("##### 📝 رصد الدرجات الأكاديمية")
-                        df_g = fetch_safe("grades")
+                        
+                        # ⚡ قراءة الدرجات من الذاكرة المحلية
+                        df_g = st.session_state.df_grades
                         cur_p1 = 0; cur_p2 = 0
+                        grade_idx = None
+                        
                         if not df_g.empty:
                             df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
-                            gr = df_g[df_g['clean_id'] == sid]
-                            if not gr.empty:
-                                cur_p1 = int(pd.to_numeric(gr.iloc[0]['p1'], errors='coerce') or 0)
-                                cur_p2 = int(pd.to_numeric(gr.iloc[0]['p2'], errors='coerce') or 0)
+                            gr_match = df_g[df_g['clean_id'] == sid]
+                            if not gr_match.empty:
+                                grade_idx = gr_match.index[0]
+                                cur_p1 = int(pd.to_numeric(gr_match.iloc[0]['p1'], errors='coerce') or 0)
+                                cur_p2 = int(pd.to_numeric(gr_match.iloc[0]['p2'], errors='coerce') or 0)
                         
                         if st.session_state.role == "teacher":
                             with st.form("gr_upd", clear_on_submit=False):
                                 v1 = st.number_input("درجة المشاركة", 0, st.session_state.max_tasks, cur_p1)
                                 v2 = st.number_input("درجة الاختبار", 0, st.session_state.max_quiz, cur_p2)
-                                if st.form_submit_button("💾 رفع الدرجة مباشرة", type="primary"):
-                                    with st.spinner("جاري الحفظ..."):
-                                        ws_g = sh.worksheet("grades")
-                                        cell = ws_g.find(sid) # هنا Find مقبولة لأنها لمرة واحدة فقط لدرجة الطالب
-                                        tot = v1 + v2
-                                        if cell:
-                                            ws_g.update_cell(cell.row, 2, v1); ws_g.update_cell(cell.row, 3, v2)
-                                            ws_g.update_cell(cell.row, 4, tot); ws_g.update_cell(cell.row, 5, str(datetime.date.today()))
-                                        else: ws_g.append_row([sid, v1, v2, tot, str(datetime.date.today())])
-                                        st.cache_data.clear(); st.rerun()
+                                
+                                if st.form_submit_button("💾 حفظ الدرجات", type="primary"):
+                                    tot = v1 + v2
+                                    # 1. تحديث جوجل شيت
+                                    ws_g = sh.worksheet("grades")
+                                    cell = ws_g.find(sid)
+                                    if cell:
+                                        ws_g.update_cell(cell.row, 2, v1); ws_g.update_cell(cell.row, 3, v2)
+                                        ws_g.update_cell(cell.row, 4, tot); ws_g.update_cell(cell.row, 5, str(datetime.date.today()))
+                                    else: 
+                                        ws_g.append_row([sid, v1, v2, tot, str(datetime.date.today())])
+                                        
+                                    # 2. ⚡ تحديث الذاكرة المحلية للدرجات
+                                    if grade_idx is not None:
+                                        st.session_state.df_grades.loc[grade_idx, 'p1'] = v1
+                                        st.session_state.df_grades.loc[grade_idx, 'p2'] = v2
+                                        st.session_state.df_grades.loc[grade_idx, 'perf'] = tot
+                                    else:
+                                        new_row = pd.DataFrame([[sid, v1, v2, tot, str(datetime.date.today()), sid]], columns=df_g.columns)
+                                        st.session_state.df_grades = pd.concat([st.session_state.df_grades, new_row], ignore_index=True)
+
+                                    # ❌ تم حذف st.rerun() 
+                                    st.toast("✅ تم اعتماد الدرجات الأكاديمية بنجاح!", icon="🎓")
                         else: st.info("💡 وضع القراءة فقط.")
                         st.caption(f"📊 المجموع الحالي للدرجات: {cur_p1 + cur_p2}")
 
-            # --- مركز الرفع الجماعي (Sync Center) ---
-            if st.session_state.role == "teacher" and st.session_state.pending_behaviors:
-                st.markdown("---")
-                st.warning(f"⚠️ لديك ({len(st.session_state.pending_behaviors)}) ملاحظات سلوكية معلقة في الذاكرة المؤقتة لم يتم رفعها للمنصة!")
-                
-                with st.expander("👀 عرض الملاحظات المعلقة", expanded=True):
-                    for idx, pb in enumerate(st.session_state.pending_behaviors):
-                        st.write(f"**{pb['name']}**: {pb['type']} - *{pb['note']}*")
-                        
-                    if st.button("🚀 رفع جميع الملاحظات دفعة واحدة", type="primary", use_container_width=True):
-                        try:
-                            with st.spinner("جاري رفع الملاحظات وتحديث النقاط..."):
-                                behavior_rows = []
-                                point_updates = {}
-                                
-                                # تجهيز البيانات من الـ Buffer
-                                for pb in st.session_state.pending_behaviors:
-                                    behavior_rows.append([pb['student_id'], pb['date'], pb['type'], pb['note']])
-                                    match = re.search(r'\(([\+\-]?\d+)\)', pb['type'])
-                                    if match:
-                                        point_updates[pb['student_id']] = point_updates.get(pb['student_id'], 0) + int(match.group(1))
-
-                                # 1. رفع الملاحظات دفعة واحدة
-                                if behavior_rows:
-                                    sh.worksheet("behavior").append_rows(behavior_rows)
-                                
-                                # 2. تحديث النقاط دفعة واحدة بدون دالة find
-                                if point_updates:
-                                    ws_st = sh.worksheet("students")
-                                    all_st = ws_st.get_all_records()
-                                    headers = ws_st.row_values(1)
-                                    if 'النقاط' in headers:
-                                        p_idx = headers.index('النقاط') + 1
-                                        from gspread import Cell
-                                        cells_to_update = []
-                                        for i, r in enumerate(all_st):
-                                            st_id = str(r.get('id', '')).split('.')[0].strip()
-                                            if st_id in point_updates:
-                                                cur_p = int(pd.to_numeric(r.get('النقاط', 0), errors='coerce') or 0)
-                                                new_p = cur_p + point_updates[st_id]
-                                                cells_to_update.append(Cell(row=i+2, col=p_idx, value=new_p))
-                                        
-                                        if cells_to_update:
-                                            ws_st.update_cells(cells_to_update)
-                                
-                                # تنظيف السلة والكاش أخيراً
-                                st.session_state.pending_behaviors = []
-                                st.cache_data.clear()
-                                st.success("✅ تم مزامنة جميع الملاحظات مع قاعدة البيانات بنجاح!")
-                                st.rerun()
-                                
-                        except Exception as e:
-                            st.error(f"حدث خطأ أثناء الرفع: {e}")
+                    # --- سجل السلوك السفلي ---
+                    st.markdown("#### 📜 سجل السلوك الأخير")
                     
-                    if st.button("🗑️ إفراغ الذاكرة وإلغاء المعلقات"):
-                        st.session_state.pending_behaviors = []
-                        st.rerun()
+                    # ⚡ يقرأ من الذاكرة مباشرة ليظهر السلوك الجديد لحظياً
+                    df_b = st.session_state.df_behavior
+                    if not df_b.empty:
+                        cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
+                        my_b = df_b[df_b[cid].astype(str) == str(sid)]
+                        
+                        # دالة حذف السلوك تم تعديلها لتحدث الذاكرة أيضاً
+                        def delete_behavior(row_idx, global_idx):
+                            try: 
+                                sh.worksheet("behavior").delete_rows(int(row_idx) + 2)
+                                st.session_state.df_behavior = st.session_state.df_behavior.drop(global_idx).reset_index(drop=True)
+                            except: pass
 
+                        for global_idx, r in my_b.iloc[::-1].iterrows():
+                            with st.container():
+                                color = "#ef4444" if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else "#10b981"
+                                st.markdown(f"""
+                                <div class="mobile-list-item" style="border-right: 4px solid {color}">
+                                    <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#6b7280">{r.get('note')}</span></div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                c_del, c_wa, c_em = st.columns([0.5, 1, 1])
+                                lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
+                                c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
+                                c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
+                                
+                                # إرسال رقم الصف في جوجل والرقم في الذاكرة
+                                if st.session_state.role == "teacher": 
+                                    c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, global_idx))
         # --- 2. الرصد الجماعي السريع (الميزة الجديدة) ---
         with eval_tabs[1]:
             if st.session_state.role == "teacher":
