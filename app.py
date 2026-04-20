@@ -279,7 +279,13 @@ if st.session_state.role is None:
                     st.error("❌ بيانات الدخول غير صحيحة.")
                     
     show_footer()
-
+# --- 🏗️ تأسيس المخزن المحلي (يُنفذ مرة واحدة فقط) ---
+if 'db_loaded' not in st.session_state:
+    with st.spinner("⏳ جاري تحميل قاعدة البيانات المركزية... (يرجى الانتظار لمرة واحدة فقط)"):
+        st.session_state.df_students = fetch_safe("students")
+        st.session_state.df_grades = fetch_safe("grades")
+        st.session_state.df_behavior = fetch_safe("behavior")
+        st.session_state.db_loaded = True
 # ==========================================
 # 👨‍🏫 4. واجهة المعلم / الإدارة (مشاهد)
 # ==========================================
