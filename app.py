@@ -844,6 +844,7 @@ elif st.session_state.role in ["teacher", "viewer"]:
             st.subheader("⚙️ إعدادات النظام")
             with st.expander("🛠️ أدوات الصيانة والنسخ الاحتياطي", expanded=True):
                 c1, c2 = st.columns(2)
+                
                 if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True):
                     st.cache_data.clear()
                     if 'db_loaded' in st.session_state:
