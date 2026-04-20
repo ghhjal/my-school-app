@@ -7,7 +7,7 @@ import hashlib
 import io
 import re
 from google.oauth2.service_account import Credentials
-
+ب
 # ==========================================
 # ⚙️ 1. إعدادات النظام
 # ==========================================
@@ -614,7 +614,7 @@ else:
                                                         new_val = current_points + chg
                                                         ws.update_cell(c.row, idx, new_val)
                                                         # 3. ⚡ تحديث الذاكرة المحلية للنقاط (وحل مشكلة str)
-                                                        st.session_state.df_students.loc[student_idx, 'النقاط'] = str(new_val)
+                                                        st.session_state.df_students.loc[student_idx, 'النقاط'] = int(new_val)
                                             except Exception as e: st.error(f"خطأ: {e}")
                                         
                                         # ظهور الإشعار بدون st.rerun
@@ -654,9 +654,9 @@ else:
                                             
                                         # ⚡ تحديث الذاكرة المحلية للدرجات (حل مشكلة str)
                                         if grade_idx is not None:
-                                            st.session_state.df_grades.loc[grade_idx, 'p1'] = str(v1)
-                                            st.session_state.df_grades.loc[grade_idx, 'p2'] = str(v2)
-                                            st.session_state.df_grades.loc[grade_idx, 'perf'] = str(tot)
+                                            st.session_state.df_grades.loc[grade_idx, 'p1'] = int(v1)
+                                            st.session_state.df_grades.loc[grade_idx, 'p2'] = int(v2)
+                                            st.session_state.df_grades.loc[grade_idx, 'perf'] = int(tot)
                                         else:
                                             new_row = pd.DataFrame([[sid, v1, v2, tot, str(datetime.date.today()), sid]], columns=df_g.columns)
                                             st.session_state.df_grades = pd.concat([st.session_state.df_grades, new_row], ignore_index=True)
