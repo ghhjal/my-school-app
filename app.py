@@ -291,7 +291,11 @@ else:
             except Exception as e:
                 st.error(f"❌ حدث خطأ أثناء الاتصال: {e}")
                 st.stop()
-
+    # 👇👇 الكود الجديد: يقرأ الإشارة ويظهر لك رسالة النجاح اللطيفة 👇👇
+    if st.session_state.get('show_refresh_success'):
+        st.toast("✅ تم تحديث البيانات ومزامنتها بنجاح!", icon="🔄")
+        st.session_state['show_refresh_success'] = False  # نمسح الإشارة حتى لا تتكرر
+    # 👆👆 -------------------------------------------------------- 👆👆
     if st.session_state.role in ["teacher", "viewer"]:
         
         if st.session_state.role == "teacher":
@@ -837,6 +841,8 @@ else:
                     if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True):
                         st.cache_data.clear()
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                        # 👇 السطر الجديد: نرسل إشارة للذاكرة أننا نريد عرض رسالة بعد التحميل
+                        st.session_state['show_refresh_success'] = True 
                         st.rerun()
                         
                     if c2.button("🧹 تصفير جميع النقاط", use_container_width=True):
