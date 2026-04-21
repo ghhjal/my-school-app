@@ -1158,217 +1158,217 @@ else:
                             st.divider()
                             st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
                             certificate_html = f"""
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <title>شهادة تفوق - {s_nm}</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-
-    <style>
-        * {{
-            box-sizing: border-box;
-        }}
-
-        body {{
-            margin: 0;
-            padding: 0;
-            background: #e9edf2;
-            font-family: 'Cairo', Arial, sans-serif;
-        }}
-
-        .page {{
-            width: 297mm;
-            height: 210mm;
-            margin: auto;
-            background: white;
-            position: relative;
-            overflow: hidden;
-        }}
-
-        /* Luxury watermark */
-        .page::before {{
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            height: 400px;
-            background: url("data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBzdHJva2U9IiMxOTNiNjgiIHN0cm9rZS13aWR0aD0iMiIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDAiLz48cGF0aCBkPSJNNTAgMTUgTDYwIDUwIEw1MCA4NSBMNDAgNTAgWiIvPjwvc3ZnPg==") no-repeat center;
-            background-size: contain;
-            opacity: 0.05;
-            z-index: 0;
-        }}
-
-        .frame {{
-            position: absolute;
-            top: 12mm;
-            left: 12mm;
-            right: 12mm;
-            bottom: 12mm;
-            border: 3px solid #b68a36;
-        }}
-
-        .inner-frame {{
-            position: absolute;
-            top: 6mm;
-            left: 6mm;
-            right: 6mm;
-            bottom: 6mm;
-            border: 1px solid #193b68;
-            padding: 20mm 15mm;
-            text-align: center;
-        }}
-
-        h1 {{
-            font-family: 'Amiri', serif;
-            font-size: 52px;
-            color: #b68a36;
-            margin: 0;
-        }}
-
-        h2 {{
-            font-size: 26px;
-            color: #193b68;
-            margin: 10px 0 25px;
-            font-weight: 900;
-        }}
-
-        .intro {{
-            font-size: 18px;
-            color: #333;
-        }}
-
-        .name {{
-            font-size: 48px;
-            font-weight: 900;
-            color: #b68a36;
-            margin: 20px 0;
-            border-bottom: 2px solid #193b68;
-            display: inline-block;
-            padding: 0 30px 5px;
-        }}
-
-        .text {{
-            font-size: 20px;
-            color: #444;
-            line-height: 2;
-        }}
-
-        .footer {{
-            position: absolute;
-            bottom: 20mm;
-            left: 15mm;
-            right: 15mm;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }}
-
-        .box {{
-            text-align: center;
-            width: 200px;
-        }}
-
-        .title {{
-            font-size: 18px;
-            font-weight: 700;
-            color: #193b68;
-        }}
-
-        .line {{
-            border-bottom: 1px solid #b68a36;
-            margin: 10px auto;
-            width: 140px;
-        }}
-
-        .value {{
-            font-size: 18px;
-            color: #333;
-        }}
-
-        .signature {{
-            font-family: 'Amiri', serif;
-            font-size: 26px;
-            color: #193b68;
-        }}
-
-        .stamp {{
-            width: 120px;
-            height: 120px;
-            border: 2px dashed #b68a36;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 14px;
-            color: #b68a36;
-            transform: rotate(-10deg);
-        }}
-
-        @media print {{
-            @page {{
-                size: A4 landscape;
-                margin: 0;
-            }}
-
-            body {{
-                background: white;
-            }}
-
-            .page {{
-                margin: 0;
-            }}
-        }}
-    </style>
-</head>
-
-<body>
-    <div class="page">
-        <div class="frame">
-            <div class="inner-frame">
-
-                <h1>شهادة شكر وتقدير</h1>
-                <h2>جامعة التميز الأكاديمي</h2>
-
-                <p class="intro">تمنح هذه الشهادة إلى الطالب:</p>
-
-                <div class="name">{s_nm}</div>
-
-                <p class="text">
-                    تقديراً لتفوقه الأكاديمي المتميز، وحصوله على درجة <b style="color:#b68a36;">امتياز</b>، 
-                    متمنين له دوام النجاح والتفوق في مسيرته العلمية.
-                </p>
-
-                <div class="footer">
-
-                    <div class="box">
-                        <div class="title">التاريخ</div>
-                        <div class="line"></div>
-                        <div class="value">{datetime.date.today().strftime('%Y-%m-%d')}</div>
-                    </div>
-
-                    <div class="stamp">
-                        ختم<br>الجامعة
-                    </div>
-
-                    <div class="box">
-                        <div class="title">التوقيع</div>
-                        <div class="line"></div>
-                        <div class="signature">الأستاذ زياد المعمري</div>
-                    </div>
-
-                </div>
-
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"""
+                            <!DOCTYPE html>
+                            <html dir="rtl" lang="ar">
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>شهادة تفوق - {s_nm}</title>
+                            
+                                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+                            
+                                <style>
+                                    * {{
+                                        box-sizing: border-box;
+                                    }}
+                            
+                                    body {{
+                                        margin: 0;
+                                        padding: 0;
+                                        background: #e9edf2;
+                                        font-family: 'Cairo', Arial, sans-serif;
+                                    }}
+                            
+                                    .page {{
+                                        width: 297mm;
+                                        height: 210mm;
+                                        margin: auto;
+                                        background: white;
+                                        position: relative;
+                                        overflow: hidden;
+                                    }}
+                            
+                                    /* Luxury watermark */
+                                    .page::before {{
+                                        content: "";
+                                        position: absolute;
+                                        top: 50%;
+                                        left: 50%;
+                                        transform: translate(-50%, -50%);
+                                        width: 400px;
+                                        height: 400px;
+                                        background: url("data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBzdHJva2U9IiMxOTNiNjgiIHN0cm9rZS13aWR0aD0iMiIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDAiLz48cGF0aCBkPSJNNTAgMTUgTDYwIDUwIEw1MCA4NSBMNDAgNTAgWiIvPjwvc3ZnPg==") no-repeat center;
+                                        background-size: contain;
+                                        opacity: 0.05;
+                                        z-index: 0;
+                                    }}
+                            
+                                    .frame {{
+                                        position: absolute;
+                                        top: 12mm;
+                                        left: 12mm;
+                                        right: 12mm;
+                                        bottom: 12mm;
+                                        border: 3px solid #b68a36;
+                                    }}
+                            
+                                    .inner-frame {{
+                                        position: absolute;
+                                        top: 6mm;
+                                        left: 6mm;
+                                        right: 6mm;
+                                        bottom: 6mm;
+                                        border: 1px solid #193b68;
+                                        padding: 20mm 15mm;
+                                        text-align: center;
+                                    }}
+                            
+                                    h1 {{
+                                        font-family: 'Amiri', serif;
+                                        font-size: 52px;
+                                        color: #b68a36;
+                                        margin: 0;
+                                    }}
+                            
+                                    h2 {{
+                                        font-size: 26px;
+                                        color: #193b68;
+                                        margin: 10px 0 25px;
+                                        font-weight: 900;
+                                    }}
+                            
+                                    .intro {{
+                                        font-size: 18px;
+                                        color: #333;
+                                    }}
+                            
+                                    .name {{
+                                        font-size: 48px;
+                                        font-weight: 900;
+                                        color: #b68a36;
+                                        margin: 20px 0;
+                                        border-bottom: 2px solid #193b68;
+                                        display: inline-block;
+                                        padding: 0 30px 5px;
+                                    }}
+                            
+                                    .text {{
+                                        font-size: 20px;
+                                        color: #444;
+                                        line-height: 2;
+                                    }}
+                            
+                                    .footer {{
+                                        position: absolute;
+                                        bottom: 20mm;
+                                        left: 15mm;
+                                        right: 15mm;
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: flex-end;
+                                    }}
+                            
+                                    .box {{
+                                        text-align: center;
+                                        width: 200px;
+                                    }}
+                            
+                                    .title {{
+                                        font-size: 18px;
+                                        font-weight: 700;
+                                        color: #193b68;
+                                    }}
+                            
+                                    .line {{
+                                        border-bottom: 1px solid #b68a36;
+                                        margin: 10px auto;
+                                        width: 140px;
+                                    }}
+                            
+                                    .value {{
+                                        font-size: 18px;
+                                        color: #333;
+                                    }}
+                            
+                                    .signature {{
+                                        font-family: 'Amiri', serif;
+                                        font-size: 26px;
+                                        color: #193b68;
+                                    }}
+                            
+                                    .stamp {{
+                                        width: 120px;
+                                        height: 120px;
+                                        border: 2px dashed #b68a36;
+                                        border-radius: 50%;
+                                        display: flex;
+                                        flex-direction: column;
+                                        justify-content: center;
+                                        align-items: center;
+                                        font-size: 14px;
+                                        color: #b68a36;
+                                        transform: rotate(-10deg);
+                                    }}
+                            
+                                    @media print {{
+                                        @page {{
+                                            size: A4 landscape;
+                                            margin: 0;
+                                        }}
+                            
+                                        body {{
+                                            background: white;
+                                        }}
+                            
+                                        .page {{
+                                            margin: 0;
+                                        }}
+                                    }}
+                                </style>
+                            </head>
+                            
+                            <body>
+                                <div class="page">
+                                    <div class="frame">
+                                        <div class="inner-frame">
+                            
+                                            <h1>شهادة شكر وتقدير</h1>
+                                            <h2>جامعة التميز الأكاديمي</h2>
+                            
+                                            <p class="intro">تمنح هذه الشهادة إلى الطالب:</p>
+                            
+                                            <div class="name">{s_nm}</div>
+                            
+                                            <p class="text">
+                                                تقديراً لتفوقه الأكاديمي المتميز، وحصوله على درجة <b style="color:#b68a36;">امتياز</b>، 
+                                                متمنين له دوام النجاح والتفوق في مسيرته العلمية.
+                                            </p>
+                            
+                                            <div class="footer">
+                            
+                                                <div class="box">
+                                                    <div class="title">التاريخ</div>
+                                                    <div class="line"></div>
+                                                    <div class="value">{datetime.date.today().strftime('%Y-%m-%d')}</div>
+                                                </div>
+                            
+                                                <div class="stamp">
+                                                    ختم<br>الجامعة
+                                                </div>
+                            
+                                                <div class="box">
+                                                    <div class="title">التوقيع</div>
+                                                    <div class="line"></div>
+                                                    <div class="signature">الأستاذ زياد المعمري</div>
+                                                </div>
+                            
+                                            </div>
+                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """
                             
                             # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
                             try:
