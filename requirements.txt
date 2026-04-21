@@ -7,3 +7,4 @@ google-auth-httplib2
 xlsxwriter
 oauth2client
 openpyxl
+weasyprint==61.2
