@@ -1224,10 +1224,10 @@ else:
                                         <div class="cert-inner-border">
                                             <div class="cert-content">
                                                 <h1>شهادة شكر وتقدير</h1>
-                                                <h2>
-                                                  <img src="data:image/svg+xml;base64,...أدخل_كود_Base64_للنجمة... " alt="Star" style="width:25px; height:25px; vertical-align: middle; margin-top:-5px;">
-                                                  وسام التميز الأكاديمي
-                                                  <img src="data:image/svg+xml;base64,...أدخل_كود_Base64_للنجمة... " alt="Star" style="width:25px; height:25px; vertical-align: middle; margin-top:-5px;">
+                                                <h2 style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+                                                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2Q5NzcwNiI+PHBhdGggZD0iTTEyIDJMMTUuMDkgOC4yNkwyMiA5LjI3TDE3IDE0LjE0TDE4LjE4IDIxLjAyTDEyIDE3Ljc3TDUuODIgMjEuMDJMNyAxNC4xNEwyIDkuMjdLOC45MSA4LjI2TDEyIDJaIi8+PC9zdmc+" style="width:35px; height:35px;">
+                                                    وسام التميز الأكاديمي
+                                                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2Q5NzcwNiI+PHBhdGggZD0iTTEyIDJMMTUuMDkgOC4yNkwyMiA5LjI3TDE3IDE0LjE0TDE4LjE4IDIxLjAyTDEyIDE3Ljc3TDUuODIgMjEuMDJMNyAxNC4xNEwyIDkuMjdLOC45MSA4LjI2TDEyIDJaIi8+PC9zdmc+" style="width:35px; height:35px;">
                                                 </h2>
                                                 <p>
                                                     يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
