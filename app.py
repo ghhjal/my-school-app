@@ -1192,8 +1192,11 @@ else:
                                     position: relative;
                                     padding: 30px 40px;
                                     text-align: center;
-                                    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
-                                    background-size: 25px 25px;
+                                    
+                                    /* ✳️ تم استبدال النقاط بتموجات حريرية دقيقة للغاية */
+                                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3C%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='0.5'/%3E%3Cpath d='M0,400 C160,320 320,480 480,400 S800,320 960,400 S1280,480 1440,400 S1600,320 1600,320' fill='none' stroke='rgba(182,138,54,0.04)' stroke-width='0.5'/%3E%3Cpath d='M0,240 C160,160 320,320 480,240 S800,160 960,240 S1280,320 1440,240 S1600,160 1600,160' fill='none' stroke='rgba(182,138,54,0.05)' stroke-width='0.5'/%3E%3C/svg%3E");
+                                    background-size: cover;
+                                    
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }}
@@ -1217,7 +1220,11 @@ else:
                                     display: flex; justify-content: center; align-items: center; gap: 15px;
                                 }}
                                 
-                                p.intro {{ font-family: 'Cairo', sans-serif; font-size: 22px; color: #193b68; margin-bottom: 10px; }}
+                                /* المقدمة موحدة الخط وتكبير حجمها */
+                                p.intro {{ 
+                                    font-family: 'Cairo', sans-serif; font-size: 24px; color: #193b68; 
+                                    margin-bottom: 10px; 
+                                }}
                                 
                                 .student-name {{ 
                                     font-family: 'Cairo', sans-serif; font-size: 55px; font-weight: 900; color: #d32f2f; 
@@ -1244,10 +1251,21 @@ else:
                                 .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 34px; color: #193b68; line-height: 1; }}
                                 .date-val {{ font-size: 22px; font-weight: bold; color: #333; margin-top: 8px; }}
 
+                                /* الختم المدمج المحدث */
                                 .stamp-wrapper {{
-                                    display: flex; justify-content: center; align-items: center;
-                                    margin-bottom: 10px; width: 150px;
+                                    display: flex; justify-content: center; align-items: center; flex-direction: column;
+                                    width: 140px; height: 140px;
+                                    border: 4px dashed #d32f2f;
+                                    border-radius: 50%;
+                                    transform: rotate(-15deg);
+                                    color: #d32f2f;
+                                    text-align: center;
+                                    opacity: 0.85;
+                                    margin-bottom: 10px;
+                                    background-color: rgba(255, 255, 255, 0.6); /* خلفية بيضاء خفيفة للختم ليبرز فوق التموجات */
                                 }}
+                                .stamp-text {{ font-weight: 900; font-size: 28px; line-height: 1.1; margin: 2px 0; }}
+                                .stamp-sub {{ font-size: 15px; font-weight: bold; }}
 
                                 @media print {{
                                     @page {{ size: A4 landscape; margin: 0mm; }}
@@ -1268,9 +1286,9 @@ else:
                                         <h1>شهادة شكر وتقدير</h1>
                                         
                                         <h2>
-                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
+                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI_IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
                                             وسام التميز الأكاديمي
-                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
+                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS2_IDE3IDE0LjE0IDE4LjE4IDIxLjAyIDExIDE3Ljc3IDUuODIgMjEuMDIgNyAxNC4xNCAyIDkuMjdIDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
                                         </h2>
 
                                         <p class="intro">يتقدم الأستاذ/ <strong>زياد المعمري</strong> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
@@ -1290,12 +1308,9 @@ else:
                                             </div>
                                             
                                             <div class="stamp-wrapper">
-                                                <div style="width: 140px; height: 140px; border: 3px dashed #d32f2f; border-radius: 50%; transform: rotate(-15deg); color: #d32f2f; text-align: center; opacity: 0.85; position: relative; padding-top: 25px; margin: 0 auto; background-color: rgba(255, 255, 255, 0.7);">
-                                                    <div style="position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 1px solid #d32f2f; border-radius: 50%;"></div>
-                                                    <div style="font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 900; line-height: 1; margin-top: 5px;">وسام</div>
-                                                    <div style="font-family: 'Aref Ruqaa', serif; font-size: 34px; font-weight: bold; line-height: 1.2; margin: 2px 0;">ختم التميز</div>
-                                                    <div style="font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: bold; line-height: 1;">الأكاديمي</div>
-                                                </div>
+                                                <div class="stamp-sub">وسام</div>
+                                                <div class="stamp-text">ختم<br>التميز</div>
+                                                <div class="stamp-sub">الأكاديمي</div>
                                             </div>
 
                                             <div class="sig-box">
