@@ -1158,103 +1158,164 @@ else:
                             st.divider()
                             st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
                             certificate_html = f"""
-                            <!DOCTYPE html>
-                            <html dir="rtl" lang="ar">
-                            <head>
-                                <meta charset="UTF-8">
-                                <title>شهادة تفوق - {s_nm}</title>
-                                <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                                <style>
-                                    * {{ box-sizing: border-box; }}
-                                    body {{
-                                        font-family: 'Cairo', sans-serif;
-                                        background-color: #f8fafc;
-                                        display: flex;
-                                        justify-content: center;
-                                        align-items: center;
-                                        min-height: 100vh;
-                                        margin: 0;
-                                    }}
-                                    .cert-wrapper {{
-                                        width: 297mm;
-                                        height: 210mm;
-                                        background-color: white;
-                                        padding: 15mm;
-                                        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-                                    }}
-                                    .cert-border {{
-                                        border: 15px solid #1e3a8a;
-                                        height: 100%;
-                                        width: 100%;
-                                        padding: 10px;
-                                        background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
-                                        background-size: 20px 20px;
-                                        -webkit-print-color-adjust: exact !important;
-                                        print-color-adjust: exact !important;
-                                    }}
-                                    .cert-inner-border {{
-                                        border: 3px double #d97706;
-                                        height: 100%;
-                                        width: 100%;
-                                        padding: 30px;
-                                        text-align: center;
-                                        display: flex;
-                                        flex-direction: column;
-                                        justify-content: space-between;
-                                    }}
-                                    .cert-content {{ flex-grow: 1; }}
-                                    h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 0 0 15px 0; }}
-                                    h2 {{ font-size: 35px; color: #1e3a8a; margin: 0 0 20px 0; }}
-                                    p {{ font-size: 26px; color: #334155; line-height: 1.8; margin: 0 50px; }}
-                                    .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; display: inline-block; margin: 15px 0; }}
-                                    .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 40px; margin-bottom: 10px; }}
-                                    .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; line-height: 1.5; }}
-                                    .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
-                                    
-                                    @media print {{
-                                        @page {{ size: A4 landscape; margin: 0mm; }}
-                                        body {{ min-height: auto; background-color: white; align-items: flex-start; justify-content: flex-start; }}
-                                        .cert-wrapper {{ box-shadow: none; width: 297mm; height: 210mm; padding: 10mm; page-break-after: avoid; }}
-                                    }}
-                                </style>
-                            </head>
-                            <body>
-                                <div class="cert-wrapper">
-                                    <div class="cert-border">
-                                        <div class="cert-inner-border">
-                                            <div class="cert-content">
-                                                <h1>شهادة شكر وتقدير</h1>
-                                                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 20px;">
-                                                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZDk3NzA2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjZDk3NzA2IiAvPjwvc3ZnPg==" style="width:40px; height:40px;">
-                                                    
-                                                    <h2 style="margin: 0; padding: 0;">وسام التميز الأكاديمي</h2>
-                                                    
-                                                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZDk3NzA2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjZDk3NzA2IiAvPjwvc3ZnPg==" style="width:40px; height:40px;">
-                                                </div>
-                                                <p>
-                                                    يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
-                                                    <br><span class="student-name">{s_nm}</span><br>
-                                                    وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
-                                                    <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
-                                                </p>
+                        <!DOCTYPE html>
+                        <html dir="rtl" lang="ar">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>شهادة تفوق - {s_nm}</title>
+                            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                            <style>
+                                * {{ box-sizing: border-box; }}
+                                body {{
+                                    margin: 0; padding: 0;
+                                    background-color: #ffffff;
+                                    display: flex; justify-content: center; align-items: center;
+                                    min-height: 100vh;
+                                }}
+                                .cert-page {{
+                                    width: 297mm; height: 210mm;
+                                    padding: 12mm;
+                                    background: #ffffff;
+                                    position: relative;
+                                }}
+                                .border-outer {{
+                                    border: 14px solid #193b68; /* الأزرق الملكي */
+                                    height: 100%; width: 100%;
+                                    padding: 6px;
+                                    position: relative;
+                                }}
+                                .border-inner {{
+                                    border: 3px solid #b68a36; /* الذهبي */
+                                    height: 100%; width: 100%;
+                                    position: relative;
+                                    padding: 40px 50px;
+                                    text-align: center;
+                                    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+                                    background-size: 25px 25px;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                }}
+                                
+                                /* الزخارف الزاوية البسيطة */
+                                .corner {{ position: absolute; width: 30px; height: 30px; border: 4px solid #b68a36; }}
+                                .tl {{ top: -8px; left: -8px; border-right: none; border-bottom: none; }}
+                                .tr {{ top: -8px; right: -8px; border-left: none; border-bottom: none; }}
+                                .bl {{ bottom: -8px; left: -8px; border-right: none; border-top: none; }}
+                                .br {{ bottom: -8px; right: -8px; border-left: none; border-top: none; }}
+
+                                /* وسام الزاوية العلوية */
+                                .top-badge {{
+                                    position: absolute; top: 30px; left: 40px; width: 100px; height: 100px;
+                                }}
+
+                                h1 {{ 
+                                    font-family: 'Aref Ruqaa', serif; font-size: 75px; color: #b68a36; 
+                                    margin: 0; font-weight: normal; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+                                }}
+                                
+                                h2 {{ 
+                                    font-family: 'Cairo', sans-serif; font-size: 38px; color: #193b68; 
+                                    margin: 10px 0 35px 0; font-weight: 900;
+                                    display: flex; justify-content: center; align-items: center; gap: 20px;
+                                }}
+                                
+                                p.intro {{ font-family: 'Amiri', serif; font-size: 28px; color: #333; margin-bottom: 15px; }}
+                                
+                                .student-name {{ 
+                                    font-family: 'Cairo', sans-serif; font-size: 55px; font-weight: 900; color: #d32f2f; 
+                                    margin: 20px auto; display: inline-block;
+                                    border-bottom: 3px solid #b68a36; padding-bottom: 5px; padding-left: 20px; padding-right: 20px;
+                                }}
+                                
+                                p.reason {{ font-family: 'Amiri', serif; font-size: 26px; color: #444; line-height: 1.8; margin-top: 20px; }}
+                                
+                                .footer-section {{ 
+                                    display: flex; justify-content: space-between; align-items: flex-end; 
+                                    margin-top: 50px; padding: 0 10px; font-family: 'Cairo', sans-serif; 
+                                }}
+                                
+                                .sig-box {{ text-align: center; color: #193b68; }}
+                                .sig-title {{ font-size: 22px; font-weight: bold; }}
+                                .sig-line {{ border-bottom: 1px solid #b68a36; width: 160px; margin: 8px auto; }}
+                                .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 38px; color: #193b68; }}
+
+                                .stamp {{ 
+                                    width: 140px; height: 140px; 
+                                    border: 5px dashed #d32f2f; border-radius: 50%; 
+                                    display: flex; flex-direction: column; justify-content: center; align-items: center; 
+                                    color: #d32f2f; transform: rotate(-15deg); opacity: 0.85; 
+                                }}
+                                .stamp-text-1 {{ font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: bold; }}
+                                .stamp-text-2 {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; font-weight: bold; margin: 5px 0; }}
+
+                                .qr-box {{ display: flex; align-items: center; gap: 20px; text-align: center; color: #193b68; }}
+                                .qr-code {{ width: 85px; height: 85px; border: 2px solid #b68a36; padding: 4px; background: white; }}
+                                .qr-hint {{ font-size: 12px; color: #555; margin-top: 5px; font-weight: bold; }}
+
+                                @media print {{
+                                    @page {{ size: A4 landscape; margin: 0mm; }}
+                                    body {{ min-height: auto; align-items: flex-start; justify-content: flex-start; }}
+                                    .cert-page {{ padding: 0; box-shadow: none; page-break-after: avoid; }}
+                                }}
+                            </style>
+                        </head>
+                        <body>
+                            <div class="cert-page">
+                                <div class="border-outer">
+                                    <div class="border-inner">
+                                        <div class="corner tl"></div><div class="corner tr"></div>
+                                        <div class="corner bl"></div><div class="corner br"></div>
+                                        
+                                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzE5M2I2OCIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjQgNCIvPjxwYXRoIGQ9Ik0zNSA2NUw1MCA0MEw2NSA2NVoiIGZpbGw9IiNiNjhhMzYiLz48cGF0aCBkPSJNMzUgMzVMNjUgMzVMMTUgNjVIMzVaIiBmaWxsPSIjYjY4YTM2IiBvcGFjaXR5PSIwLjciLz48L3N2Zz4=" class="top-badge">
+
+                                        <h1>شهادة شكر وتقدير</h1>
+                                        
+                                        <h2>
+                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:35px; height:35px;">
+                                            وسام التميز الأكاديمي
+                                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:35px; height:35px;">
+                                        </h2>
+
+                                        <p class="intro">يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
+                                        
+                                        <div class="student-name">{s_nm}</div>
+                                        
+                                        <p class="reason">
+                                            وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في المادة.<br>
+                                            متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
+                                        </p>
+
+                                        <div class="footer-section">
+                                            <div class="sig-box">
+                                                <div class="sig-title">توقيع المعلم</div>
+                                                <div class="sig-line"></div>
+                                                <div class="sig-name">زياد المعمري</div>
                                             </div>
-                                            <div class="footer-section">
-                                                <div class="signature">
-                                                    تاريخ الإصدار<br>
-                                                    <span style="color:#475569;">{datetime.date.today().strftime('%Y-%m-%d')}</span>
+                                            
+                                            <div class="stamp">
+                                                <div class="stamp-text-1">وسام التميز الأكاديمي</div>
+                                                <div class="stamp-text-2">ختم التميز</div>
+                                                <div class="stamp-text-1">شهادة شكر وتقدير</div>
+                                            </div>
+
+                                            <div class="qr-box">
+                                                <div>
+                                                    <div class="sig-title">تاريخ الإصدار</div>
+                                                    <div class="sig-line" style="width:120px;"></div>
+                                                    <div style="color: #333; font-weight: bold; font-family: 'Cairo';">{datetime.date.today().strftime('%Y-%m-%d')}</div>
                                                 </div>
-                                                <div class="seal">ختم التميز</div>
-                                                <div class="signature">
-                                                    توقيع المعلم<br>
-                                                    <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
+                                                <div>
+                                                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNMTAgMTBoMzB2MzBIMTB6TTIwIDIwaDEwdjEwSDIwek02MCAxMGgzMHYzMEg2MHpNNzAgMjBoMTB2MTBINzB6TTEwIDYwaDMwdjMwSDEwek0yMCA3MGgxMHYxMEgyMHpNNDUgMTBoMTB2MTBINDV6TTQ1IDI1aDEwdjEwSDQ1ek00NSA0MGgxMHYxMEg0NXpNNDUgNTVoMTB2MTBINDV6TTQ1IDcwaDEwdjEwSDQ1ek00NSA4NWgxMHYxMEg0NXpNNjAgNjBoMTB2MTBINjB6TTc1IDYwaDEwdjEwSDc1ek02MCA3NWgxMHYxMEg2MHpNNzUgNzVoMTB2MTBINzV6IiBmaWxsPSIjMzMz\" class="qr-code">
+                                                    <div class="qr-hint">تحقق من الشهادة<br>امسح الرمز</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </body>
-                            </html>
-                            """
+                            </div>
+                        </body>
+                        </html>
+                        """
                             
                             # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
                             try:
