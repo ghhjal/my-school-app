@@ -1125,132 +1125,132 @@ else:
                     else: st.success("🌟 سجلك نظيف تماماً!")
 
             with tabs[2]: 
-                st.caption("درجاتي")
-                if not df_gr.empty:
-                    df_gr['clean_id'] = df_gr.iloc[:,0].astype(str).str.strip().str.split('.').str[0]
-                    grs = df_gr[df_gr['clean_id']==sid]
-                    if not grs.empty:
-                        g = grs.iloc[0]
-                        max_total = st.session_state.max_tasks + st.session_state.max_quiz
-                        perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
-                        percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
-                        
-                        if percentage >= 90: title, title_color = "🌟 أسطورة المنصة", "#d97706"
-                        elif percentage >= 80: title, title_color = "🚀 بطل مبدع", "#4338ca"
-                        elif percentage >= 70: title, title_color = "👍 متألق ومجتهد", "#059669"
-                        elif percentage >= 60: title, title_color = "💪 واصل تقدمك", "#2563eb"
-                        else: title, title_color = "🌱 أنت قادر على الأفضل", "#64748b"
+            st.caption("درجاتي")
+            if not df_gr.empty:
+                df_gr['clean_id'] = df_gr.iloc[:,0].astype(str).str.strip().str.split('.').str[0]
+                grs = df_gr[df_gr['clean_id']==sid]
+                if not grs.empty:
+                    g = grs.iloc[0]
+                    max_total = st.session_state.max_tasks + st.session_state.max_quiz
+                    perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
+                    percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
+                    
+                    if percentage >= 90: title, title_color = "🌟 أسطورة المنصة", "#d97706"
+                    elif percentage >= 80: title, title_color = "🚀 بطل مبدع", "#4338ca"
+                    elif percentage >= 70: title, title_color = "👍 متألق ومجتهد", "#059669"
+                    elif percentage >= 60: title, title_color = "💪 واصل تقدمك", "#2563eb"
+                    else: title, title_color = "🌱 أنت قادر على الأفضل", "#64748b"
 
-                        st.markdown(f"""
-                        <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')} / {st.session_state.max_tasks}</b></div>
-                        <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
-                        <div class='mobile-list-item' style='background:#eef2ff; border-color:#818cf8; display:flex; flex-direction:column; align-items:flex-start;'>
-                            <div style="width:100%; display:flex; justify-content:space-between;">
-                                <span style="color:#4338ca; font-weight:bold;">🏆 المجموع النهائي</span><b style="color:#4338ca; font-size:1.2rem;">{perf_score} / {max_total}</b>
-                            </div>
-                            <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
-                                {title}
-                            </div>
+                    st.markdown(f"""
+                    <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')} / {st.session_state.max_tasks}</b></div>
+                    <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
+                    <div class='mobile-list-item' style='background:#eef2ff; border-color:#818cf8; display:flex; flex-direction:column; align-items:flex-start;'>
+                        <div style="width:100%; display:flex; justify-content:space-between;">
+                            <span style="color:#4338ca; font-weight:bold;">🏆 المجموع النهائي</span><b style="color:#4338ca; font-size:1.2rem;">{perf_score} / {max_total}</b>
                         </div>
-                        """, unsafe_allow_html=True)
+                        <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
+                            {title}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                        if percentage >= 90:
-                            st.divider()
-                            st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
-                            certificate_html = f"""
-                            <!DOCTYPE html>
-                            <html dir="rtl" lang="ar">
-                            <head>
-                                <meta charset="UTF-8">
-                                <title>شهادة تفوق - {s_nm}</title>
-                                <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                                <style>
-                                    * {{ box-sizing: border-box; }}
-                                    body {{
-                                        font-family: 'Cairo', sans-serif;
-                                        background-color: #f8fafc;
-                                        display: flex;
-                                        justify-content: center;
-                                        align-items: center;
-                                        min-height: 100vh;
-                                        margin: 0;
-                                    }}
-                                    .cert-wrapper {{
-                                        width: 297mm;
-                                        height: 210mm;
-                                        background-color: white;
-                                        padding: 15mm;
-                                        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-                                    }}
-                                    .cert-border {{
-                                        border: 15px solid #1e3a8a;
-                                        height: 100%;
-                                        width: 100%;
-                                        padding: 10px;
-                                        background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
-                                        background-size: 20px 20px;
-                                        -webkit-print-color-adjust: exact !important;
-                                        print-color-adjust: exact !important;
-                                    }}
-                                    .cert-inner-border {{
-                                        border: 3px double #d97706;
-                                        height: 100%;
-                                        width: 100%;
-                                        padding: 30px;
-                                        text-align: center;
-                                        display: flex;
-                                        flex-direction: column;
-                                        justify-content: space-between;
-                                    }}
-                                    .cert-content {{ flex-grow: 1; }}
-                                    h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 0 0 15px 0; }}
-                                    h2 {{ font-size: 35px; color: #1e3a8a; margin: 0 0 20px 0; }}
-                                    p {{ font-size: 26px; color: #334155; line-height: 1.8; margin: 0 50px; }}
-                                    .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; display: inline-block; margin: 15px 0; }}
-                                    .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 40px; margin-bottom: 10px; }}
-                                    .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; line-height: 1.5; }}
-                                    .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
-                                    
-                                    @media print {{
-                                        @page {{ size: A4 landscape; margin: 0mm; }}
-                                        body {{ min-height: auto; background-color: white; align-items: flex-start; justify-content: flex-start; }}
-                                        .cert-wrapper {{ box-shadow: none; width: 297mm; height: 210mm; padding: 10mm; page-break-after: avoid; }}
-                                    }}
-                                </style>
-                            </head>
-                            <body>
-                                <div class="cert-wrapper">
-                                    <div class="cert-border">
-                                        <div class="cert-inner-border">
-                                            <div class="cert-content">
-                                                <h1>شهادة شكر وتقدير</h1>
-                                                <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
-                                                <p>
-                                                    يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
-                                                    <br><span class="student-name">{s_nm}</span><br>
-                                                    وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
-                                                    <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
-                                                </p>
+                    if percentage >= 90:
+                        st.divider()
+                        st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
+                        certificate_html = f"""
+                        <!DOCTYPE html>
+                        <html dir="rtl" lang="ar">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>شهادة تفوق - {s_nm}</title>
+                            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                            <style>
+                                * {{ box-sizing: border-box; }}
+                                body {{
+                                    font-family: 'Cairo', sans-serif;
+                                    background-color: #f8fafc;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    min-height: 100vh;
+                                    margin: 0;
+                                }}
+                                .cert-wrapper {{
+                                    width: 297mm;
+                                    height: 210mm;
+                                    background-color: white;
+                                    padding: 15mm;
+                                    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                                }}
+                                .cert-border {{
+                                    border: 15px solid #1e3a8a;
+                                    height: 100%;
+                                    width: 100%;
+                                    padding: 10px;
+                                    background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
+                                    background-size: 20px 20px;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                }}
+                                .cert-inner-border {{
+                                    border: 3px double #d97706;
+                                    height: 100%;
+                                    width: 100%;
+                                    padding: 30px;
+                                    text-align: center;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: space-between;
+                                }}
+                                .cert-content {{ flex-grow: 1; }}
+                                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 60px; color: #d97706; margin: 0 0 15px 0; }}
+                                h2 {{ font-size: 35px; color: #1e3a8a; margin: 0 0 20px 0; }}
+                                p {{ font-size: 26px; color: #334155; line-height: 1.8; margin: 0 50px; }}
+                                .student-name {{ font-size: 45px; font-weight: 900; color: #ef4444; text-decoration: underline; text-decoration-color: #d97706; display: inline-block; margin: 15px 0; }}
+                                .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 40px; margin-bottom: 10px; }}
+                                .signature {{ font-size: 24px; font-weight: bold; color: #1e3a8a; text-align: center; line-height: 1.5; }}
+                                .seal {{ width: 120px; height: 120px; border: 4px dashed #ef4444; border-radius: 50%; line-height: 110px; color: #ef4444; font-weight: 900; font-size: 20px; transform: rotate(-15deg); opacity: 0.8; text-align: center; }}
+                                
+                                @media print {{
+                                    @page {{ size: A4 landscape; margin: 0mm; }}
+                                    body {{ min-height: auto; background-color: white; align-items: flex-start; justify-content: flex-start; }}
+                                    .cert-wrapper {{ box-shadow: none; width: 297mm; height: 210mm; padding: 10mm; page-break-after: avoid; }}
+                                }}
+                            </style>
+                        </head>
+                        <body>
+                            <div class="cert-wrapper">
+                                <div class="cert-border">
+                                    <div class="cert-inner-border">
+                                        <div class="cert-content">
+                                            <h1>شهادة شكر وتقدير</h1>
+                                            <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
+                                            <p>
+                                                يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
+                                                <br><span class="student-name">{s_nm}</span><br>
+                                                وذلك نظير تفوقه العلمي وحصوله على نسبة <b>{int(percentage)}%</b> في المادة.
+                                                <br>متمنين له دوام التوفيق ومزيداً من التألق والنجاح.
+                                            </p>
+                                        </div>
+                                        <div class="footer-section">
+                                            <div class="signature">
+                                                تاريخ الإصدار<br>
+                                                <span style="color:#475569;">{datetime.date.today().strftime('%Y-%m-%d')}</span>
                                             </div>
-                                            <div class="footer-section">
-                                                <div class="signature">
-                                                    تاريخ الإصدار<br>
-                                                    <span style="color:#475569;">{datetime.date.today().strftime('%Y-%m-%d')}</span>
-                                                </div>
-                                                <div class="seal">ختم التميز</div>
-                                                <div class="signature">
-                                                    توقيع المعلم<br>
-                                                    <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
-                                                </div>
+                                            <div class="seal">ختم التميز</div>
+                                            <div class="signature">
+                                                توقيع المعلم<br>
+                                                <span style="font-family: 'Aref Ruqaa', serif; font-size: 35px; color:#475569;">زياد المعمري</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </body>
-                            </html>
-                            """
-                            
-                            # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
+                            </div>
+                        </body>
+                        </html>
+                        """
+                        
+                        # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
                         try:
                             from weasyprint import HTML
                             with st.spinner("⏳ جاري إعداد شهادة التفوق بصيغة PDF..."):
@@ -1277,8 +1277,7 @@ else:
                                 use_container_width=True
                             )
 
-                    else: st.info("لم يتم رصد درجات بعد")
-
+                else: st.info("لم يتم رصد درجات بعد")
             with tabs[3]: 
                 st.caption("لوحة الشرف (أفضل 10 طلاب)")
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
