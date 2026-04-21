@@ -1224,7 +1224,11 @@ else:
                                         <div class="cert-inner-border">
                                             <div class="cert-content">
                                                 <h1>شهادة شكر وتقدير</h1>
-                                                <h2>🌟 وسام التميز الأكاديمي 🌟</h2>
+                                                <h2>
+                                                  <img src="data:image/svg+xml;base64,...أدخل_كود_Base64_للنجمة... " alt="Star" style="width:25px; height:25px; vertical-align: middle; margin-top:-5px;">
+                                                  وسام التميز الأكاديمي
+                                                  <img src="data:image/svg+xml;base64,...أدخل_كود_Base64_للنجمة... " alt="Star" style="width:25px; height:25px; vertical-align: middle; margin-top:-5px;">
+                                                </h2>
                                                 <p>
                                                     يتقدم الأستاذ/ <b>زياد المعمري</b> بوافر الشكر والتقدير للطالب المبدع والمتألق:
                                                     <br><span class="student-name">{s_nm}</span><br>
