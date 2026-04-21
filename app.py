@@ -1157,7 +1157,7 @@ else:
                         if percentage >= 90:
                             st.divider()
                             st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة استخراج 'شهادة التفوق'.")
-                      certificate_html = f"""
+                        certificate_html = f"""
                         <!DOCTYPE html>
                         <html dir="rtl" lang="ar">
                         <head>
