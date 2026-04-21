@@ -7,6 +7,7 @@ import hashlib
 import io
 import re
 from google.oauth2.service_account import Credentials
+from weasyprint import HTML
 # ==========================================
 # ⚙️ 1. إعدادات النظام
 # ==========================================
@@ -1249,8 +1250,26 @@ else:
                             </html>
                             """
                             
+                            # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
+                        try:
+                            from weasyprint import HTML
+                            with st.spinner("⏳ جاري إعداد شهادة التفوق بصيغة PDF..."):
+                                # تحويل كود الـ HTML إلى ملف PDF في الذاكرة
+                                pdf_bytes = HTML(string=certificate_html).write_pdf()
+                                
+                                st.download_button(
+                                    label="📥 تحميل شهادة التفوق (PDF مباشر)",
+                                    data=pdf_bytes,
+                                    file_name=f"Certificate_{sid}_{s_nm}.pdf",
+                                    mime="application/pdf",
+                                    type="primary",
+                                    use_container_width=True
+                                )
+                        except Exception as e:
+                            # في حال عدم توفر مكتبة PDF على السيرفر، يظهر زر الـ HTML التلقائي
+                            st.info("💡 ملاحظة: تم تفعيل تحميل نسخة الويب لسرعة الوصول.")
                             st.download_button(
-                                label="📜 استخراج وطباعة شهادة التفوق",
+                                label="📜 استخراج شهادة التفوق (نسخة ويب)",
                                 data=certificate_html,
                                 file_name=f"Certificate_{sid}.html",
                                 mime="text/html",
