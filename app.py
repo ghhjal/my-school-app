@@ -400,8 +400,8 @@ else:
 
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
-                    import streamlit as st
-                    import pandas as pd
+                import streamlit as st
+                import pandas as pd
                     
                     # 💡 ملاحظة: افترضنا أن لديك داتا فريم جاهزة باسم df_students تحتوي على درجات الطلاب
                     # ويجب أن تحتوي على الأعمدة: ['اسم الطالب', 'المشاركة', 'الاختبارات', 'المجموع']
