@@ -400,6 +400,84 @@ else:
 
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
+                    import streamlit as st
+import pandas as pd
+
+# 💡 ملاحظة: افترضنا أن لديك داتا فريم جاهزة باسم df_students تحتوي على درجات الطلاب
+# ويجب أن تحتوي على الأعمدة: ['اسم الطالب', 'المشاركة', 'الاختبارات', 'المجموع']
+
+st.subheader("🏆 لوحة شرف المتفوقين (لوحة المعلم)")
+st.markdown("---")
+
+# 1. أزرار الفرز السريع (لترتيب الطلاب حسب الأفضلية)
+sort_choice = st.radio(
+    "ترتيب الطلاب حسب:",
+    ["المجموع النهائي", "المشاركة والواجبات", "الاختبارات القصيرة"],
+    horizontal=True
+)
+
+# 2. تطبيق الفرز على الداتا فريم (مع تحويل القيم لأرقام لضمان الترتيب الصحيح)
+# (استبدل df_students باسم الداتا فريم الفعلي الخاص بك)
+if not df_students.empty:
+    # التأكد من أن الأعمدة رقمية لتجنب أخطاء الترتيب
+    df_students['المجموع_رقم'] = pd.to_numeric(df_students['المجموع'], errors='coerce').fillna(0)
+    df_students['المشاركة_رقم'] = pd.to_numeric(df_students['المشاركة'], errors='coerce').fillna(0)
+    df_students['الاختبارات_رقم'] = pd.to_numeric(df_students['الاختبارات'], errors='coerce').fillna(0)
+
+    if sort_choice == "المجموع النهائي":
+        df_sorted = df_students.sort_values(by="المجموع_رقم", ascending=False)
+    elif sort_choice == "المشاركة والواجبات":
+        df_sorted = df_students.sort_values(by="المشاركة_رقم", ascending=False)
+    else:
+        df_sorted = df_students.sort_values(by="الاختبارات_رقم", ascending=False)
+
+    # 3. بناء العرض الشبكي (Grid View) - 3 كروت في كل صف
+    cols = st.columns(3) 
+    
+    # نأخذ أفضل 12 طالب مثلاً (يمكنك تعديل الرقم)
+    top_students = df_sorted.head(12)
+    
+    for index, (i, row) in enumerate(top_students.iterrows()):
+        # توزيع الكروت على الأعمدة الثلاثة بالتناوب
+        col_idx = index % 3 
+        
+        with cols[col_idx]:
+            # تصميم كرت الطالب باستخدام HTML/CSS داخل Streamlit
+            st.markdown(f"""
+            <div style='
+                border: 2px solid #e5e7eb; 
+                border-top: 5px solid #1e3a8a; /* خط أزرق ملكي علوي */
+                border-radius: 10px; 
+                padding: 15px; 
+                background: white; 
+                text-align: center; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+                margin-bottom: 20px;
+                transition: transform 0.2s;'>
+                
+                <h3 style='color: #1e3a8a; margin-bottom: 5px; font-family: "Cairo", sans-serif; font-size: 1.3rem;'>
+                    {row['اسم الطالب']}
+                </h3>
+                
+                <div style='color: #d97706; font-size: 26px; font-weight: 900; margin: 10px 0;'>
+                    {row['المجموع_رقم']} <span style='font-size:18px;'>نقطة ⭐️</span>
+                </div>
+                
+                <hr style='margin: 10px 0; border-top: 1px solid #f3f4f6;'>
+                
+                <div style='display: flex; justify-content: space-between; font-size: 13px; color: #4b5563; font-weight: bold;'>
+                    <span>📝 مشاركة: {row['المشاركة_رقم']}</span>
+                    <span>✍️ اختبار: {row['الاختبارات_رقم']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # يمكنك إضافة زر طباعة لكل طالب هنا إذا أردت لاحقاً
+            # if st.button(f"طباعة شهادة {row['اسم الطالب']}", key=f"print_{i}"):
+            #     pass
+
+else:
+    st.info("لا توجد بيانات للطلاب حتى الآن.")
                     st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
                     df_g = st.session_state.df_grades
                     
