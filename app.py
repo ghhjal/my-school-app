@@ -401,83 +401,159 @@ else:
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
                     import streamlit as st
-                    import pandas as pd
-                    
-                    # 💡 ملاحظة: افترضنا أن لديك داتا فريم جاهزة باسم df_students تحتوي على درجات الطلاب
-                    # ويجب أن تحتوي على الأعمدة: ['اسم الطالب', 'المشاركة', 'الاختبارات', 'المجموع']
-                    
-                    st.subheader("🏆 لوحة شرف المتفوقين (لوحة المعلم)")
-                    st.markdown("---")
-                    
-                    # 1. أزرار الفرز السريع (لترتيب الطلاب حسب الأفضلية)
-                    sort_choice = st.radio(
-                        "ترتيب الطلاب حسب:",
-                        ["المجموع النهائي", "المشاركة والواجبات", "الاختبارات القصيرة"],
-                        horizontal=True
-                    )
-                    
-                # 2. تطبيق الفرز على الداتا فريم (مع تحويل القيم لأرقام لضمان الترتيب الصحيح)
-                # (استبدل df_students باسم الداتا فريم الفعلي الخاص بك)
-                if not df_students.empty:
-                    # التأكد من أن الأعمدة رقمية لتجنب أخطاء الترتيب
-                    df_students['المجموع_رقم'] = pd.to_numeric(df_students['المجموع'], errors='coerce').fillna(0)
-                    df_students['المشاركة_رقم'] = pd.to_numeric(df_students['المشاركة'], errors='coerce').fillna(0)
-                    df_students['الاختبارات_رقم'] = pd.to_numeric(df_students['الاختبارات'], errors='coerce').fillna(0)
+import pandas as pd
+import datetime
+
+# تأكد من استدعاء مكتبة WeasyPrint في أعلى الملف
+try:
+    from weasyprint import HTML
+except ImportError:
+    pass
+
+st.subheader("🏆 لوحة شرف المتفوقين وإصدار الشهادات")
+st.markdown("---")
+
+# 1. خيارات الفرز
+sort_choice = st.radio(
+    "ترتيب الطلاب حسب:",
+    ["المجموع النهائي", "المشاركة والواجبات", "الاختبارات القصيرة"],
+    horizontal=True
+)
+
+if not df_st.empty:
+    # 2. تحويل القيم إلى أرقام للترتيب
+    df_st['المجموع_رقم'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
+    df_st['المشاركة_رقم'] = pd.to_numeric(df_st['p1'], errors='coerce').fillna(0)
+    df_st['الاختبارات_رقم'] = pd.to_numeric(df_st['p2'], errors='coerce').fillna(0)
+
+    if sort_choice == "المجموع النهائي":
+        df_sorted = df_st.sort_values(by="المجموع_رقم", ascending=False)
+    elif sort_choice == "المشاركة والواجبات":
+        df_sorted = df_st.sort_values(by="المشاركة_رقم", ascending=False)
+    else:
+        df_sorted = df_st.sort_values(by="الاختبارات_رقم", ascending=False)
+
+    # 3. بناء العرض الشبكي (3 طلاب في كل صف)
+    cols = st.columns(3) 
+    top_students = df_sorted.head(12) # عرض أفضل 12 طالب
+    
+    for index, (i, row) in enumerate(top_students.iterrows()):
+        col_idx = index % 3 
+        s_nm = row.get('الاسم', 'طالب غير معروف')
+        
+        with cols[col_idx]:
+            # كرت الطالب
+            st.markdown(f"""
+            <div style='border: 2px solid #e5e7eb; border-top: 5px solid #1e3a8a; border-radius: 10px; padding: 15px; background: white; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px;'>
+                <h3 style='color: #1e3a8a; margin-bottom: 5px; font-family: "Cairo", sans-serif; font-size: 1.3rem;'>
+                    {s_nm}
+                </h3>
+                <div style='color: #d97706; font-size: 26px; font-weight: 900; margin: 10px 0;'>
+                    {row['المجموع_رقم']} <span style='font-size:18px;'>نقطة ⭐️</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 4. قائمة منسدلة لإصدار الشهادة الفخمة للمعلم
+            with st.expander(f"📜 استخراج شهادة {s_nm}"):
                 
-                    if sort_choice == "المجموع النهائي":
-                        df_sorted = df_students.sort_values(by="المجموع_رقم", ascending=False)
-                    elif sort_choice == "المشاركة والواجبات":
-                        df_sorted = df_students.sort_values(by="المشاركة_رقم", ascending=False)
-                    else:
-                        df_sorted = df_students.sort_values(by="الاختبارات_رقم", ascending=False)
-                
-                    # 3. بناء العرض الشبكي (Grid View) - 3 كروت في كل صف
-                    cols = st.columns(3) 
-                    
-                    # نأخذ أفضل 12 طالب مثلاً (يمكنك تعديل الرقم)
-                    top_students = df_sorted.head(12)
-                    
-                    for index, (i, row) in enumerate(top_students.iterrows()):
-                        # توزيع الكروت على الأعمدة الثلاثة بالتناوب
-                        col_idx = index % 3 
-                        
-                        with cols[col_idx]:
-                            # تصميم كرت الطالب باستخدام HTML/CSS داخل Streamlit
-                            st.markdown(f"""
-                            <div style='
-                                border: 2px solid #e5e7eb; 
-                                border-top: 5px solid #1e3a8a; /* خط أزرق ملكي علوي */
-                                border-radius: 10px; 
-                                padding: 15px; 
-                                background: white; 
-                                text-align: center; 
-                                box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-                                margin-bottom: 20px;
-                                transition: transform 0.2s;'>
-                                
-                                <h3 style='color: #1e3a8a; margin-bottom: 5px; font-family: "Cairo", sans-serif; font-size: 1.3rem;'>
-                                    {row['اسم الطالب']}
-                                </h3>
-                                
-                                <div style='color: #d97706; font-size: 26px; font-weight: 900; margin: 10px 0;'>
-                                    {row['المجموع_رقم']} <span style='font-size:18px;'>نقطة ⭐️</span>
+                # هنا نضع كود الشهادة الفخم الذي اعتمدناه سابقاً
+                teacher_cert_html = f"""
+                <!DOCTYPE html>
+                <html dir="rtl" lang="ar">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>شهادة تفوق - {s_nm}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        * {{ box-sizing: border-box; }}
+                        body {{ margin: 0; padding: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }}
+                        .cert-page {{ width: 297mm; height: 210mm; padding: 10mm; background: #ffffff; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); overflow: hidden; }}
+                        .border-outer {{ border: 14px solid #193b68; height: 100%; width: 100%; padding: 6px; position: relative; }}
+                        .border-inner {{ border: 3px solid #b68a36; height: 100%; width: 100%; position: relative; padding: 30px 40px; text-align: center; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='0.5'/%3E%3Cpath d='M0,400 C160,320 320,480 480,400 S800,320 960,400 S1280,480 1440,400 S1600,320 1600,320' fill='none' stroke='rgba(182,138,54,0.04)' stroke-width='0.5'/%3E%3Cpath d='M0,240 C160,160 320,320 480,240 S800,160 960,240 S1280,320 1440,240 S1600,160 1600,160' fill='none' stroke='rgba(182,138,54,0.05)' stroke-width='0.5'/%3E%3C/svg%3E"); background-size: cover; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                        .corner {{ position: absolute; width: 30px; height: 30px; border: 4px solid #b68a36; }}
+                        .tl {{ top: -8px; left: -8px; border-right: none; border-bottom: none; }} .tr {{ top: -8px; right: -8px; border-left: none; border-bottom: none; }}
+                        .bl {{ bottom: -8px; left: -8px; border-right: none; border-top: none; }} .br {{ bottom: -8px; right: -8px; border-left: none; border-top: none; }}
+                        .top-badge {{ position: absolute; top: 25px; left: 35px; width: 90px; height: 90px; }}
+                        h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 70px; color: #b68a36; margin: 0; font-weight: normal; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }}
+                        h2 {{ font-family: 'Cairo', sans-serif; font-size: 34px; color: #193b68; margin: 5px 0 25px 0; font-weight: 900; display: flex; justify-content: center; align-items: center; gap: 15px; }}
+                        p.intro {{ font-family: 'Cairo', sans-serif; font-size: 24px; color: #193b68; margin-bottom: 10px; }}
+                        .student-name {{ font-family: 'Cairo', sans-serif; font-size: 55px; font-weight: 900; color: #d32f2f; margin: 15px auto; display: inline-block; border-bottom: 3px solid #b68a36; padding-bottom: 5px; padding-left: 30px; padding-right: 30px; letter-spacing: 1px; }}
+                        .reason-container {{ margin-top: 15px; margin-bottom: 25px; }}
+                        p.reason {{ font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 600; color: #444; line-height: 1.8; margin: 0; }}
+                        .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding: 0 30px; font-family: 'Cairo', sans-serif; }}
+                        .sig-box, .date-box {{ text-align: center; color: #193b68; width: 220px; }}
+                        .sig-title {{ font-size: 22px; font-weight: bold; }} .sig-line {{ border-bottom: 1px solid #b68a36; width: 150px; margin: 8px auto; }}
+                        .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 34px; color: #193b68; line-height: 1; }} .date-val {{ font-size: 22px; font-weight: bold; color: #333; margin-top: 8px; }}
+                        .stamp-wrapper {{ width: 160px; text-align: center; margin-bottom: 10px; }}
+                        .stamp-circle {{ width: 140px; height: 140px; border: 4px dashed #d32f2f; border-radius: 100px; transform: rotate(-15deg); color: #d32f2f; margin: 0 auto; background-color: rgba(255, 255, 255, 0.7); text-align: center; padding-top: 24px; box-sizing: border-box; }}
+                        .stamp-txt-top {{ font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 900; line-height: 1; }}
+                        .stamp-txt-mid {{ font-family: 'Aref Ruqaa', serif; font-size: 34px; font-weight: bold; line-height: 1.1; margin: 2px 0; }}
+                        .stamp-txt-bot {{ font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: bold; line-height: 1; }}
+                        @media print {{ @page {{ size: A4 landscape; margin: 0mm; }} body {{ min-height: auto; align-items: flex-start; justify-content: flex-start; background: white; }} .cert-page {{ padding: 0; box-shadow: none; width: 297mm; height: 210mm; overflow: hidden; page-break-after: avoid; page-break-before: avoid; }} }}
+                    </style>
+                </head>
+                <body>
+                    <div class="cert-page">
+                        <div class="border-outer"><div class="border-inner">
+                            <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzE5M2I2OCIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjQgNCIvPjxwYXRoIGQ9Ik0zNSA2NUw1MCA0MEw2NSA2NVoiIGZpbGw9IiNiNjhhMzYiLz48cGF0aCBkPSJNMzUgMzVMNjUgMzVMMTUgNjVIMzVaIiBmaWxsPSIjYjY4YTM2IiBvcGFjaXR5PSIwLjciLz48L3N2Zz4=" class="top-badge">
+                            <h1>شهادة شكر وتقدير</h1>
+                            <h2>
+                                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
+                                وسام التميز الأكاديمي
+                                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" style="width:30px; height:30px;">
+                            </h2>
+                            <p class="intro">يتقدم الأستاذ/ <strong>زياد المعمري</strong> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
+                            <div class="student-name">{s_nm}</div>
+                            <div class="reason-container">
+                                <p class="reason">وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في المادة.</p>
+                                <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
+                            </div>
+                            <div class="footer-section">
+                                <div class="date-box">
+                                    <div class="sig-title">تاريخ الإصدار</div><div class="sig-line"></div><div class="date-val">{datetime.date.today().strftime('%Y-%m-%d')}</div>
                                 </div>
-                                
-                                <hr style='margin: 10px 0; border-top: 1px solid #f3f4f6;'>
-                                
-                                <div style='display: flex; justify-content: space-between; font-size: 13px; color: #4b5563; font-weight: bold;'>
-                                    <span>📝 مشاركة: {row['المشاركة_رقم']}</span>
-                                    <span>✍️ اختبار: {row['الاختبارات_رقم']}</span>
+                                <div class="stamp-wrapper">
+                                    <div class="stamp-circle"><div class="stamp-txt-top">وسام</div><div class="stamp-txt-mid">ختم<br>التميز</div><div class="stamp-txt-bot">الأكاديمي</div></div>
+                                </div>
+                                <div class="sig-box">
+                                    <div class="sig-title">توقيع المعلم</div><div class="sig-line"></div><div class="sig-name">زياد المعمري</div>
                                 </div>
                             </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # يمكنك إضافة زر طباعة لكل طالب هنا إذا أردت لاحقاً
-                            # if st.button(f"طباعة شهادة {row['اسم الطالب']}", key=f"print_{i}"):
-                            #     pass
-                
-                else:
-                    st.info("لا توجد بيانات للطلاب حتى الآن.")
+                        </div></div>
+                    </div>
+                </body>
+                </html>
+                """
+
+                # 5. أزرار التحميل الخاصة بالمعلم
+                try:
+                    with st.spinner("⏳ تجهيز PDF للطباعة..."):
+                        pdf_bytes = HTML(string=teacher_cert_html).write_pdf()
+                        st.download_button(
+                            label="🖨️ طباعة الشهادة (PDF)",
+                            data=pdf_bytes,
+                            file_name=f"Teacher_Cert_{s_nm}.pdf",
+                            mime="application/pdf",
+                            type="primary",
+                            key=f"teacher_pdf_btn_{i}", # مفتاح فريد ضروري لكل زر
+                            use_container_width=True
+                        )
+                except Exception as e:
+                    st.download_button(
+                        label="🌐 تحميل كصفحة ويب (HTML)",
+                        data=teacher_cert_html,
+                        file_name=f"Teacher_Cert_{s_nm}.html",
+                        mime="text/html",
+                        key=f"teacher_html_btn_{i}",
+                        use_container_width=True
+                    )
+            
+            st.write("") # مسافة بين الكروت
+
+else:
+    st.info("لم يتم رصد درجات للطلاب بعد.")
                     st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
                     df_g = st.session_state.df_grades
                     
