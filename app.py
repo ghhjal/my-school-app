@@ -376,151 +376,125 @@ else:
                                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                         st.cache_data.clear(); st.rerun()
                 
-               # --- 2. لوحة الشرف (النقاط والسلوك) ---
+                # --- 2. لوحة الشرف (النقاط والسلوك) ---
+                # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
-                    top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
                     
-                    # --- عرض الطلاب على الشاشة (كودك الأصلي الرائع) ---
-                    for i, (_, r) in enumerate(top_10.iterrows(), 1):
-                        ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                        border_color = "#f59e0b" if i<=3 else "#cbd5e1"
-                        st.markdown(f"""
-                            <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
-                                <div style='display:flex; align-items:center; gap:15px;'>
-                                    <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
-                                    <div>
-                                        <b style='font-size:1.1rem; color:#1e3a8a;'>{r['name']}</b><br>
-                                        <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r['clean_id']}</small>
+                    if not df_st.empty:
+                        top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
+                        
+                        # --- عرض الطلاب على الشاشة ---
+                        for i, (_, r) in enumerate(top_10.iterrows(), 1):
+                            ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                            border_color = "#f59e0b" if i<=3 else "#cbd5e1"
+                            st.markdown(f"""
+                                <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                                    <div style='display:flex; align-items:center; gap:15px;'>
+                                        <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
+                                        <div>
+                                            <b style='font-size:1.1rem; color:#1e3a8a;'>{r.get('name', '')}</b><br>
+                                            <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
+                                        </div>
+                                    </div>
+                                    <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
+                                        {int(r.get('النقاط', 0))} نقطة
                                     </div>
                                 </div>
-                                <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
-                                    {int(r['النقاط'])} نقطة
-                                </div>
+                            """, unsafe_allow_html=True)
+                        
+                        # --- 🖨️ طباعة بوستر لوحة الشرف ---
+                        st.markdown("---")
+                        st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
+                        
+                        board_items_html = ""
+                        for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+                            student_name = row.get('name', 'اسم غير متوفر')
+                            score = int(row.get('النقاط', 0))
+                            rank_color = "#b68a36" if rank == 1 else "#71717a" if rank == 2 else "#b45309" if rank == 3 else "#193b68"
+                            
+                            board_items_html += f"""
+                            <div class="student-row">
+                                <div class="rank-circle" style="background-color: {rank_color};">{rank}</div>
+                                <div class="student-name">{student_name}</div>
+                                <div class="student-score">{score} <span>نقطة</span></div>
                             </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # --- زر الطباعة والبوستر الفخم (الكود الجديد) ---
-                    st.markdown("---")
-                    st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
-                    
-                    # تجهيز صفوف الطلاب برمجياً من كود top_10 الخاص بك
-                    board_items_html = ""
-                    for rank, (_, row) in enumerate(top_10.iterrows(), 1):
-                        student_name = row.get('name', 'اسم غير متوفر')
-                        score = int(row.get('النقاط', 0))
+                            """
                         
-                        rank_color = "#b68a36" if rank == 1 else "#71717a" if rank == 2 else "#b45309" if rank == 3 else "#193b68"
-                        
-                        board_items_html += f"""
-                        <div class="student-row">
-                            <div class="rank-circle" style="background-color: {rank_color};">{rank}</div>
-                            <div class="student-name">{student_name}</div>
-                            <div class="student-score">{score} <span>نقطة</span></div>
-                        </div>
+                        import datetime
+                        honor_board_html = f"""
+                        <!DOCTYPE html>
+                        <html dir="rtl" lang="ar">
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>لوحة الشرف</title>
+                            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                            <style>
+                                * {{ box-sizing: border-box; }} body {{ margin: 0; padding: 0; background-color: #fff; }}
+                                .board-page {{ width: 210mm; min-height: 297mm; padding: 12mm; position: relative; overflow: hidden; }}
+                                .border-outer {{ border: 12px solid #193b68; height: 100%; padding: 5px; }}
+                                .border-inner {{ border: 3px solid #b68a36; height: 100%; padding: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='0.5'/%3E%3C/svg%3E"); background-size: cover; display: flex; flex-direction: column; }}
+                                .header-section {{ text-align: center; margin-bottom: 25px; border-bottom: 2px dashed #b68a36; padding-bottom: 15px; }}
+                                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 55px; color: #b68a36; margin: 0; }}
+                                h2 {{ font-family: 'Cairo', sans-serif; font-size: 24px; color: #193b68; margin: 5px 0 0 0; font-weight: 900; }}
+                                .students-container {{ display: flex; flex-direction: column; gap: 10px; flex-grow:1; justify-content: center; }}
+                                .student-row {{ display: flex; align-items: center; justify-content: space-between; background-color: rgba(255, 255, 255, 0.95); border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
+                                .rank-circle {{ width: 40px; height: 40px; border-radius: 50%; color: white; font-family: 'Cairo', sans-serif; font-size: 20px; font-weight: 900; display: flex; justify-content: center; align-items: center; }}
+                                .student-name {{ flex-grow: 1; margin-right: 20px; font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900; color: #193b68; }}
+                                .student-score {{ font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900; color: #d32f2f; }}
+                                .student-score span {{ font-size: 14px; color: #64748b; }}
+                                .footer {{ text-align: center; margin-top: 20px; font-family: 'Cairo', sans-serif; font-size: 16px; color: #193b68; font-weight: bold; }}
+                                @media print {{ @page {{ size: A4 portrait; margin: 0; }} body {{ background: white; }} .board-page {{ box-shadow: none; }} }}
+                            </style>
+                        </head>
+                        <body>
+                            <div class="board-page"><div class="border-outer"><div class="border-inner">
+                                <div class="header-section">
+                                    <h1>لوحة شرف المتفوقين</h1>
+                                    <h2>بإشراف الأستاذ/ زياد المعمري</h2>
+                                </div>
+                                <div class="students-container">{board_items_html}</div>
+                                <div class="footer">تاريخ الإصدار: {datetime.date.today().strftime('%Y-%m-%d')}</div>
+                            </div></div></div>
+                        </body>
+                        </html>
                         """
-                    
-                    import datetime
-                    honor_board_html = f"""
-                    <!DOCTYPE html>
-                    <html dir="rtl" lang="ar">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>لوحة الشرف</title>
-                        <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                        <style>
-                            * {{ box-sizing: border-box; }}
-                            body {{ margin: 0; padding: 0; background-color: #fff; }}
-                            .board-page {{ width: 210mm; min-height: 297mm; padding: 12mm; position: relative; }}
-                            .border-outer {{ border: 12px solid #193b68; height: 100%; padding: 5px; }}
-                            .border-inner {{
-                                border: 3px solid #b68a36; height: 100%; padding: 30px;
-                                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='0.5'/%3E%3Cpath d='M0,400 C160,320 320,480 480,400 S800,320 960,400 S1280,480 1440,400 S1600,320 1600,320' fill='none' stroke='rgba(182,138,54,0.04)' stroke-width='0.5'/%3E%3C/svg%3E");
-                                background-size: cover;
-                            }}
-                            .header-section {{ text-align: center; margin-bottom: 40px; border-bottom: 2px dashed #b68a36; padding-bottom: 20px; }}
-                            h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 65px; color: #b68a36; margin: 0; }}
-                            h2 {{ font-family: 'Cairo', sans-serif; font-size: 28px; color: #193b68; margin: 5px 0 0 0; font-weight: 900; }}
-                            .students-container {{ display: flex; flex-direction: column; gap: 15px; }}
-                            .student-row {{
-                                display: flex; align-items: center; justify-content: space-between;
-                                background-color: rgba(255, 255, 255, 0.9); border: 2px solid #e2e8f0; border-radius: 12px;
-                                padding: 12px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-                            }}
-                            .rank-circle {{ width: 45px; height: 45px; border-radius: 50%; color: white; font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900; display: flex; justify-content: center; align-items: center; }}
-                            .student-name {{ flex-grow: 1; margin-right: 20px; font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: #193b68; }}
-                            .student-score {{ font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: #d32f2f; }}
-                            .student-score span {{ font-size: 16px; color: #64748b; }}
-                            .footer {{ text-align: center; margin-top: 40px; font-family: 'Cairo', sans-serif; font-size: 18px; color: #193b68; font-weight: bold; }}
-                            @media print {{ @page {{ size: A4 portrait; margin: 0; }} body {{ background: white; }} .board-page {{ box-shadow: none; }} }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="board-page">
-                            <div class="border-outer">
-                                <div class="border-inner">
-                                    <div class="header-section">
-                                        <h1>لوحة شرف المتفوقين</h1>
-                                        <h2>بإشراف الأستاذ/ زياد المعمري</h2>
-                                    </div>
-                                    <div class="students-container">
-                                        {board_items_html}
-                                    </div>
-                                    <div class="footer">
-                                        تم الإصدار في: {datetime.date.today().strftime('%Y-%m-%d')}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                    """
-                    
-                    try:
-                        from weasyprint import HTML
-                        with st.spinner("⏳ تجهيز تصميم لوحة الشرف..."):
-                            board_pdf_bytes = HTML(string=honor_board_html).write_pdf()
-                            st.download_button(
-                                label="📜 تحميل بوستر لوحة الشرف (PDF للطباعة)",
-                                data=board_pdf_bytes,
-                                file_name=f"Honor_Board_{datetime.date.today()}.pdf",
-                                mime="application/pdf",
-                                type="primary"
-                            )
-                    except Exception as e:
-                        st.download_button(
-                            label="📜 تحميل لوحة الشرف (HTML للطباعة)",
-                            data=honor_board_html,
-                            file_name=f"Honor_Board_{datetime.date.today()}.html",
-                            mime="text/html"
-                        )
+                        
+                        try:
+                            from weasyprint import HTML
+                            pdf_bytes = HTML(string=honor_board_html).write_pdf()
+                            st.download_button(label="📜 تحميل بوستر لوحة الشرف (PDF)", data=pdf_bytes, file_name=f"Honor_Board_{datetime.date.today()}.pdf", mime="application/pdf", type="primary", use_container_width=True)
+                        except Exception as e:
+                            st.download_button(label="🌐 تحميل بوستر لوحة الشرف (HTML للطباعة)", data=honor_board_html, file_name=f"Honor_Board_{datetime.date.today()}.html", mime="text/html", use_container_width=True)
+                    else:
+                        st.info("لا توجد بيانات للطلاب بعد.")
         
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
                     st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
-                    df_g = st.session_state.df_grades
                     
-                    if not df_g.empty and not df_st.empty:
+                    if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
+                        df_g = st.session_state.df_grades.copy()
                         df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                         merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
                         
                         if not merged_df.empty:
-                            max_total = st.session_state.max_tasks + st.session_state.max_quiz
+                            max_total = st.session_state.get('max_tasks', 0) + st.session_state.get('max_quiz', 0)
                             if max_total > 0:
                                 merged_df['perf_num'] = pd.to_numeric(merged_df['perf'], errors='coerce').fillna(0)
                                 merged_df['percentage'] = (merged_df['perf_num'] / max_total) * 100
-                                
                                 top_academic = merged_df[merged_df['percentage'] >= 90].sort_values('percentage', ascending=False)
                                 
                                 if not top_academic.empty:
+                                    # --- عرض الطلاب على الشاشة ---
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
                                         st.markdown(f"""
                                             <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                                                 <div style='display:flex; align-items:center; gap:15px;'>
                                                     <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>🎓</span>
                                                     <div>
-                                                        <b style='font-size:1.1rem; color:#064e3b;'>{r['name']}</b><br>
-                                                        <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r['clean_id']}</small>
+                                                        <b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br>
+                                                        <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                                                     </div>
                                                 </div>
                                                 <div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900; font-size:1.2rem;'>
@@ -528,13 +502,69 @@ else:
                                                 </div>
                                             </div>
                                         """, unsafe_allow_html=True)
+                                        
+                                    # --- 🖨️ طباعة بطاقات التفوق ---
+                                    st.markdown("---")
+                                    st.subheader("🖨️ طباعة بطاقات المتفوقين العصرية")
+                                    
+                                    cards_html_content = ""
+                                    for _, row in top_academic.iterrows():
+                                        student_name = row.get('name', 'طالب')
+                                        percentage = int(row['percentage'])
+                                        cards_html_content += f"""
+                                        <div class="card">
+                                            <div class="card-header">وسام التميز الأكاديمي</div>
+                                            <div class="card-body">
+                                                <div style="font-family: 'Amiri', serif; font-size: 16px; color:#333; margin-bottom:10px;">يتقدم الأستاذ/ زياد المعمري بخالص الشكر للطالب:</div>
+                                                <div class="card-name">{student_name}</div>
+                                                <div class="card-score">بنسبة {percentage}%</div>
+                                            </div>
+                                            <div class="card-footer">
+                                                مع تمنياتنا بدوام التألق والنجاح
+                                            </div>
+                                        </div>
+                                        """
+        
+                                    full_cards_html = f"""
+                                    <!DOCTYPE html>
+                                    <html dir="rtl" lang="ar">
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                                        <style>
+                                            * {{ box-sizing: border-box; }} body {{ margin: 0; padding: 0; background-color: #fff; }}
+                                            .cards-page {{ width: 210mm; padding: 10mm; display: grid; grid-template-columns: 1fr 1fr; gap: 15mm; justify-content: center; }}
+                                            .card {{ height: auto; border: 2px solid #b68a36; border-radius: 15px; overflow: hidden; page-break-inside: avoid; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; }}
+                                            .card::before {{ content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.05)' stroke-width='1'/%3E%3C/svg%3E"); z-index: -1; }}
+                                            .card-header {{ background-color: #193b68; color: #b68a36; font-family: 'Aref Ruqaa', serif; font-size: 26px; padding: 15px 0; border-bottom: 3px solid #b68a36; }}
+                                            .card-body {{ padding: 25px 15px; background-color: rgba(255,255,255,0.9); }}
+                                            .card-name {{ font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: #d32f2f; margin-bottom: 15px; border-bottom: 2px dashed #b68a36; padding-bottom:10px; }}
+                                            .card-score {{ font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: bold; color: #193b68; background-color: #f8fafc; padding: 5px; border-radius: 8px; display: inline-block; }}
+                                            .card-footer {{ font-family: 'Amiri', serif; font-size: 14px; color: #666; padding: 15px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; }}
+                                            @media print {{ @page {{ size: A4 portrait; margin: 0; }} body {{ background: white; }} .card {{ box-shadow: none; border: 2px solid #193b68; }} }}
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="cards-page">
+                                            {cards_html_content}
+                                        </div>
+                                    </body>
+                                    </html>
+                                    """
+                                    
+                                    try:
+                                        from weasyprint import HTML
+                                        cards_pdf_bytes = HTML(string=full_cards_html).write_pdf()
+                                        st.download_button(label="🎟️ تحميل بطاقات المتفوقين (PDF)", data=cards_pdf_bytes, file_name=f"Top_Cards_{datetime.date.today()}.pdf", mime="application/pdf", type="primary", use_container_width=True)
+                                    except Exception as e:
+                                        st.download_button(label="🌐 تحميل بطاقات المتفوقين (HTML)", data=full_cards_html, file_name=f"Top_Cards_{datetime.date.today()}.html", mime="text/html", use_container_width=True)
+                                        
                                 else:
                                     st.info("لم يصل أحد لنسبة 90% حتى الآن. بانتظار إبداعات الأبطال!")
                         else:
                             st.info("لا توجد درجات مطابقة للطلاب.")
                     else:
                         st.info("لم يتم رصد درجات بعد.")
-
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
