@@ -378,71 +378,66 @@ else:
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
-                # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     
-                    # CSS HTML فاخر جداً ومضاد لمشاكل المحاذاة
+                    # CSS HTML فاخر جداً ومضاد لمشاكل المحاذاة مع تمييز النقاط
                     lux_css = """
                         * { box-sizing: border-box; } 
                         body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
                         .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
                         
-                        /* تصميم البطاقة كجسم مادي بارز */
                         .card { 
                             width: 46%; height: 135mm; 
                             border-radius: 15px; position: relative; overflow: hidden;
                             background: #fff;
-                            box-shadow: 0 15px 35px rgba(0,0,0,0.15); /* ظل واقعي يبرز البطاقة */
-                            page-break-inside: avoid;
-                            margin-bottom: 20px;
+                            box-shadow: 0 15px 35px rgba(0,0,0,0.15); 
+                            page-break-inside: avoid; margin-bottom: 20px;
                         }
                         
-                        /* الإطار الداخلي للبطاقة */
                         .card-inner {
-                            position: absolute;
-                            top: 12px; bottom: 12px; left: 12px; right: 12px;
-                            border: 2px dashed #b68a36;
-                            border-radius: 10px;
-                            padding: 20px 10px;
+                            position: absolute; top: 12px; bottom: 12px; left: 12px; right: 12px;
+                            border: 2px dashed #b68a36; border-radius: 10px; padding: 20px 10px;
                             display: flex; flex-direction: column; justify-content: space-between; align-items: center;
                             background-color: rgba(255,255,255,0.95);
                             background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b68a36' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
                         }
                         
-                        /* ✳️ المحاذاة الصارمة: إجبار كل العناصر على التمركز 100% */
                         .c-icon { font-size: 45px; line-height: 1; margin-bottom: 5px; width: 100%; text-align: center; }
                         .c-header { font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 5px; color: #b68a36; }
-                        .c-teacher { font-size: 14px; color: #475569; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; }
+                        .c-teacher { font-size: 13px; color: #475569; width: 100%; text-align: center; margin-bottom: 10px; }
+                        .c-teacher strong { font-size: 15px; color: #333; }
                         
                         .c-name { 
                             font-size: 26px; font-weight: 900; line-height: 1.4; 
-                            width: 100%; text-align: center; /* ✳️ الحل الجذري للميلان */
+                            width: 100%; text-align: center; 
                             display: flex; align-items: center; justify-content: center; flex-grow: 1;
                             padding: 0 10px; word-wrap: break-word;
                         }
                         
-                        .c-badge { 
-                            width: 80%; margin: 10px auto; padding: 15px 5px; border-radius: 12px;
-                            background: #fff; text-align: center;
-                            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-                        }
-                        .b-val { display: block; font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 5px; }
-                        .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; }
+                        /* صندوق التقييم الأساسي */
+                        .c-badge { width: 85%; margin: 10px auto; padding: 15px 5px; border-radius: 12px; text-align: center; }
+                        .b-val { display: block; font-weight: 900; line-height: 1; margin-bottom: 5px; }
+                        .b-lbl { display: block; font-weight: bold; }
+                        
+                        /* ✳️ تمييز النقاط (لوحة الشرف) */
+                        .highlight-honor { background-color: #fef3c7; border: 2px solid #d97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15); }
+                        .highlight-honor .b-val { color: #b45309; font-size: 36px; }
+                        .highlight-honor .b-lbl { color: #92400e; font-size: 16px; }
+                        
+                        /* ✳️ تمييز التقدير والمادة (المتفوقين) */
+                        .highlight-academic { background-color: #fff1f2; border: 2px solid #e11d48; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.15); }
+                        .highlight-academic .b-val { color: #be123c; font-size: 34px; }
+                        .highlight-academic .b-lbl { color: #881337; font-size: 16px; }
                         
                         .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
                         
-                        /* الألوان - الأزرق الملكي (لوحة الشرف) */
-                        .theme-honor { border: 14px solid #1e3a8a; } /* إطار سميك لواقعية البطاقة */
-                        .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #1e3a8a; }
-                        .theme-honor .c-badge { border: 2px solid #1e3a8a; }
+                        .theme-honor { border: 14px solid #1e3a8a; } 
+                        .theme-honor .c-name, .theme-honor .c-footer { color: #1e3a8a; }
                         
-                        /* الألوان - العنابي الفاخر (المتفوقين) */
-                        .theme-academic { border: 14px solid #881337; } /* إطار سميك لواقعية البطاقة */
-                        .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
-                        .theme-academic .c-badge { border: 2px solid #881337; }
+                        .theme-academic { border: 14px solid #881337; } 
+                        .theme-academic .c-name, .theme-academic .c-footer { color: #881337; }
                         
-                        /* إعدادات الطباعة الدقيقة */
                         @media print { 
                             @page { size: A4 portrait; margin: 5mm; } 
                             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
@@ -485,9 +480,9 @@ else:
                                 <div class="card-inner">
                                     <div class="c-icon">🌟</div>
                                     <div class="c-header">بطاقة تميز طالب</div>
-                                    <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                    <div class="c-teacher">إشراف الأستاذ/ <strong>زياد المعمري</strong></div>
                                     <div class="c-name">{student_name}</div>
-                                    <div class="c-badge">
+                                    <div class="c-badge highlight-honor">
                                         <span class="b-val">{score}</span>
                                         <span class="b-lbl">نقطة تميز</span>
                                     </div>
@@ -537,11 +532,11 @@ else:
                                             <div class="card-inner">
                                                 <div class="c-icon">🎖️</div>
                                                 <div class="c-header">وسام التميز الأكاديمي</div>
-                                                <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                                <div class="c-teacher">إشراف الأستاذ/ <strong>زياد المعمري</strong></div>
                                                 <div class="c-name">{row.get('name', 'طالب')}</div>
-                                                <div class="c-badge">
+                                                <div class="c-badge highlight-academic">
                                                     <span class="b-val">ممتاز</span>
-                                                    <span class="b-lbl">نظير تفوقه العلمي</span>
+                                                    <span class="b-lbl">في مادة اللغة الإنجليزية</span>
                                                 </div>
                                                 <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
                                             </div>
