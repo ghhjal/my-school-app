@@ -376,10 +376,12 @@ else:
                                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                         st.cache_data.clear(); st.rerun()
                 
-                # --- 2. لوحة الشرف (النقاط والسلوك) ---
+               # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
+                    
+                    # --- عرض الطلاب على الشاشة (كودك الأصلي الرائع) ---
                     for i, (_, r) in enumerate(top_10.iterrows(), 1):
                         ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                         border_color = "#f59e0b" if i<=3 else "#cbd5e1"
@@ -397,46 +399,17 @@ else:
                                 </div>
                             </div>
                         """, unsafe_allow_html=True)
-                        # --- 1. أعلى الملف (الاستيرادات) ---
-                import streamlit as st
-                import pandas as pd
-                import datetime
-                from weasyprint import HTML  # 📍 تأكد من وجود هذا السطر في الأعلى
-                
-                # ... (أكواد التطبيق الخاصة بك وتسجيل الدخول إلخ) ...
-                
-                # --- 2. قسم إدارة المعلم ---
-                st.header("👥 إدارة الطلاب والتقارير")
-                
-                # لديك تبويبات مشابهة لهذا السطر
-                tab_list, tab_honor, tab_top, tab_report = st.tabs([
-                    "📑 قائمة الطلاب", 
-                    "🏆 لوحة الشرف (نقاط)", 
-                    "🌟 المتفوقين (90%+)", 
-                    "📊 تقرير الطالب الشامل"
-                ])
-                
-                # كود التبويب الأول (لا تغير فيه شيء)
-                with tab_list:
-                    st.write("محتوى قائمة الطلاب...")
-                
-                # 📍 هنا المكان الصحيح! داخل التبويب الثاني
-                with tab_honor:
                     
-                    # تأكد فقط أن المتغير df_st (الذي يحتوي على درجات الطلاب) موجود ومعرف قبل هذا السطر
-                    
-                    # ---------------------------------------------------------
-                    # 👇👇 انسخ الكود الذي أرسلته لك في الرد السابق والصقه هنا 👇👇
+                    # --- زر الطباعة والبوستر الفخم (الكود الجديد) ---
                     st.markdown("---")
                     st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
                     
-                    # 1. تجهيز صفوف الطلاب برمجياً (ترتيبهم من 1 إلى كذا)
+                    # تجهيز صفوف الطلاب برمجياً من كود top_10 الخاص بك
                     board_items_html = ""
-                    for rank, (idx, row) in enumerate(top_students.iterrows(), 1):
-                        student_name = row.get('الاسم', 'اسم غير متوفر')
-                        score = row.get('المجموع_رقم', 0)
+                    for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+                        student_name = row.get('name', 'اسم غير متوفر')
+                        score = int(row.get('النقاط', 0))
                         
-                        # تمييز المركز الأول والثاني والثالث بألوان خاصة (ذهبي، فضي، برونزي) إذا أردت
                         rank_color = "#b68a36" if rank == 1 else "#71717a" if rank == 2 else "#b45309" if rank == 3 else "#193b68"
                         
                         board_items_html += f"""
@@ -447,7 +420,7 @@ else:
                         </div>
                         """
                     
-                    # 2. تصميم بوستر لوحة الشرف الفخم (A4 طولي)
+                    import datetime
                     honor_board_html = f"""
                     <!DOCTYPE html>
                     <html dir="rtl" lang="ar">
@@ -458,11 +431,7 @@ else:
                         <style>
                             * {{ box-sizing: border-box; }}
                             body {{ margin: 0; padding: 0; background-color: #fff; }}
-                            .board-page {{
-                                width: 210mm; min-height: 297mm; /* مقاس A4 طولي */
-                                padding: 12mm;
-                                position: relative;
-                            }}
+                            .board-page {{ width: 210mm; min-height: 297mm; padding: 12mm; position: relative; }}
                             .border-outer {{ border: 12px solid #193b68; height: 100%; padding: 5px; }}
                             .border-inner {{
                                 border: 3px solid #b68a36; height: 100%; padding: 30px;
@@ -472,57 +441,34 @@ else:
                             .header-section {{ text-align: center; margin-bottom: 40px; border-bottom: 2px dashed #b68a36; padding-bottom: 20px; }}
                             h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 65px; color: #b68a36; margin: 0; }}
                             h2 {{ font-family: 'Cairo', sans-serif; font-size: 28px; color: #193b68; margin: 5px 0 0 0; font-weight: 900; }}
-                            
                             .students-container {{ display: flex; flex-direction: column; gap: 15px; }}
-                            
                             .student-row {{
                                 display: flex; align-items: center; justify-content: space-between;
-                                background-color: rgba(255, 255, 255, 0.9);
-                                border: 2px solid #e2e8f0; border-radius: 12px;
-                                padding: 12px 20px;
-                                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                                background-color: rgba(255, 255, 255, 0.9); border: 2px solid #e2e8f0; border-radius: 12px;
+                                padding: 12px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
                             }}
-                            .rank-circle {{
-                                width: 45px; height: 45px; border-radius: 50%;
-                                color: white; font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900;
-                                display: flex; justify-content: center; align-items: center;
-                            }}
-                            .student-name {{
-                                flex-grow: 1; margin-right: 20px;
-                                font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: #193b68;
-                            }}
-                            .student-score {{
-                                font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: #d32f2f;
-                            }}
+                            .rank-circle {{ width: 45px; height: 45px; border-radius: 50%; color: white; font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900; display: flex; justify-content: center; align-items: center; }}
+                            .student-name {{ flex-grow: 1; margin-right: 20px; font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: #193b68; }}
+                            .student-score {{ font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: #d32f2f; }}
                             .student-score span {{ font-size: 16px; color: #64748b; }}
-                            
                             .footer {{ text-align: center; margin-top: 40px; font-family: 'Cairo', sans-serif; font-size: 18px; color: #193b68; font-weight: bold; }}
-                            
-                            @media print {{
-                                @page {{ size: A4 portrait; margin: 0; }}
-                                body {{ background: white; }}
-                                .board-page {{ box-shadow: none; }}
-                            }}
+                            @media print {{ @page {{ size: A4 portrait; margin: 0; }} body {{ background: white; }} .board-page {{ box-shadow: none; }} }}
                         </style>
                     </head>
                     <body>
                         <div class="board-page">
                             <div class="border-outer">
                                 <div class="border-inner">
-                                    
                                     <div class="header-section">
                                         <h1>لوحة شرف المتفوقين</h1>
                                         <h2>بإشراف الأستاذ/ زياد المعمري</h2>
                                     </div>
-                                    
                                     <div class="students-container">
                                         {board_items_html}
                                     </div>
-                                    
                                     <div class="footer">
                                         تم الإصدار في: {datetime.date.today().strftime('%Y-%m-%d')}
                                     </div>
-                                    
                                 </div>
                             </div>
                         </div>
@@ -530,8 +476,8 @@ else:
                     </html>
                     """
                     
-                    # 3. زر إنشاء وتحميل لوحة الشرف كملف PDF
                     try:
+                        from weasyprint import HTML
                         with st.spinner("⏳ تجهيز تصميم لوحة الشرف..."):
                             board_pdf_bytes = HTML(string=honor_board_html).write_pdf()
                             st.download_button(
@@ -542,26 +488,13 @@ else:
                                 type="primary"
                             )
                     except Exception as e:
-                        # في حال وجود مشكلة في WeasyPrint، نعرضها كصفحة ويب للطباعة
                         st.download_button(
                             label="📜 تحميل لوحة الشرف (HTML للطباعة)",
                             data=honor_board_html,
                             file_name=f"Honor_Board_{datetime.date.today()}.html",
                             mime="text/html"
                         )
-                    
-                    st.markdown("---")
-                    st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
-                    
-                    # ... (باقي الكود يبدأ من هنا: حلقة for لترتيب الطلاب، وتجهيز board_items_html، ثم honor_board_html، وأخيراً زر التحميل st.download_button) ...
-                    
-                    # ---------------------------------------------------------
-                    # 👆👆 نهاية الكود المنسوخ 👆👆
-                    # ---------------------------------------------------------
-                
-                with tab_top:
-                    st.write("محتوى المتفوقين...")
-
+        
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
                     st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
