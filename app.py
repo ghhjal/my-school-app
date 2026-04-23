@@ -378,187 +378,226 @@ else:
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
-                with sub_tabs[1]:
-                    st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
-                    
-                    # CSS HTML فاخر جداً ومضاد لمشاكل المحاذاة مع تمييز النقاط
-                    lux_css = """
-                        * { box-sizing: border-box; } 
-                        body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
-                        .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
-                        
-                        .card { 
-                            width: 46%; height: 135mm; 
-                            border-radius: 15px; position: relative; overflow: hidden;
-                            background: #fff;
-                            box-shadow: 0 15px 35px rgba(0,0,0,0.15); 
-                            page-break-inside: avoid; margin-bottom: 20px;
-                        }
-                        
-                        .card-inner {
-                            position: absolute; top: 12px; bottom: 12px; left: 12px; right: 12px;
-                            border: 2px dashed #b68a36; border-radius: 10px; padding: 20px 10px;
-                            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-                            background-color: rgba(255,255,255,0.95);
-                            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b68a36' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
-                        }
-                        
-                        .c-icon { font-size: 45px; line-height: 1; margin-bottom: 5px; width: 100%; text-align: center; }
-                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 5px; color: #b68a36; }
-                        .c-teacher { font-size: 13px; color: #475569; width: 100%; text-align: center; margin-bottom: 10px; }
-                        .c-teacher strong { font-size: 15px; color: #333; }
-                        
-                        .c-name { 
-                            font-size: 26px; font-weight: 900; line-height: 1.4; 
-                            width: 100%; text-align: center; 
-                            display: flex; align-items: center; justify-content: center; flex-grow: 1;
-                            padding: 0 10px; word-wrap: break-word;
-                        }
-                        
-                        /* صندوق التقييم الأساسي */
-                        .c-badge { width: 85%; margin: 10px auto; padding: 15px 5px; border-radius: 12px; text-align: center; }
-                        .b-val { display: block; font-weight: 900; line-height: 1; margin-bottom: 5px; }
-                        .b-lbl { display: block; font-weight: bold; }
-                        
-                        /* ✳️ تمييز النقاط (لوحة الشرف) */
-                        .highlight-honor { background-color: #fef3c7; border: 2px solid #d97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15); }
-                        .highlight-honor .b-val { color: #b45309; font-size: 36px; }
-                        .highlight-honor .b-lbl { color: #92400e; font-size: 16px; }
-                        
-                        /* ✳️ تمييز التقدير والمادة (المتفوقين) */
-                        .highlight-academic { background-color: #fff1f2; border: 2px solid #e11d48; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.15); }
-                        .highlight-academic .b-val { color: #be123c; font-size: 34px; }
-                        .highlight-academic .b-lbl { color: #881337; font-size: 16px; }
-                        
-                        .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
-                        
-                        .theme-honor { border: 14px solid #1e3a8a; } 
-                        .theme-honor .c-name, .theme-honor .c-footer { color: #1e3a8a; }
-                        
-                        .theme-academic { border: 14px solid #881337; } 
-                        .theme-academic .c-name, .theme-academic .c-footer { color: #881337; }
-                        
-                        @media print { 
-                            @page { size: A4 portrait; margin: 5mm; } 
-                            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-                            .card { box-shadow: none; margin-bottom: 10mm; border-width: 10px; }
-                        }
-                    """
-        
-                    if not df_st.empty:
-                        top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
-                        
-                        for i, (_, r) in enumerate(top_10.iterrows(), 1):
-                            ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                            border_color = "#f59e0b" if i<=3 else "#cbd5e1"
-                            st.markdown(f"""
-                                <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
-                                    <div style='display:flex; align-items:center; gap:15px;'>
-                                        <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
-                                        <div>
-                                            <b style='font-size:1.1rem; color:#1e3a8a;'>{r.get('name', '')}</b><br>
-                                            <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
-                                        </div>
-                                    </div>
-                                    <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
-                                        {int(r.get('النقاط', 0))} نقطة
-                                    </div>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
-                        st.markdown("---")
-                        st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
-                        
-                        honor_cards_content = ""
-                        for rank, (_, row) in enumerate(top_10.iterrows(), 1):
-                            student_name = row.get('name', 'اسم غير متوفر')
-                            score = int(row.get('النقاط', 0))
-                            rank_text = "المركز الأول" if rank==1 else "المركز الثاني" if rank==2 else "المركز الثالث" if rank==3 else f"المركز {rank}"
-                            
-                            honor_cards_content += f"""
-                            <div class="card theme-honor">
-                                <div class="card-inner">
-                                    <div class="c-icon">🌟</div>
-                                    <div class="c-header">بطاقة تميز طالب</div>
-                                    <div class="c-teacher">إشراف الأستاذ/ <strong>زياد المعمري</strong></div>
-                                    <div class="c-name">{student_name}</div>
-                                    <div class="c-badge highlight-honor">
-                                        <span class="b-val">{score}</span>
-                                        <span class="b-lbl">نقطة تميز</span>
-                                    </div>
-                                    <div class="c-footer">{rank_text}</div>
+        with sub_tabs[1]:
+            st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
+            
+            # CSS HTML فاخر مع إضافة أشرطة الأبطال (Ribbons)
+            lux_css = """
+                * { box-sizing: border-box; } 
+                body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
+                .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
+                
+                .card { 
+                    width: 46%; height: 135mm; 
+                    border-radius: 15px; position: relative; overflow: hidden;
+                    background: #fff;
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.15); 
+                    page-break-inside: avoid;
+                    margin-bottom: 20px;
+                }
+                
+                /* ✳️ شريط الزاوية للمراكز الأولى (Ribbon) */
+                .ribbon {
+                    position: absolute; top: 20px; right: -35px;
+                    padding: 5px 40px; font-weight: 900; font-size: 15px;
+                    transform: rotate(45deg); z-index: 10;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                    font-family: 'Cairo', sans-serif; letter-spacing: 1px;
+                }
+                .ribbon.gold { background: linear-gradient(45deg, #FFD700, #FFA500); color: #8B4513; }
+                .ribbon.silver { background: linear-gradient(45deg, #E2E8F0, #94A3B8); color: #1E293B; }
+                .ribbon.bronze { background: linear-gradient(45deg, #FDBA74, #D97706); color: #78350F; }
+                
+                .card-inner {
+                    position: absolute; top: 12px; bottom: 12px; left: 12px; right: 12px;
+                    border: 2px dashed #b68a36; border-radius: 10px; padding: 20px 10px;
+                    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+                    background-color: rgba(255,255,255,0.95);
+                    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b68a36' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+                }
+                
+                .c-icon { font-size: 45px; line-height: 1; margin-bottom: 5px; width: 100%; text-align: center; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1)); }
+                .c-header { font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 5px; color: #b68a36; }
+                .c-teacher { font-size: 14px; color: #475569; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; }
+                
+                .c-name { 
+                    font-size: 26px; font-weight: 900; line-height: 1.4; 
+                    width: 100%; text-align: center; 
+                    display: flex; align-items: center; justify-content: center; flex-grow: 1;
+                    padding: 0 10px; word-wrap: break-word;
+                }
+                
+                .c-badge { 
+                    width: 80%; margin: 10px auto; padding: 15px 5px; border-radius: 12px;
+                    background: #fff; text-align: center;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
+                }
+                
+                /* ✳️ تلوين صناديق النقاط للمراكز الأولى */
+                .c-badge.rank-1 { background: linear-gradient(145deg, #FFF8DC, #FFD700); border-color: #DAA520; }
+                .c-badge.rank-2 { background: linear-gradient(145deg, #F8F9FA, #E2E8F0); border-color: #94A3B8; }
+                .c-badge.rank-3 { background: linear-gradient(145deg, #FFF1F2, #FECDD3); border-color: #CD7F32; }
+                
+                .b-val { display: block; font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 5px; }
+                .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; }
+                
+                /* تلوين نصوص الصناديق المميزة */
+                .rank-1 .b-val { color: #8B4513; font-size: 36px; } .rank-1 .b-lbl { color: #A0522D; }
+                .rank-2 .b-val { color: #1E293B; font-size: 34px; } .rank-2 .b-lbl { color: #334155; }
+                .rank-3 .b-val { color: #78350F; font-size: 34px; } .rank-3 .b-lbl { color: #92400E; }
+                
+                .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
+                
+                .theme-honor { border: 14px solid #1e3a8a; } 
+                .theme-honor .c-name, .theme-honor .b-val:not(.rank-1 .b-val):not(.rank-2 .b-val):not(.rank-3 .b-val), .theme-honor .c-footer { color: #1e3a8a; }
+                
+                .theme-academic { border: 14px solid #881337; } 
+                .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
+                
+                @media print { 
+                    @page { size: A4 portrait; margin: 5mm; } 
+                    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+                    .card { box-shadow: none; margin-bottom: 10mm; border-width: 10px; }
+                }
+            """
+
+            if not df_st.empty:
+                top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
+                
+                for i, (_, r) in enumerate(top_10.iterrows(), 1):
+                    ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                    border_color = "#f59e0b" if i<=3 else "#cbd5e1"
+                    st.markdown(f"""
+                        <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                            <div style='display:flex; align-items:center; gap:15px;'>
+                                <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
+                                <div>
+                                    <b style='font-size:1.1rem; color:#1e3a8a;'>{r.get('name', '')}</b><br>
+                                    <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                                 </div>
                             </div>
-                            """
-                        
-                        import datetime
-                        honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
-                        
-                        st.download_button(
-                            label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
-                            data=honor_full_html, 
-                            file_name=f"Honor_Cards_{datetime.date.today()}.html", 
-                            mime="text/html", 
-                            use_container_width=True,
-                            type="primary"
-                        )
-        
-                # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
-                with sub_tabs[2]:
-                    st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً")
-                    if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
-                        df_g = st.session_state.df_grades.copy()
-                        df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
-                        merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
-                        
-                        if not merged_df.empty:
-                            max_total = st.session_state.get('max_tasks', 0) + st.session_state.get('max_quiz', 0)
-                            if max_total > 0:
-                                merged_df['perf_num'] = pd.to_numeric(merged_df['perf'], errors='coerce').fillna(0)
-                                merged_df['percentage'] = (merged_df['perf_num'] / max_total) * 100
-                                top_academic = merged_df[merged_df['percentage'] >= 90].sort_values('percentage', ascending=False)
-                                
-                                if not top_academic.empty:
-                                    for i, (_, r) in enumerate(top_academic.iterrows(), 1):
-                                        st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
-                                        
-                                    st.markdown("---")
-                                    st.subheader("🖨️ طباعة بطاقات التفوق")
-                                    
-                                    academic_cards_content = ""
-                                    for _, row in top_academic.iterrows():
-                                        academic_cards_content += f"""
-                                        <div class="card theme-academic">
-                                            <div class="card-inner">
-                                                <div class="c-icon">🎖️</div>
-                                                <div class="c-header">وسام التميز الأكاديمي</div>
-                                                <div class="c-teacher">إشراف الأستاذ/ <strong>زياد المعمري</strong></div>
-                                                <div class="c-name">{row.get('name', 'طالب')}</div>
-                                                <div class="c-badge highlight-academic">
-                                                    <span class="b-val">ممتاز</span>
-                                                    <span class="b-lbl">في مادة اللغة الإنجليزية</span>
-                                                </div>
-                                                <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
-                                            </div>
-                                        </div>
-                                        """
-        
-                                    academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{academic_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
-                                    
-                                    st.download_button(
-                                        label="🌐 تحميل بطاقات المتفوقين (تصميم واقعي للطباعة)", 
-                                        data=academic_full_html, 
-                                        file_name=f"Excellence_Cards_{datetime.date.today()}.html", 
-                                        mime="text/html", 
-                                        use_container_width=True,
-                                        type="primary"
-                                    )
-                                else:
-                                    st.info("لم يصل أحد لنسبة 90% حتى الآن.")
-                        else:
-                            st.info("لا توجد درجات مطابقة للطلاب.")
+                            <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
+                                {int(r.get('النقاط', 0))} نقطة
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
+                
+                honor_cards_content = ""
+                for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+                    student_name = row.get('name', 'اسم غير متوفر')
+                    score = int(row.get('النقاط', 0))
+                    
+                    # ✳️ منطق المراكز الثلاثة الأولى
+                    if rank == 1:
+                        rank_text = "المركز الأول"
+                        icon = "🏆"
+                        ribbon_html = '<div class="ribbon gold">الأول</div>'
+                        badge_class = "rank-1"
+                    elif rank == 2:
+                        rank_text = "المركز الثاني"
+                        icon = "🥈"
+                        ribbon_html = '<div class="ribbon silver">الثاني</div>'
+                        badge_class = "rank-2"
+                    elif rank == 3:
+                        rank_text = "المركز الثالث"
+                        icon = "🥉"
+                        ribbon_html = '<div class="ribbon bronze">الثالث</div>'
+                        badge_class = "rank-3"
                     else:
-                        st.info("لم يتم رصد درجات بعد.")
+                        rank_text = f"المركز {rank}"
+                        icon = "🌟"
+                        ribbon_html = ""
+                        badge_class = ""
+                    
+                    honor_cards_content += f"""
+                    <div class="card theme-honor">
+                        {ribbon_html}
+                        <div class="card-inner">
+                            <div class="c-icon">{icon}</div>
+                            <div class="c-header">بطاقة تميز طالب</div>
+                            <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                            <div class="c-name">{student_name}</div>
+                            <div class="c-badge {badge_class}">
+                                <span class="b-val">{score}</span>
+                                <span class="b-lbl">نقطة تميز</span>
+                            </div>
+                            <div class="c-footer">{rank_text}</div>
+                        </div>
+                    </div>
+                    """
+                
+                import datetime
+                honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
+                
+                st.download_button(
+                    label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
+                    data=honor_full_html, 
+                    file_name=f"Honor_Cards_{datetime.date.today()}.html", 
+                    mime="text/html", 
+                    use_container_width=True,
+                    type="primary"
+                )
+
+        # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
+        with sub_tabs[2]:
+            st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً")
+            if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
+                df_g = st.session_state.df_grades.copy()
+                df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
+                merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
+                
+                if not merged_df.empty:
+                    max_total = st.session_state.get('max_tasks', 0) + st.session_state.get('max_quiz', 0)
+                    if max_total > 0:
+                        merged_df['perf_num'] = pd.to_numeric(merged_df['perf'], errors='coerce').fillna(0)
+                        merged_df['percentage'] = (merged_df['perf_num'] / max_total) * 100
+                        top_academic = merged_df[merged_df['percentage'] >= 90].sort_values('percentage', ascending=False)
+                        
+                        if not top_academic.empty:
+                            for i, (_, r) in enumerate(top_academic.iterrows(), 1):
+                                st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
+                                
+                            st.markdown("---")
+                            st.subheader("🖨️ طباعة بطاقات التفوق")
+                            
+                            academic_cards_content = ""
+                            for _, row in top_academic.iterrows():
+                                academic_cards_content += f"""
+                                <div class="card theme-academic">
+                                    <div class="ribbon gold">متفوق</div>
+                                    <div class="card-inner">
+                                        <div class="c-icon">🎖️</div>
+                                        <div class="c-header">وسام التميز الأكاديمي</div>
+                                        <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                        <div class="c-name">{row.get('name', 'طالب')}</div>
+                                        <div class="c-badge rank-1">
+                                            <span class="b-val">ممتاز</span>
+                                            <span class="b-lbl">في مادة اللغة الإنجليزية</span>
+                                        </div>
+                                        <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
+                                    </div>
+                                </div>
+                                """
+
+                            academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{academic_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
+                            
+                            st.download_button(
+                                label="🌐 تحميل بطاقات المتفوقين (تصميم واقعي للطباعة)", 
+                                data=academic_full_html, 
+                                file_name=f"Excellence_Cards_{datetime.date.today()}.html", 
+                                mime="text/html", 
+                                use_container_width=True,
+                                type="primary"
+                            )
+                        else:
+                            st.info("لم يصل أحد لنسبة 90% حتى الآن.")
+                else:
+                    st.info("لا توجد درجات مطابقة للطلاب.")
+            else:
+                st.info("لم يتم رصد درجات بعد.")
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
