@@ -384,7 +384,7 @@ else:
                     if not df_st.empty:
                         top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
                         
-                        # --- عرض الطلاب في واجهة المنصة ---
+                        # عرض الطلاب في المنصة
                         for i, (_, r) in enumerate(top_10.iterrows(), 1):
                             ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                             border_color = "#f59e0b" if i<=3 else "#cbd5e1"
@@ -403,7 +403,7 @@ else:
                                 </div>
                             """, unsafe_allow_html=True)
                         
-                        # --- 🖨️ طباعة بطاقات لوحة الشرف (التصميم الموحد - أزرق) ---
+                        # --- طباعة بطاقات لوحة الشرف (أزرق) ---
                         st.markdown("---")
                         st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
                         
@@ -416,7 +416,7 @@ else:
                             honor_cards_content += f"""
                             <div class="card theme-honor">
                                 <div class="card-inner">
-                                    <div class="c-header">لوحة شرف المتفوقين</div>
+                                    <div class="c-header">وسام التميز الأكاديمي</div>
                                     <div class="c-teacher">بإشراف الأستاذ/ زياد المعمري</div>
                                     <div class="c-name">{student_name}</div>
                                     <div class="c-badge-container">
@@ -445,54 +445,36 @@ else:
                                 background-size: cover; background-color: rgba(255,255,255,0.95);
                                 padding: 20px 10px; position: relative;
                             }
-                            .c-header { font-family: 'Aref Ruqaa', serif; font-size: 28px; color: #b68a36; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 10px; }
-                            .c-teacher { font-size: 14px; color: #64748b; margin-bottom: 20px; font-weight: bold; }
-                            .c-name { font-size: 26px; font-weight: 900; margin-bottom: 20px; line-height: 1.2; }
-                            .c-badge-container { display: flex; justify-content: center; margin-bottom: 20px; }
-                            .c-badge { border: 2px dashed #b68a36; border-radius: 12px; padding: 10px 20px; display: inline-block; background: #fff; }
-                            .b-val { display: block; font-size: 28px; font-weight: 900; line-height: 1; }
-                            .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; margin-top: 5px; }
+                            .c-header { font-family: 'Aref Ruqaa', serif; font-size: 24px; color: #b68a36; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 10px; }
+                            .c-teacher { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold; }
+                            .c-name { font-size: 26px; font-weight: 900; margin-bottom: 15px; line-height: 1.1; }
+                            .c-badge-container { display: flex; justify-content: center; margin-bottom: 15px; }
+                            .c-badge { border: 2px dashed #b68a36; border-radius: 12px; padding: 10px 15px; display: inline-block; background: #fff; }
+                            .b-val { display: block; font-size: 24px; font-weight: 900; line-height: 1; }
+                            .b-lbl { display: block; font-size: 13px; font-weight: bold; color: #64748b; margin-top: 5px; }
                             .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; }
                             
-                            /* Theme Colors */
                             .theme-honor { background-color: #193b68; border: 2px solid #193b68; }
-                            .theme-honor .c-name { color: #193b68; }
-                            .theme-honor .b-val { color: #193b68; }
-                            .theme-honor .c-footer { color: #193b68; }
+                            .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #193b68; }
                             
                             .theme-academic { background-color: #881337; border: 2px solid #881337; }
-                            .theme-academic .c-name { color: #881337; }
-                            .theme-academic .b-val { color: #881337; }
-                            .theme-academic .c-footer { color: #881337; }
+                            .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
                             
                             @media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }
                         """
                         
-                        honor_full_html = f"""
-                        <!DOCTYPE html>
-                        <html dir="rtl" lang="ar">
-                        <head>
-                            <meta charset="UTF-8">
-                            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                            <style>{base_css}</style>
-                        </head>
-                        <body><div class="page">{honor_cards_content}</div></body>
-                        </html>
-                        """
+                        honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css}</style></head><body><div class="page">{honor_cards_content}</div></body></html>"""
                         
                         try:
                             from weasyprint import HTML
                             pdf_bytes = HTML(string=honor_full_html).write_pdf()
                             st.download_button(label="🎟️ تحميل بطاقات الشرف (PDF)", data=pdf_bytes, file_name=f"Honor_Cards_{datetime.date.today()}.pdf", mime="application/pdf", type="primary", use_container_width=True)
-                        except Exception as e:
+                        except:
                             st.download_button(label="🌐 تحميل بطاقات الشرف (HTML)", data=honor_full_html, file_name=f"Honor_Cards_{datetime.date.today()}.html", mime="text/html", use_container_width=True)
-                    else:
-                        st.info("لا توجد بيانات للطلاب بعد.")
         
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
-                    st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً (نسبة 90% فما فوق)")
-                    
+                    st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً")
                     if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
                         df_g = st.session_state.df_grades.copy()
                         df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
@@ -506,42 +488,25 @@ else:
                                 top_academic = merged_df[merged_df['percentage'] >= 90].sort_values('percentage', ascending=False)
                                 
                                 if not top_academic.empty:
-                                    # --- عرض الطلاب في واجهة المنصة ---
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
-                                        st.markdown(f"""
-                                            <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
-                                                <div style='display:flex; align-items:center; gap:15px;'>
-                                                    <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>🎓</span>
-                                                    <div>
-                                                        <b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br>
-                                                        <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
-                                                    </div>
-                                                </div>
-                                                <div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900; font-size:1.2rem;'>
-                                                    {int(r['percentage'])}%
-                                                </div>
-                                            </div>
-                                        """, unsafe_allow_html=True)
+                                        st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
                                         
-                                    # --- 🖨️ طباعة بطاقات المتفوقين (التصميم الموحد - عنابي) ---
+                                    # --- طباعة بطاقات المتفوقين (عنابي) ---
                                     st.markdown("---")
-                                    st.subheader("🖨️ طباعة بطاقات التفوق الأكاديمي")
+                                    st.subheader("🖨️ طباعة بطاقات التفوق")
                                     
                                     academic_cards_content = ""
                                     for _, row in top_academic.iterrows():
-                                        student_name = row.get('name', 'طالب')
-                                        percentage = int(row['percentage'])
-                                        
                                         academic_cards_content += f"""
                                         <div class="card theme-academic">
                                             <div class="card-inner">
                                                 <div class="c-header">وسام التميز الأكاديمي</div>
                                                 <div class="c-teacher">يتقدم الأستاذ/ زياد المعمري بالشكر للطالب:</div>
-                                                <div class="c-name">{student_name}</div>
+                                                <div class="c-name">{row.get('name', 'طالب')}</div>
                                                 <div class="c-badge-container">
                                                     <div class="c-badge">
-                                                        <span class="b-val">{percentage}%</span>
-                                                        <span class="b-lbl">تقدير ممتاز</span>
+                                                        <span class="b-val">ممتاز</span>
+                                                        <span class="b-lbl">نظير تفوقه العلمي</span>
                                                     </div>
                                                 </div>
                                                 <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
@@ -549,31 +514,13 @@ else:
                                         </div>
                                         """
         
-                                    academic_full_html = f"""
-                                    <!DOCTYPE html>
-                                    <html dir="rtl" lang="ar">
-                                    <head>
-                                        <meta charset="UTF-8">
-                                        <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                                        <style>{base_css}</style>
-                                    </head>
-                                    <body><div class="page">{academic_cards_content}</div></body>
-                                    </html>
-                                    """
+                                    academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css}</style></head><body><div class="page">{academic_cards_content}</div></body></html>"""
                                     
                                     try:
-                                        from weasyprint import HTML
                                         cards_pdf_bytes = HTML(string=academic_full_html).write_pdf()
                                         st.download_button(label="🎟️ تحميل بطاقات المتفوقين (PDF)", data=cards_pdf_bytes, file_name=f"Excellence_Cards_{datetime.date.today()}.pdf", mime="application/pdf", type="primary", use_container_width=True)
-                                    except Exception as e:
+                                    except:
                                         st.download_button(label="🌐 تحميل بطاقات المتفوقين (HTML)", data=academic_full_html, file_name=f"Excellence_Cards_{datetime.date.today()}.html", mime="text/html", use_container_width=True)
-                                        
-                                else:
-                                    st.info("لم يصل أحد لنسبة 90% حتى الآن. بانتظار إبداعات الأبطال!")
-                        else:
-                            st.info("لا توجد درجات مطابقة للطلاب.")
-                    else:
-                        st.info("لم يتم رصد درجات بعد.")
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
