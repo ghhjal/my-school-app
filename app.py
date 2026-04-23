@@ -427,7 +427,128 @@ else:
                     
                     # ---------------------------------------------------------
                     # 👇👇 انسخ الكود الذي أرسلته لك في الرد السابق والصقه هنا 👇👇
-                    # ---------------------------------------------------------
+                    st.markdown("---")
+                    st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
+                    
+                    # 1. تجهيز صفوف الطلاب برمجياً (ترتيبهم من 1 إلى كذا)
+                    board_items_html = ""
+                    for rank, (idx, row) in enumerate(top_students.iterrows(), 1):
+                        student_name = row.get('الاسم', 'اسم غير متوفر')
+                        score = row.get('المجموع_رقم', 0)
+                        
+                        # تمييز المركز الأول والثاني والثالث بألوان خاصة (ذهبي، فضي، برونزي) إذا أردت
+                        rank_color = "#b68a36" if rank == 1 else "#71717a" if rank == 2 else "#b45309" if rank == 3 else "#193b68"
+                        
+                        board_items_html += f"""
+                        <div class="student-row">
+                            <div class="rank-circle" style="background-color: {rank_color};">{rank}</div>
+                            <div class="student-name">{student_name}</div>
+                            <div class="student-score">{score} <span>نقطة</span></div>
+                        </div>
+                        """
+                    
+                    # 2. تصميم بوستر لوحة الشرف الفخم (A4 طولي)
+                    honor_board_html = f"""
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>لوحة الشرف</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                        <style>
+                            * {{ box-sizing: border-box; }}
+                            body {{ margin: 0; padding: 0; background-color: #fff; }}
+                            .board-page {{
+                                width: 210mm; min-height: 297mm; /* مقاس A4 طولي */
+                                padding: 12mm;
+                                position: relative;
+                            }}
+                            .border-outer {{ border: 12px solid #193b68; height: 100%; padding: 5px; }}
+                            .border-inner {{
+                                border: 3px solid #b68a36; height: 100%; padding: 30px;
+                                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='0.5'/%3E%3Cpath d='M0,400 C160,320 320,480 480,400 S800,320 960,400 S1280,480 1440,400 S1600,320 1600,320' fill='none' stroke='rgba(182,138,54,0.04)' stroke-width='0.5'/%3E%3C/svg%3E");
+                                background-size: cover;
+                            }}
+                            .header-section {{ text-align: center; margin-bottom: 40px; border-bottom: 2px dashed #b68a36; padding-bottom: 20px; }}
+                            h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 65px; color: #b68a36; margin: 0; }}
+                            h2 {{ font-family: 'Cairo', sans-serif; font-size: 28px; color: #193b68; margin: 5px 0 0 0; font-weight: 900; }}
+                            
+                            .students-container {{ display: flex; flex-direction: column; gap: 15px; }}
+                            
+                            .student-row {{
+                                display: flex; align-items: center; justify-content: space-between;
+                                background-color: rgba(255, 255, 255, 0.9);
+                                border: 2px solid #e2e8f0; border-radius: 12px;
+                                padding: 12px 20px;
+                                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                            }}
+                            .rank-circle {{
+                                width: 45px; height: 45px; border-radius: 50%;
+                                color: white; font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 900;
+                                display: flex; justify-content: center; align-items: center;
+                            }}
+                            .student-name {{
+                                flex-grow: 1; margin-right: 20px;
+                                font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: #193b68;
+                            }}
+                            .student-score {{
+                                font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: #d32f2f;
+                            }}
+                            .student-score span {{ font-size: 16px; color: #64748b; }}
+                            
+                            .footer {{ text-align: center; margin-top: 40px; font-family: 'Cairo', sans-serif; font-size: 18px; color: #193b68; font-weight: bold; }}
+                            
+                            @media print {{
+                                @page {{ size: A4 portrait; margin: 0; }}
+                                body {{ background: white; }}
+                                .board-page {{ box-shadow: none; }}
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="board-page">
+                            <div class="border-outer">
+                                <div class="border-inner">
+                                    
+                                    <div class="header-section">
+                                        <h1>لوحة شرف المتفوقين</h1>
+                                        <h2>بإشراف الأستاذ/ زياد المعمري</h2>
+                                    </div>
+                                    
+                                    <div class="students-container">
+                                        {board_items_html}
+                                    </div>
+                                    
+                                    <div class="footer">
+                                        تم الإصدار في: {datetime.date.today().strftime('%Y-%m-%d')}
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    # 3. زر إنشاء وتحميل لوحة الشرف كملف PDF
+                    try:
+                        with st.spinner("⏳ تجهيز تصميم لوحة الشرف..."):
+                            board_pdf_bytes = HTML(string=honor_board_html).write_pdf()
+                            st.download_button(
+                                label="📜 تحميل بوستر لوحة الشرف (PDF للطباعة)",
+                                data=board_pdf_bytes,
+                                file_name=f"Honor_Board_{datetime.date.today()}.pdf",
+                                mime="application/pdf",
+                                type="primary"
+                            )
+                    except Exception as e:
+                        # في حال وجود مشكلة في WeasyPrint، نعرضها كصفحة ويب للطباعة
+                        st.download_button(
+                            label="📜 تحميل لوحة الشرف (HTML للطباعة)",
+                            data=honor_board_html,
+                            file_name=f"Honor_Board_{datetime.date.today()}.html",
+                            mime="text/html"
+                        )
                     
                     st.markdown("---")
                     st.subheader("🖨️ طباعة لوحة الشرف (للفصل)")
