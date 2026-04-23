@@ -382,55 +382,63 @@ else:
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     
-                    # CSS HTML ثلاثي الأبعاد فاخر جداً للمتصفحات
+                    # CSS HTML فاخر جداً ومضاد لمشاكل المحاذاة
                     lux_css = """
                         * { box-sizing: border-box; } 
-                        body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; }
-                        .page { width: 210mm; padding: 10mm auto; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-around; gap: 15px; }
+                        body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
+                        .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
                         
+                        /* تصميم البطاقة كجسم مادي بارز */
                         .card { 
-                            width: 46%; height: 130mm; 
+                            width: 46%; height: 135mm; 
                             border-radius: 15px; position: relative; overflow: hidden;
                             background: #fff;
-                            box-shadow: 0 15px 25px rgba(0,0,0,0.15); /* ظل ثلاثي الأبعاد */
+                            box-shadow: 0 15px 35px rgba(0,0,0,0.15); /* ظل واقعي يبرز البطاقة */
                             page-break-inside: avoid;
+                            margin-bottom: 20px;
+                        }
+                        
+                        /* الإطار الداخلي للبطاقة */
+                        .card-inner {
+                            position: absolute;
+                            top: 12px; bottom: 12px; left: 12px; right: 12px;
+                            border: 2px dashed #b68a36;
+                            border-radius: 10px;
+                            padding: 20px 10px;
                             display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-                            padding: 20px;
+                            background-color: rgba(255,255,255,0.95);
+                            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b68a36' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
                         }
                         
-                        /* التدرج الذهبي الفاخر */
-                        .gold-text {
-                            background: linear-gradient(45deg, #B8860B, #FFD700, #DAA520, #F0E68C, #B8860B);
-                            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                        }
-                        
-                        .c-icon { font-size: 50px; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
-                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 32px; font-weight: bold; margin-bottom: 5px; }
-                        .c-teacher { font-size: 14px; color: #475569; font-weight: bold; margin-bottom: 20px; }
+                        /* ✳️ المحاذاة الصارمة: إجبار كل العناصر على التمركز 100% */
+                        .c-icon { font-size: 45px; line-height: 1; margin-bottom: 5px; width: 100%; text-align: center; }
+                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 5px; color: #b68a36; }
+                        .c-teacher { font-size: 14px; color: #475569; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; }
                         
                         .c-name { 
-                            font-size: 26px; font-weight: 900; line-height: 1.3; 
-                            flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%;
-                            border-top: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05);
+                            font-size: 26px; font-weight: 900; line-height: 1.4; 
+                            width: 100%; text-align: center; /* ✳️ الحل الجذري للميلان */
+                            display: flex; align-items: center; justify-content: center; flex-grow: 1;
+                            padding: 0 10px; word-wrap: break-word;
                         }
                         
                         .c-badge { 
-                            margin-top: 20px; margin-bottom: 15px;
-                            width: 80%; padding: 15px 5px; border-radius: 12px;
-                            background: linear-gradient(145deg, #ffffff, #f0f0f0);
-                            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05), 0 5px 10px rgba(0,0,0,0.05);
+                            width: 80%; margin: 10px auto; padding: 15px 5px; border-radius: 12px;
+                            background: #fff; text-align: center;
+                            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
                         }
                         .b-val { display: block; font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 5px; }
                         .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; }
                         
-                        .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; }
+                        .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
                         
-                        /* ألوان الإطارات الصلبة ثلاثية الأبعاد */
-                        .theme-honor { border: 10px solid #1e3a8a; box-shadow: inset 0 0 0 4px #DAA520, 0 10px 20px rgba(0,0,0,0.2); }
+                        /* الألوان - الأزرق الملكي (لوحة الشرف) */
+                        .theme-honor { border: 14px solid #1e3a8a; } /* إطار سميك لواقعية البطاقة */
                         .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #1e3a8a; }
                         .theme-honor .c-badge { border: 2px solid #1e3a8a; }
                         
-                        .theme-academic { border: 10px solid #881337; box-shadow: inset 0 0 0 4px #DAA520, 0 10px 20px rgba(0,0,0,0.2); }
+                        /* الألوان - العنابي الفاخر (المتفوقين) */
+                        .theme-academic { border: 14px solid #881337; } /* إطار سميك لواقعية البطاقة */
                         .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
                         .theme-academic .c-badge { border: 2px solid #881337; }
                         
@@ -438,7 +446,7 @@ else:
                         @media print { 
                             @page { size: A4 portrait; margin: 5mm; } 
                             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-                            .card { box-shadow: inset 0 0 0 4px #DAA520 !important; }
+                            .card { box-shadow: none; margin-bottom: 10mm; border-width: 10px; }
                         }
                     """
         
@@ -474,24 +482,25 @@ else:
                             
                             honor_cards_content += f"""
                             <div class="card theme-honor">
-                                <div class="c-icon">🌟</div>
-                                <div class="c-header gold-text">بطاقة تميز طالب</div>
-                                <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
-                                <div class="c-name">{student_name}</div>
-                                <div class="c-badge">
-                                    <span class="b-val">{score}</span>
-                                    <span class="b-lbl">نقطة تميز</span>
+                                <div class="card-inner">
+                                    <div class="c-icon">🌟</div>
+                                    <div class="c-header">بطاقة تميز طالب</div>
+                                    <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                    <div class="c-name">{student_name}</div>
+                                    <div class="c-badge">
+                                        <span class="b-val">{score}</span>
+                                        <span class="b-lbl">نقطة تميز</span>
+                                    </div>
+                                    <div class="c-footer">{rank_text}</div>
                                 </div>
-                                <div class="c-footer">{rank_text}</div>
                             </div>
                             """
                         
                         import datetime
-                        # دمجنا كود جافاسكريبت لفتح نافذة الطباعة فوراً عند فتح الملف
                         honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                         
                         st.download_button(
-                            label="🌐 تحميل بطاقات الشرف (تصميم فاخر للطباعة)", 
+                            label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
                             data=honor_full_html, 
                             file_name=f"Honor_Cards_{datetime.date.today()}.html", 
                             mime="text/html", 
@@ -525,22 +534,24 @@ else:
                                     for _, row in top_academic.iterrows():
                                         academic_cards_content += f"""
                                         <div class="card theme-academic">
-                                            <div class="c-icon">🎖️</div>
-                                            <div class="c-header gold-text">لوحة شرف</div>
-                                            <div class="c-teacher">يتقدم الأستاذ/ زياد المعمري بالشكر للطالب:</div>
-                                            <div class="c-name">{row.get('name', 'طالب')}</div>
-                                            <div class="c-badge">
-                                                <span class="b-val">ممتاز</span>
-                                                <span class="b-lbl">نظير تفوقه العلمي</span>
+                                            <div class="card-inner">
+                                                <div class="c-icon">🎖️</div>
+                                                <div class="c-header">وسام التميز الأكاديمي</div>
+                                                <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                                <div class="c-name">{row.get('name', 'طالب')}</div>
+                                                <div class="c-badge">
+                                                    <span class="b-val">ممتاز</span>
+                                                    <span class="b-lbl">نظير تفوقه العلمي</span>
+                                                </div>
+                                                <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
                                             </div>
-                                            <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
                                         </div>
                                         """
         
                                     academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{academic_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                                     
                                     st.download_button(
-                                        label="🌐 تحميل بطاقات المتفوقين (تصميم فاخر للطباعة)", 
+                                        label="🌐 تحميل بطاقات المتفوقين (تصميم واقعي للطباعة)", 
                                         data=academic_full_html, 
                                         file_name=f"Excellence_Cards_{datetime.date.today()}.html", 
                                         mime="text/html", 
