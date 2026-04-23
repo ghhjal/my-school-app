@@ -1438,7 +1438,7 @@ else:
                                         <div class="student-name">{s_nm}</div>
                                         
                                         <div class="reason-container">
-                                            <p class="reason">وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في المادة.</p>
+                                            <p class="reason">وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في مادة اللغة الإنجليزية.</p>
                                             <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
                                         </div>
 
