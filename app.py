@@ -378,56 +378,55 @@ else:
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
+                # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     
-                    # CSS أساسي وموحد للبطاقات (بمقاس ثابت لمنع التفاوت)
+                    # CSS أساسي صلب ومضاد لأخطاء WeasyPrint
                     base_css_cards = """
-                        * { box-sizing: border-box; } body { margin: 0; padding: 0; background: #fff; }
-                        .page { width: 210mm; padding: 10mm; font-family: 'Cairo', sans-serif; text-align: center; font-size: 0; /* لإزالة الفراغات بين بطاقات inline-block */ }
+                        * { box-sizing: border-box; } 
+                        body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; text-align: center; }
+                        .page { width: 210mm; padding: 10mm; font-size: 0; }
                         
-                        /* ✳️ التعديل الأهم: تثبيت عرض وارتفاع البطاقة لتكون متطابقة دائماً */
                         .card { 
-                            display: inline-block; vertical-align: top; font-size: 16px; /* استعادة حجم الخط */
-                            width: 88mm; height: 135mm; /* مقاس ثابت وصارم */
-                            margin: 3mm; border-radius: 15px; padding: 6px; 
-                            position: relative; page-break-inside: avoid;
+                            display: inline-block; vertical-align: top; font-size: 16px; 
+                            width: 45%; height: 125mm; /* مقاس ثابت وصارم للنصف */
+                            margin: 2%; border-radius: 12px; padding: 5px; 
+                            page-break-inside: avoid;
                         }
                         .card-inner {
-                            border: 2px solid #b68a36; border-radius: 10px; height: 100%;
+                            border: 2px solid #b68a36; border-radius: 8px; height: 100%;
                             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='1'/%3E%3C/svg%3E");
-                            background-size: cover; background-color: rgba(255,255,255,0.95);
-                            padding: 15px 10px; 
-                            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+                            background-size: cover; background-color: rgba(255,255,255,0.96);
+                            padding: 15px; text-align: center; display: block;
                         }
                         
-                        .c-icon { font-size: 32px; line-height: 1; margin-bottom: 5px; }
-                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 22px; color: #b68a36; font-weight: bold; margin-bottom: 5px; }
-                        .c-teacher { font-size: 12px; color: #64748b; font-weight: bold; }
-                        .c-name { font-size: 22px; font-weight: 900; line-height: 1.2; padding: 0 5px; display: flex; align-items: center; text-align: center; flex-grow: 1; }
+                        .c-icon { margin-top: 5px; margin-bottom: 10px; height: 35px; }
+                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 26px; color: #b68a36; margin-bottom: 5px; font-weight: bold;}
+                        .c-teacher { font-size: 12px; color: #64748b; margin-bottom: 25px; font-weight: bold; }
+                        .c-name { font-size: 24px; font-weight: 900; margin-bottom: 25px; line-height: 1.3; min-height: 60px; }
                         
-                        .c-badge { border: 1px solid #b68a36; border-radius: 8px; width: 85%; padding: 10px 5px; background: rgba(255,255,255,0.8); margin: 0 auto; }
-                        .b-val { display: block; font-size: 22px; font-weight: 900; line-height: 1; }
-                        .b-lbl { display: block; font-size: 13px; font-weight: bold; margin-top: 4px; }
+                        .c-badge { border: 2px dashed #b68a36; border-radius: 10px; width: 80%; margin: 0 auto 20px auto; padding: 15px 5px; background: rgba(255,255,255,0.8); }
+                        .b-val { display: block; font-size: 26px; font-weight: 900; margin-bottom: 5px; line-height: 1; }
+                        .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; }
                         
-                        .c-footer { font-family: 'Amiri', serif; font-size: 15px; font-weight: bold; border-top: 1px solid #e2e8f0; width: 85%; padding-top: 8px; margin-top: auto; }
+                        .c-footer { border-top: 1px solid #e2e8f0; padding-top: 15px; font-family: 'Amiri', serif; font-size: 16px; font-weight: bold; }
                         
-                        /* الألوان المخصصة لكل نوع */
-                        .theme-honor { background-color: #193b68; border: 2px solid #193b68; }
+                        .theme-honor { background-color: #193b68; }
                         .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #193b68; }
-                        .theme-honor .b-lbl { color: #193b68; opacity: 0.8; }
                         
-                        .theme-academic { background-color: #7f1d1d; border: 2px solid #7f1d1d; }
+                        .theme-academic { background-color: #7f1d1d; }
                         .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #7f1d1d; }
-                        .theme-academic .b-lbl { color: #7f1d1d; opacity: 0.8; }
                         
                         @media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }
                     """
         
+                    # أيقونة نجمة ذهبية مدمجة (بديلة للإيموجي الذي لا يظهر)
+                    star_svg = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg==" height="35">'
+        
                     if not df_st.empty:
                         top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
                         
-                        # --- عرض الطلاب في المنصة ---
                         for i, (_, r) in enumerate(top_10.iterrows(), 1):
                             ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                             border_color = "#f59e0b" if i<=3 else "#cbd5e1"
@@ -446,7 +445,6 @@ else:
                                 </div>
                             """, unsafe_allow_html=True)
                         
-                        # --- طباعة بطاقات لوحة الشرف (الزرقاء) ---
                         st.markdown("---")
                         st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
                         
@@ -459,7 +457,7 @@ else:
                             honor_cards_content += f"""
                             <div class="card theme-honor">
                                 <div class="card-inner">
-                                    <div class="c-icon">⭐</div>
+                                    <div class="c-icon">{star_svg}</div>
                                     <div class="c-header">بطاقة تميز طالب</div>
                                     <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
                                     <div class="c-name">{student_name}</div>
@@ -501,7 +499,6 @@ else:
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
                                         st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
                                         
-                                    # --- طباعة بطاقات المتفوقين (العنابية) ---
                                     st.markdown("---")
                                     st.subheader("🖨️ طباعة بطاقات التفوق")
                                     
@@ -510,7 +507,7 @@ else:
                                         academic_cards_content += f"""
                                         <div class="card theme-academic">
                                             <div class="card-inner">
-                                                <div class="c-icon">👑</div>
+                                                <div class="c-icon">{star_svg}</div>
                                                 <div class="c-header">لوحة شرف</div>
                                                 <div class="c-teacher">يتقدم الأستاذ/ زياد المعمري بالشكر للطالب:</div>
                                                 <div class="c-name">{row.get('name', 'طالب')}</div>
@@ -535,7 +532,7 @@ else:
                         else:
                             st.info("لا توجد درجات مطابقة للطلاب.")
                     else:
-                            st.info("لم يتم رصد درجات بعد."))
+                        st.info("لم يتم رصد درجات بعد.")
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
