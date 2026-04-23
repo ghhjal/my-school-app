@@ -377,14 +377,57 @@ else:
                                         st.cache_data.clear(); st.rerun()
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
-                # --- 2. لوحة الشرف (النقاط والسلوك) ---
+                # --- 2. لوحة الشرف (النقاط والسلوك) ---# --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     
+                    # CSS أساسي وموحد للبطاقات (بمقاس ثابت لمنع التفاوت)
+                    base_css_cards = """
+                        * { box-sizing: border-box; } body { margin: 0; padding: 0; background: #fff; }
+                        .page { width: 210mm; padding: 10mm; font-family: 'Cairo', sans-serif; text-align: center; font-size: 0; /* لإزالة الفراغات بين بطاقات inline-block */ }
+                        
+                        /* ✳️ التعديل الأهم: تثبيت عرض وارتفاع البطاقة لتكون متطابقة دائماً */
+                        .card { 
+                            display: inline-block; vertical-align: top; font-size: 16px; /* استعادة حجم الخط */
+                            width: 88mm; height: 135mm; /* مقاس ثابت وصارم */
+                            margin: 3mm; border-radius: 15px; padding: 6px; 
+                            position: relative; page-break-inside: avoid;
+                        }
+                        .card-inner {
+                            border: 2px solid #b68a36; border-radius: 10px; height: 100%;
+                            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='1'/%3E%3C/svg%3E");
+                            background-size: cover; background-color: rgba(255,255,255,0.95);
+                            padding: 15px 10px; 
+                            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+                        }
+                        
+                        .c-icon { font-size: 32px; line-height: 1; margin-bottom: 5px; }
+                        .c-header { font-family: 'Aref Ruqaa', serif; font-size: 22px; color: #b68a36; font-weight: bold; margin-bottom: 5px; }
+                        .c-teacher { font-size: 12px; color: #64748b; font-weight: bold; }
+                        .c-name { font-size: 22px; font-weight: 900; line-height: 1.2; padding: 0 5px; display: flex; align-items: center; text-align: center; flex-grow: 1; }
+                        
+                        .c-badge { border: 1px solid #b68a36; border-radius: 8px; width: 85%; padding: 10px 5px; background: rgba(255,255,255,0.8); margin: 0 auto; }
+                        .b-val { display: block; font-size: 22px; font-weight: 900; line-height: 1; }
+                        .b-lbl { display: block; font-size: 13px; font-weight: bold; margin-top: 4px; }
+                        
+                        .c-footer { font-family: 'Amiri', serif; font-size: 15px; font-weight: bold; border-top: 1px solid #e2e8f0; width: 85%; padding-top: 8px; margin-top: auto; }
+                        
+                        /* الألوان المخصصة لكل نوع */
+                        .theme-honor { background-color: #193b68; border: 2px solid #193b68; }
+                        .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #193b68; }
+                        .theme-honor .b-lbl { color: #193b68; opacity: 0.8; }
+                        
+                        .theme-academic { background-color: #7f1d1d; border: 2px solid #7f1d1d; }
+                        .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #7f1d1d; }
+                        .theme-academic .b-lbl { color: #7f1d1d; opacity: 0.8; }
+                        
+                        @media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }
+                    """
+        
                     if not df_st.empty:
                         top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
                         
-                        # عرض الطلاب في المنصة
+                        # --- عرض الطلاب في المنصة ---
                         for i, (_, r) in enumerate(top_10.iterrows(), 1):
                             ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                             border_color = "#f59e0b" if i<=3 else "#cbd5e1"
@@ -403,7 +446,7 @@ else:
                                 </div>
                             """, unsafe_allow_html=True)
                         
-                        # --- طباعة بطاقات لوحة الشرف (أزرق) ---
+                        # --- طباعة بطاقات لوحة الشرف (الزرقاء) ---
                         st.markdown("---")
                         st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
                         
@@ -416,14 +459,13 @@ else:
                             honor_cards_content += f"""
                             <div class="card theme-honor">
                                 <div class="card-inner">
-                                    <div class="c-header">وسام التميز الأكاديمي</div>
-                                    <div class="c-teacher">بإشراف الأستاذ/ زياد المعمري</div>
+                                    <div class="c-icon">⭐</div>
+                                    <div class="c-header">بطاقة تميز طالب</div>
+                                    <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
                                     <div class="c-name">{student_name}</div>
-                                    <div class="c-badge-container">
-                                        <div class="c-badge">
-                                            <span class="b-val">{score}</span>
-                                            <span class="b-lbl">نقطة تميز</span>
-                                        </div>
+                                    <div class="c-badge">
+                                        <span class="b-val">{score}</span>
+                                        <span class="b-lbl">نقطة تميز</span>
                                     </div>
                                     <div class="c-footer">{rank_text}</div>
                                 </div>
@@ -431,39 +473,7 @@ else:
                             """
                         
                         import datetime
-                        base_css = """
-                            * { box-sizing: border-box; } body { margin: 0; padding: 0; background: #fff; }
-                            .page { width: 210mm; padding: 10mm; font-family: 'Cairo', sans-serif; text-align: center; }
-                            .card { 
-                                display: inline-block; width: 47%; margin: 1%; vertical-align: top;
-                                border-radius: 15px; padding: 6px; position: relative;
-                                page-break-inside: avoid; margin-bottom: 15px;
-                            }
-                            .card-inner {
-                                border: 2px solid #b68a36; border-radius: 10px; height: 100%;
-                                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cpath d='M0,320 C160,240 320,400 480,320 S800,240 960,320 S1280,400 1440,320 S1600,240 1600,240' fill='none' stroke='rgba(182,138,54,0.06)' stroke-width='1'/%3E%3C/svg%3E");
-                                background-size: cover; background-color: rgba(255,255,255,0.95);
-                                padding: 20px 10px; position: relative;
-                            }
-                            .c-header { font-family: 'Aref Ruqaa', serif; font-size: 24px; color: #b68a36; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 10px; }
-                            .c-teacher { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold; }
-                            .c-name { font-size: 26px; font-weight: 900; margin-bottom: 15px; line-height: 1.1; }
-                            .c-badge-container { display: flex; justify-content: center; margin-bottom: 15px; }
-                            .c-badge { border: 2px dashed #b68a36; border-radius: 12px; padding: 10px 15px; display: inline-block; background: #fff; }
-                            .b-val { display: block; font-size: 24px; font-weight: 900; line-height: 1; }
-                            .b-lbl { display: block; font-size: 13px; font-weight: bold; color: #64748b; margin-top: 5px; }
-                            .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; }
-                            
-                            .theme-honor { background-color: #193b68; border: 2px solid #193b68; }
-                            .theme-honor .c-name, .theme-honor .b-val, .theme-honor .c-footer { color: #193b68; }
-                            
-                            .theme-academic { background-color: #881337; border: 2px solid #881337; }
-                            .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
-                            
-                            @media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }
-                        """
-                        
-                        honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css}</style></head><body><div class="page">{honor_cards_content}</div></body></html>"""
+                        honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css_cards}</style></head><body><div class="page">{honor_cards_content}</div></body></html>"""
                         
                         try:
                             from weasyprint import HTML
@@ -491,7 +501,7 @@ else:
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
                                         st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
                                         
-                                    # --- طباعة بطاقات المتفوقين (عنابي) ---
+                                    # --- طباعة بطاقات المتفوقين (العنابية) ---
                                     st.markdown("---")
                                     st.subheader("🖨️ طباعة بطاقات التفوق")
                                     
@@ -500,27 +510,32 @@ else:
                                         academic_cards_content += f"""
                                         <div class="card theme-academic">
                                             <div class="card-inner">
-                                                <div class="c-header">وسام التميز الأكاديمي</div>
+                                                <div class="c-icon">👑</div>
+                                                <div class="c-header">لوحة شرف</div>
                                                 <div class="c-teacher">يتقدم الأستاذ/ زياد المعمري بالشكر للطالب:</div>
                                                 <div class="c-name">{row.get('name', 'طالب')}</div>
-                                                <div class="c-badge-container">
-                                                    <div class="c-badge">
-                                                        <span class="b-val">ممتاز</span>
-                                                        <span class="b-lbl">نظير تفوقه العلمي</span>
-                                                    </div>
+                                                <div class="c-badge">
+                                                    <span class="b-val">ممتاز</span>
+                                                    <span class="b-lbl">نظير تفوقه العلمي</span>
                                                 </div>
                                                 <div class="c-footer">مع تمنياتنا بدوام التألق والنجاح</div>
                                             </div>
                                         </div>
                                         """
         
-                                    academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css}</style></head><body><div class="page">{academic_cards_content}</div></body></html>"""
+                                    academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{base_css_cards}</style></head><body><div class="page">{academic_cards_content}</div></body></html>"""
                                     
                                     try:
                                         cards_pdf_bytes = HTML(string=academic_full_html).write_pdf()
                                         st.download_button(label="🎟️ تحميل بطاقات المتفوقين (PDF)", data=cards_pdf_bytes, file_name=f"Excellence_Cards_{datetime.date.today()}.pdf", mime="application/pdf", type="primary", use_container_width=True)
                                     except:
                                         st.download_button(label="🌐 تحميل بطاقات المتفوقين (HTML)", data=academic_full_html, file_name=f"Excellence_Cards_{datetime.date.today()}.html", mime="text/html", use_container_width=True)
+                                else:
+                                    st.info("لم يصل أحد لنسبة 90% حتى الآن.")
+                        else:
+                            st.info("لا توجد درجات مطابقة للطلاب.")
+                    else:
+                        st.info("لم يتم رصد درجات بعد.")
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
