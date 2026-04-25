@@ -320,29 +320,68 @@ else:
                 
                 # --- 1. قائمة الطلاب ---
                 # --- 1. قائمة الطلاب ---
+                # --- 1. قائمة الطلاب ---
                 with sub_tabs[0]:
+                    # الإحصائيات العلوية
                     c1, c2, c3 = st.columns(3)
-                    c1.metric("العدد الإجمالي", len(df_st))
-                    c2.metric("الفصول", len(df_st.iloc[:,2].unique()) if len(df_st.columns)>2 else 0)
-                    c3.metric("متوسط النقاط", round(df_st['النقاط'].mean(), 1))
+                    c1.metric("العدد الإجمالي", len(df_st), "طالب")
+                    c2.metric("الفصول", len(df_st.iloc[:,2].unique()) if len(df_st.columns)>2 else 0, "فصول")
+                    c3.metric("متوسط النقاط", round(df_st['النقاط'].mean(), 1), "نقطة")
                     st.divider()
         
-                    if st.session_state.role == "teacher":
-                        # --- ➕ إضافة طالب ---
-                        with st.expander("➕ إضافة طالب جديد", expanded=False):
+                    # ✳️ التصميم الجديد: تبويبات داخلية للعمليات (نفس تصميمك المقترح)
+                    action_tabs = st.tabs(["🔍 عرض الطلاب", "➕ إضافة طالب", "✏️ تعديل بيانات طالب", "🗑️ حذف طالب"])
+        
+                    # -------------------------------------
+                    # 1. تبويب: عرض الطلاب
+                    # -------------------------------------
+                    with action_tabs[0]:
+                        sq = st.text_input("🔍 بحث في القائمة (بالاسم أو الرقم الأكاديمي):", placeholder="أدخل اسم الطالب أو رقمه...")
+                        
+                        # ترتيب وتنظيف الجدول قبل عرضه ليظهر بشكل فخم ومفهوم
+                        display_df = df_st.copy()
+                        if 'clean_id' in display_df.columns:
+                            display_df = display_df.drop(columns=['clean_id'])
+                        
+                        # ترجمة الأعمدة للعربية (لتطابق التصميم المقترح)
+                        rename_dict = {
+                            'id': 'الرقم الأكاديمي', 'name': 'الاسم', 'class': 'الصف',
+                            'year': 'العام', 'sem': 'المرحلة', 'subject': 'المادة'
+                        }
+                        display_df = display_df.rename(columns=rename_dict)
+                        
+                        if sq: 
+                            norm_sq = normalize_arabic(sq)
+                            mask = display_df['الرقم الأكاديمي'].astype(str).str.contains(norm_sq) | display_df['الاسم'].astype(str).apply(normalize_arabic).str.contains(norm_sq)
+                            st.dataframe(display_df[mask], use_container_width=True, hide_index=True)
+                        else: 
+                            st.dataframe(display_df, use_container_width=True, hide_index=True)
+        
+                    # -------------------------------------
+                    # 2. تبويب: إضافة طالب جديد
+                    # -------------------------------------
+                    with action_tabs[1]:
+                        if st.session_state.role == "teacher":
                             with st.form("add_st_v26", clear_on_submit=True):
+                                st.markdown("#### 👤 بيانات الطالب الأساسية")
                                 c1, c2 = st.columns(2)
-                                f_id = c1.text_input("🔢 الرقم الأكاديمي")
-                                f_name = c2.text_input("👤 الاسم")
-                                c3, c4, c5 = st.columns(3)
-                                f_class = c3.selectbox("الصف", st.session_state.class_options)
-                                f_stage = c4.selectbox("المرحلة", st.session_state.stage_options)
-                                f_year = c5.text_input("العام", st.session_state.current_year)
-                                c6, c7 = st.columns(2)
-                                f_phone = c6.text_input("📱 الجوال")
-                                f_mail = c7.text_input("📧 الإيميل")
+                                f_name = c1.text_input("الإسم الكامل", placeholder="أدخل الاسم الكامل")
+                                f_id = c2.text_input("الرقم الأكاديمي", placeholder="أدخل الرقم الأكاديمي")
                                 
-                                if st.form_submit_button("✅ حفظ", type="primary"):
+                                c3, c4, c5 = st.columns(3)
+                                f_stage = c3.selectbox("المرحلة", st.session_state.stage_options)
+                                f_class = c4.selectbox("الصف", st.session_state.class_options)
+                                f_year = c5.text_input("العام", st.session_state.current_year)
+                                
+                                st.markdown("#### 📞 معلومات التواصل")
+                                c6, c7 = st.columns(2)
+                                f_mail = c6.text_input("الإيميل", placeholder="أدخل البريد الإلكتروني")
+                                f_phone = c7.text_input("الجوال", placeholder="أدخل رقم الجوال")
+                                
+                                st.write("") # مسافة فارغة للترتيب
+                                submit_btn = st.form_submit_button("✅ حفظ الطالب", type="primary", use_container_width=True)
+                                
+                                if submit_btn:
                                     if f_id and f_name:
                                         if f_id.strip() in df_st['clean_id'].values:
                                             st.error(f"⚠️ الرقم {f_id} مسجل مسبقاً!")
@@ -350,18 +389,20 @@ else:
                                             cl_p = clean_phone_number(f_phone) if f_phone else ""
                                             st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الجوال": cl_p, "الإيميل": f_mail.strip(), "النقاط": "0"}
                                             if safe_append_row("students", st_map):
-                                                # ✳️ رسالة تأكيد الإضافة
                                                 st.success(f"✅ تم إضافة الطالب '{f_name}' بنجاح!")
-                                                import time
-                                                time.sleep(1.5) # نوقف الصفحة قليلاً ليقرأ المعلم الرسالة
+                                                import time; time.sleep(1.5)
                                                 if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                                 st.cache_data.clear(); st.rerun()
-                                    else: st.warning("أكمل البيانات")
+                                    else: st.warning("الرجاء إكمال البيانات الأساسية (الاسم والرقم)!")
+                        else:
+                            st.info("ليس لديك صلاحية لإضافة طلاب.")
         
-                        # --- ✏️ تعديل بيانات طالب (القسم الجديد) ---
-                        # --- ✏️ تعديل بيانات طالب ---
-                        with st.expander("✏️ تعديل بيانات طالب"):
-                            eq = st.text_input("🔍 ابحث عن الطالب لتعديل بياناته:", key="edit_q")
+                    # -------------------------------------
+                    # 3. تبويب: تعديل بيانات طالب
+                    # -------------------------------------
+                    with action_tabs[2]:
+                        if st.session_state.role == "teacher":
+                            eq = st.text_input("🔍 ابحث عن الطالب لتعديل بياناته:", key="edit_q", placeholder="اكتب اسم الطالب هنا...")
                             if eq:
                                 norm_eq = normalize_arabic(eq)
                                 mask = df_st.iloc[:,0].astype(str).str.contains(norm_eq) | df_st.iloc[:,1].astype(str).apply(normalize_arabic).str.contains(norm_eq)
@@ -372,61 +413,46 @@ else:
                                             st.markdown(f"**📝 تعديل بيانات: <span style='color:#1e3a8a;'>{r.iloc[1]}</span>**", unsafe_allow_html=True)
                                             cols = st.columns(3)
                                             new_vals = []
-                                            
-                                            # ✳️ الحل هنا: فلترة الأعمدة واستبعاد الأعمدة المساعدة (clean_id) والأعمدة الفارغة (Unnamed)
                                             valid_columns = [c for c in df_st.columns if c not in ['clean_id'] and not str(c).startswith('Unnamed')]
                                             
                                             for col_idx, col_name in enumerate(valid_columns):
                                                 with cols[col_idx % 3]:
-                                                    # تنظيف القيمة من أي تشوهات (مثل nan)
                                                     import pandas as pd
                                                     current_val = "" if pd.isna(r[col_name]) else str(r[col_name])
                                                     val = st.text_input(col_name, current_val, key=f"inp_{i}_{col_idx}")
                                                     new_vals.append(val)
                                             
-                                            if st.form_submit_button("💾 حفظ التعديلات", type="primary"):
+                                            if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
                                                 row_index = int(i) + 2
                                                 try:
-                                                    # تحديث الصف في قاعدة البيانات (بالأعمدة الأصلية فقط)
                                                     sh.worksheet("students").update(f"A{row_index}", [new_vals])
                                                     st.success(f"✅ تم تحديث بيانات الطالب '{new_vals[1]}' بنجاح!")
-                                                    import time
-                                                    time.sleep(1.5)
+                                                    import time; time.sleep(1.5)
                                                     if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                                    st.cache_data.clear()
-                                                    st.rerun()
+                                                    st.cache_data.clear(); st.rerun()
                                                 except Exception as e:
                                                     st.error(f"❌ حدث خطأ أثناء التعديل: {e}")
                                 else:
-                                    st.info("لم يتم العثور على طالب بهذا الاسم أو الرقم.")
+                                    st.info("لم يتم العثور على طالب بهذا الاسم.")
         
-                    st.write("---")
-                    
-                    sq = st.text_input("🔍 بحث في القائمة:")
-                    if sq: 
-                        norm_sq = normalize_arabic(sq)
-                        mask = df_st.iloc[:,0].astype(str).str.contains(norm_sq) | df_st.iloc[:,1].astype(str).apply(normalize_arabic).str.contains(norm_sq)
-                        st.dataframe(df_st[mask], use_container_width=True, hide_index=True)
-                    else: 
-                        st.dataframe(df_st, use_container_width=True, hide_index=True)
-        
-                    if st.session_state.role == "teacher":
-                        # --- 🗑️ حذف طالب ---
-                        with st.expander("🗑️ حذف طالب"):
-                            dq = st.text_input("بحث للحذف:", key="dq")
+                    # -------------------------------------
+                    # 4. تبويب: حذف طالب
+                    # -------------------------------------
+                    with action_tabs[3]:
+                        if st.session_state.role == "teacher":
+                            dq = st.text_input("🗑️ ابحث عن الطالب الذي تريد حذفه:", key="dq", placeholder="اكتب اسم الطالب هنا...")
                             if dq:
                                 norm_dq = normalize_arabic(dq)
                                 mask = df_st.iloc[:,0].astype(str).str.contains(norm_dq) | df_st.iloc[:,1].astype(str).apply(normalize_arabic).str.contains(norm_dq)
                                 for i, r in df_st[mask].iterrows():
-                                    if st.button(f"حذف {r.iloc[1]}", key=f"d{i}"):
+                                    # رسالة تأكيدية قبل الحذف
+                                    st.warning(f"⚠️ هل أنت متأكد من حذف بيانات الطالب ( {r.iloc[1]} ) بشكل نهائي؟")
+                                    if st.button(f"نعم، احذف {r.iloc[1]}", key=f"d{i}", type="secondary"):
                                         sh.worksheet("students").delete_rows(int(i)+2)
-                                        # ✳️ رسالة تأكيد الحذف
                                         st.success(f"✅ تم حذف الطالب '{r.iloc[1]}' من السجلات بشكل نهائي!")
-                                        import time
-                                        time.sleep(1.5)
+                                        import time; time.sleep(1.5)
                                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                        st.cache_data.clear()
-                                        st.rerun()
+                                        st.cache_data.clear(); st.rerun()
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
