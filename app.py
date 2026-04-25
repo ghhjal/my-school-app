@@ -359,6 +359,7 @@ else:
                                     else: st.warning("أكمل البيانات")
         
                         # --- ✏️ تعديل بيانات طالب (القسم الجديد) ---
+                        # --- ✏️ تعديل بيانات طالب ---
                         with st.expander("✏️ تعديل بيانات طالب"):
                             eq = st.text_input("🔍 ابحث عن الطالب لتعديل بياناته:", key="edit_q")
                             if eq:
@@ -371,18 +372,23 @@ else:
                                             st.markdown(f"**📝 تعديل بيانات: <span style='color:#1e3a8a;'>{r.iloc[1]}</span>**", unsafe_allow_html=True)
                                             cols = st.columns(3)
                                             new_vals = []
-                                            # ✳️ هذا الكود ذكي جداً: سيعرض كل الأعمدة الموجودة في الجدول لتتمكن من تعديل أي شيء!
-                                            for col_idx, col_name in enumerate(df_st.columns):
+                                            
+                                            # ✳️ الحل هنا: فلترة الأعمدة واستبعاد الأعمدة المساعدة (clean_id) والأعمدة الفارغة (Unnamed)
+                                            valid_columns = [c for c in df_st.columns if c not in ['clean_id'] and not str(c).startswith('Unnamed')]
+                                            
+                                            for col_idx, col_name in enumerate(valid_columns):
                                                 with cols[col_idx % 3]:
-                                                    val = st.text_input(col_name, str(r[col_name]), key=f"inp_{i}_{col_idx}")
+                                                    # تنظيف القيمة من أي تشوهات (مثل nan)
+                                                    import pandas as pd
+                                                    current_val = "" if pd.isna(r[col_name]) else str(r[col_name])
+                                                    val = st.text_input(col_name, current_val, key=f"inp_{i}_{col_idx}")
                                                     new_vals.append(val)
                                             
                                             if st.form_submit_button("💾 حفظ التعديلات", type="primary"):
                                                 row_index = int(i) + 2
                                                 try:
-                                                    # تحديث الصف في قاعدة البيانات (Google Sheets)
+                                                    # تحديث الصف في قاعدة البيانات (بالأعمدة الأصلية فقط)
                                                     sh.worksheet("students").update(f"A{row_index}", [new_vals])
-                                                    # ✳️ رسالة تأكيد التعديل
                                                     st.success(f"✅ تم تحديث بيانات الطالب '{new_vals[1]}' بنجاح!")
                                                     import time
                                                     time.sleep(1.5)
