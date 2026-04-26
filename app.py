@@ -322,12 +322,12 @@ else:
                 # --- 1. قائمة الطلاب ---
                 # --- 1. قائمة الطلاب ---
                 with sub_tabs[0]:
-                    # ✳️ نظام الإشعارات السريعة (بدون sleep)
+                    # ✳️ نظام الإشعارات السريعة (Toast) بدون Sleep
                     if 'toast_msg' in st.session_state:
                         st.toast(st.session_state.toast_msg, icon="🔔")
                         del st.session_state['toast_msg']
         
-                    # الإحصائيات العلوية (تم استبدال iloc بأسماء الأعمدة)
+                    # الإحصائيات العلوية
                     c1, c2, c3 = st.columns(3)
                     c1.metric("العدد الإجمالي", len(df_st), "طالب")
                     c2.metric("الفصول", len(df_st['class'].unique()) if 'class' in df_st.columns else 0, "فصول")
@@ -380,7 +380,6 @@ else:
                                 f_mail = c6.text_input("الإيميل", placeholder="أدخل البريد الإلكتروني")
                                 f_phone = c7.text_input("الجوال", placeholder="أدخل رقم الجوال")
                                 
-                                st.write("") 
                                 submit_btn = st.form_submit_button("✅ حفظ الطالب", type="primary", use_container_width=True)
                                 
                                 if submit_btn:
@@ -391,7 +390,6 @@ else:
                                             cl_p = clean_phone_number(f_phone) if f_phone else ""
                                             st_map = {"id": f_id.strip(), "name": f_name.strip(), "class": f_class, "year": f_year, "sem": f_stage, "الجوال": cl_p, "الإيميل": f_mail.strip(), "النقاط": "0"}
                                             if safe_append_row("students", st_map):
-                                                # ✳️ حفظ رسالة التنبيه في الذاكرة وإعادة التحميل فوراً (بدون Sleep)
                                                 st.session_state.toast_msg = f"✅ تم إضافة الطالب '{f_name}' بنجاح!"
                                                 if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                                 st.cache_data.clear()
@@ -408,12 +406,11 @@ else:
                             eq = st.text_input("🔍 ابحث عن الطالب لتعديل بياناته (بالاسم أو الرقم):", key="edit_q")
                             if eq:
                                 norm_eq = normalize_arabic(eq)
-                                # ✳️ استخدام أسماء الأعمدة بدلاً من iloc
                                 mask = df_st['id'].astype(str).str.contains(norm_eq) | df_st['name'].astype(str).apply(normalize_arabic).str.contains(norm_eq)
                                 edit_df = df_st[mask]
                                 
                                 if not edit_df.empty:
-                                    # ✳️ استخدام selectbox نظيف لاختيار الطالب بدلاً من تكرار النماذج
+                                    # ✳️ الحل المعماري: Selectbox نظيف يمنع تكرار الفورمات
                                     edit_options = edit_df.index.tolist()
                                     selected_idx = st.selectbox(
                                         "📌 اختر الطالب المطلوب تعديله:", 
@@ -459,7 +456,7 @@ else:
                                 del_df = df_st[mask]
                                 
                                 if not del_df.empty:
-                                    # ✳️ استخدام selectbox للحذف الآمن
+                                    # ✳️ الحل المعماري: Selectbox نظيف يمنع ظهور أزرار حذف متعددة
                                     del_options = del_df.index.tolist()
                                     del_idx = st.selectbox(
                                         "📌 اختر الطالب المطلوب حذفه نهائياً:", 
