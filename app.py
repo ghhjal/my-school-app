@@ -335,7 +335,6 @@ else:
                     total_classes = len(df_st['class'].unique()) if 'class' in df_st.columns else 0
                     avg_points = round(df_st['النقاط'].mean(), 1) if 'النقاط' in df_st.columns else 0
                     
-                    # كود CSS لتصميم البطاقات العصرية
                     cards_css = """
                     <style>
                     .metric-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; direction: rtl; }
@@ -352,6 +351,9 @@ else:
                     .ic-green { background-color: #dcfce7; color: #16a34a; }
                     .ic-blue { background-color: #e0f2fe; color: #0284c7; }
                     .ic-red { background-color: #fee2e2; color: #dc2626; }
+                    
+                    /* ✳️ إجبار حاوية الجدول على الاتجاه من اليمين لليسار */
+                    [data-testid="stDataFrame"] { direction: rtl; }
                     </style>
                     """
                     
@@ -389,22 +391,19 @@ else:
                     action_tabs = st.tabs(["🔍 عرض الطلاب", "➕ إضافة طالب", "✏️ تعديل بيانات طالب", "🗑️ حذف طالب"])
         
                     # -------------------------------------
-                    # 📄 2. تبويب: عرض الطلاب (مع نظام الصفحات)
+                    # 📄 2. تبويب: عرض الطلاب (مع نظام الصفحات والاتجاه العربي)
                     # -------------------------------------
                     with action_tabs[0]:
                         
-                        # إعداد متغيرات الصفحات في الذاكرة
                         if 'current_page' not in st.session_state:
                             st.session_state.current_page = 1
                         
-                        # صف البحث وخيارات العرض
                         col_search, col_rows = st.columns([3, 1])
                         with col_search:
                             sq = st.text_input("🔍 بحث:", placeholder="أدخل اسم الطالب أو رقمه...", label_visibility="collapsed")
                         with col_rows:
                             rows_per_page = st.selectbox("الصفوف:", [10, 20, 50, 100], index=0, label_visibility="collapsed")
                         
-                        # تجهيز البيانات
                         display_df = df_st.copy()
                         if 'clean_id' in display_df.columns:
                             display_df = display_df.drop(columns=['clean_id'])
@@ -415,14 +414,15 @@ else:
                         }
                         display_df = display_df.rename(columns=rename_dict)
                         
-                        # تطبيق البحث
+                        # ✳️ الحيلة السحرية: قلب ترتيب الأعمدة برمجياً لتبدأ من اليمين
+                        display_df = display_df[display_df.columns[::-1]]
+                        
                         if sq: 
                             norm_sq = normalize_arabic(sq)
                             mask = display_df['الرقم الأكاديمي'].astype(str).str.contains(norm_sq) | display_df['الاسم'].astype(str).apply(normalize_arabic).str.contains(norm_sq)
                             display_df = display_df[mask]
-                            st.session_state.current_page = 1 # إعادة الصفحة لـ 1 عند البحث
+                            st.session_state.current_page = 1 
                         
-                        # منطق تقسيم الصفحات (Pagination)
                         total_rows = len(display_df)
                         total_pages = max(1, math.ceil(total_rows / rows_per_page))
                         
@@ -432,7 +432,6 @@ else:
                         start_idx = (st.session_state.current_page - 1) * rows_per_page
                         end_idx = start_idx + rows_per_page
                         
-                        # عرض الجدول المقتطع
                         st.dataframe(display_df.iloc[start_idx:end_idx], use_container_width=True, hide_index=True)
                         
                         # -------------------------------------
