@@ -322,26 +322,89 @@ else:
                 # --- 1. قائمة الطلاب ---
                 # --- 1. قائمة الطلاب ---
                 with sub_tabs[0]:
-                    # ✳️ نظام الإشعارات السريعة (Toast) بدون Sleep
                     if 'toast_msg' in st.session_state:
                         st.toast(st.session_state.toast_msg, icon="🔔")
                         del st.session_state['toast_msg']
         
-                    # الإحصائيات العلوية
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("العدد الإجمالي", len(df_st), "طالب")
-                    c2.metric("الفصول", len(df_st['class'].unique()) if 'class' in df_st.columns else 0, "فصول")
-                    c3.metric("متوسط النقاط", round(df_st['النقاط'].mean(), 1) if 'النقاط' in df_st.columns else 0, "نقطة")
-                    st.divider()
+                    # -------------------------------------
+                    # 🎨 1. تصميم بطاقات الإحصائيات العلوية
+                    # -------------------------------------
+                    import math
+                    
+                    total_students = len(df_st)
+                    total_classes = len(df_st['class'].unique()) if 'class' in df_st.columns else 0
+                    avg_points = round(df_st['النقاط'].mean(), 1) if 'النقاط' in df_st.columns else 0
+                    
+                    # كود CSS لتصميم البطاقات العصرية
+                    cards_css = """
+                    <style>
+                    .metric-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; direction: rtl; }
+                    .metric-card {
+                        background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+                        padding: 20px; flex: 1; display: flex; justify-content: space-between; align-items: center;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+                    }
+                    .metric-info { text-align: right; }
+                    .metric-title { color: #64748b; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+                    .metric-val { color: #0f172a; font-size: 28px; font-weight: 900; }
+                    .metric-sub { color: #94a3b8; font-size: 13px; }
+                    .metric-icon { width: 55px; height: 55px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 26px; }
+                    .ic-green { background-color: #dcfce7; color: #16a34a; }
+                    .ic-blue { background-color: #e0f2fe; color: #0284c7; }
+                    .ic-red { background-color: #fee2e2; color: #dc2626; }
+                    </style>
+                    """
+                    
+                    cards_html = f"""
+                    {cards_css}
+                    <div class="metric-container">
+                        <div class="metric-card">
+                            <div class="metric-info">
+                                <div class="metric-title">العدد الإجمالي</div>
+                                <div class="metric-val">{total_students}</div>
+                                <div class="metric-sub">طالب مسجل</div>
+                            </div>
+                            <div class="metric-icon ic-green">👥</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-info">
+                                <div class="metric-title">الفصول</div>
+                                <div class="metric-val">{total_classes}</div>
+                                <div class="metric-sub">فصول دراسية</div>
+                            </div>
+                            <div class="metric-icon ic-blue">🏫</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-info">
+                                <div class="metric-title">متوسط النقاط</div>
+                                <div class="metric-val" dir="ltr">{avg_points}</div>
+                                <div class="metric-sub">نقطة تميز</div>
+                            </div>
+                            <div class="metric-icon ic-red">📈</div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(cards_html, unsafe_allow_html=True)
         
                     action_tabs = st.tabs(["🔍 عرض الطلاب", "➕ إضافة طالب", "✏️ تعديل بيانات طالب", "🗑️ حذف طالب"])
         
                     # -------------------------------------
-                    # 1. تبويب: عرض الطلاب
+                    # 📄 2. تبويب: عرض الطلاب (مع نظام الصفحات)
                     # -------------------------------------
                     with action_tabs[0]:
-                        sq = st.text_input("🔍 بحث في القائمة (بالاسم أو الرقم الأكاديمي):", placeholder="أدخل اسم الطالب أو رقمه...")
                         
+                        # إعداد متغيرات الصفحات في الذاكرة
+                        if 'current_page' not in st.session_state:
+                            st.session_state.current_page = 1
+                        
+                        # صف البحث وخيارات العرض
+                        col_search, col_rows = st.columns([3, 1])
+                        with col_search:
+                            sq = st.text_input("🔍 بحث:", placeholder="أدخل اسم الطالب أو رقمه...", label_visibility="collapsed")
+                        with col_rows:
+                            rows_per_page = st.selectbox("الصفوف:", [10, 20, 50, 100], index=0, label_visibility="collapsed")
+                        
+                        # تجهيز البيانات
                         display_df = df_st.copy()
                         if 'clean_id' in display_df.columns:
                             display_df = display_df.drop(columns=['clean_id'])
@@ -352,13 +415,47 @@ else:
                         }
                         display_df = display_df.rename(columns=rename_dict)
                         
+                        # تطبيق البحث
                         if sq: 
                             norm_sq = normalize_arabic(sq)
                             mask = display_df['الرقم الأكاديمي'].astype(str).str.contains(norm_sq) | display_df['الاسم'].astype(str).apply(normalize_arabic).str.contains(norm_sq)
-                            st.dataframe(display_df[mask], use_container_width=True, hide_index=True)
-                        else: 
-                            st.dataframe(display_df, use_container_width=True, hide_index=True)
+                            display_df = display_df[mask]
+                            st.session_state.current_page = 1 # إعادة الصفحة لـ 1 عند البحث
+                        
+                        # منطق تقسيم الصفحات (Pagination)
+                        total_rows = len(display_df)
+                        total_pages = max(1, math.ceil(total_rows / rows_per_page))
+                        
+                        if st.session_state.current_page > total_pages:
+                            st.session_state.current_page = total_pages
+                            
+                        start_idx = (st.session_state.current_page - 1) * rows_per_page
+                        end_idx = start_idx + rows_per_page
+                        
+                        # عرض الجدول المقتطع
+                        st.dataframe(display_df.iloc[start_idx:end_idx], use_container_width=True, hide_index=True)
+                        
+                        # -------------------------------------
+                        # 🎛️ 3. أزرار التحكم بالصفحات
+                        # -------------------------------------
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        pc1, pc2, pc3 = st.columns([1, 2, 1])
+                        
+                        with pc1:
+                            if st.button("▶ التالي", disabled=(st.session_state.current_page >= total_pages), use_container_width=True):
+                                st.session_state.current_page += 1
+                                st.rerun()
+                                
+                        with pc2:
+                            st.markdown(f"<div style='text-align: center; font-weight: bold; padding-top: 5px; color: #64748b;'>صفحة {st.session_state.current_page} من {total_pages} <br><small>(إجمالي الطلاب: {total_rows})</small></div>", unsafe_allow_html=True)
+                            
+                        with pc3:
+                            if st.button("السابق ◀", disabled=(st.session_state.current_page <= 1), use_container_width=True):
+                                st.session_state.current_page -= 1
+                                st.rerun()
         
+                    # ... (باقي التبويبات action_tabs[1], action_tabs[2], action_tabs[3] تبقى كما هي تماماً) ...
+                
                     # -------------------------------------
                     # 2. تبويب: إضافة طالب جديد
                     # -------------------------------------
