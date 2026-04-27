@@ -139,35 +139,28 @@ st.markdown(f"""
     
     .header-container {{
         background: {header_grad};
-        padding: 60px 20px 40px 20px;
+        padding: 50px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
         box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
-        color: white; 
-        position: relative; overflow: visible;
+        color: white; text-align: center;
     }}
     
-    /* ✳️ التعديل الجديد: جعل القبعة بجانب النص */
-    .header-content {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 20px; /* المسافة بين القبعة والنص */
-        flex-wrap: wrap;
+    /* ✳️ التعديل الجديد: دمج القبعة بجانب النص في نفس السطر */
+    .main-title {{
+        margin: 0; font-size: 2.8rem; font-weight: 900; color: #fff !important; 
+        display: flex; align-items: center; justify-content: center; gap: 15px;
     }}
     
-    .header-text {{
-        text-align: right;
+    .sub-title {{
+        margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.2rem; font-weight: 500;
     }}
-    
-    .header-text h1 {{ margin: 0; font-size: 2.8rem; font-weight: 900; color: #fff !important; line-height: 1.2; }}
-    .header-text p {{ margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.2rem; font-weight: 500; }}
     
     .logo-icon {{ 
-        font-size: 4.5rem; 
-        margin-bottom: 0; /* إزالة المسافة السفلية ليتوازى مع النص */
+        font-size: 3.5rem; 
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         animation: float 4s ease-in-out infinite;
+        display: inline-block;
         line-height: 1;
     }}
     
@@ -181,28 +174,22 @@ st.markdown(f"""
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: #0F172A !important; }}
     
-    /* ✳️ التعديل الجديد: إجبار جميع الأزرار (والزر الأساسي الأحمر) على اللون الأزرق */
-    button[kind="primary"] {{
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
-        border: none !important;
-        color: white !important;
-    }}
-    button[kind="primary"]:hover {{
-        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
-        border: none !important;
-    }}
-    
+    /* ✳️ التعديل الجذري: إجبار جميع أزرار الحفظ في المنصة على أخذ اللون الأزرق */
+    [data-testid="stFormSubmitButton"] button, 
+    [data-testid="baseButton-primary"], 
     div.stButton > button {{
         background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+        background-color: #2563EB !important;
         color: white !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 12px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; width: 100%; height: 50px;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important; transition: all 0.2s !important; width: 100%; height: 50px;
     }}
+    [data-testid="stFormSubmitButton"] button:hover, 
+    [data-testid="baseButton-primary"]:hover, 
     div.stButton > button:hover {{ 
         background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important; 
-        box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3); 
+        box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3) !important; 
     }}
-    div.stButton > button:active {{ transform: scale(0.98); }}
     
     .app-card {{ background: {card_bg}; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid {border_color}; margin-bottom: 15px; }}
     
@@ -225,19 +212,14 @@ st.markdown(f"""
 
     @media (max-width: 768px) {{
         .header-container {{ padding: 70px 20px 30px 20px; }}
-        .header-text h1 {{ font-size: 1.8rem; }}
-        .logo-icon {{ font-size: 4rem; }}
+        .main-title {{ font-size: 1.8rem; }}
+        .logo-icon {{ font-size: 2.5rem; }}
     }}
     </style>
 
     <div class="header-container">
-        <div class="header-content">
-            <div class="header-text">
-                <h1>منصة زياد الذكية</h1>
-                <p>بوابة التعليم الذكية 2026</p>
-            </div>
-            <div class="logo-icon">🎓</div>
-        </div>
+        <h1 class="main-title">منصة زياد الذكية <span class="logo-icon">🎓</span></h1>
+        <p class="sub-title">بوابة التعليم الذكية 2026</p>
     </div>
 """, unsafe_allow_html=True)
 
