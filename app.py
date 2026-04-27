@@ -135,33 +135,32 @@ st.markdown(f"""
         background-color: {main_bg} !important; color: {text_color} !important; 
     }}
     
-    /* ✳️ تعديل المساحة العلوية لمنع قص الهيدر */
     .block-container {{ padding-top: 1rem !important; padding-bottom: 5rem; max-width: 1000px; }}
     
     .header-container {{
         background: {header_grad};
-        padding: 50px 20px 40px 20px; /* مساحة تنفس ممتازة من الأعلى */
+        padding: 70px 20px 40px 20px; /* ✳️ تم زيادة المساحة العلوية لتجنب قص القبعة */
         border-radius: 0 0 40px 40px;
-        margin: -1rem -5rem 30px -5rem; /* ضبط السحب للأعلى ليكون متوازناً */
+        margin: -1rem -5rem 30px -5rem;
         box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
         color: white; 
         text-align: center;
     }}
     
-    /* ✳️ حاوية لترتيب القبعة والنص على نفس السطر تماماً */
     .title-wrapper {{
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 15px; /* المسافة بين القبعة والنص */
+        gap: 15px; 
         margin-bottom: 10px;
     }}
     
     .logo-icon {{ 
-        font-size: 3.5rem; 
+        font-size: 3.8rem; 
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         animation: float 4s ease-in-out infinite;
         line-height: 1;
+        margin-top: 12px; /* ✳️ تنزيل القبعة للأسفل لكي تتوازى مع النص تماماً */
     }}
     
     .main-title {{ 
@@ -189,7 +188,6 @@ st.markdown(f"""
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: #0F172A !important; }}
     
-    /* إجبار جميع الأزرار على التدرج الأزرق */
     [data-testid="stFormSubmitButton"] button, 
     [data-testid="baseButton-primary"], 
     div.stButton > button {{
@@ -226,7 +224,7 @@ st.markdown(f"""
     .urgent-box {{ background-color: #FEF2F2; border: 2px solid {danger_color}; color: #991B1B; padding: 15px; border-radius: 12px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
-        .header-container {{ padding: 40px 20px 30px 20px; }}
+        .header-container {{ padding: 60px 20px 30px 20px; }}
         .main-title {{ font-size: 2rem; }}
         .logo-icon {{ font-size: 2.5rem; }}
     }}
@@ -234,8 +232,8 @@ st.markdown(f"""
 
     <div class="header-container">
         <div class="title-wrapper">
-            <h1 class="main-title">منصة زياد الذكية</h1>
             <div class="logo-icon">🎓</div>
+            <h1 class="main-title">منصة زياد الذكية</h1>
         </div>
         <p class="sub-title">بوابة التعليم الذكية 2026</p>
     </div>
