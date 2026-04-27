@@ -139,22 +139,37 @@ st.markdown(f"""
     
     .header-container {{
         background: {header_grad};
-        padding: 80px 20px 40px 20px;
+        padding: 60px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
         box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
-        color: white; text-align: center;
+        color: white; 
         position: relative; overflow: visible;
     }}
     
-    .logo-icon {{ 
-        font-size: 5rem; margin-bottom: 15px; display: inline-block;
-        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-        animation: float 4s ease-in-out infinite;
+    /* ✳️ التعديل الجديد: جعل القبعة بجانب النص */
+    .header-content {{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px; /* المسافة بين القبعة والنص */
+        flex-wrap: wrap;
     }}
     
-    .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
-    .header-text p {{ margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.1rem; font-weight: 500; }}
+    .header-text {{
+        text-align: right;
+    }}
+    
+    .header-text h1 {{ margin: 0; font-size: 2.8rem; font-weight: 900; color: #fff !important; line-height: 1.2; }}
+    .header-text p {{ margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.2rem; font-weight: 500; }}
+    
+    .logo-icon {{ 
+        font-size: 4.5rem; 
+        margin-bottom: 0; /* إزالة المسافة السفلية ليتوازى مع النص */
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        animation: float 4s ease-in-out infinite;
+        line-height: 1;
+    }}
     
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
         background-color: #F8FAFC !important; border: 2px solid #E2E8F0 !important; border-radius: 12px !important; height: 50px; 
@@ -166,13 +181,27 @@ st.markdown(f"""
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: #0F172A !important; }}
     
+    /* ✳️ التعديل الجديد: إجبار جميع الأزرار (والزر الأساسي الأحمر) على اللون الأزرق */
+    button[kind="primary"] {{
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+        border: none !important;
+        color: white !important;
+    }}
+    button[kind="primary"]:hover {{
+        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
+        border: none !important;
+    }}
+    
     div.stButton > button {{
-        background: {primary_color} !important;
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
         color: white !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 12px !important; padding: 12px 20px !important;
         box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; width: 100%; height: 50px;
     }}
-    div.stButton > button:hover {{ background: {accent_color} !important; box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3); }}
+    div.stButton > button:hover {{ 
+        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important; 
+        box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3); 
+    }}
     div.stButton > button:active {{ transform: scale(0.98); }}
     
     .app-card {{ background: {card_bg}; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid {border_color}; margin-bottom: 15px; }}
@@ -203,11 +232,11 @@ st.markdown(f"""
 
     <div class="header-container">
         <div class="header-content">
-            <div class="logo-icon">🎓</div>
             <div class="header-text">
                 <h1>منصة زياد الذكية</h1>
                 <p>بوابة التعليم الذكية 2026</p>
             </div>
+            <div class="logo-icon">🎓</div>
         </div>
     </div>
 """, unsafe_allow_html=True)
