@@ -8,21 +8,26 @@ import io
 import re
 from google.oauth2.service_account import Credentials
 from weasyprint import HTML
+import math
+
 # ==========================================
 # ⚙️ 1. إعدادات النظام
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان (ثيم البنفسجي مع حقول محايدة) ---
-main_bg = "#f5f3ff"
-card_bg = "#ffffff"
-text_color = "#1e1b4b"
-sub_text = "#6b7280"
-border_color = "#e0e7ff"
-primary_color = "#4f46e5"
-accent_color = "#818cf8"
-header_grad = "linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)"
-shadow_val = "0 4px 6px -1px rgba(67, 56, 202, 0.1), 0 2px 4px -1px rgba(67, 56, 202, 0.06)"
+# --- 🎨 تعريف الألوان (الثيم المؤسسي الحديث حسب التصميم الجديد) ---
+main_bg = "#F8FAFC"
+card_bg = "#FFFFFF"
+text_color = "#0F172A"
+sub_text = "#64748B"
+border_color = "#E2E8F0"
+primary_color = "#2563EB"
+accent_color = "#1E40AF"
+success_color = "#10B981"
+warning_color = "#F59E0B"
+danger_color = "#EF4444"
+header_grad = "linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)"
+shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
 
 # --- [الدوال المساعدة والاتصال الذكي] ---
 
@@ -137,7 +142,7 @@ st.markdown(f"""
         padding: 80px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -60px -5rem 30px -5rem;
-        box-shadow: 0 10px 30px -10px rgba(67, 56, 202, 0.5);
+        box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
         color: white; text-align: center;
         position: relative; overflow: visible;
     }}
@@ -149,44 +154,45 @@ st.markdown(f"""
     }}
     
     .header-text h1 {{ margin: 0; font-size: 2.5rem; font-weight: 900; color: #fff !important; }}
-    .header-text p {{ margin: 5px 0 0 0; color: #e0e7ff; font-size: 1.1rem; font-weight: 500; }}
+    .header-text p {{ margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.1rem; font-weight: 500; }}
     
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
-        background-color: #f1f5f9 !important; border: 2px solid #cbd5e1 !important; border-radius: 16px !important; height: 55px; 
+        background-color: #F8FAFC !important; border: 2px solid #E2E8F0 !important; border-radius: 12px !important; height: 50px; 
     }}
     input, textarea, select {{ 
-        color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; caret-color: {primary_color} !important;
-        background-color: transparent !important; font-weight: 700 !important; font-size: 1.1rem !important;
+        color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; caret-color: {primary_color} !important;
+        background-color: transparent !important; font-weight: 700 !important; font-size: 1.05rem !important;
     }}
-    ::placeholder {{ color: #64748b !important; opacity: 1 !important; -webkit-text-fill-color: #64748b !important; }}
-    div[data-baseweb="select"] div {{ color: #0f172a !important; }}
+    ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
+    div[data-baseweb="select"] div {{ color: #0F172A !important; }}
     
     div.stButton > button {{
-        background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%) !important;
+        background: {primary_color} !important;
         color: white !important; border: none !important; font-weight: 800 !important;
-        font-size: 1.1rem !important; border-radius: 16px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); transition: transform 0.2s; width: 100%; height: 55px;
+        font-size: 1.1rem !important; border-radius: 12px !important; padding: 12px 20px !important;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: all 0.2s; width: 100%; height: 50px;
     }}
+    div.stButton > button:hover {{ background: {accent_color} !important; box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3); }}
     div.stButton > button:active {{ transform: scale(0.98); }}
     
-    .app-card {{ background: {card_bg}; padding: 20px; border-radius: 24px; box-shadow: {shadow_val}; border: 1px solid #e0e7ff; margin-bottom: 15px; }}
+    .app-card {{ background: {card_bg}; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid {border_color}; margin-bottom: 15px; }}
     
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
-    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; color: #64748b; font-weight: bold; flex: 1; justify-content: center; }}
-    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; color: #64748B; font-weight: bold; flex: 1; justify-content: center; transition: 0.3s; }}
+    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }}
 
-    .mobile-list-item {{ background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #e0e7ff; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; }}
+    .mobile-list-item {{ background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; }}
     
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
-    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 20px; text-align: center; border: 1px solid #e0e7ff; box-shadow: {shadow_val}; }}
-    .m-active {{ border: 2px solid #f59e0b !important; background: linear-gradient(to bottom right, #fffbeb, #fef3c7) !important; }}
+    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 16px; text-align: center; border: 1px solid #E2E8F0; box-shadow: {shadow_val}; }}
+    .m-active {{ border: 2px solid {warning_color} !important; background: #FFFBEB !important; }}
     
-    .points-banner {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 24px; text-align: center; margin-bottom: 25px; }}
-    .welcome-card {{ background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 24px; margin-bottom: 15px; }}
+    .points-banner {{ background: {warning_color}; color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }}
+    .welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }}
 
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
-    @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
-    .urgent-box {{ background-color: #fef2f2; border: 2px solid #ef4444; color: #b91c1c; padding: 15px; border-radius: 16px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
+    @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
+    .urgent-box {{ background-color: #FEF2F2; border: 2px solid {danger_color}; color: #991B1B; padding: 15px; border-radius: 12px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
         .header-container {{ padding: 70px 20px 30px 20px; }}
@@ -281,7 +287,6 @@ if st.session_state.role is None:
 # 👨‍🏫 4. واجهة المعلم / الإدارة (مشاهد)
 # ==========================================
 else:
-    # --- 🏗️ تأسيس المخزن المحلي (يُنفذ مرة واحدة فقط بعد الدخول) ---
     if 'db_loaded' not in st.session_state:
         with st.spinner("⏳ جاري الاتصال بالمنصة وتحديث البيانات المركزية..."):
             try:
@@ -292,11 +297,11 @@ else:
             except Exception as e:
                 st.error(f"❌ حدث خطأ أثناء الاتصال: {e}")
                 st.stop()
-    # 👇👇 الكود الجديد: يقرأ الإشارة ويظهر لك رسالة النجاح اللطيفة 👇👇
+                
     if st.session_state.get('show_refresh_success'):
         st.toast("✅ تم تحديث البيانات ومزامنتها بنجاح!", icon="🔄")
-        st.session_state['show_refresh_success'] = False  # نمسح الإشارة حتى لا تتكرر
-    # 👆👆 -------------------------------------------------------- 👆👆
+        st.session_state['show_refresh_success'] = False 
+
     if st.session_state.role in ["teacher", "viewer"]:
         
         if st.session_state.role == "teacher":
@@ -309,7 +314,6 @@ else:
         # --- 👥 الطلاب ---
         with tab_students:
             st.subheader("👥 إدارة الطلاب والتقارير")
-            # قراءة سريعة من الذاكرة المحلية
             df_st = st.session_state.df_students
             
             if not df_st.empty:
@@ -319,41 +323,33 @@ else:
                 sub_tabs = st.tabs(["📋 قائمة الطلاب", "🏆 لوحة الشرف (نقاط)", "🌟 المتفوقين (90%+)", "📑 تقرير الطالب الشامل"])
                 
                 # --- 1. قائمة الطلاب ---
-                # --- 1. قائمة الطلاب ---
-                # --- 1. قائمة الطلاب ---
                 with sub_tabs[0]:
                     if 'toast_msg' in st.session_state:
                         st.toast(st.session_state.toast_msg, icon="🔔")
                         del st.session_state['toast_msg']
         
-                    # -------------------------------------
-                    # 🎨 1. تصميم بطاقات الإحصائيات العلوية
-                    # -------------------------------------
-                    import math
-                    
                     total_students = len(df_st)
                     total_classes = len(df_st['class'].unique()) if 'class' in df_st.columns else 0
                     avg_points = round(df_st['النقاط'].mean(), 1) if 'النقاط' in df_st.columns else 0
                     
-                    cards_css = """
+                    cards_css = f"""
                     <style>
-                    .metric-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; direction: rtl; }
-                    .metric-card {
-                        background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+                    .metric-container {{ display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; direction: rtl; }}
+                    .metric-card {{
+                        background-color: #ffffff; border: 1px solid {border_color}; border-radius: 12px;
                         padding: 20px; flex: 1; display: flex; justify-content: space-between; align-items: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-                    }
-                    .metric-info { text-align: right; }
-                    .metric-title { color: #64748b; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-                    .metric-val { color: #0f172a; font-size: 28px; font-weight: 900; }
-                    .metric-sub { color: #94a3b8; font-size: 13px; }
-                    .metric-icon { width: 55px; height: 55px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 26px; }
-                    .ic-green { background-color: #dcfce7; color: #16a34a; }
-                    .ic-blue { background-color: #e0f2fe; color: #0284c7; }
-                    .ic-red { background-color: #fee2e2; color: #dc2626; }
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                    }}
+                    .metric-info {{ text-align: right; }}
+                    .metric-title {{ color: {sub_text}; font-size: 14px; font-weight: bold; margin-bottom: 5px; }}
+                    .metric-val {{ color: {text_color}; font-size: 28px; font-weight: 900; }}
+                    .metric-sub {{ color: #94A3B8; font-size: 13px; }}
+                    .metric-icon {{ width: 55px; height: 55px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 26px; }}
+                    .ic-green {{ background-color: #D1FAE5; color: {success_color}; }}
+                    .ic-blue {{ background-color: #DBEAFE; color: {primary_color}; }}
+                    .ic-red {{ background-color: #FEE2E2; color: {danger_color}; }}
                     
-                    /* ✳️ إجبار حاوية الجدول على الاتجاه من اليمين لليسار */
-                    [data-testid="stDataFrame"] { direction: rtl; }
+                    [data-testid="stDataFrame"] {{ direction: rtl; }}
                     </style>
                     """
                     
@@ -391,7 +387,7 @@ else:
                     action_tabs = st.tabs(["🔍 عرض الطلاب", "➕ إضافة طالب", "✏️ تعديل بيانات طالب", "🗑️ حذف طالب"])
         
                     # -------------------------------------
-                    # 📄 2. تبويب: عرض الطلاب (مع نظام الصفحات والاتجاه العربي)
+                    # 📄 عرض الطلاب
                     # -------------------------------------
                     with action_tabs[0]:
                         
@@ -414,7 +410,7 @@ else:
                         }
                         display_df = display_df.rename(columns=rename_dict)
                         
-                        # ✳️ الحيلة السحرية: قلب ترتيب الأعمدة برمجياً لتبدأ من اليمين
+                        # قلب الترتيب
                         display_df = display_df[display_df.columns[::-1]]
                         
                         if sq: 
@@ -434,9 +430,6 @@ else:
                         
                         st.dataframe(display_df.iloc[start_idx:end_idx], use_container_width=True, hide_index=True)
                         
-                        # -------------------------------------
-                        # 🎛️ 3. أزرار التحكم بالصفحات
-                        # -------------------------------------
                         st.markdown("<br>", unsafe_allow_html=True)
                         pc1, pc2, pc3 = st.columns([1, 2, 1])
                         
@@ -453,10 +446,8 @@ else:
                                 st.session_state.current_page -= 1
                                 st.rerun()
         
-                    # ... (باقي التبويبات action_tabs[1], action_tabs[2], action_tabs[3] تبقى كما هي تماماً) ...
-                
                     # -------------------------------------
-                    # 2. تبويب: إضافة طالب جديد
+                    # 2. إضافة طالب
                     # -------------------------------------
                     with action_tabs[1]:
                         if st.session_state.role == "teacher":
@@ -495,59 +486,51 @@ else:
                             st.info("ليس لديك صلاحية لإضافة طلاب.")
         
                     # -------------------------------------
-                    # 3. تبويب: تعديل بيانات طالب
+                    # 3. تعديل بيانات طالب
                     # -------------------------------------
-                    # -------------------------------------
-            # 3. تبويب: تعديل بيانات طالب
-            # -------------------------------------
-            with action_tabs[2]:
-                if st.session_state.role == "teacher":
-                    if not df_st.empty:
-                        edit_options = df_st.index.tolist()
-                        selected_idx = st.selectbox(
-                            "✏️ اختر الطالب المطلوب تعديل بياناته (يمكنك البحث بالكتابة هنا):", 
-                            edit_options, 
-                            format_func=lambda x: f"{df_st.loc[x, 'name']} - (الرقم: {df_st.loc[x, 'id']})",
-                            key="edit_select"
-                        )
-                        
-                        with st.form("edit_form_single"):
-                            st.markdown(f"**📝 تعديل بيانات: <span style='color:#1e3a8a;'>{df_st.loc[selected_idx, 'name']}</span>**", unsafe_allow_html=True)
-                            cols = st.columns(3)
-                            new_vals = []
-                            
-                            # ✳️ إضافة شرط إضافي (str(c).strip() != "") لضمان اختفاء المربع الفارغ أسفل الفورم
-                            valid_columns = [c for c in df_st.columns if c not in ['clean_id'] and not str(c).startswith('Unnamed') and str(c).strip() != ""]
-                            
-                            for col_idx, col_name in enumerate(valid_columns):
-                                with cols[col_idx % 3]:
-                                    import pandas as pd
-                                    current_val = "" if pd.isna(df_st.loc[selected_idx, col_name]) else str(df_st.loc[selected_idx, col_name])
+                    with action_tabs[2]:
+                        if st.session_state.role == "teacher":
+                            if not df_st.empty:
+                                edit_options = df_st.index.tolist()
+                                selected_idx = st.selectbox(
+                                    "✏️ اختر الطالب المطلوب تعديل بياناته (يمكنك البحث بالكتابة هنا):", 
+                                    edit_options, 
+                                    format_func=lambda x: f"{df_st.loc[x, 'name']} - (الرقم: {df_st.loc[x, 'id']})",
+                                    key="edit_select"
+                                )
+                                
+                                with st.form("edit_form_single"):
+                                    st.markdown(f"**📝 تعديل بيانات: <span style='color:{primary_color};'>{df_st.loc[selected_idx, 'name']}</span>**", unsafe_allow_html=True)
+                                    cols = st.columns(3)
+                                    new_vals = []
                                     
-                                    # ✳️ الحل الجذري: ربط مفتاح المربع (key) برقم الطالب (selected_idx) ليتغير ديناميكياً!
-                                    val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
-                                    new_vals.append(val)
-                            
-                            if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
-                                row_index = int(selected_idx) + 2
-                                try:
-                                    sh.worksheet("students").update(f"A{row_index}", [new_vals])
-                                    st.session_state.toast_msg = f"🔄 تم تحديث بيانات '{new_vals[1]}' بنجاح!"
-                                    if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                    st.cache_data.clear()
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"❌ حدث خطأ أثناء التعديل: {e}")
-                    else:
-                        st.info("لا توجد بيانات للطلاب بعد.")
+                                    valid_columns = [c for c in df_st.columns if c not in ['clean_id'] and not str(c).startswith('Unnamed') and str(c).strip() != ""]
+                                    
+                                    for col_idx, col_name in enumerate(valid_columns):
+                                        with cols[col_idx % 3]:
+                                            current_val = "" if pd.isna(df_st.loc[selected_idx, col_name]) else str(df_st.loc[selected_idx, col_name])
+                                            val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
+                                            new_vals.append(val)
+                                    
+                                    if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
+                                        row_index = int(selected_idx) + 2
+                                        try:
+                                            sh.worksheet("students").update(f"A{row_index}", [new_vals])
+                                            st.session_state.toast_msg = f"🔄 تم تحديث بيانات '{new_vals[1]}' بنجاح!"
+                                            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                            st.cache_data.clear()
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"❌ حدث خطأ أثناء التعديل: {e}")
+                            else:
+                                st.info("لا توجد بيانات للطلاب بعد.")
         
                     # -------------------------------------
-                    # 4. تبويب: حذف طالب
+                    # 4. حذف طالب
                     # -------------------------------------
                     with action_tabs[3]:
                         if st.session_state.role == "teacher":
                             if not df_st.empty:
-                                # ✳️ عرض القائمة المنسدلة مباشرة (بدون مربع بحث إضافي)
                                 del_options = df_st.index.tolist()
                                 del_idx = st.selectbox(
                                     "🗑️ اختر الطالب المطلوب حذفه نهائياً (يمكنك البحث بالكتابة هنا):", 
@@ -569,14 +552,12 @@ else:
                                 st.info("لا توجد بيانات للطلاب بعد.")
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
-                # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
                     st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
                     
-                    # CSS HTML فاخر مع إضافة أشرطة الأبطال (Ribbons)
                     lux_css = """
                         * { box-sizing: border-box; } 
-                        body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
+                        body { margin: 0; padding: 0; background: #F8FAFC; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
                         .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
                         
                         .card { 
@@ -588,7 +569,6 @@ else:
                             margin-bottom: 20px;
                         }
                         
-                        /* ✳️ شريط الزاوية للمراكز الأولى (Ribbon) */
                         .ribbon {
                             position: absolute; top: 20px; right: -35px;
                             padding: 5px 40px; font-weight: 900; font-size: 15px;
@@ -622,26 +602,24 @@ else:
                         .c-badge { 
                             width: 80%; margin: 10px auto; padding: 15px 5px; border-radius: 12px;
                             background: #fff; text-align: center;
-                            box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
+                            box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 1px solid #E2E8F0;
                         }
                         
-                        /* ✳️ تلوين صناديق النقاط للمراكز الأولى */
                         .c-badge.rank-1 { background: linear-gradient(145deg, #FFF8DC, #FFD700); border-color: #DAA520; }
                         .c-badge.rank-2 { background: linear-gradient(145deg, #F8F9FA, #E2E8F0); border-color: #94A3B8; }
                         .c-badge.rank-3 { background: linear-gradient(145deg, #FFF1F2, #FECDD3); border-color: #CD7F32; }
                         
                         .b-val { display: block; font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 5px; }
-                        .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748b; }
+                        .b-lbl { display: block; font-size: 14px; font-weight: bold; color: #64748B; }
                         
-                        /* تلوين نصوص الصناديق المميزة */
                         .rank-1 .b-val { color: #8B4513; font-size: 36px; } .rank-1 .b-lbl { color: #A0522D; }
                         .rank-2 .b-val { color: #1E293B; font-size: 34px; } .rank-2 .b-lbl { color: #334155; }
                         .rank-3 .b-val { color: #78350F; font-size: 34px; } .rank-3 .b-lbl { color: #92400E; }
                         
                         .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
                         
-                        .theme-honor { border: 14px solid #1e3a8a; } 
-                        .theme-honor .c-name, .theme-honor .b-val:not(.rank-1 .b-val):not(.rank-2 .b-val):not(.rank-3 .b-val), .theme-honor .c-footer { color: #1e3a8a; }
+                        .theme-honor { border: 14px solid #1E40AF; } 
+                        .theme-honor .c-name, .theme-honor .b-val:not(.rank-1 .b-val):not(.rank-2 .b-val):not(.rank-3 .b-val), .theme-honor .c-footer { color: #1E40AF; }
                         
                         .theme-academic { border: 14px solid #881337; } 
                         .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
@@ -658,17 +636,17 @@ else:
                         
                         for i, (_, r) in enumerate(top_10.iterrows(), 1):
                             ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                            border_color = "#f59e0b" if i<=3 else "#cbd5e1"
+                            brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
                             st.markdown(f"""
-                                <div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid {border_color}; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                                <div style='background:#ffffff; border:1px solid #E2E8F0; border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                                     <div style='display:flex; align-items:center; gap:15px;'>
                                         <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
                                         <div>
-                                            <b style='font-size:1.1rem; color:#1e3a8a;'>{r.get('name', '')}</b><br>
-                                            <small style='color:#64748b;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
+                                            <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
+                                            <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                                         </div>
                                     </div>
-                                    <div style='background:#fef3c7; padding:5px 15px; border-radius:8px; color:#b45309; font-weight:900; font-size:1.2rem;'>
+                                    <div style='background:#FEF3C7; padding:5px 15px; border-radius:8px; color:#B45309; font-weight:900; font-size:1.2rem;'>
                                         {int(r.get('النقاط', 0))} نقطة
                                     </div>
                                 </div>
@@ -682,7 +660,6 @@ else:
                             student_name = row.get('name', 'اسم غير متوفر')
                             score = int(row.get('النقاط', 0))
                             
-                            # ✳️ منطق المراكز الثلاثة الأولى
                             if rank == 1:
                                 rank_text = "المركز الأول"
                                 icon = "🏆"
@@ -721,7 +698,6 @@ else:
                             </div>
                             """
                         
-                        import datetime
                         honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                         
                         st.download_button(
@@ -750,7 +726,7 @@ else:
                                 
                                 if not top_academic.empty:
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
-                                        st.markdown(f"<div style='background:#ffffff; border:1px solid #e2e8f0; border-right:5px solid #059669; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:#064e3b;'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#dcfce7; padding:5px 15px; border-radius:8px; color:#047857; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
+                                        st.markdown(f"<div style='background:#ffffff; border:1px solid #E2E8F0; border-right:5px solid {success_color}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:{success_color};'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#D1FAE5; padding:5px 15px; border-radius:8px; color:{success_color}; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
                                         
                                     st.markdown("---")
                                     st.subheader("🖨️ طباعة بطاقات التفوق")
@@ -790,6 +766,7 @@ else:
                             st.info("لا توجد درجات مطابقة للطلاب.")
                     else:
                         st.info("لم يتم رصد درجات بعد.")
+                        
                 # --- 4. تقرير الطالب الشامل ---
                 with sub_tabs[3]:
                     st.markdown("#### 📑 التقرير الشامل المفصل")
@@ -807,8 +784,8 @@ else:
                         c4.error(f"🌟 إجمالي النقاط:\n\n**{int(s_inf['النقاط'])}**")
                         st.markdown("<br>", unsafe_allow_html=True)
                         
-                        grades_html_table = "<div style='text-align:center; padding:20px; color:#64748b;'>لا توجد درجات مرصودة لهذا الطالب.</div>"
-                        behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748b;'>✨ سجل السلوك نظيف.</div>"
+                        grades_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>لا توجد درجات مرصودة لهذا الطالب.</div>"
+                        behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>✨ سجل السلوك نظيف.</div>"
 
                         st.markdown("##### 📊 الدرجات الأكاديمية")
                         df_g = st.session_state.df_grades
@@ -828,7 +805,7 @@ else:
                                     <tr>
                                         <td style="text-align: center;">{g_inf.get('p1', 0)}</td>
                                         <td style="text-align: center;">{g_inf.get('p2', 0)}</td>
-                                        <td style="text-align: center; font-weight:bold; color:#1e40af;">{g_inf.get('perf', 0)}</td>
+                                        <td style="text-align: center; font-weight:bold; color:{primary_color};">{g_inf.get('perf', 0)}</td>
                                     </tr>
                                 </table>
                                 """
@@ -859,26 +836,26 @@ else:
                             <title>تقرير الطالب: {s_inf['name']}</title>
                             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
                             <style>
-                                body {{ font-family: 'Cairo', sans-serif; background-color: #f8fafc; padding: 20px; color: #334155; line-height: 1.6; }}
-                                .container {{ max-width: 800px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }}
-                                .banner {{ background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 30px; font-weight: 800; font-size: 24px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }}
+                                body {{ font-family: 'Cairo', sans-serif; background-color: #F8FAFC; padding: 20px; color: #0F172A; line-height: 1.6; }}
+                                .container {{ max-width: 800px; margin: 0 auto; background: #FFFFFF; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }}
+                                .banner {{ background: {header_grad}; color: white; text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 30px; font-weight: 800; font-size: 24px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }}
                                 .header {{ text-align: center; margin-bottom: 30px; }}
-                                .header h1 {{ color: #0f172a; margin-bottom: 5px; font-weight: 800; font-size: 28px; }}
-                                .header p {{ color: #64748b; font-size: 14px; margin-top: 0; }}
-                                .student-card {{ background: linear-gradient(to left, #eff6ff, #ffffff); border-right: 5px solid #3b82f6; padding: 25px; border-radius: 12px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }}
-                                .student-card h2 {{ grid-column: 1 / -1; margin-top: 0; color: #1e40af; border-bottom: 1px dashed #bfdbfe; padding-bottom: 15px; margin-bottom: 10px; }}
+                                .header h1 {{ color: #0F172A; margin-bottom: 5px; font-weight: 800; font-size: 28px; }}
+                                .header p {{ color: #64748B; font-size: 14px; margin-top: 0; }}
+                                .student-card {{ background: #F8FAFC; border-right: 5px solid {primary_color}; padding: 25px; border-radius: 12px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }}
+                                .student-card h2 {{ grid-column: 1 / -1; margin-top: 0; color: {accent_color}; border-bottom: 1px dashed {border_color}; padding-bottom: 15px; margin-bottom: 10px; }}
                                 .student-card .info-item {{ font-size: 16px; }}
                                 .student-card .info-item span {{ font-weight: 800; color: #475569; margin-left: 5px; }}
-                                h3 {{ color: #4338ca; display: flex; align-items: center; gap: 10px; margin-top: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }}
-                                .table-container {{ overflow: hidden; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 20px; border: 1px solid #e2e8f0; }}
+                                h3 {{ color: {accent_color}; display: flex; align-items: center; gap: 10px; margin-top: 40px; border-bottom: 2px solid {border_color}; padding-bottom: 10px; }}
+                                .table-container {{ overflow: hidden; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 20px; border: 1px solid {border_color}; }}
                                 table {{ width: 100%; border-collapse: collapse; background: #fff; text-align: right; }}
-                                th {{ background-color: #f8fafc; color: #334155; font-weight: 800; padding: 15px; border-bottom: 2px solid #e2e8f0; }}
-                                td {{ padding: 15px; border-bottom: 1px solid #f1f5f9; color: #475569; font-weight: 600; }}
+                                th {{ background-color: #F8FAFC; color: #0F172A; font-weight: 800; padding: 15px; border-bottom: 2px solid {border_color}; }}
+                                td {{ padding: 15px; border-bottom: 1px solid #F1F5F9; color: #475569; font-weight: 600; }}
                                 tr:last-child td {{ border-bottom: none; }}
-                                tr:nth-child(even) {{ background-color: #f8fafc; }}
-                                .footer-sigs {{ margin-top: 60px; display: flex; justify-content: space-between; align-items: center; padding-top: 30px; border-top: 2px dashed #cbd5e1; color: #334155; font-weight: 800; }}
+                                tr:nth-child(even) {{ background-color: #F8FAFC; }}
+                                .footer-sigs {{ margin-top: 60px; display: flex; justify-content: space-between; align-items: center; padding-top: 30px; border-top: 2px dashed #CBD5E1; color: #0F172A; font-weight: 800; }}
                                 .footer-sigs > div {{ text-align: center; flex: 1; }}
-                                .sig-line {{ margin-top: 30px; color: #94a3b8; font-weight: normal; }}
+                                .sig-line {{ margin-top: 30px; color: #94A3B8; font-weight: normal; }}
                                 @media print {{ body {{ background: white; padding: 0; }} .container {{ box-shadow: none; padding: 0; max-width: 100%; border: none; }} .banner, th, .student-card {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }} }}
                             </style>
                         </head>
@@ -898,7 +875,7 @@ else:
                                 <div class="table-container">{behavior_html_table}</div>
                                 <div class="footer-sigs">
                                     <div>وكيل شؤون الطلاب<div class="sig-line">.................................</div></div>
-                                    <div>المعلم<div style="margin-top: 20px; color: #1e40af; font-size: 18px;">زياد المعمري</div></div>
+                                    <div>المعلم<div style="margin-top: 20px; color: {accent_color}; font-size: 18px;">زياد المعمري</div></div>
                                     <div>الموجه الطلابي<div class="sig-line">.................................</div></div>
                                 </div>
                             </div>
@@ -915,7 +892,7 @@ else:
             st.markdown("### 📊 التقييم والمتابعة")
             eval_tabs = st.tabs(["👤 التقييم الفردي", "👥 الرصد الجماعي السريع"])
             
-            # --- 1. التقييم الفردي (صاروخي: يقرأ من الذاكرة المحلية وبدون إعادة تحميل الصفحة) ---
+            # --- 1. التقييم الفردي ---
             with eval_tabs[0]:
                 df_ev = st.session_state.df_students
                 
@@ -951,10 +928,8 @@ else:
                                     if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
                                         new_b_row = {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn}
                                         
-                                        # 1. إرسال السلوك لجوجل شيت
                                         safe_append_row("behavior", new_b_row)
                                         
-                                        # 2. تحديث الذاكرة المحلية للسلوك
                                         new_b_df = pd.DataFrame([new_b_row])
                                         st.session_state.df_behavior = pd.concat([st.session_state.df_behavior, new_b_df], ignore_index=True)
                                         
@@ -969,11 +944,9 @@ else:
                                                         idx = h.index('النقاط') + 1
                                                         new_val = current_points + chg
                                                         ws.update_cell(c.row, idx, new_val)
-                                                        # 3. ⚡ تحديث الذاكرة المحلية للنقاط (وحل مشكلة str)
                                                         st.session_state.df_students.loc[student_idx, 'النقاط'] = int(new_val)
                                             except Exception as e: st.error(f"خطأ: {e}")
                                         
-                                        # ظهور الإشعار بدون st.rerun
                                         st.toast(f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!", icon="🎉")
                             else: st.info("💡 وضع القراءة فقط.")
 
@@ -1008,7 +981,6 @@ else:
                                         else: 
                                             ws_g.append_row([sid, v1, v2, tot, str(datetime.date.today())])
                                             
-                                        # ⚡ تحديث الذاكرة المحلية للدرجات (حل مشكلة str)
                                         if grade_idx is not None:
                                             st.session_state.df_grades.loc[grade_idx, 'p1'] = str(v1)
                                             st.session_state.df_grades.loc[grade_idx, 'p2'] = str(v2)
@@ -1036,10 +1008,10 @@ else:
 
                             for global_idx, r in my_b.iloc[::-1].iterrows():
                                 with st.container():
-                                    color = "#ef4444" if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else "#10b981"
+                                    color = danger_color if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else success_color
                                     st.markdown(f"""
                                     <div class="mobile-list-item" style="border-right: 4px solid {color}">
-                                        <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#6b7280">{r.get('note')}</span></div>
+                                        <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#64748B">{r.get('note')}</span></div>
                                     </div>
                                     """, unsafe_allow_html=True)
                                     
@@ -1090,7 +1062,7 @@ else:
                                     b_note = c3.text_input("تفاصيل", key=f"b_note_{sid_b}", label_visibility="collapsed", placeholder="أضف تفاصيل...")
                                     
                                     bulk_data[sid_b] = {"type": b_type, "note": b_note}
-                                    st.markdown("<div style='border-bottom: 1px dashed #e0e7ff; margin: 5px 0;'></div>", unsafe_allow_html=True)
+                                    st.markdown("<div style='border-bottom: 1px dashed #E2E8F0; margin: 5px 0;'></div>", unsafe_allow_html=True)
 
                                 if st.form_submit_button("🚀 حفظ الرصد الجماعي للجميع", type="primary"):
                                     behavior_rows_to_add = []
@@ -1127,11 +1099,10 @@ else:
                                                     if cells_to_update:
                                                         ws_st.update_cells(cells_to_update)
                                                 
-                                            st.success(f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة.")
-                                            # إجبار النظام على تحديث الذاكرة المحلية بعد الرصد الجماعي
-                                            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                            st.cache_data.clear()
-                                            st.rerun()
+                                                st.success(f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة.")
+                                                if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                                st.cache_data.clear()
+                                                st.rerun()
                                         except Exception as e:
                                             st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
                                     else:
@@ -1167,13 +1138,13 @@ else:
                 for i, r in df_a.iloc[::-1].iterrows():
                     with st.container():
                         is_urgent = str(r.get('عاجل')).strip() == 'نعم'
-                        anim_class = "urgent-anim" if is_urgent else ""
-                        border_style = "2px solid #ef4444" if is_urgent else "1px solid #e0e7ff"
-                        bg_style = "#fef2f2" if is_urgent else "#ffffff"
+                        anim_class = "urgent-box" if is_urgent else ""
+                        border_style = f"2px solid {danger_color}" if is_urgent else f"1px solid {border_color}"
+                        bg_style = "#FEF2F2" if is_urgent else "#FFFFFF"
                         st.markdown(f"""
                         <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:12px; padding:15px; margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between;"><h4 style="margin:0; color:#000;">{r.get('العنوان')}</h4><span style="background:white; padding:2px 8px; border-radius:8px; font-size:0.8rem; color:#555;">{r.get('التاريخ')}</span></div>
-                            <p style="margin:5px 0 0 0; color:#475569">{r.get('الرابط')}</p><small style="color:#1e3a8a; font-weight:bold;">🎯 الفئة: {r.get('الصف')}</small>
+                            <div style="display:flex; justify-content:space-between;"><h4 style="margin:0; color:#0F172A;">{r.get('العنوان')}</h4><span style="background:white; padding:2px 8px; border-radius:8px; font-size:0.8rem; color:#64748B;">{r.get('التاريخ')}</span></div>
+                            <p style="margin:5px 0 0 0; color:#475569">{r.get('الرابط')}</p><small style="color:{accent_color}; font-weight:bold;">🎯 الفئة: {r.get('الصف')}</small>
                         </div>
                         """, unsafe_allow_html=True)
                         kc1, kc2 = st.columns([1, 4])
@@ -1194,7 +1165,6 @@ else:
                     if c1.button("🔄 تحديث البيانات (Refresh)", use_container_width=True):
                         st.cache_data.clear()
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                        # 👇 السطر الجديد: نرسل إشارة للذاكرة أننا نريد عرض رسالة بعد التحميل
                         st.session_state['show_refresh_success'] = True 
                         st.rerun()
                         
@@ -1233,19 +1203,19 @@ else:
                                 else: st.error("لم يتم العثور على عمود 'النقاط'")
                         except Exception as e: st.error(f"حدث خطأ: {e}")
 
-                    st.divider()
-                    st.markdown("##### 📥 تنزيل نسخة كاملة من البيانات (Backup)")
-                    df_st_full = fetch_safe("students")
-                    if not df_st_full.empty:
-                        b_st = io.BytesIO()
-                        with pd.ExcelWriter(b_st, engine='xlsxwriter') as writer: df_st_full.to_excel(writer, index=False, sheet_name='Students')
-                        st.download_button(label="📂 تنزيل بيانات الطلاب (Excel)", data=b_st.getvalue(), file_name=f"students_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-                    
-                    df_gr_full = fetch_safe("grades")
-                    if not df_gr_full.empty:
-                        b_gr = io.BytesIO()
-                        with pd.ExcelWriter(b_gr, engine='xlsxwriter') as writer: df_gr_full.to_excel(writer, index=False, sheet_name='Grades')
-                        st.download_button(label="📊 تنزيل سجل الدرجات (Excel)", data=b_gr.getvalue(), file_name=f"grades_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.divider()
+                st.markdown("##### 📥 تنزيل نسخة كاملة من البيانات (Backup)")
+                df_st_full = fetch_safe("students")
+                if not df_st_full.empty:
+                    b_st = io.BytesIO()
+                    with pd.ExcelWriter(b_st, engine='xlsxwriter') as writer: df_st_full.to_excel(writer, index=False, sheet_name='Students')
+                    st.download_button(label="📂 تنزيل بيانات الطلاب (Excel)", data=b_st.getvalue(), file_name=f"students_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                
+                df_gr_full = fetch_safe("grades")
+                if not df_gr_full.empty:
+                    b_gr = io.BytesIO()
+                    with pd.ExcelWriter(b_gr, engine='xlsxwriter') as writer: df_gr_full.to_excel(writer, index=False, sheet_name='Grades')
+                    st.download_button(label="📊 تنزيل سجل الدرجات (Excel)", data=b_gr.getvalue(), file_name=f"grades_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
                 with st.expander("📝 تهيئة الصفوف والدرجات"):
                     cy = st.text_input("العام الدراسي", st.session_state.current_year)
@@ -1425,14 +1395,14 @@ else:
                 if not urg.empty:
                     u = urg.tail(1).iloc[0]
                     link_text = str(u.get('الرابط', ''))
-                    link_display = f"<a href='{link_text}' target='_blank' style='color:#7f1d1d; text-decoration:underline;'>اضغط هنا</a>" if link_text.startswith('http') else link_text if link_text.lower() != 'none' else ""
-                    st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:#7f1d1d'>{link_display}</small></div>", unsafe_allow_html=True)
+                    link_display = f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>" if link_text.startswith('http') else link_text if link_text.lower() != 'none' else ""
+                    st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>", unsafe_allow_html=True)
 
             st.markdown(f"""
                 <div class="welcome-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div><h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2><p style="color:#e0e7ff; margin:5px 0 0 0;">{s_cls}</p></div>
-                        <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;"><span style="font-weight:bold; font-size:0.9rem;">ID: {sid}</span></div>
+                        <div><h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2><p style="color:#DBEAFE; margin:5px 0 0 0;">{s_cls}</p></div>
+                        <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;"><span style="font-weight:bold; font-size:0.9rem; color:#FFFFFF;">ID: {sid}</span></div>
                     </div>
                 </div>
                 <div class="points-banner">
@@ -1441,13 +1411,13 @@ else:
                     <p style="margin:0; font-size:0.8rem;">استمر في التفوق!</p>
                 </div>
                 <div class="medal-flex">
-                    <div class="m-card {'m-active' if pts>=100 else ''}" style="color: #d97706;">🥇<br><b>ذهبي</b></div>
-                    <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #64748b;">🥈<br><b>فضي</b></div>
-                    <div class="m-card m-active" style="color: #b45309;">🥉<br><b>برونزي</b></div>
+                    <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي</b></div>
+                    <div class="m-card {'m-active' if pts>=50 else ''}" style="color: {sub_text};">🥈<br><b>فضي</b></div>
+                    <div class="m-card m-active" style="color: #B45309;">🥉<br><b>برونزي</b></div>
                 </div>
             """, unsafe_allow_html=True)
 
-            tabs = st.tabs(["📢", "📝", "📊", "🏆", "⚙️"])
+            tabs = st.tabs(["📢 التنبيهات", "📝 السلوك", "📊 الدرجات", "🏆 الشرف", "⚙️ الإعدادات"])
 
             with tabs[0]: 
                 st.caption("التعاميم والتنبيهات")
@@ -1455,12 +1425,12 @@ else:
                     anns = df_ann[df_ann['الصف'].astype(str).str.strip().isin(['الكل', s_cls])]
                     for _, r in anns.iloc[::-1].iterrows():
                         row_link = str(r.get('الرابط', ''))
-                        row_link_display = f"<a href='{row_link}' target='_blank' style='color:#4b5563; text-decoration:underline;'>اضغط هنا للفتح</a>" if row_link.startswith('http') else row_link if row_link.lower() != 'none' else ""
+                        row_link_display = f"<a href='{row_link}' target='_blank' style='color:{primary_color}; text-decoration:underline;'>اضغط هنا للفتح</a>" if row_link.startswith('http') else row_link if row_link.lower() != 'none' else ""
                         st.markdown(f"""
                         <div class='mobile-list-item'>
                             <div style="width:100%">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>📢 {r.get('العنوان')}</b><small style="background:#f5f3ff; color:#4338ca; padding:2px 6px; border-radius:4px;">{r.get('التاريخ')}</small></div>
-                                <span style="color:#4b5563; font-size:0.9rem;">{row_link_display}</span>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>📢 {r.get('العنوان')}</b><small style="background:#EFF6FF; color:{primary_color}; padding:2px 6px; border-radius:4px;">{r.get('التاريخ')}</small></div>
+                                <span style="color:#475569; font-size:0.9rem;">{row_link_display}</span>
                             </div>
                         </div>""", unsafe_allow_html=True)
                 else: st.info("لا يوجد تنبيهات حالياً")
@@ -1472,8 +1442,8 @@ else:
                     nts = df_beh[df_beh['clean_id']==sid]
                     if not nts.empty:
                         for _, n in nts.iloc[::-1].iterrows():
-                            color = "#ef4444" if "سلبي" in str(n.get('type')) else "#4f46e5"
-                            st.markdown(f"<div class='mobile-list-item' style='border-right: 4px solid {color};'><div><b style='color:{color}'>{n.get('type')}</b><p style='margin:0; font-size:0.9rem; color:#374151;'>{n.get('note')}</p><small style='color:#9ca3af;'>{n.get('date')}</small></div></div>", unsafe_allow_html=True)
+                            color = danger_color if "سلبي" in str(n.get('type')) else primary_color
+                            st.markdown(f"<div class='mobile-list-item' style='border-right: 4px solid {color};'><div><b style='color:{color}'>{n.get('type')}</b><p style='margin:0; font-size:0.9rem; color:#334155;'>{n.get('note')}</p><small style='color:#94A3B8;'>{n.get('date')}</small></div></div>", unsafe_allow_html=True)
                     else: st.success("🌟 سجلك نظيف تماماً!")
 
             with tabs[2]: 
@@ -1487,18 +1457,18 @@ else:
                         perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
                         percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
                         
-                        if percentage >= 90: title, title_color = "🌟 أسطورة المنصة", "#d97706"
-                        elif percentage >= 80: title, title_color = "🚀 بطل مبدع", "#4338ca"
-                        elif percentage >= 70: title, title_color = "👍 متألق ومجتهد", "#059669"
-                        elif percentage >= 60: title, title_color = "💪 واصل تقدمك", "#2563eb"
-                        else: title, title_color = "🌱 أنت قادر على الأفضل", "#64748b"
+                        if percentage >= 90: title, title_color = "🌟 أسطورة المنصة", warning_color
+                        elif percentage >= 80: title, title_color = "🚀 بطل مبدع", accent_color
+                        elif percentage >= 70: title, title_color = "👍 متألق ومجتهد", success_color
+                        elif percentage >= 60: title, title_color = "💪 واصل تقدمك", primary_color
+                        else: title, title_color = "🌱 أنت قادر على الأفضل", sub_text
     
                         st.markdown(f"""
                         <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')} / {st.session_state.max_tasks}</b></div>
                         <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
-                        <div class='mobile-list-item' style='background:#eef2ff; border-color:#818cf8; display:flex; flex-direction:column; align-items:flex-start;'>
+                        <div class='mobile-list-item' style='background:#EFF6FF; border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
                             <div style="width:100%; display:flex; justify-content:space-between;">
-                                <span style="color:#4338ca; font-weight:bold;">🏆 المجموع النهائي</span><b style="color:#4338ca; font-size:1.2rem;">{perf_score} / {max_total}</b>
+                                <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي</span><b style="color:{accent_color}; font-size:1.2rem;">{perf_score} / {max_total}</b>
                             </div>
                             <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
                                 {title}
@@ -1663,11 +1633,9 @@ else:
                         </html>
                         """
                             
-                            # --- كود تحويل الشهادة إلى PDF بدلاً من HTML ---
                             try:
                                 from weasyprint import HTML
                                 with st.spinner("⏳ جاري إعداد شهادة التفوق بصيغة PDF..."):
-                                    # تحويل كود الـ HTML إلى ملف PDF في الذاكرة
                                     pdf_bytes = HTML(string=certificate_html).write_pdf()
                                     
                                     st.download_button(
@@ -1679,7 +1647,6 @@ else:
                                         use_container_width=True
                                     )
                             except Exception as e:
-                                # فضح الخطأ لمعرفة المشكلة التقنية في السيرفر
                                 st.error(f"⚠️ فشل توليد الـ PDF بسبب: {e}")
                                 st.info("💡 ملاحظة: تم تفعيل تحميل نسخة الويب لسرعة الوصول.")
                                 st.download_button(
@@ -1697,8 +1664,8 @@ else:
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
                 for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
                     ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                    sty = "border:2px solid #818cf8; background:#eef2ff;" if str(r['clean_id']) == sid else ""
-                    st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:#f59e0b; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
+                    sty = f"border:2px solid {primary_color}; background:#EFF6FF;" if str(r['clean_id']) == sid else ""
+                    st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
 
             with tabs[4]:
                 st.caption("إدارة الملف الشخصي")
