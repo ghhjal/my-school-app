@@ -135,33 +135,48 @@ st.markdown(f"""
         background-color: {main_bg} !important; color: {text_color} !important; 
     }}
     
-    .block-container {{ padding-top: 0rem; padding-bottom: 5rem; max-width: 1000px; }}
+    /* ✳️ تعديل المساحة العلوية لمنع قص الهيدر */
+    .block-container {{ padding-top: 1rem !important; padding-bottom: 5rem; max-width: 1000px; }}
     
     .header-container {{
         background: {header_grad};
-        padding: 50px 20px 40px 20px;
+        padding: 50px 20px 40px 20px; /* مساحة تنفس ممتازة من الأعلى */
         border-radius: 0 0 40px 40px;
-        margin: -60px -5rem 30px -5rem;
+        margin: -1rem -5rem 30px -5rem; /* ضبط السحب للأعلى ليكون متوازناً */
         box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
-        color: white; text-align: center;
+        color: white; 
+        text-align: center;
     }}
     
-    /* ✳️ التعديل الجديد: دمج القبعة بجانب النص في نفس السطر */
-    .main-title {{
-        margin: 0; font-size: 2.8rem; font-weight: 900; color: #fff !important; 
-        display: flex; align-items: center; justify-content: center; gap: 15px;
-    }}
-    
-    .sub-title {{
-        margin: 5px 0 0 0; color: #DBEAFE; font-size: 1.2rem; font-weight: 500;
+    /* ✳️ حاوية لترتيب القبعة والنص على نفس السطر تماماً */
+    .title-wrapper {{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px; /* المسافة بين القبعة والنص */
+        margin-bottom: 10px;
     }}
     
     .logo-icon {{ 
         font-size: 3.5rem; 
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         animation: float 4s ease-in-out infinite;
-        display: inline-block;
         line-height: 1;
+    }}
+    
+    .main-title {{ 
+        margin: 0; 
+        font-size: 3rem; 
+        font-weight: 900; 
+        color: #ffffff !important; 
+        line-height: 1;
+    }}
+    
+    .sub-title {{ 
+        margin: 0; 
+        color: #DBEAFE; 
+        font-size: 1.2rem; 
+        font-weight: 500; 
     }}
     
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
@@ -174,7 +189,7 @@ st.markdown(f"""
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: #0F172A !important; }}
     
-    /* ✳️ التعديل الجذري: إجبار جميع أزرار الحفظ في المنصة على أخذ اللون الأزرق */
+    /* إجبار جميع الأزرار على التدرج الأزرق */
     [data-testid="stFormSubmitButton"] button, 
     [data-testid="baseButton-primary"], 
     div.stButton > button {{
@@ -211,14 +226,17 @@ st.markdown(f"""
     .urgent-box {{ background-color: #FEF2F2; border: 2px solid {danger_color}; color: #991B1B; padding: 15px; border-radius: 12px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
-        .header-container {{ padding: 70px 20px 30px 20px; }}
-        .main-title {{ font-size: 1.8rem; }}
+        .header-container {{ padding: 40px 20px 30px 20px; }}
+        .main-title {{ font-size: 2rem; }}
         .logo-icon {{ font-size: 2.5rem; }}
     }}
     </style>
 
     <div class="header-container">
-        <h1 class="main-title">منصة زياد الذكية <span class="logo-icon">🎓</span></h1>
+        <div class="title-wrapper">
+            <h1 class="main-title">منصة زياد الذكية</h1>
+            <div class="logo-icon">🎓</div>
+        </div>
         <p class="sub-title">بوابة التعليم الذكية 2026</p>
     </div>
 """, unsafe_allow_html=True)
