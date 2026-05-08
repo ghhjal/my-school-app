@@ -101,6 +101,7 @@ def safe_append_row(worksheet_name, data_dict):
         return False
 
 # --- تحميل الإعدادات ---
+# --- تحميل الإعدادات ---
 if "class_options" not in st.session_state:
     try:
         sett = sh.worksheet("settings").get_all_records()
@@ -108,11 +109,19 @@ if "class_options" not in st.session_state:
         st.session_state.max_tasks = int(s_map.get('max_tasks', 60))
         st.session_state.max_quiz = int(s_map.get('max_quiz', 40))
         st.session_state.current_year = str(s_map.get('current_year', '1447هـ'))
+        
+        # ✳️ السطر الجديد: جلب الفترة النشطة من الإعدادات في جوجل شيت
+        st.session_state.current_period = str(s_map.get('current_period', 'الفترة الأولى'))
+        
         st.session_state.class_options = [x.strip() for x in str(s_map.get('class_list', 'الأول')).split(',') if x.strip()]
         st.session_state.stage_options = [x.strip() for x in str(s_map.get('stage_list', 'ابتدائي')).split(',') if x.strip()]
     except:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
+        
+        # ✳️ السطر الجديد: القيمة الافتراضية في حال كانت قاعدة البيانات فارغة
+        st.session_state.current_period = "الفترة الأولى"
+        
         st.session_state.class_options = ["الأول"]; st.session_state.stage_options = ["ابتدائي"]
 
 if "role" not in st.session_state: st.session_state.role = None
@@ -737,11 +746,20 @@ else:
                         )
         
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
+                # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
-                    st.markdown("#### 🎓 لوحة المتفوقين أكاديمياً")
+                    cp = st.session_state.get('current_period', 'الفترة الأولى')
+                    st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
+                    
                     if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
                         df_g = st.session_state.df_grades.copy()
                         df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
+                        
+                        # ✳️ تصفية الدرجات لتشمل الفترة النشطة فقط
+                        if 'period' not in df_g.columns:
+                            df_g['period'] = 'الفترة الأولى'
+                        df_g = df_g[df_g['period'] == cp]
+                        
                         merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
                         
                         if not merged_df.empty:
@@ -788,9 +806,9 @@ else:
                                         type="primary"
                                     )
                                 else:
-                                    st.info("لم يصل أحد لنسبة 90% حتى الآن.")
+                                    st.info(f"لم يصل أحد لنسبة 90% في {cp} حتى الآن.")
                         else:
-                            st.info("لا توجد درجات مطابقة للطلاب.")
+                            st.info(f"لا توجد درجات مطابقة للطلاب في {cp}.")
                     else:
                         st.info("لم يتم رصد درجات بعد.")
                         
@@ -1520,10 +1538,18 @@ else:
                     else: st.success("🌟 سجلك نظيف تماماً!")
 
             with tabs[2]: 
-                st.caption("درجاتي")
+                cp = st.session_state.get('current_period', 'الفترة الأولى')
+                st.caption(f"درجاتي - {cp}")
+                
                 if not df_gr.empty:
                     df_gr['clean_id'] = df_gr.iloc[:,0].astype(str).str.strip().str.split('.').str[0]
-                    grs = df_gr[df_gr['clean_id']==sid]
+                    
+                    # ✳️ تصفية درجات الطالب بناءً على الفترة النشطة
+                    if 'period' not in df_gr.columns:
+                        df_gr['period'] = 'الفترة الأولى'
+                    
+                    grs = df_gr[(df_gr['clean_id']==sid) & (df_gr['period']==cp)]
+                    
                     if not grs.empty:
                         g = grs.iloc[0]
                         max_total = st.session_state.max_tasks + st.session_state.max_quiz
@@ -1541,7 +1567,7 @@ else:
                         <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
                         <div class='mobile-list-item' style='background:#EFF6FF; border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
                             <div style="width:100%; display:flex; justify-content:space-between;">
-                                <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي</span><b style="color:{accent_color}; font-size:1.2rem;">{perf_score} / {max_total}</b>
+                                <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي ({cp})</span><b style="color:{accent_color}; font-size:1.2rem;">{perf_score} / {max_total}</b>
                             </div>
                             <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
                                 {title}
@@ -1731,7 +1757,7 @@ else:
                                     use_container_width=True
                                 )
     
-                    else: st.info("لم يتم رصد درجات بعد")
+                    else: st.info(f"لم يتم رصد درجات لك في {cp} حتى الآن.")
             with tabs[3]: 
                 st.caption("لوحة الشرف (أفضل 10 طلاب)")
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
