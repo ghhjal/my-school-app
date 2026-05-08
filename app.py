@@ -1211,18 +1211,22 @@ else:
                                     pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                                     pivot_table.index.name = "اسم الطالب"
                                     
-                                    # ✳️ السحر البرمجي الجديد: تجميع الملاحظات النصية في عمود واحد
-                                    # ✳️ السحر البرمجي الجديد: تجميع الملاحظات النصية في عمود واحد
-                                    def combine_notes(group):
-                                        valid = group[group['note'].astype(str).str.strip() != '']
-                                        if valid.empty: return ""
-                                        # الاكتفاء بالنص المكتوب فقط والفصل بفاصلة عربية (،)
-                                        return " ، ".join(valid['note'].astype(str).str.strip())
-                                        
-                                    notes_series = class_data.groupby('name').apply(combine_notes)
-                                    pivot_table['الملاحظات النصية التفصيلية'] = notes_series
-                                    pivot_table.fillna('', inplace=True) # تنظيف الخلايا الفارغة
+                                    # تجميع الملاحظات النصية
+                                    if 'note' in class_data.columns:
+                                        def combine_notes(group):
+                                            valid = group[group['note'].astype(str).str.strip() != '']
+                                            if valid.empty: return ""
+                                            return " ، ".join(valid['note'].astype(str).str.strip())
                                             
+                                        notes_series = class_data.groupby('name').apply(combine_notes)
+                                        pivot_table['الملاحظات النصية التفصيلية'] = notes_series
+                                    
+                                    # ✳️ الحل الجذري لمنع اختفاء الجدول: تنظيف وتوحيد نوع البيانات
+                                    pivot_table = pivot_table.fillna("") 
+                                    pivot_table = pivot_table.astype(str) # إجبار كل الخلايا لتكون نصوصاً لكي لا يتعطل محرك الرسم
+                                    
+                                    st.dataframe(pivot_table, use_container_width=True)
+                                    
                                     b_csv = io.BytesIO()
                                     with pd.ExcelWriter(b_csv, engine='xlsxwriter') as writer:
                                         pivot_table.to_excel(writer, sheet_name='التفريغ الورقي')
