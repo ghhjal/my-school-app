@@ -1333,28 +1333,59 @@ else:
                     if st.button("🚀 بدء المزامنة السريعة", type="primary") and up:
                         try:
                             with st.spinner('جاري معالجة ورفع البيانات دفعة واحدة...'):
-                                df = pd.read_excel(up).fillna("").dropna(how='all'); ws = sh.worksheet(ts)
-                                existing_ids = set(str(r.get('id', r.get('student_id', ''))).strip().split('.')[0] for r in ws.get_all_records())
-                                hd = ws.row_values(1); new_rows_to_append = []; progress_bar = st.progress(0)
+                                df = pd.read_excel(up).fillna("").dropna(how='all')
+                                ws = sh.worksheet(ts)
+                                
+                                # ✳️ تحديث الهيدر تلقائياً إذا كنا نرفع درجات ولم يكن عمود period موجوداً
+                                hd = ws.row_values(1)
+                                if ts == "grades" and 'period' not in hd:
+                                    ws.update_cell(1, len(hd)+1, 'period')
+                                    hd.append('period')
+
+                                records = ws.get_all_records()
+                                
+                                # ✳️ منطق ذكي للتحقق من التكرار (للطالب نتحقق من رقمه فقط، وللدرجات نتحقق من رقمه + اسم الفترة)
+                                if ts == "grades":
+                                    existing_keys = set(f"{str(r.get('student_id', '')).strip().split('.')[0]}_{str(r.get('period', 'الفترة الأولى')).strip()}" for r in records)
+                                else:
+                                    existing_keys = set(str(r.get('id', '')).strip().split('.')[0] for r in records)
+
+                                new_rows_to_append = []
+                                progress_bar = st.progress(0)
+                                cp = st.session_state.get('current_period', 'الفترة الأولى') # جلب الفترة النشطة حالياً
                                 
                                 for idx, row in df.iterrows():
                                     d = row.to_dict()
                                     raw_id = str(d.get('student_id', d.get('id', ''))).strip().split('.')[0]
                                     if not raw_id or raw_id == '0' or raw_id.lower() == 'nan': continue
+                                    
                                     if ts == "grades":
-                                        d.update({"student_id": raw_id, "p1": int(d.get('p1',0)), "p2": int(d.get('p2',0)), "perf": int(d.get('p1',0))+int(d.get('p2',0)), "date": str(datetime.date.today())})
+                                        d.update({
+                                            "student_id": raw_id, 
+                                            "p1": int(d.get('p1',0)), 
+                                            "p2": int(d.get('p2',0)), 
+                                            "perf": int(d.get('p1',0))+int(d.get('p2',0)), 
+                                            "date": str(datetime.date.today()),
+                                            "period": d.get('period', cp) # ✳️ حقن الفترة الحالية تلقائياً بدون تعب للمعلم
+                                        })
                                         if 'id' in d: del d['id']
+                                        check_key = f"{raw_id}_{d['period']}"
                                     else:
                                         d['id'] = raw_id; d['الجوال'] = clean_phone_number(d.get('الجوال',''))
                                         if 'النقاط' not in d or str(d.get('النقاط', '')).strip() == "": d['النقاط'] = 0
-                                    if raw_id not in existing_ids: new_rows_to_append.append([str(d.get(k, "")) for k in hd])
+                                        check_key = raw_id
+                                        
+                                    if check_key not in existing_keys: 
+                                        new_rows_to_append.append([str(d.get(k, "")) for k in hd])
+                                        
                                     progress_bar.progress(min((idx + 1) / len(df), 1.0))
 
                                 if new_rows_to_append: 
                                     ws.append_rows(new_rows_to_append)
-                                    st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح!")
+                                    st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح لـ ({cp})!")
                                 else: 
-                                    st.info("💡 جميع البيانات موجودة مسبقاً، لم يتم إضافة جديد.")
+                                    st.info(f"💡 جميع البيانات المرفوعة موجودة مسبقاً في ({cp})، لم يتم إضافة جديد.")
+                                    
                                 if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                 st.cache_data.clear(); st.rerun()
                         except Exception as e: st.error(f"حدث خطأ أثناء المزامنة: {e}")
