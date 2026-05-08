@@ -751,14 +751,16 @@ else:
                     cp = st.session_state.get('current_period', 'الفترة الأولى')
                     st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
                     
-                    if 'df_grades' in st.session_state and not st.session_state.df_grades.empty and not df_st.empty:
+                    if 'df_grades' in st.session_state and not st.session_state.df_grades.empty:
                         df_g = st.session_state.df_grades.copy()
                         df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                         
-                        # ✳️ تصفية الدرجات لتشمل الفترة النشطة فقط
-                        if 'period' not in df_g.columns:
-                            df_g['period'] = 'الفترة الأولى'
+                        # ✳️ ملء الفراغات لضمان ظهور بيانات الفترة الأولى القديمة
+                        if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
+                        df_g['period'] = df_g['period'].replace(['', None, 'nan'], 'الفترة الأولى')
+                        
                         df_g = df_g[df_g['period'] == cp]
+                        # ... بقية الكود الخاص بـ merged_df و top_academic يكمل كما هو ...
                         
                         merged_df = pd.merge(df_g, df_st[['clean_id', 'name', 'class']], on='clean_id', how='inner')
                         
@@ -999,22 +1001,19 @@ else:
                         # --- قسم الدرجات الأكاديمية ---
                         with c1:
                             st.container(border=True)
-                            
-                            # ✳️ جلب الفترة النشطة من الإعدادات
                             cp = st.session_state.get('current_period', 'الفترة الأولى')
                             st.markdown(f"##### 📝 رصد الدرجات ({cp})")
                             
-                            df_g = st.session_state.df_grades
-                            cur_p1 = 0; cur_p2 = 0
+                            df_g = st.session_state.df_grades.copy()
+                            cur_p1, cur_p2 = 0, 0
                             
                             if not df_g.empty:
                                 df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                                 
-                                # التأكد من وجود عمود الفترة، وإلا نعتبر كل القديم "الفترة الأولى"
-                                if 'period' not in df_g.columns:
-                                    df_g['period'] = 'الفترة الأولى'
+                                # ✳️ الحل هنا: ملء الفراغات في عمود الفترة بالقيمة الافتراضية
+                                if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
+                                df_g['period'] = df_g['period'].replace(['', None, 'nan'], 'الفترة الأولى')
                                     
-                                # جلب درجة الطالب الخاصة بالفترة المحددة فقط
                                 gr_match = df_g[(df_g['clean_id'] == sid) & (df_g['period'] == cp)]
                                 if not gr_match.empty:
                                     cur_p1 = int(pd.to_numeric(gr_match.iloc[0]['p1'], errors='coerce') or 0)
@@ -1542,13 +1541,15 @@ else:
                 st.caption(f"درجاتي - {cp}")
                 
                 if not df_gr.empty:
+                    df_gr = df_gr.copy()
                     df_gr['clean_id'] = df_gr.iloc[:,0].astype(str).str.strip().str.split('.').str[0]
                     
-                    # ✳️ تصفية درجات الطالب بناءً على الفترة النشطة
-                    if 'period' not in df_gr.columns:
-                        df_gr['period'] = 'الفترة الأولى'
+                    # ✳️ ملء الفراغات لضمان ظهور درجات الطالب في الفترة الأولى
+                    if 'period' not in df_gr.columns: df_gr['period'] = 'الفترة الأولى'
+                    df_gr['period'] = df_gr['period'].replace(['', None, 'nan'], 'الفترة الأولى')
                     
                     grs = df_gr[(df_gr['clean_id']==sid) & (df_gr['period']==cp)]
+                    # ... بقية الكود يكمل كما هو ...
                     
                     if not grs.empty:
                         g = grs.iloc[0]
