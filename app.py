@@ -1206,8 +1206,22 @@ else:
                                 
                                 if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
                                     st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
+                                    
+                                    # إنشاء الجدول التجميعي للأرقام
                                     pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                                     pivot_table.index.name = "اسم الطالب"
+                                    
+                                    # ✳️ السحر البرمجي الجديد: تجميع الملاحظات النصية في عمود واحد
+                                    def combine_notes(group):
+                                        valid = group[group['note'].astype(str).str.strip() != '']
+                                        if valid.empty: return ""
+                                        # دمج نوع السلوك مع النص المكتوب بين قوسين
+                                        return " | ".join(valid[beh_col].astype(str) + " (" + valid['note'].astype(str) + ")")
+                                        
+                                    notes_series = class_data.groupby('name').apply(combine_notes)
+                                    pivot_table['الملاحظات النصية التفصيلية'] = notes_series
+                                    pivot_table.fillna('', inplace=True) # تنظيف الخلايا الفارغة
+                                    
                                     st.dataframe(pivot_table, use_container_width=True)
                                     
                                     b_csv = io.BytesIO()
@@ -1219,8 +1233,9 @@ else:
                                     st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في (الصف {cls_choice})")
                                     specific_data = class_data[class_data[beh_col] == type_choice]
                                     if not specific_data.empty:
-                                        summary = specific_data.groupby('name').size().reset_index(name='عدد المرات')
-                                        summary.rename(columns={'name': 'اسم الطالب'}, inplace=True)
+                                        # عرض الملاحظات النصية حتى في البحث الفردي
+                                        summary = specific_data.groupby(['name', 'note']).size().reset_index(name='عدد المرات')
+                                        summary.rename(columns={'name': 'اسم الطالب', 'note': 'التفاصيل المكتوبة'}, inplace=True)
                                         summary = summary.sort_values('عدد المرات', ascending=False)
                                         st.dataframe(summary, use_container_width=True, hide_index=True)
                                     else:
