@@ -1245,22 +1245,41 @@ else:
                     st.download_button(label="📊 تنزيل سجل الدرجات (Excel)", data=b_gr.getvalue(), file_name=f"grades_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
                 with st.expander("📝 تهيئة الصفوف والدرجات"):
-                    cy = st.text_input("العام الدراسي", st.session_state.current_year)
-                    cls = st.text_area("قائمة الصفوف (افصل بفاصلة)", ",".join(st.session_state.class_options))
-                    stg = st.text_area("قائمة المراحل", ",".join(st.session_state.stage_options))
+                    c_y, c_p = st.columns(2)
+                    cy = c_y.text_input("العام الدراسي", st.session_state.get('current_year', '1447هـ'))
+                    
+                    # ✳️ الإضافة الجديدة: قائمة لاختيار الفترة النشطة
+                    current_period_val = st.session_state.get('current_period', 'الفترة الأولى')
+                    period_options = ["الفترة الأولى", "الفترة الثانية", "الفصل الثاني - فترة أولى", "الفصل الثاني - فترة ثانية"]
+                    cp_index = period_options.index(current_period_val) if current_period_val in period_options else 0
+                    cp = c_p.selectbox("الفترة الدراسية النشطة", period_options, index=cp_index)
+
+                    cls = st.text_area("قائمة الصفوف (افصل بفاصلة)", ",".join(st.session_state.get('class_options', ['الرابع'])))
+                    stg = st.text_area("قائمة المراحل", ",".join(st.session_state.get('stage_options', ['ابتدائي'])))
+                    
                     c1, c2 = st.columns(2)
-                    mt = c1.number_input("الدرجة العظمى (مشاركة)", 0, 100, st.session_state.max_tasks)
-                    mq = c2.number_input("الدرجة العظمى (اختبار)", 0, 100, st.session_state.max_quiz)
+                    mt = c1.number_input("الدرجة العظمى (مشاركة)", 0, 100, st.session_state.get('max_tasks', 60))
+                    mq = c2.number_input("الدرجة العظمى (اختبار)", 0, 100, st.session_state.get('max_quiz', 40))
+                    
                     if st.button("💾 حفظ الإعدادات", type="primary"):
+                        # ✳️ تحديث قاعدة البيانات لتشمل الفترة الجديدة في الخلية A7:B7
                         sh.worksheet("settings").batch_update([
-                            {'range': 'A2:B2', 'values': [['max_tasks', mt]]}, {'range': 'A3:B3', 'values': [['max_quiz', mq]]},
-                            {'range': 'A4:B4', 'values': [['current_year', cy]]}, {'range': 'A5:B5', 'values': [['class_list', cls]]},
-                            {'range': 'A6:B6', 'values': [['stage_list', stg]]} 
+                            {'range': 'A2:B2', 'values': [['max_tasks', mt]]}, 
+                            {'range': 'A3:B3', 'values': [['max_quiz', mq]]},
+                            {'range': 'A4:B4', 'values': [['current_year', cy]]}, 
+                            {'range': 'A5:B5', 'values': [['class_list', cls]]},
+                            {'range': 'A6:B6', 'values': [['stage_list', stg]]},
+                            {'range': 'A7:B7', 'values': [['current_period', cp]]} # حفظ الفترة
                         ])
-                        st.session_state.max_tasks = mt; st.session_state.max_quiz = mq; st.session_state.current_year = cy
+                        
+                        st.session_state.max_tasks = mt
+                        st.session_state.max_quiz = mq
+                        st.session_state.current_year = cy
+                        st.session_state.current_period = cp # تحديث الذاكرة
                         st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                         st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
-                        st.success("✅ تم الحفظ بنجاح")
+                        
+                        st.success(f"✅ تم الحفظ بنجاح! المنصة الآن تعمل على: {cp}")
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                         st.cache_data.clear(); st.rerun()
 
