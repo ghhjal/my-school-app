@@ -1212,18 +1212,17 @@ else:
                                     pivot_table.index.name = "اسم الطالب"
                                     
                                     # ✳️ السحر البرمجي الجديد: تجميع الملاحظات النصية في عمود واحد
+                                    # ✳️ السحر البرمجي الجديد: تجميع الملاحظات النصية في عمود واحد
                                     def combine_notes(group):
                                         valid = group[group['note'].astype(str).str.strip() != '']
                                         if valid.empty: return ""
-                                        # دمج نوع السلوك مع النص المكتوب بين قوسين
-                                        return " | ".join(valid[beh_col].astype(str) + " (" + valid['note'].astype(str) + ")")
+                                        # الاكتفاء بالنص المكتوب فقط والفصل بفاصلة عربية (،)
+                                        return " ، ".join(valid['note'].astype(str).str.strip())
                                         
                                     notes_series = class_data.groupby('name').apply(combine_notes)
                                     pivot_table['الملاحظات النصية التفصيلية'] = notes_series
                                     pivot_table.fillna('', inplace=True) # تنظيف الخلايا الفارغة
-                                    
-                                    st.dataframe(pivot_table, use_container_width=True)
-                                    
+                                            
                                     b_csv = io.BytesIO()
                                     with pd.ExcelWriter(b_csv, engine='xlsxwriter') as writer:
                                         pivot_table.to_excel(writer, sheet_name='التفريغ الورقي')
