@@ -978,47 +978,74 @@ else:
                             else: st.info("💡 وضع القراءة فقط.")
 
                         # --- قسم الدرجات الأكاديمية ---
+                        # --- قسم الدرجات الأكاديمية ---
                         with c1:
                             st.container(border=True)
-                            st.markdown("##### 📝 رصد الدرجات الأكاديمية")
+                            
+                            # ✳️ جلب الفترة النشطة من الإعدادات
+                            cp = st.session_state.get('current_period', 'الفترة الأولى')
+                            st.markdown(f"##### 📝 رصد الدرجات ({cp})")
+                            
                             df_g = st.session_state.df_grades
                             cur_p1 = 0; cur_p2 = 0
-                            grade_idx = None
                             
                             if not df_g.empty:
                                 df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
-                                gr_match = df_g[df_g['clean_id'] == sid]
+                                
+                                # التأكد من وجود عمود الفترة، وإلا نعتبر كل القديم "الفترة الأولى"
+                                if 'period' not in df_g.columns:
+                                    df_g['period'] = 'الفترة الأولى'
+                                    
+                                # جلب درجة الطالب الخاصة بالفترة المحددة فقط
+                                gr_match = df_g[(df_g['clean_id'] == sid) & (df_g['period'] == cp)]
                                 if not gr_match.empty:
-                                    grade_idx = gr_match.index[0]
                                     cur_p1 = int(pd.to_numeric(gr_match.iloc[0]['p1'], errors='coerce') or 0)
                                     cur_p2 = int(pd.to_numeric(gr_match.iloc[0]['p2'], errors='coerce') or 0)
                             
                             if st.session_state.role == "teacher":
                                 with st.form("gr_upd", clear_on_submit=False):
-                                    v1 = st.number_input("درجة المشاركة", 0, st.session_state.max_tasks, cur_p1)
-                                    v2 = st.number_input("درجة الاختبار", 0, st.session_state.max_quiz, cur_p2)
+                                    v1 = st.number_input("درجة المشاركة", 0, st.session_state.get('max_tasks', 60), cur_p1)
+                                    v2 = st.number_input("درجة الاختبار", 0, st.session_state.get('max_quiz', 40), cur_p2)
                                     
                                     if st.form_submit_button("💾 حفظ الدرجات", type="primary"):
                                         tot = v1 + v2
                                         ws_g = sh.worksheet("grades")
-                                        cell = ws_g.find(sid)
-                                        if cell:
-                                            ws_g.update_cell(cell.row, 2, v1); ws_g.update_cell(cell.row, 3, v2)
-                                            ws_g.update_cell(cell.row, 4, tot); ws_g.update_cell(cell.row, 5, str(datetime.date.today()))
-                                        else: 
-                                            ws_g.append_row([sid, v1, v2, tot, str(datetime.date.today())])
+                                        
+                                        # ✳️ منطق ذكي: إضافة عمود 'period' للشيت تلقائياً إذا لم يكن موجوداً
+                                        headers = ws_g.row_values(1)
+                                        if 'period' not in headers:
+                                            ws_g.update_cell(1, len(headers)+1, 'period')
+                                            headers.append('period')
                                             
-                                        if grade_idx is not None:
-                                            st.session_state.df_grades.loc[grade_idx, 'p1'] = str(v1)
-                                            st.session_state.df_grades.loc[grade_idx, 'p2'] = str(v2)
-                                            st.session_state.df_grades.loc[grade_idx, 'perf'] = str(tot)
-                                        else:
-                                            new_row = pd.DataFrame([[sid, v1, v2, tot, str(datetime.date.today()), sid]], columns=df_g.columns)
-                                            st.session_state.df_grades = pd.concat([st.session_state.df_grades, new_row], ignore_index=True)
-
-                                        st.toast("✅ تم اعتماد الدرجات الأكاديمية بنجاح!", icon="🎓")
+                                        records = ws_g.get_all_records()
+                                        row_to_update = None
+                                        
+                                        # البحث عن صف الطالب في نفس الفترة النشطة
+                                        for i, r in enumerate(records):
+                                            r_id = str(r.get(headers[0], '')).strip().split('.')[0]
+                                            r_period = str(r.get('period', 'الفترة الأولى'))
+                                            if r_id == sid and r_period == cp:
+                                                row_to_update = i + 2 # +2 لتعويض صف العناوين وبدء الإندكس
+                                                break
+                                                
+                                        if row_to_update:
+                                            # تحديث درجات الفترة الحالية
+                                            ws_g.update_cell(row_to_update, 2, v1); ws_g.update_cell(row_to_update, 3, v2)
+                                            ws_g.update_cell(row_to_update, 4, tot); ws_g.update_cell(row_to_update, 5, str(datetime.date.today()))
+                                            ws_g.update_cell(row_to_update, headers.index('period')+1, cp)
+                                        else: 
+                                            # إنشاء صف جديد للدرجات زائد اسم الفترة
+                                            new_row = [sid, v1, v2, tot, str(datetime.date.today())]
+                                            while len(new_row) < len(headers) - 1: new_row.append("") # موازنة الأعمدة
+                                            new_row.append(cp)
+                                            ws_g.append_row(new_row)
+                                            
+                                        # تحديث الواجهة فوراً
+                                        st.session_state['show_refresh_success'] = True
+                                        if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                        st.cache_data.clear(); st.rerun()
                             else: st.info("💡 وضع القراءة فقط.")
-                            st.caption(f"📊 المجموع الحالي للدرجات: {cur_p1 + cur_p2}")
+                            st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
 
                         # --- سجل السلوك السفلي ---
                         st.markdown("#### 📜 سجل السلوك الأخير")
