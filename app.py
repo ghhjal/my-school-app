@@ -1658,11 +1658,27 @@ else:
                         else: title, title_color = "🌱 أنت قادر على الأفضل", sub_text
     
                         st.markdown(f"""
-                        <div class='mobile-list-item'><span>📝 المشاركة والواجبات</span><b>{g.get('p1')} / {st.session_state.max_tasks}</b></div>
-                        <div class='mobile-list-item'><span>✍️ الاختبارات القصيرة</span><b>{g.get('p2')} / {st.session_state.max_quiz}</b></div>
+                        <div class='mobile-list-item'>
+                            <span>📝 المشاركة والواجبات</span>
+                            <div>
+                                <span style='font-size:1.4rem; font-weight:900; color:{primary_color};'>{g.get('p1')}</span> 
+                                <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
+                            </div>
+                        </div>
+                        <div class='mobile-list-item'>
+                            <span>✍️ الاختبارات القصيرة</span>
+                            <div>
+                                <span style='font-size:1.4rem; font-weight:900; color:{primary_color};'>{g.get('p2')}</span> 
+                                <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
+                            </div>
+                        </div>
                         <div class='mobile-list-item' style='background:#EFF6FF; border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
-                            <div style="width:100%; display:flex; justify-content:space-between;">
-                                <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي ({cp})</span><b style="color:{accent_color}; font-size:1.2rem;">{perf_score} / {max_total}</b>
+                            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي ({cp})</span>
+                                <div>
+                                    <span style='font-size:1.6rem; font-weight:900; color:{accent_color};'>{perf_score}</span> 
+                                    <span style='color:{accent_color}; opacity:0.5; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
+                                </div>
                             </div>
                             <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
                                 {title}
