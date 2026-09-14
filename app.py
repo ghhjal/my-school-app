@@ -214,33 +214,33 @@ st.markdown(f"""
     
     /* ✳️ إصلاح التبويبات المفقودة في الوضع الليلي */
     /* ✳️ تصميم التبويبات (Tabs) بشكل دائري وأنيق يطابق الأزرار */
-    .stTabs [data-baseweb="tab-list"] { 
+    .stTabs [data-baseweb="tab-list"] {{ 
         gap: 10px; 
         background-color: transparent; 
         border: none; 
-    }
-    .stTabs [data-baseweb="tab"] { 
+    }}
+    .stTabs [data-baseweb="tab"] {{ 
         height: 50px; 
         background-color: var(--secondary-background-color) !important; 
-        border-radius: 12px !important; /* حواف دائرية للتبويبات */
+        border-radius: 12px !important; 
         border: 1px solid var(--border-color) !important; 
         color: var(--text-color) !important; 
         font-weight: bold; 
         flex: 1; 
         justify-content: center; 
         transition: all 0.3s ease; 
-    }
-    .stTabs [aria-selected="true"] { 
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important; /* مطابقة لون زر الدخول */
+    }}
+    .stTabs [aria-selected="true"] {{ 
+        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important; 
         color: white !important; 
         border: none !important; 
-        border-radius: 12px !important; /* إجبار الحواف الدائرية للتبويب النشط */
+        border-radius: 12px !important; 
         box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important; 
-    }
+    }}
     
     /* إخفاء الخطوط السفلية الحادة الافتراضية من نظام Streamlit */
-    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
-    .stTabs [data-baseweb="tab-border"] { display: none !important; }
+    .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
+    .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
     /* ✳️ إصلاح كروت المهام والدرجات */
     .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); }}
     
