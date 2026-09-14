@@ -92,35 +92,45 @@ if "class_options" not in st.session_state:
 if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
-# --- 🎨 نظام القوالب الديناميكية للمناسبات ---
+# --- 🎨 نظام القوالب الديناميكية للمناسبات (مع الرموز والعبارات والنقوش) ---
 active_theme_name = st.session_state.get('app_theme', 'الرئيسي (الافتراضي)')
 
 themes = {
     "الرئيسي (الافتراضي)": {
         "primary": "#2563EB", "accent": "#1E40AF", "header_grad": "linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)",
-        "title_color": "#ffffff", "sub_color": "#DBEAFE", "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)"
+        "title_color": "#ffffff", "sub_color": "#DBEAFE", "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
+        "icon": "🎓", "title": "منصة زياد الذكية", "subtitle": "بوابة التعليم الذكية 2026",
+        "bg_pattern": "none"
     },
     "اليوم الوطني 🇸🇦": {
         "primary": "#006C5B", "accent": "#004D40", "header_grad": "linear-gradient(135deg, #004D40 0%, #006C5B 100%)",
-        "title_color": "#D4AF37", "sub_color": "#FDF6E3", "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)"
+        "title_color": "#ffffff", "sub_color": "#D4AF37", "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
+        "icon": "🇸🇦", "title": "منصة زياد الذكية", "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>اليوم الوطني السعودي 96</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
     },
     "يوم التأسيس 🏛️": {
         "primary": "#8B4513", "accent": "#5C4033", "header_grad": "linear-gradient(135deg, #5C4033 0%, #8B4513 100%)",
-        "title_color": "#F5DEB3", "sub_color": "#FAEBD7", "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)"
+        "title_color": "#F5DEB3", "sub_color": "#FAEBD7", "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
+        "icon": "🐎", "title": "منصة زياد الذكية", "subtitle": "يوم بدينا<br><span style='font-size:1.1rem; color:#F5DEB3; opacity:0.9;'>ثلاثة قرون من العز والفخر</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")"
     },
     "رمضان المبارك 🌙": {
         "primary": "#0B1B3D", "accent": "#060D23", "header_grad": "linear-gradient(135deg, #060D23 0%, #0B1B3D 100%)",
-        "title_color": "#D4AF37", "sub_color": "#B0C4DE", "btn_hover": "linear-gradient(135deg, #000000 0%, #060D23 100%)"
+        "title_color": "#D4AF37", "sub_color": "#B0C4DE", "btn_hover": "linear-gradient(135deg, #000000 0%, #060D23 100%)",
+        "icon": "🌙", "title": "منصة زياد الذكية", "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.1rem; color:#D4AF37; opacity:0.9;'>رمضان يجمعنا</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")"
     },
     "التفوق والنجاح 🏆": {
         "primary": "#D4AF37", "accent": "#B8860B", "header_grad": "linear-gradient(135deg, #B8860B 0%, #D4AF37 100%)",
-        "title_color": "#ffffff", "sub_color": "#FFF8DC", "btn_hover": "linear-gradient(135deg, #8B6508 0%, #B8860B 100%)"
+        "title_color": "#ffffff", "sub_color": "#FFF8DC", "btn_hover": "linear-gradient(135deg, #8B6508 0%, #B8860B 100%)",
+        "icon": "🏆", "title": "منصة زياد الذكية", "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>نهاية العام الدراسي</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
     }
 }
 
 t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
 
-# متغيرات الألوان الثابتة (تم إعادتها لمنع الخطأ)
+# متغيرات الألوان الثابتة
 text_color = "#0F172A"
 sub_text = "#64748B"
 border_color = "#E2E8F0"
@@ -161,7 +171,6 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     
-    /* ✳️ التكيف التلقائي مع الوضع العادي والليلي للخلفية الأساسية */
     html, body, [data-testid="stAppViewContainer"] {{ 
         font-family: 'Tajawal', sans-serif !important; 
         direction: RTL; text-align: right; 
@@ -173,6 +182,8 @@ st.markdown(f"""
     
     .header-container {{
         background: {header_grad};
+        background-image: {t_colors["bg_pattern"]}, {header_grad};
+        background-blend-mode: overlay;
         padding: 70px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -1rem -5rem 30px -5rem;
@@ -212,13 +223,13 @@ st.markdown(f"""
     .sub-title {{ 
         margin: 0; 
         color: {t_colors["sub_color"]}; 
-        font-size: 1.2rem; 
+        font-size: 1.3rem; 
         font-weight: 500; 
         position: relative;
         z-index: 2;
+        line-height: 1.5;
     }}
     
-    /* ✳️ التكيف مع الوضع الليلي لمربعات الإدخال */
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
         background-color: var(--secondary-background-color) !important; border: 2px solid var(--border-color) !important; border-radius: 12px !important; height: 50px; 
     }}
@@ -229,7 +240,6 @@ st.markdown(f"""
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: var(--text-color) !important; }}
     
-    /* أزرار الإرسال */
     [data-testid="stFormSubmitButton"] button, 
     [data-testid="baseButton-primary"], 
     div.stButton > button {{
@@ -248,7 +258,6 @@ st.markdown(f"""
     
     .app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid var(--border-color); margin-bottom: 15px; }}
     
-    /* ✳️ تصميم التبويبات (Tabs) بشكل دائري وأنيق يطابق الأزرار */
     .stTabs [data-baseweb="tab-list"] {{ 
         gap: 10px; 
         background-color: transparent; 
@@ -273,11 +282,9 @@ st.markdown(f"""
         box-shadow: 0 4px 6px rgba(0,0,0, 0.2) !important; 
     }}
     
-    /* إخفاء الخطوط السفلية الحادة الافتراضية من نظام Streamlit */
     .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
     .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
 
-    /* ✳️ إصلاح كروت المهام والدرجات */
     .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); }}
     
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
@@ -300,10 +307,10 @@ st.markdown(f"""
 
     <div class="header-container">
         <div class="title-wrapper">
-            <div class="logo-icon">🎓</div>
-            <h1 class="main-title">منصة زياد الذكية</h1>
+            <div class="logo-icon">{t_colors["icon"]}</div>
+            <h1 class="main-title">{t_colors["title"]}</h1>
         </div>
-        <p class="sub-title">بوابة التعليم الذكية 2026</p>
+        <p class="sub-title">{t_colors["subtitle"]}</p>
     </div>
 """, unsafe_allow_html=True)
 
