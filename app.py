@@ -14,20 +14,6 @@ import math
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 تعريف الألوان ---
-main_bg = "#F8FAFC"
-card_bg = "#FFFFFF"
-text_color = "#0F172A"
-sub_text = "#64748B"
-border_color = "#E2E8F0"
-primary_color = "#2563EB"
-accent_color = "#1E40AF"
-success_color = "#10B981"
-warning_color = "#F59E0B"
-danger_color = "#EF4444"
-header_grad = "linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)"
-shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
-
 # --- [الدوال المساعدة والاتصال الذكي] ---
 
 @st.cache_resource(ttl=2700) 
@@ -53,22 +39,6 @@ def clean_phone_number(phone):
     if p.startswith("0"): p = p[1:]
     if not p.startswith("966") and p != "": p = "966" + p
     return p
-
-def get_professional_msg(name, b_type, b_desc, date):
-    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n📝 *التفاصيل:* {b_desc if b_desc else 'متابعة'}\n📅 *التاريخ:* {date}")
-    return urllib.parse.quote(msg)
-
-def show_footer():
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown(f"""
-    <div style='text-align: center; color: {sub_text}; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.9rem;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
-    </div>
-    """, unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
-    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
 @st.cache_data(ttl=300)
 def fetch_safe(worksheet_name):
@@ -108,6 +78,7 @@ if "class_options" not in st.session_state:
         st.session_state.max_quiz = int(s_map.get('max_quiz', 40))
         st.session_state.current_year = str(s_map.get('current_year', '1447هـ'))
         st.session_state.current_period = str(s_map.get('current_period', 'الفترة الأولى')).strip()
+        st.session_state.app_theme = str(s_map.get('app_theme', 'الرئيسي (الافتراضي)')).strip() # ✳️ جلب القالب المحفوظ
         
         st.session_state.class_options = [x.strip() for x in str(s_map.get('class_list', 'الأول')).split(',') if x.strip()]
         st.session_state.stage_options = [x.strip() for x in str(s_map.get('stage_list', 'ابتدائي')).split(',') if x.strip()]
@@ -115,10 +86,67 @@ if "class_options" not in st.session_state:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
         st.session_state.current_period = "الفترة الأولى"
+        st.session_state.app_theme = "الرئيسي (الافتراضي)"
         st.session_state.class_options = ["الأول"]; st.session_state.stage_options = ["ابتدائي"]
 
 if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
+
+# --- 🎨 نظام القوالب الديناميكية للمناسبات ---
+active_theme_name = st.session_state.get('app_theme', 'الرئيسي (الافتراضي)')
+
+themes = {
+    "الرئيسي (الافتراضي)": {
+        "primary": "#2563EB", "accent": "#1E40AF", "header_grad": "linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)",
+        "title_color": "#ffffff", "sub_color": "#DBEAFE", "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)"
+    },
+    "اليوم الوطني 🇸🇦": {
+        "primary": "#006C5B", "accent": "#004D40", "header_grad": "linear-gradient(135deg, #004D40 0%, #006C5B 100%)",
+        "title_color": "#D4AF37", "sub_color": "#FDF6E3", "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)"
+    },
+    "يوم التأسيس 🏛️": {
+        "primary": "#8B4513", "accent": "#5C4033", "header_grad": "linear-gradient(135deg, #5C4033 0%, #8B4513 100%)",
+        "title_color": "#F5DEB3", "sub_color": "#FAEBD7", "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)"
+    },
+    "رمضان المبارك 🌙": {
+        "primary": "#0B1B3D", "accent": "#060D23", "header_grad": "linear-gradient(135deg, #060D23 0%, #0B1B3D 100%)",
+        "title_color": "#D4AF37", "sub_color": "#B0C4DE", "btn_hover": "linear-gradient(135deg, #000000 0%, #060D23 100%)"
+    },
+    "التفوق والنجاح 🏆": {
+        "primary": "#D4AF37", "accent": "#B8860B", "header_grad": "linear-gradient(135deg, #B8860B 0%, #D4AF37 100%)",
+        "title_color": "#ffffff", "sub_color": "#FFF8DC", "btn_hover": "linear-gradient(135deg, #8B6508 0%, #B8860B 100%)"
+    }
+}
+
+t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
+
+# متغيرات الألوان الثابتة
+border_color = "#E2E8F0"
+success_color = "#10B981"
+warning_color = "#F59E0B"
+danger_color = "#EF4444"
+shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
+
+# متغيرات الألوان الديناميكية
+primary_color = t_colors["primary"]
+accent_color = t_colors["accent"]
+header_grad = t_colors["header_grad"]
+
+def get_professional_msg(name, b_type, b_desc, date):
+    msg = (f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:* {b_type}\n📝 *التفاصيل:* {b_desc if b_desc else 'متابعة'}\n📅 *التاريخ:* {date}")
+    return urllib.parse.quote(msg)
+
+def show_footer():
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='text-align: center; color: var(--text-color); opacity: 0.7; padding: 20px; border-top: 1px solid {border_color};'>
+        <p style='margin-bottom: 10px; font-size: 0.9rem;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
+    </div>
+    """, unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
+    c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
+    c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
 # ==========================================
 # 🎨 2. التصميم (CSS)
@@ -146,9 +174,11 @@ st.markdown(f"""
         padding: 70px 20px 40px 20px;
         border-radius: 0 0 40px 40px;
         margin: -1rem -5rem 30px -5rem;
-        box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.4);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.4);
         color: white; 
         text-align: center;
+        position: relative;
+        overflow: hidden;
     }}
     
     .title-wrapper {{
@@ -157,6 +187,8 @@ st.markdown(f"""
         justify-content: center;
         gap: 15px; 
         margin-bottom: 10px;
+        position: relative;
+        z-index: 2;
     }}
     
     .logo-icon {{ 
@@ -171,15 +203,17 @@ st.markdown(f"""
         margin: 0; 
         font-size: 3rem; 
         font-weight: 900; 
-        color: #ffffff !important; 
+        color: {t_colors["title_color"]} !important; 
         line-height: 1;
     }}
     
     .sub-title {{ 
         margin: 0; 
-        color: #DBEAFE; 
+        color: {t_colors["sub_color"]}; 
         font-size: 1.2rem; 
         font-weight: 500; 
+        position: relative;
+        z-index: 2;
     }}
     
     /* ✳️ التكيف مع الوضع الليلي لمربعات الإدخال */
@@ -197,22 +231,21 @@ st.markdown(f"""
     [data-testid="stFormSubmitButton"] button, 
     [data-testid="baseButton-primary"], 
     div.stButton > button {{
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
-        background-color: #2563EB !important;
-        color: white !important; border: none !important; font-weight: 800 !important;
+        background: {header_grad} !important;
+        background-color: {primary_color} !important;
+        color: {t_colors["title_color"]} !important; border: none !important; font-weight: 800 !important;
         font-size: 1.1rem !important; border-radius: 12px !important; padding: 12px 20px !important;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important; transition: all 0.2s !important; width: 100%; height: 50px;
+        box-shadow: 0 4px 6px rgba(0,0,0, 0.2) !important; transition: all 0.2s !important; width: 100%; height: 50px;
     }}
     [data-testid="stFormSubmitButton"] button:hover, 
     [data-testid="baseButton-primary"]:hover, 
     div.stButton > button:hover {{ 
-        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important; 
-        box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3) !important; 
+        background: {t_colors["btn_hover"]} !important; 
+        box-shadow: 0 6px 12px rgba(0,0,0, 0.3) !important; 
     }}
     
     .app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid var(--border-color); margin-bottom: 15px; }}
     
-    /* ✳️ إصلاح التبويبات المفقودة في الوضع الليلي */
     /* ✳️ تصميم التبويبات (Tabs) بشكل دائري وأنيق يطابق الأزرار */
     .stTabs [data-baseweb="tab-list"] {{ 
         gap: 10px; 
@@ -231,16 +264,17 @@ st.markdown(f"""
         transition: all 0.3s ease; 
     }}
     .stTabs [aria-selected="true"] {{ 
-        background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important; 
-        color: white !important; 
+        background: {header_grad} !important; 
+        color: {t_colors["title_color"]} !important; 
         border: none !important; 
         border-radius: 12px !important; 
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important; 
+        box-shadow: 0 4px 6px rgba(0,0,0, 0.2) !important; 
     }}
     
     /* إخفاء الخطوط السفلية الحادة الافتراضية من نظام Streamlit */
     .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
     .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
+
     /* ✳️ إصلاح كروت المهام والدرجات */
     .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); }}
     
@@ -249,7 +283,7 @@ st.markdown(f"""
     .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.1) !important; }}
     
     .points-banner {{ background: {warning_color}; color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }}
-    .welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }}
+    .welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0, 0.3); }}
 
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
@@ -395,18 +429,18 @@ else:
                     <style>
                     .metric-container {{ display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; direction: rtl; }}
                     .metric-card {{
-                        background-color: #ffffff; border: 1px solid {border_color}; border-radius: 12px;
+                        background-color: var(--secondary-background-color); border: 1px solid var(--border-color); border-radius: 12px;
                         padding: 20px; flex: 1; display: flex; justify-content: space-between; align-items: center;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
                     }}
                     .metric-info {{ text-align: right; }}
                     .metric-title {{ color: {sub_text}; font-size: 14px; font-weight: bold; margin-bottom: 5px; }}
-                    .metric-val {{ color: {text_color}; font-size: 28px; font-weight: 900; }}
+                    .metric-val {{ color: var(--text-color); font-size: 28px; font-weight: 900; }}
                     .metric-sub {{ color: #94A3B8; font-size: 13px; }}
                     .metric-icon {{ width: 55px; height: 55px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 26px; }}
-                    .ic-green {{ background-color: #D1FAE5; color: {success_color}; }}
-                    .ic-blue {{ background-color: #DBEAFE; color: {primary_color}; }}
-                    .ic-red {{ background-color: #FEE2E2; color: {danger_color}; }}
+                    .ic-green {{ background-color: rgba(16, 185, 129, 0.1); color: {success_color}; }}
+                    .ic-blue {{ background-color: rgba(37, 99, 235, 0.1); color: {primary_color}; }}
+                    .ic-red {{ background-color: rgba(239, 68, 68, 0.1); color: {danger_color}; }}
                     
                     [data-testid="stDataFrame"] {{ direction: rtl; }}
                     </style>
@@ -697,7 +731,7 @@ else:
                             ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                             brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
                             st.markdown(f"""
-                                <div style='background:#ffffff; border:1px solid #E2E8F0; border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                                <div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                                     <div style='display:flex; align-items:center; gap:15px;'>
                                         <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
                                         <div>
@@ -705,7 +739,7 @@ else:
                                             <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                                         </div>
                                     </div>
-                                    <div style='background:#FEF3C7; padding:5px 15px; border-radius:8px; color:#B45309; font-weight:900; font-size:1.2rem;'>
+                                    <div style='background:rgba(245, 158, 11, 0.1); padding:5px 15px; border-radius:8px; color:#B45309; font-weight:900; font-size:1.2rem;'>
                                         {int(r.get('النقاط', 0))} نقطة
                                     </div>
                                 </div>
@@ -777,7 +811,6 @@ else:
                         df_g = st.session_state.df_grades.copy()
                         df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                         
-                        # ✳️ إصلاح: تنظيف الفترة وفلترتها بشكل صحيح
                         if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
                         df_g['period'] = df_g['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
                         
@@ -794,7 +827,7 @@ else:
                                 
                                 if not top_academic.empty:
                                     for i, (_, r) in enumerate(top_academic.iterrows(), 1):
-                                        st.markdown(f"<div style='background:#ffffff; border:1px solid #E2E8F0; border-right:5px solid {success_color}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:{success_color};'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:#D1FAE5; padding:5px 15px; border-radius:8px; color:{success_color}; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
+                                        st.markdown(f"<div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {success_color}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'><div style='display:flex; align-items:center; gap:15px;'><span style='font-size:1.5rem;'>🎓</span><div><b style='font-size:1.1rem; color:{success_color};'>{r.get('name', '')}</b><br><small>🏫 {r.get('class', '')}</small></div></div><div style='background:rgba(16, 185, 129, 0.1); padding:5px 15px; border-radius:8px; color:{success_color}; font-weight:900;'>ممتاز</div></div>", unsafe_allow_html=True)
                                         
                                     st.markdown("---")
                                     st.subheader("🖨️ طباعة بطاقات التفوق")
@@ -860,7 +893,6 @@ else:
                         if not df_g.empty:
                             df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                             
-                            # ✳️ إصلاح: تنظيف الفترة وفلترتها لتجنب عرض فترة خاطئة
                             if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
                             df_g['period'] = df_g['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
                             cp_report = st.session_state.get('current_period', 'الفترة الأولى').strip()
@@ -868,7 +900,7 @@ else:
                             my_g = df_g[(df_g['clean_id'] == sid) & (df_g['period'] == cp_report)]
                             
                             if not my_g.empty:
-                                g_inf = my_g.iloc[-1] # ✳️ أخذ أحدث درجة في حال وجود تكرار
+                                g_inf = my_g.iloc[-1]
                                 k1, k2, k3 = st.columns(3)
                                 k1.metric("📝 المشاركة والواجبات", g_inf.get('p1', 0))
                                 k2.metric("✍️ الاختبارات", g_inf.get('p2', 0))
@@ -914,7 +946,7 @@ else:
                             <style>
                                 body {{ font-family: 'Cairo', sans-serif; background-color: #F8FAFC; padding: 20px; color: #0F172A; line-height: 1.6; }}
                                 .container {{ max-width: 800px; margin: 0 auto; background: #FFFFFF; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }}
-                                .banner {{ background: {header_grad}; color: white; text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 30px; font-weight: 800; font-size: 24px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }}
+                                .banner {{ background: {header_grad}; color: white; text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 30px; font-weight: 800; font-size: 24px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0, 0.3); }}
                                 .header {{ text-align: center; margin-bottom: 30px; }}
                                 .header h1 {{ color: #0F172A; margin-bottom: 5px; font-weight: 800; font-size: 28px; }}
                                 .header p {{ color: #64748B; font-size: 14px; margin-top: 0; }}
@@ -1038,7 +1070,6 @@ else:
                             if not df_g.empty:
                                 df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                                 
-                                # ✳️ إصلاح: تنظيف الفترة لتطابق المدخل بشكل دقيق
                                 if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
                                 df_g['period'] = df_g['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
                                     
@@ -1066,7 +1097,7 @@ else:
                                         
                                         for i, r in enumerate(records):
                                             r_id = str(r.get(headers[0], '')).strip().split('.')[0]
-                                            r_period = str(r.get('period', 'الفترة الأولى')).strip() # ✳️ مسح المسافات
+                                            r_period = str(r.get('period', 'الفترة الأولى')).strip()
                                             if r_id == sid and r_period == cp:
                                                 row_to_update = i + 2 
                                                 break
@@ -1206,7 +1237,7 @@ else:
                 else:
                     st.info("💡 وضع القراءة فقط.")
         
-            # --- 3. مساعد التفريغ الورقي (الإضافة الجديدة) ---
+            # --- 3. مساعد التفريغ الورقي ---
             with eval_tabs[2]:
                 st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
                 st.info("هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف المتابعة الورقي بسرعة.")
@@ -1236,11 +1267,9 @@ else:
                         if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
                             st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
                             
-                            # إنشاء الجدول التجميعي للأرقام
                             pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                             pivot_table.index.name = "اسم الطالب"
                             
-                            # تجميع الملاحظات النصية
                             if 'note' in class_data.columns:
                                 def combine_notes(group):
                                     valid = group[group['note'].astype(str).str.strip() != '']
@@ -1250,9 +1279,8 @@ else:
                                 notes_series = class_data.groupby('name').apply(combine_notes)
                                 pivot_table['الملاحظات النصية التفصيلية'] = notes_series
                             
-                            # ✳️ الحل الجذري لمنع اختفاء الجدول: تنظيف وتوحيد نوع البيانات
                             pivot_table = pivot_table.fillna("") 
-                            pivot_table = pivot_table.astype(str) # إجبار كل الخلايا لتكون نصوصاً لكي لا يتعطل محرك الرسم
+                            pivot_table = pivot_table.astype(str) 
                             
                             st.dataframe(pivot_table, use_container_width=True)
                             
@@ -1265,7 +1293,6 @@ else:
                             st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في (الصف {cls_choice})")
                             specific_data = class_data[class_data[beh_col] == type_choice]
                             if not specific_data.empty:
-                                # عرض الملاحظات النصية حتى في البحث الفردي
                                 summary = specific_data.groupby(['name', 'note']).size().reset_index(name='عدد المرات')
                                 summary.rename(columns={'name': 'اسم الطالب', 'note': 'التفاصيل المكتوبة'}, inplace=True)
                                 summary = summary.sort_values('عدد المرات', ascending=False)
@@ -1304,11 +1331,11 @@ else:
                     with st.container():
                         is_urgent = str(r.get('عاجل')).strip() == 'نعم'
                         anim_class = "urgent-box" if is_urgent else ""
-                        border_style = f"2px solid {danger_color}" if is_urgent else f"1px solid {border_color}"
-                        bg_style = "#FEF2F2" if is_urgent else "#FFFFFF"
+                        border_style = f"2px solid {danger_color}" if is_urgent else f"1px solid var(--border-color)"
+                        bg_style = "rgba(239, 68, 68, 0.1)" if is_urgent else "var(--secondary-background-color)"
                         st.markdown(f"""
                         <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:12px; padding:15px; margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between;"><h4 style="margin:0; color:#0F172A;">{r.get('العنوان')}</h4><span style="background:white; padding:2px 8px; border-radius:8px; font-size:0.8rem; color:#64748B;">{r.get('التاريخ')}</span></div>
+                            <div style="display:flex; justify-content:space-between;"><h4 style="margin:0; color:var(--text-color);">{r.get('العنوان')}</h4><span style="background:var(--background-color); padding:2px 8px; border-radius:8px; font-size:0.8rem; color:#64748B;">{r.get('التاريخ')}</span></div>
                             <p style="margin:5px 0 0 0; color:#475569">{r.get('الرابط')}</p><small style="color:{accent_color}; font-weight:bold;">🎯 الفئة: {r.get('الصف')}</small>
                         </div>
                         """, unsafe_allow_html=True)
@@ -1382,11 +1409,19 @@ else:
                     with pd.ExcelWriter(b_gr, engine='xlsxwriter') as writer: df_gr_full.to_excel(writer, index=False, sheet_name='Grades')
                     st.download_button(label="📊 تنزيل سجل الدرجات (Excel)", data=b_gr.getvalue(), file_name=f"grades_backup_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-                with st.expander("📝 تهيئة الصفوف والدرجات"):
+                with st.expander("📝 تهيئة الصفوف والدرجات", expanded=True):
+                    
+                    # ✳️ الإضافة الجديدة: اختيار مظهر المنصة
+                    st.markdown("#### 🎨 المظهر والهوية البصرية")
+                    theme_options = list(themes.keys())
+                    current_theme_val = st.session_state.get('app_theme', 'الرئيسي (الافتراضي)')
+                    th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
+                    selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
+                    
+                    st.markdown("#### ⚙️ الإعدادات الأكاديمية")
                     c_y, c_p = st.columns(2)
                     cy = c_y.text_input("العام الدراسي", st.session_state.get('current_year', '1447هـ'))
                     
-                    # ✳️ الإضافة الجديدة: قائمة لاختيار الفترة النشطة
                     current_period_val = st.session_state.get('current_period', 'الفترة الأولى')
                     period_options = ["الفترة الأولى", "الفترة الثانية", "الفصل الثاني - فترة أولى", "الفصل الثاني - فترة ثانية"]
                     cp_index = period_options.index(current_period_val) if current_period_val in period_options else 0
@@ -1400,24 +1435,25 @@ else:
                     mq = c2.number_input("الدرجة العظمى (اختبار)", 0, 100, st.session_state.get('max_quiz', 40))
                     
                     if st.button("💾 حفظ الإعدادات", type="primary"):
-                        # ✳️ تحديث قاعدة البيانات لتشمل الفترة الجديدة في الخلية A7:B7
                         sh.worksheet("settings").batch_update([
                             {'range': 'A2:B2', 'values': [['max_tasks', mt]]}, 
                             {'range': 'A3:B3', 'values': [['max_quiz', mq]]},
                             {'range': 'A4:B4', 'values': [['current_year', cy]]}, 
                             {'range': 'A5:B5', 'values': [['class_list', cls]]},
                             {'range': 'A6:B6', 'values': [['stage_list', stg]]},
-                            {'range': 'A7:B7', 'values': [['current_period', cp]]} # حفظ الفترة
+                            {'range': 'A7:B7', 'values': [['current_period', cp]]},
+                            {'range': 'A8:B8', 'values': [['app_theme', selected_theme]]} # ✳️ حفظ القالب المختار
                         ])
                         
                         st.session_state.max_tasks = mt
                         st.session_state.max_quiz = mq
                         st.session_state.current_year = cy
-                        st.session_state.current_period = cp # تحديث الذاكرة
+                        st.session_state.current_period = cp 
                         st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                         st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
+                        st.session_state.app_theme = selected_theme # ✳️ تحديث ذاكرة القالب
                         
-                        st.success(f"✅ تم الحفظ بنجاح! المنصة الآن تعمل على: {cp}")
+                        st.success(f"✅ تم الحفظ بنجاح! المنصة تعمل بهوية: {selected_theme}")
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                         st.cache_data.clear(); st.rerun()
 
@@ -1430,7 +1466,6 @@ else:
                                 df = pd.read_excel(up).fillna("").dropna(how='all')
                                 ws = sh.worksheet(ts)
                                 
-                                # ✳️ تحديث الهيدر تلقائياً إذا كنا نرفع درجات ولم يكن عمود period موجوداً
                                 hd = ws.row_values(1)
                                 if ts == "grades" and 'period' not in hd:
                                     ws.update_cell(1, len(hd)+1, 'period')
@@ -1438,7 +1473,6 @@ else:
 
                                 records = ws.get_all_records()
                                 
-                                # ✳️ منطق ذكي للتحقق من التكرار (للطالب نتحقق من رقمه فقط، وللدرجات نتحقق من رقمه + اسم الفترة)
                                 if ts == "grades":
                                     existing_keys = set(f"{str(r.get('student_id', '')).strip().split('.')[0]}_{str(r.get('period', 'الفترة الأولى')).strip()}" for r in records)
                                 else:
@@ -1446,7 +1480,7 @@ else:
 
                                 new_rows_to_append = []
                                 progress_bar = st.progress(0)
-                                cp = st.session_state.get('current_period', 'الفترة الأولى').strip() # جلب الفترة النشطة حالياً
+                                cp = st.session_state.get('current_period', 'الفترة الأولى').strip()
                                 
                                 for idx, row in df.iterrows():
                                     d = row.to_dict()
@@ -1460,7 +1494,7 @@ else:
                                             "p2": int(d.get('p2',0)), 
                                             "perf": int(d.get('p1',0))+int(d.get('p2',0)), 
                                             "date": str(datetime.date.today()),
-                                            "period": str(d.get('period', cp)).strip() # ✳️ مسح المسافات وحقن الفترة الحالية
+                                            "period": str(d.get('period', cp)).strip() 
                                         })
                                         if 'id' in d: del d['id']
                                         check_key = f"{raw_id}_{d['period']}"
@@ -1616,7 +1650,7 @@ else:
             st.markdown(f"""
                 <div class="welcome-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div><h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2><p style="color:#DBEAFE; margin:5px 0 0 0;">{s_cls}</p></div>
+                        <div><h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2><p style="color:{t_colors['sub_color']}; margin:5px 0 0 0;">{s_cls}</p></div>
                         <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;"><span style="font-weight:bold; font-size:0.9rem; color:#FFFFFF;">ID: {sid}</span></div>
                     </div>
                 </div>
@@ -1644,7 +1678,7 @@ else:
                         st.markdown(f"""
                         <div class='mobile-list-item'>
                             <div style="width:100%">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>📢 {r.get('العنوان')}</b><small style="background:#EFF6FF; color:{primary_color}; padding:2px 6px; border-radius:4px;">{r.get('التاريخ')}</small></div>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>📢 {r.get('العنوان')}</b><small style="background:var(--background-color); color:{primary_color}; padding:2px 6px; border-radius:4px;">{r.get('التاريخ')}</small></div>
                                 <span style="color:#475569; font-size:0.9rem;">{row_link_display}</span>
                             </div>
                         </div>""", unsafe_allow_html=True)
@@ -1669,14 +1703,13 @@ else:
                     df_gr = df_gr.copy()
                     df_gr['clean_id'] = df_gr.iloc[:,0].astype(str).str.strip().str.split('.').str[0]
                     
-                    # ✳️ إصلاح وتوحيد الفترات
                     if 'period' not in df_gr.columns: df_gr['period'] = 'الفترة الأولى'
                     df_gr['period'] = df_gr['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
                     
                     grs = df_gr[(df_gr['clean_id']==sid) & (df_gr['period']==cp)]
                     
                     if not grs.empty:
-                        g = grs.iloc[-1] # ✳️ نأخذ أحدث درجة تم رصدها للفترة
+                        g = grs.iloc[-1]
                         max_total = st.session_state.max_tasks + st.session_state.max_quiz
                         perf_score = int(pd.to_numeric(g.get('perf', 0), errors='coerce') or 0)
                         percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
@@ -1702,7 +1735,7 @@ else:
                                 <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
                             </div>
                         </div>
-                        <div class='mobile-list-item' style='background:#EFF6FF; border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
+                        <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
                             <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:{accent_color}; font-weight:bold;">🏆 المجموع النهائي ({cp})</span>
                                 <div>
@@ -1710,7 +1743,7 @@ else:
                                     <span style='color:{accent_color}; opacity:0.5; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
                                 </div>
                             </div>
-                            <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:white; border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
+                            <div style="margin-top:8px; width:100%; text-align:center; padding:5px; background:var(--background-color); border-radius:8px; color:{title_color}; font-weight:bold; font-size:1.1rem; border:1px solid {title_color}33;">
                                 {title}
                             </div>
                         </div>
@@ -1904,7 +1937,7 @@ else:
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
                 for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
                     ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                    sty = f"border:2px solid {primary_color}; background:#EFF6FF;" if str(r['clean_id']) == sid else ""
+                    sty = f"border:2px solid {primary_color}; background:var(--secondary-background-color);" if str(r['clean_id']) == sid else ""
                     st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
 
             with tabs[4]:
