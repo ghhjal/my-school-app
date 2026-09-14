@@ -78,7 +78,7 @@ if "class_options" not in st.session_state:
         st.session_state.max_quiz = int(s_map.get('max_quiz', 40))
         st.session_state.current_year = str(s_map.get('current_year', '1447هـ'))
         st.session_state.current_period = str(s_map.get('current_period', 'الفترة الأولى')).strip()
-        st.session_state.app_theme = str(s_map.get('app_theme', 'الرئيسي (الافتراضي)')).strip() # ✳️ جلب القالب المحفوظ
+        st.session_state.app_theme = str(s_map.get('app_theme', 'الرئيسي (الافتراضي)')).strip() 
         
         st.session_state.class_options = [x.strip() for x in str(s_map.get('class_list', 'الأول')).split(',') if x.strip()]
         st.session_state.stage_options = [x.strip() for x in str(s_map.get('stage_list', 'ابتدائي')).split(',') if x.strip()]
@@ -120,7 +120,9 @@ themes = {
 
 t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
 
-# متغيرات الألوان الثابتة
+# متغيرات الألوان الثابتة (تم إعادتها لمنع الخطأ)
+text_color = "#0F172A"
+sub_text = "#64748B"
 border_color = "#E2E8F0"
 success_color = "#10B981"
 warning_color = "#F59E0B"
@@ -1237,7 +1239,7 @@ else:
                 else:
                     st.info("💡 وضع القراءة فقط.")
         
-            # --- 3. مساعد التفريغ الورقي ---
+            # --- 3. مساعد التفريغ الورقي (الإضافة الجديدة) ---
             with eval_tabs[2]:
                 st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
                 st.info("هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف المتابعة الورقي بسرعة.")
@@ -1267,9 +1269,11 @@ else:
                         if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
                             st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
                             
+                            # إنشاء الجدول التجميعي للأرقام
                             pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                             pivot_table.index.name = "اسم الطالب"
                             
+                            # تجميع الملاحظات النصية
                             if 'note' in class_data.columns:
                                 def combine_notes(group):
                                     valid = group[group['note'].astype(str).str.strip() != '']
@@ -1279,8 +1283,9 @@ else:
                                 notes_series = class_data.groupby('name').apply(combine_notes)
                                 pivot_table['الملاحظات النصية التفصيلية'] = notes_series
                             
+                            # ✳️ الحل الجذري لمنع اختفاء الجدول: تنظيف وتوحيد نوع البيانات
                             pivot_table = pivot_table.fillna("") 
-                            pivot_table = pivot_table.astype(str) 
+                            pivot_table = pivot_table.astype(str) # إجبار كل الخلايا لتكون نصوصاً لكي لا يتعطل محرك الرسم
                             
                             st.dataframe(pivot_table, use_container_width=True)
                             
@@ -1293,6 +1298,7 @@ else:
                             st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في (الصف {cls_choice})")
                             specific_data = class_data[class_data[beh_col] == type_choice]
                             if not specific_data.empty:
+                                # عرض الملاحظات النصية حتى في البحث الفردي
                                 summary = specific_data.groupby(['name', 'note']).size().reset_index(name='عدد المرات')
                                 summary.rename(columns={'name': 'اسم الطالب', 'note': 'التفاصيل المكتوبة'}, inplace=True)
                                 summary = summary.sort_values('عدد المرات', ascending=False)
