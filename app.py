@@ -131,10 +131,12 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     
+    /* ✳️ التكيف التلقائي مع الوضع العادي والليلي للخلفية الأساسية */
     html, body, [data-testid="stAppViewContainer"] {{ 
         font-family: 'Tajawal', sans-serif !important; 
         direction: RTL; text-align: right; 
-        background-color: {main_bg} !important; color: {text_color} !important; 
+        background-color: var(--background-color) !important; 
+        color: var(--text-color) !important; 
     }}
     
     .block-container {{ padding-top: 1rem !important; padding-bottom: 5rem; max-width: 1000px; }}
@@ -180,16 +182,18 @@ st.markdown(f"""
         font-weight: 500; 
     }}
     
+    /* ✳️ التكيف مع الوضع الليلي لمربعات الإدخال */
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
-        background-color: #F8FAFC !important; border: 2px solid #E2E8F0 !important; border-radius: 12px !important; height: 50px; 
+        background-color: var(--secondary-background-color) !important; border: 2px solid var(--border-color) !important; border-radius: 12px !important; height: 50px; 
     }}
     input, textarea, select {{ 
-        color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; caret-color: {primary_color} !important;
+        color: var(--text-color) !important; -webkit-text-fill-color: var(--text-color) !important; caret-color: {primary_color} !important;
         background-color: transparent !important; font-weight: 700 !important; font-size: 1.05rem !important;
     }}
     ::placeholder {{ color: #94A3B8 !important; opacity: 1 !important; -webkit-text-fill-color: #94A3B8 !important; }}
-    div[data-baseweb="select"] div {{ color: #0F172A !important; }}
+    div[data-baseweb="select"] div {{ color: var(--text-color) !important; }}
     
+    /* أزرار الإرسال */
     [data-testid="stFormSubmitButton"] button, 
     [data-testid="baseButton-primary"], 
     div.stButton > button {{
@@ -206,24 +210,26 @@ st.markdown(f"""
         box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3) !important; 
     }}
     
-    .app-card {{ background: {card_bg}; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid {border_color}; margin-bottom: 15px; }}
+    .app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1px solid var(--border-color); margin-bottom: 15px; }}
     
+    /* ✳️ إصلاح التبويبات المفقودة في الوضع الليلي */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: transparent; border: none; }}
-    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; color: #64748B; font-weight: bold; flex: 1; justify-content: center; transition: 0.3s; }}
-    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: var(--secondary-background-color) !important; border-radius: 12px; border: 1px solid var(--border-color) !important; color: var(--text-color) !important; font-weight: bold; flex: 1; justify-content: center; transition: 0.3s; }}
+    .stTabs [aria-selected="true"] {{ background-color: {primary_color} !important; color: white !important; border: none !important; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); }}
 
-    .mobile-list-item {{ background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; }}
+    /* ✳️ إصلاح كروت المهام والدرجات */
+    .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); }}
     
     .medal-flex {{ display: flex; gap: 10px; margin: 20px 0; direction: rtl; }}
-    .m-card {{ flex: 1; background: white; padding: 15px 5px; border-radius: 16px; text-align: center; border: 1px solid #E2E8F0; box-shadow: {shadow_val}; }}
-    .m-active {{ border: 2px solid {warning_color} !important; background: #FFFBEB !important; }}
+    .m-card {{ flex: 1; background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center; border: 1px solid var(--border-color); box-shadow: {shadow_val}; color: var(--text-color); }}
+    .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.1) !important; }}
     
     .points-banner {{ background: {warning_color}; color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }}
     .welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }}
 
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
-    .urgent-box {{ background-color: #FEF2F2; border: 2px solid {danger_color}; color: #991B1B; padding: 15px; border-radius: 12px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
+    .urgent-box {{ background-color: rgba(239, 68, 68, 0.1); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 12px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 25px; }}
 
     @media (max-width: 768px) {{
         .header-container {{ padding: 60px 20px 30px 20px; }}
