@@ -734,82 +734,89 @@ else:
                     """
         
                     if not df_st.empty:
-                        top_10 = df_st.sort_values('النقاط', ascending=False).head(10)
+                        # ✳️ التعديل هنا: فلترة الطلاب الذين نقاطهم أكبر من صفر فقط
+                        active_students = df_st[df_st['النقاط'] > 0]
                         
-                        for i, (_, r) in enumerate(top_10.iterrows(), 1):
-                            ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                            brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
-                            st.markdown(f"""
-                                <div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
-                                    <div style='display:flex; align-items:center; gap:15px;'>
-                                        <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
-                                        <div>
-                                            <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
-                                            <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
+                        if not active_students.empty:
+                            top_10 = active_students.sort_values('النقاط', ascending=False).head(10)
+                            
+                            for i, (_, r) in enumerate(top_10.iterrows(), 1):
+                                ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                                brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
+                                st.markdown(f"""
+                                    <div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                                        <div style='display:flex; align-items:center; gap:15px;'>
+                                            <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
+                                            <div>
+                                                <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
+                                                <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
+                                            </div>
+                                        </div>
+                                        <div style='background:rgba(245, 158, 11, 0.1); padding:5px 15px; border-radius:8px; color:#B45309; font-weight:900; font-size:1.2rem;'>
+                                            {int(r.get('النقاط', 0))} نقطة
                                         </div>
                                     </div>
-                                    <div style='background:rgba(245, 158, 11, 0.1); padding:5px 15px; border-radius:8px; color:#B45309; font-weight:900; font-size:1.2rem;'>
-                                        {int(r.get('النقاط', 0))} نقطة
+                                """, unsafe_allow_html=True)
+                            
+                            st.markdown("---")
+                            st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
+                            
+                            honor_cards_content = ""
+                            for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+                                student_name = row.get('name', 'اسم غير متوفر')
+                                score = int(row.get('النقاط', 0))
+                                
+                                if rank == 1:
+                                    rank_text = "المركز الأول"
+                                    icon = "🏆"
+                                    ribbon_html = '<div class="ribbon gold">الأول</div>'
+                                    badge_class = "rank-1"
+                                elif rank == 2:
+                                    rank_text = "المركز الثاني"
+                                    icon = "🥈"
+                                    ribbon_html = '<div class="ribbon silver">الثاني</div>'
+                                    badge_class = "rank-2"
+                                elif rank == 3:
+                                    rank_text = "المركز الثالث"
+                                    icon = "🥉"
+                                    ribbon_html = '<div class="ribbon bronze">الثالث</div>'
+                                    badge_class = "rank-3"
+                                else:
+                                    rank_text = f"المركز {rank}"
+                                    icon = "🌟"
+                                    ribbon_html = ""
+                                    badge_class = ""
+                                
+                                honor_cards_content += f"""
+                                <div class="card theme-honor">
+                                    {ribbon_html}
+                                    <div class="card-inner">
+                                        <div class="c-icon">{icon}</div>
+                                        <div class="c-header">بطاقة تميز طالب</div>
+                                        <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
+                                        <div class="c-name">{student_name}</div>
+                                        <div class="c-badge {badge_class}">
+                                            <span class="b-val">{score}</span>
+                                            <span class="b-lbl">نقطة تميز</span>
+                                        </div>
+                                        <div class="c-footer">{rank_text}</div>
                                     </div>
                                 </div>
-                            """, unsafe_allow_html=True)
-                        
-                        st.markdown("---")
-                        st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
-                        
-                        honor_cards_content = ""
-                        for rank, (_, row) in enumerate(top_10.iterrows(), 1):
-                            student_name = row.get('name', 'اسم غير متوفر')
-                            score = int(row.get('النقاط', 0))
+                                """
                             
-                            if rank == 1:
-                                rank_text = "المركز الأول"
-                                icon = "🏆"
-                                ribbon_html = '<div class="ribbon gold">الأول</div>'
-                                badge_class = "rank-1"
-                            elif rank == 2:
-                                rank_text = "المركز الثاني"
-                                icon = "🥈"
-                                ribbon_html = '<div class="ribbon silver">الثاني</div>'
-                                badge_class = "rank-2"
-                            elif rank == 3:
-                                rank_text = "المركز الثالث"
-                                icon = "🥉"
-                                ribbon_html = '<div class="ribbon bronze">الثالث</div>'
-                                badge_class = "rank-3"
-                            else:
-                                rank_text = f"المركز {rank}"
-                                icon = "🌟"
-                                ribbon_html = ""
-                                badge_class = ""
+                            honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                             
-                            honor_cards_content += f"""
-                            <div class="card theme-honor">
-                                {ribbon_html}
-                                <div class="card-inner">
-                                    <div class="c-icon">{icon}</div>
-                                    <div class="c-header">بطاقة تميز طالب</div>
-                                    <div class="c-teacher">إشراف الأستاذ/ زياد المعمري</div>
-                                    <div class="c-name">{student_name}</div>
-                                    <div class="c-badge {badge_class}">
-                                        <span class="b-val">{score}</span>
-                                        <span class="b-lbl">نقطة تميز</span>
-                                    </div>
-                                    <div class="c-footer">{rank_text}</div>
-                                </div>
-                            </div>
-                            """
-                        
-                        honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
-                        
-                        st.download_button(
-                            label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
-                            data=honor_full_html, 
-                            file_name=f"Honor_Cards_{datetime.date.today()}.html", 
-                            mime="text/html", 
-                            use_container_width=True,
-                            type="primary"
-                        )
+                            st.download_button(
+                                label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
+                                data=honor_full_html, 
+                                file_name=f"Honor_Cards_{datetime.date.today()}.html", 
+                                mime="text/html", 
+                                use_container_width=True,
+                                type="primary"
+                            )
+                        else:
+                            # ✳️ رسالة تظهر إذا كان الجميع نقاطهم صفر
+                            st.info("لم يحصل أي طالب على نقاط تميز حتى الآن. لوحة الشرف بانتظار الأبطال! 🌟")
         
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
                 with sub_tabs[2]:
@@ -1987,11 +1994,17 @@ else:
             with tabs[3]: 
                 st.caption("لوحة الشرف (أفضل 10 طلاب)")
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-                for i, (_, r) in enumerate(df_st.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
-                    ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
-                    sty = f"border:2px solid {primary_color}; background:var(--secondary-background-color);" if str(r['clean_id']) == sid else ""
-                    st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
-
+                
+                # ✳️ التعديل هنا: فلترة الطلاب للطالب أيضاً
+                active_students = df_st[df_st['p_num'] > 0]
+                
+                if not active_students.empty:
+                    for i, (_, r) in enumerate(active_students.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
+                        ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
+                        sty = f"border:2px solid {primary_color}; background:var(--secondary-background-color);" if str(r['clean_id']) == sid else ""
+                        st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
             with tabs[4]:
                 st.caption("إدارة الملف الشخصي")
                 with st.form("my_profile"):
