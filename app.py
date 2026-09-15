@@ -1061,7 +1061,8 @@ else:
                                                         idx = h.index('النقاط') + 1
                                                         new_val = current_points + chg
                                                         ws.update_cell(c.row, idx, new_val)
-                                                        st.session_state.df_students.loc[student_idx, 'النقاط'] = int(new_val)
+                                                        # ✳️ التعديل هنا: استخدام str بدلاً من int
+                                                        st.session_state.df_students.loc[student_idx, 'النقاط'] = str(new_val)
                                             except Exception as e: st.error(f"خطأ: {e}")
                                         
                                         st.toast(f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!", icon="🎉")
