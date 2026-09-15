@@ -1042,30 +1042,32 @@ else:
                                     ])
                                     bn = st.text_area("تفاصيل الملاحظة")
                                     
+                                    # ✳️ التحديث المباشر للملاحظات
                                     if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
                                         new_b_row = {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn}
                                         
-                                        safe_append_row("behavior", new_b_row)
-                                        
-                                        new_b_df = pd.DataFrame([new_b_row])
-                                        st.session_state.df_behavior = pd.concat([st.session_state.df_behavior, new_b_df], ignore_index=True)
-                                        
-                                        match = re.search(r'\(([\+\-]?\d+)\)', bt)
-                                        chg = int(match.group(1)) if match else 0
-                                        if chg != 0:
-                                            try:
-                                                ws = sh.worksheet("students"); c = ws.find(sid)
-                                                if c:
-                                                    h = ws.row_values(1)
-                                                    if 'النقاط' in h:
-                                                        idx = h.index('النقاط') + 1
-                                                        new_val = current_points + chg
-                                                        ws.update_cell(c.row, idx, new_val)
-                                                        # ✳️ التعديل هنا: استخدام str بدلاً من int
-                                                        st.session_state.df_students.loc[student_idx, 'النقاط'] = str(new_val)
-                                            except Exception as e: st.error(f"خطأ: {e}")
-                                        
-                                        st.toast(f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!", icon="🎉")
+                                        if safe_append_row("behavior", new_b_row):
+                                            match = re.search(r'\(([\+\-]?\d+)\)', bt)
+                                            chg = int(match.group(1)) if match else 0
+                                            if chg != 0:
+                                                try:
+                                                    ws = sh.worksheet("students")
+                                                    c = ws.find(sid)
+                                                    if c:
+                                                        h = ws.row_values(1)
+                                                        if 'النقاط' in h:
+                                                            idx = h.index('النقاط') + 1
+                                                            new_val = current_points + chg
+                                                            ws.update_cell(c.row, idx, str(new_val))
+                                                            st.session_state.df_students.loc[student_idx, 'النقاط'] = str(new_val)
+                                                except Exception as e:
+                                                    st.error(f"خطأ: {e}")
+                                            
+                                            st.cache_data.clear()
+                                            if 'db_loaded' in st.session_state:
+                                                del st.session_state['db_loaded']
+                                            st.toast(f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!", icon="🎉")
+                                            st.rerun()
                             else: st.info("💡 وضع القراءة فقط.")
         
                         # --- قسم الدرجات الأكاديمية ---
@@ -1129,21 +1131,19 @@ else:
                             st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
         
                         # --- سجل السلوك السفلي ---
-                        # --- سجل السلوك السفلي ---
                         st.markdown("#### 📜 سجل السلوك الأخير")
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
-                            # ✳️ تنظيف المعرفات لكشف السجلات المخفية
+                            # ✳️ تنظيف المعرفات لكشف السجلات بدقة
                             df_b['clean_cid'] = df_b[cid].astype(str).str.strip().str.split('.').str[0]
                             my_b = df_b[df_b['clean_cid'] == sid]
                             
+                            # ✳️ الحذف المباشر وتحديث الرصيد الفوري
                             def delete_behavior(global_idx, b_type):
                                 try: 
-                                    # 1. الحذف الدقيق من جوجل شيت
                                     sh.worksheet("behavior").delete_rows(int(global_idx) + 2)
                                     
-                                    # 2. خصم النقاط من رصيد الطالب فوراً
                                     match = re.search(r'\(([\+\-]?\d+)\)', str(b_type))
                                     chg = int(match.group(1)) if match else 0
                                     
@@ -1156,9 +1156,8 @@ else:
                                                 idx = h.index('النقاط') + 1
                                                 curr = int(pd.to_numeric(ws_st.cell(c.row, idx).value, errors='coerce') or 0)
                                                 new_val = curr - chg
-                                                ws_st.update_cell(c.row, idx, str(new_val)) # الحفظ كنص لتجنب الأخطاء
+                                                ws_st.update_cell(c.row, idx, str(new_val))
                                                 
-                                    # 3. إجبار المنصة على التحديث الفوري
                                     st.cache_data.clear()
                                     if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                 except Exception as e: pass
@@ -1251,14 +1250,15 @@ else:
                                                         if st_id in point_updates:
                                                             cur_p = int(pd.to_numeric(r.get('النقاط', 0), errors='coerce') or 0)
                                                             new_p = cur_p + point_updates[st_id]
-                                                            cells_to_update.append(Cell(row=i+2, col=p_idx, value=new_p))
+                                                            # حفظ كنص وتحديث فوري للمجاميع
+                                                            cells_to_update.append(Cell(row=i+2, col=p_idx, value=str(new_p)))
                                                     
                                                     if cells_to_update:
                                                         ws_st.update_cells(cells_to_update)
                                                 
                                                 st.success(f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة.")
-                                                if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                                 st.cache_data.clear()
+                                                if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                                 st.rerun()
                                         except Exception as e:
                                             st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
@@ -1269,7 +1269,7 @@ else:
                 else:
                     st.info("💡 وضع القراءة فقط.")
         
-            # --- 3. مساعد التفريغ الورقي (الإضافة الجديدة) ---
+            # --- 3. مساعد التفريغ الورقي ---
             with eval_tabs[2]:
                 st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
                 st.info("هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف المتابعة الورقي بسرعة.")
@@ -1299,11 +1299,9 @@ else:
                         if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
                             st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
                             
-                            # إنشاء الجدول التجميعي للأرقام
                             pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                             pivot_table.index.name = "اسم الطالب"
                             
-                            # تجميع الملاحظات النصية
                             if 'note' in class_data.columns:
                                 def combine_notes(group):
                                     valid = group[group['note'].astype(str).str.strip() != '']
@@ -1313,9 +1311,8 @@ else:
                                 notes_series = class_data.groupby('name').apply(combine_notes)
                                 pivot_table['الملاحظات النصية التفصيلية'] = notes_series
                             
-                            # ✳️ الحل الجذري لمنع اختفاء الجدول: تنظيف وتوحيد نوع البيانات
                             pivot_table = pivot_table.fillna("") 
-                            pivot_table = pivot_table.astype(str) # إجبار كل الخلايا لتكون نصوصاً لكي لا يتعطل محرك الرسم
+                            pivot_table = pivot_table.astype(str) 
                             
                             st.dataframe(pivot_table, use_container_width=True)
                             
@@ -1328,7 +1325,6 @@ else:
                             st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في (الصف {cls_choice})")
                             specific_data = class_data[class_data[beh_col] == type_choice]
                             if not specific_data.empty:
-                                # عرض الملاحظات النصية حتى في البحث الفردي
                                 summary = specific_data.groupby(['name', 'note']).size().reset_index(name='عدد المرات')
                                 summary.rename(columns={'name': 'اسم الطالب', 'note': 'التفاصيل المكتوبة'}, inplace=True)
                                 summary = summary.sort_values('عدد المرات', ascending=False)
@@ -1406,31 +1402,51 @@ else:
                                 st.cache_data.clear(); st.rerun()
                         except Exception as e: st.error(f"خطأ: {e}")
 
+                    # ✳️ تصحيح دالة إعادة الاحتساب لضمان قراءة القيم بدقة شديدة وتحديث الكاش
                     if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
                         try:
                             with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
-                                df_beh = fetch_safe("behavior"); ws_st = sh.worksheet("students"); students_data = ws_st.get_all_records()
+                                df_beh = fetch_safe("behavior")
+                                ws_st = sh.worksheet("students")
+                                students_data = ws_st.get_all_records()
                                 true_scores = {}
+                                
                                 if not df_beh.empty:
+                                    beh_id_col = df_beh.columns[0]
+                                    beh_type_col = 'type' if 'type' in df_beh.columns else df_beh.columns[2]
+                                    
                                     for _, row in df_beh.iterrows():
-                                        raw_id = str(row.get('student_id', row.get('id', ''))).strip().split('.')[0]
-                                        if not raw_id: continue
-                                        match = re.search(r'\(([\+\-]?\d+)\)', str(row.get('type', '')))
-                                        if match: true_scores[raw_id] = true_scores.get(raw_id, 0) + int(match.group(1))
+                                        raw_id = str(row.get(beh_id_col, '')).strip().split('.')[0]
+                                        if not raw_id:
+                                            continue
+                                        
+                                        match = re.search(r'\(([\+\-]?\d+)\)', str(row.get(beh_type_col, '')))
+                                        if match:
+                                            pts = int(match.group(1))
+                                            true_scores[raw_id] = true_scores.get(raw_id, 0) + pts
+                                
                                 headers = ws_st.row_values(1)
                                 if 'النقاط' in headers:
-                                    col_idx = headers.index('النقاط') + 1; new_values = []
+                                    col_idx = headers.index('النقاط') + 1
+                                    new_values = []
+                                    id_key = headers[0]
+                                    
                                     for st_row in students_data:
-                                        sid_v = str(st_row.get('id', '')).strip().split('.')[0]
-                                        # ✳️ تم إضافة str هنا لمنع ظهور خطأ البيانات الحمراء
+                                        sid_v = str(st_row.get(id_key, '')).strip().split('.')[0]
                                         new_values.append([str(true_scores.get(sid_v, 0))])
+                                    
                                     from gspread.utils import rowcol_to_a1
                                     ws_st.update(f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}", new_values)
-                                    st.success("✅ تم تصحيح جميع الأرصدة بنجاح!")
-                                    if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                    st.cache_data.clear(); st.rerun()
-                                else: st.error("لم يتم العثور على عمود 'النقاط'")
-                        except Exception as e: st.error(f"حدث خطأ: {e}")
+                                    
+                                    st.cache_data.clear()
+                                    if 'db_loaded' in st.session_state:
+                                        del st.session_state['db_loaded']
+                                    st.success("✅ تم تصحيح جميع الأرصدة بنجاح وفق السجلات الفعلية!")
+                                    st.rerun()
+                                else:
+                                    st.error("لم يتم العثور على عمود 'النقاط'")
+                        except Exception as e:
+                            st.error(f"حدث خطأ: {e}")
 
                 st.divider()
                 st.markdown("##### 📥 تنزيل نسخة كاملة من البيانات (Backup)")
@@ -1448,7 +1464,6 @@ else:
 
                 with st.expander("📝 تهيئة الصفوف والدرجات", expanded=True):
                     
-                    # ✳️ الإضافة الجديدة: اختيار مظهر المنصة
                     st.markdown("#### 🎨 المظهر والهوية البصرية")
                     theme_options = list(themes.keys())
                     current_theme_val = st.session_state.get('app_theme', 'الرئيسي (الافتراضي)')
@@ -1479,7 +1494,7 @@ else:
                             {'range': 'A5:B5', 'values': [['class_list', cls]]},
                             {'range': 'A6:B6', 'values': [['stage_list', stg]]},
                             {'range': 'A7:B7', 'values': [['current_period', cp]]},
-                            {'range': 'A8:B8', 'values': [['app_theme', selected_theme]]} # ✳️ حفظ القالب المختار
+                            {'range': 'A8:B8', 'values': [['app_theme', selected_theme]]}
                         ])
                         
                         st.session_state.max_tasks = mt
@@ -1488,7 +1503,7 @@ else:
                         st.session_state.current_period = cp 
                         st.session_state.class_options = [x.strip() for x in cls.split(',') if x.strip()]
                         st.session_state.stage_options = [x.strip() for x in stg.split(',') if x.strip()]
-                        st.session_state.app_theme = selected_theme # ✳️ تحديث ذاكرة القالب
+                        st.session_state.app_theme = selected_theme 
                         
                         st.success(f"✅ تم الحفظ بنجاح! المنصة تعمل بهوية: {selected_theme}")
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
