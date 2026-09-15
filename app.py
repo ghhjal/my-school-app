@@ -1129,17 +1129,39 @@ else:
                             st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
         
                         # --- سجل السلوك السفلي ---
+                        # --- سجل السلوك السفلي ---
                         st.markdown("#### 📜 سجل السلوك الأخير")
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
-                            my_b = df_b[df_b[cid].astype(str) == str(sid)]
+                            # ✳️ تنظيف المعرفات لكشف السجلات المخفية
+                            df_b['clean_cid'] = df_b[cid].astype(str).str.strip().str.split('.').str[0]
+                            my_b = df_b[df_b['clean_cid'] == sid]
                             
-                            def delete_behavior(row_idx, global_idx):
+                            def delete_behavior(global_idx, b_type):
                                 try: 
-                                    sh.worksheet("behavior").delete_rows(int(row_idx) + 2)
-                                    st.session_state.df_behavior = st.session_state.df_behavior.drop(global_idx).reset_index(drop=True)
-                                except: pass
+                                    # 1. الحذف الدقيق من جوجل شيت
+                                    sh.worksheet("behavior").delete_rows(int(global_idx) + 2)
+                                    
+                                    # 2. خصم النقاط من رصيد الطالب فوراً
+                                    match = re.search(r'\(([\+\-]?\d+)\)', str(b_type))
+                                    chg = int(match.group(1)) if match else 0
+                                    
+                                    if chg != 0:
+                                        ws_st = sh.worksheet("students")
+                                        c = ws_st.find(sid)
+                                        if c:
+                                            h = ws_st.row_values(1)
+                                            if 'النقاط' in h:
+                                                idx = h.index('النقاط') + 1
+                                                curr = int(pd.to_numeric(ws_st.cell(c.row, idx).value, errors='coerce') or 0)
+                                                new_val = curr - chg
+                                                ws_st.update_cell(c.row, idx, str(new_val)) # الحفظ كنص لتجنب الأخطاء
+                                                
+                                    # 3. إجبار المنصة على التحديث الفوري
+                                    st.cache_data.clear()
+                                    if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                except Exception as e: pass
         
                             for global_idx, r in my_b.iloc[::-1].iterrows():
                                 with st.container():
@@ -1156,7 +1178,7 @@ else:
                                     c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
                                     
                                     if st.session_state.role == "teacher": 
-                                        c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, global_idx))
+                                        c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, r.get('type')))
                     
             # --- 2. الرصد الجماعي السريع ---
             with eval_tabs[1]:
@@ -1400,7 +1422,8 @@ else:
                                     col_idx = headers.index('النقاط') + 1; new_values = []
                                     for st_row in students_data:
                                         sid_v = str(st_row.get('id', '')).strip().split('.')[0]
-                                        new_values.append([true_scores.get(sid_v, 0)])
+                                        # ✳️ تم إضافة str هنا لمنع ظهور خطأ البيانات الحمراء
+                                        new_values.append([str(true_scores.get(sid_v, 0))])
                                     from gspread.utils import rowcol_to_a1
                                     ws_st.update(f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}", new_values)
                                     st.success("✅ تم تصحيح جميع الأرصدة بنجاح!")
