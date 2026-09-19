@@ -1370,6 +1370,9 @@ else:
                 # ==========================================
                 # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
                 # ==========================================
+                # ==========================================
+                # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
+                # ==========================================
                 st.divider()
                 st.markdown("#### 📑 استخراج كشف متابعة الدرجات (فارغ للرصد اليدوي)")
                 st.info("يتم سحب أسماء الطلاب تلقائياً وتوزيعهم في كشف رسمي مطابق لنموذج الوزارة جاهز للطباعة.")
@@ -1385,11 +1388,12 @@ else:
                         if not df_print.empty:
                             rows_html = ""
                             for i, (_, row) in enumerate(df_print.iterrows(), 1):
-                                # توليد الخلايا الفارغة للرصد اليدوي (25 خلية)
+                                # توليد الخلايا الفارغة للرصد (10 حضور + 5 مشاركة + 5 واجبات + 5 مشاريع = 25)
                                 empty_cells = "<td></td>" * 25
-                                rows_html += f"<tr><td></td>{empty_cells}<td style='text-align: right; padding-right: 8px; font-weight: bold;'>{row['name']}</td><td>{i}</td></tr>"
+                                # الترتيب الصحيح: (م) ثم (الاسم) ثم (الخلايا الـ 25) ثم (المجموع)
+                                rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 8px; font-weight: bold;'>{row['name']}</td>{empty_cells}<td></td></tr>"
                                 
-                            # تصميم HTML يطابق نموذج الوزارة المرفق
+                            # تصميم HTML يطابق نموذج الوزارة المرفق والاتجاه الصحيح
                             sheet_html = f"""
                             <!DOCTYPE html>
                             <html dir="rtl" lang="ar">
@@ -1401,12 +1405,12 @@ else:
                                     body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                                     .header-box {{ background-color: #174A5B; color: white; border-radius: 15px; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
                                     .header-text {{ text-align: center; font-weight: bold; line-height: 1.5; font-size: 14px; }}
-                                    .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 8px; font-weight: bold; width: 40%; margin: -30px auto 20px auto; border-radius: 8px; border: 3px solid white; }}
+                                    .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 8px; font-weight: bold; width: 40%; margin: -30px auto 20px auto; border-radius: 8px; border: 3px solid white; position: relative; z-index: 2; }}
                                     table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }}
                                     th, td {{ border: 1px solid #b0bec5; padding: 4px; }}
                                     th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
                                     .main-th {{ font-size: 13px; padding: 8px; }}
-                                    .sub-th th {{ width: 3%; font-size: 10px; color: #555; }}
+                                    .sub-th th {{ width: 2.5%; font-size: 10px; color: #555; }}
                                     .name-col {{ width: 18%; background-color: #e0e0e0; }}
                                     td {{ height: 25px; }}
                                     .footer {{ display: flex; justify-content: space-between; margin-top: 40px; font-weight: bold; padding: 0 50px; }}
@@ -1427,25 +1431,25 @@ else:
                                 
                                 <table>
                                     <tr>
-                                        <th rowspan="2" style="width: 5%;">المجموع</th>
-                                        <th colspan="5" class="main-th">المشاريع</th>
-                                        <th colspan="5" class="main-th">الواجبات</th>
-                                        <th colspan="5" class="main-th">المشاركة</th>
-                                        <th colspan="10" class="main-th">الحضور</th>
-                                        <th rowspan="2" class="name-col">اسم الطالب</th>
                                         <th rowspan="2" style="width: 2%;">م</th>
+                                        <th rowspan="2" class="name-col">اسم الطالب</th>
+                                        <th colspan="10" class="main-th">الحضور</th>
+                                        <th colspan="5" class="main-th">المشاركة</th>
+                                        <th colspan="5" class="main-th">الواجبات</th>
+                                        <th colspan="5" class="main-th">المشاريع</th>
+                                        <th rowspan="2" style="width: 5%;">المجموع</th>
                                     </tr>
                                     <tr class="sub-th">
-                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
-                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
-                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
-                                        <th>10</th><th>9</th><th>8</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
                                     </tr>
                                     {rows_html}
                                 </table>
                                 
                                 <div class="footer">
-                                    <div>مدير المدرسة / عبدالمجيد الحربي</div>
+                                    <div>مدير المدرسة / .........................</div>
                                     <div>المعلم / زياد المعمري</div>
                                 </div>
                                 
