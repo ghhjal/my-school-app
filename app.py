@@ -1391,9 +1391,10 @@ else:
                                 # توليد الخلايا الفارغة للرصد (10 حضور + 5 مشاركة + 5 واجبات + 5 مشاريع = 25)
                                 empty_cells = "<td></td>" * 25
                                 # الترتيب الصحيح: (م) ثم (الاسم) ثم (الخلايا الـ 25) ثم (المجموع)
-                                rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 8px; font-weight: bold;'>{row['name']}</td>{empty_cells}<td></td></tr>"
+                                # ✳️ إضافة أمر nowrap لمنع الاسم الطويل من النزول لسطرين وزيادة ارتفاع الصف
+                                rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells}<td></td></tr>"
                                 
-                            # تصميم HTML يطابق نموذج الوزارة المرفق والاتجاه الصحيح
+                            # تصميم HTML يطابق نموذج الوزارة المرفق (مع تصغير الخطوط والمسافات لضغط الصفحات)
                             sheet_html = f"""
                             <!DOCTYPE html>
                             <html dir="rtl" lang="ar">
@@ -1402,18 +1403,18 @@ else:
                                 <title>كشف متابعة الدرجات - {print_cls_choice}</title>
                                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                                 <style>
-                                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                    .header-box {{ background-color: #174A5B; color: white; border-radius: 15px; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
-                                    .header-text {{ text-align: center; font-weight: bold; line-height: 1.5; font-size: 14px; }}
-                                    .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 8px; font-weight: bold; width: 40%; margin: -30px auto 20px auto; border-radius: 8px; border: 3px solid white; position: relative; z-index: 2; }}
-                                    table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }}
-                                    th, td {{ border: 1px solid #b0bec5; padding: 4px; }}
+                                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                    .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
+                                    .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 12px; }}
+                                    .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 40%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
+                                    table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }}
+                                    th, td {{ border: 1px solid #b0bec5; padding: 2px; }} /* تقليل الحشوة داخل الخلايا */
                                     th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
-                                    .main-th {{ font-size: 13px; padding: 8px; }}
-                                    .sub-th th {{ width: 2.5%; font-size: 10px; color: #555; }}
-                                    .name-col {{ width: 18%; background-color: #e0e0e0; }}
-                                    td {{ height: 25px; }}
-                                    .footer {{ display: flex; justify-content: space-between; margin-top: 40px; font-weight: bold; padding: 0 50px; }}
+                                    .main-th {{ font-size: 12px; padding: 4px; }}
+                                    .sub-th th {{ width: 2.5%; font-size: 9px; color: #555; }}
+                                    .name-col {{ width: 18%; background-color: #e0e0e0; font-size: 11px; }}
+                                    td {{ height: 18px; }} /* تقليل ارتفاع الصفوف */
+                                    .footer {{ display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
                                     @media print {{ 
                                         @page {{ size: A4 landscape; margin: 5mm; }}
                                         body {{ padding: 0; }}
@@ -1423,7 +1424,7 @@ else:
                             <body>
                                 <div class="header-box">
                                     <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مدرسة: .........................</div>
-                                    <div class="header-text" style="font-size: 24px;">وزارة التعليم<br><span style="font-size: 12px; font-weight:normal;">Ministry of Education</span></div>
+                                    <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
                                     <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
                                 </div>
                                 
@@ -1437,7 +1438,7 @@ else:
                                         <th colspan="5" class="main-th">المشاركة</th>
                                         <th colspan="5" class="main-th">الواجبات</th>
                                         <th colspan="5" class="main-th">المشاريع</th>
-                                        <th rowspan="2" style="width: 5%;">المجموع</th>
+                                        <th rowspan="2" style="width: 4%;">المجموع</th>
                                     </tr>
                                     <tr class="sub-th">
                                         <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
