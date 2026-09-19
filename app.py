@@ -350,6 +350,20 @@ if st.session_state.role is None:
                     ud = df[df['username']==u].iloc[0]
                     if hashlib.sha256(p.encode()).hexdigest() == ud['password_hash']:
                         if ud.get('role', 'teacher') in ['teacher', '']:
+                            # ✳️ تسجيل وقت دخول المعلم
+                            try:
+                                ws_u = sh.worksheet("users")
+                                c_u = ws_u.find(u)
+                                if c_u:
+                                    headers_u = ws_u.row_values(1)
+                                    if 'last_login' not in headers_u:
+                                        ws_u.update_cell(1, len(headers_u)+1, 'last_login')
+                                        headers_u.append('last_login')
+                                    idx_u = headers_u.index('last_login') + 1
+                                    now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
+                                    ws_u.update_cell(c_u.row, idx_u, now_str)
+                            except Exception: pass
+                            
                             st.session_state.username = u
                             st.session_state.role = "teacher"
                             st.rerun()
@@ -373,6 +387,20 @@ if st.session_state.role is None:
                     ud = df_u[df_u['username']==u_admin].iloc[0]
                     if hashlib.sha256(p_admin.encode()).hexdigest() == ud['password_hash']:
                         if ud.get('role', '') == 'viewer':
+                            # ✳️ تسجيل وقت دخول الإدارة
+                            try:
+                                ws_u = sh.worksheet("users")
+                                c_u = ws_u.find(u_admin)
+                                if c_u:
+                                    headers_u = ws_u.row_values(1)
+                                    if 'last_login' not in headers_u:
+                                        ws_u.update_cell(1, len(headers_u)+1, 'last_login')
+                                        headers_u.append('last_login')
+                                    idx_u = headers_u.index('last_login') + 1
+                                    now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
+                                    ws_u.update_cell(c_u.row, idx_u, now_str)
+                            except Exception: pass
+                            
                             st.session_state.username = u_admin
                             st.session_state.role = "viewer"
                             st.rerun()
@@ -734,9 +762,7 @@ else:
                     """
         
                     if not df_st.empty:
-                        # ✳️ التعديل هنا: فلترة الطلاب الذين نقاطهم أكبر من صفر فقط
                         active_students = df_st[df_st['النقاط'] > 0]
-                        
                         if not active_students.empty:
                             top_10 = active_students.sort_values('النقاط', ascending=False).head(10)
                             
@@ -815,7 +841,6 @@ else:
                                 type="primary"
                             )
                         else:
-                            # ✳️ رسالة تظهر إذا كان الجميع نقاطهم صفر
                             st.info("لم يحصل أي طالب على نقاط تميز حتى الآن. لوحة الشرف بانتظار الأبطال! 🌟")
         
                 # --- 3. المتفوقين (أكاديمياً 90% فما فوق) ---
@@ -1049,7 +1074,6 @@ else:
                                     ])
                                     bn = st.text_area("تفاصيل الملاحظة")
                                     
-                                    # ✳️ التحديث المباشر للملاحظات
                                     if st.form_submit_button("💾 تسجيل السلوك", type="primary"):
                                         new_b_row = {"student_id": sid, "date": str(datetime.date.today()), "type": bt, "note": bn}
                                         
@@ -1142,11 +1166,9 @@ else:
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
-                            # ✳️ تنظيف المعرفات لكشف السجلات بدقة
                             df_b['clean_cid'] = df_b[cid].astype(str).str.strip().str.split('.').str[0]
                             my_b = df_b[df_b['clean_cid'] == sid]
                             
-                            # ✳️ الحذف المباشر وتحديث الرصيد الفوري
                             def delete_behavior(global_idx, b_type):
                                 try: 
                                     sh.worksheet("behavior").delete_rows(int(global_idx) + 2)
@@ -1257,7 +1279,6 @@ else:
                                                         if st_id in point_updates:
                                                             cur_p = int(pd.to_numeric(r.get('النقاط', 0), errors='coerce') or 0)
                                                             new_p = cur_p + point_updates[st_id]
-                                                            # حفظ كنص وتحديث فوري للمجاميع
                                                             cells_to_update.append(Cell(row=i+2, col=p_idx, value=str(new_p)))
                                                     
                                                     if cells_to_update:
@@ -1409,7 +1430,6 @@ else:
                                 st.cache_data.clear(); st.rerun()
                         except Exception as e: st.error(f"خطأ: {e}")
 
-                    # ✳️ تصحيح دالة إعادة الاحتساب لضمان قراءة القيم بدقة شديدة وتحديث الكاش
                     if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
                         try:
                             with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
@@ -1632,7 +1652,7 @@ else:
                         st.info("لا توجد بيانات طلاب للتدقيق.")
 
                 with st.expander("🔐 إدارة المستخدمين (معلمين / إدارة)"):
-                    t1, t2, t3 = st.tabs(["➕ إضافة مستخدم", "🔑 تعديل كلمة المرور", "🗑️ حذف مستخدم"])
+                    t1, t2, t3, t4 = st.tabs(["➕ إضافة مستخدم", "🔑 تعديل كلمة المرور", "🗑️ حذف مستخدم", "🕒 آخر ظهور"])
                     with t1:
                         with st.form("add_u"):
                             nu = st.text_input("اسم المستخدم الجديد"); np = st.text_input("كلمة المرور", type="password")
@@ -1670,6 +1690,19 @@ else:
                                         sh.worksheet("users").delete_rows(int(idx)); st.success(f"✅ تم حذف المستخدم ({del_u}).")
                                         st.cache_data.clear(); st.rerun()
                                 else: st.warning("الرجاء اختيار مستخدم للحذف.")
+                    with t4:
+                        df_users_log = fetch_safe("users")
+                        if not df_users_log.empty:
+                            if 'last_login' in df_users_log.columns:
+                                disp_df = df_users_log[['username', 'role', 'last_login']].rename(columns={
+                                    'username': 'المستخدم', 'role': 'الصلاحية', 'last_login': 'آخر تسجيل دخول'
+                                })
+                                disp_df['الصلاحية'] = disp_df['الصلاحية'].replace({'teacher': '👨‍🏫 معلم', 'viewer': '👁️ إدارة'})
+                                st.dataframe(disp_df, use_container_width=True, hide_index=True)
+                            else:
+                                st.info("لم يتم تسجيل أي عمليات دخول حديثة بعد التحديث.")
+                        else:
+                            st.info("لا توجد بيانات للمستخدمين.")
 
         with tab_logout:
             st.markdown("<br><br>", unsafe_allow_html=True)
@@ -1994,8 +2027,6 @@ else:
             with tabs[3]: 
                 st.caption("لوحة الشرف (أفضل 10 طلاب)")
                 df_st['p_num'] = pd.to_numeric(df_st['النقاط'], errors='coerce').fillna(0)
-                
-                # ✳️ التعديل هنا: فلترة الطلاب للطالب أيضاً
                 active_students = df_st[df_st['p_num'] > 0]
                 
                 if not active_students.empty:
@@ -2005,6 +2036,7 @@ else:
                         st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
                 else:
                     st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
+
             with tabs[4]:
                 st.caption("إدارة الملف الشخصي")
                 with st.form("my_profile"):
