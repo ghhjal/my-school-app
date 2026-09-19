@@ -1367,9 +1367,7 @@ else:
                 else:
                     st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
 
-                # ==========================================
-                # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
-                # ==========================================
+               
                 # ==========================================
                 # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
                 # ==========================================
@@ -1471,7 +1469,46 @@ else:
                             st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
                 else:
                     st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
+                # ==========================================
+                # --- إضافة: استخراج كشف أسماء وأرقام تواصل الطلاب ---
+                # ==========================================
+                st.divider()
+                st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب")
+                st.info("سحب قائمة بأسماء طلاب فصل محدد مع أرقام الجوال المسجلة فقط (لتسهيل إضافتهم في الواتساب أو التواصل معهم).")
+                
+                if not df_s.empty:
+                    col_t1, col_t2 = st.columns([1, 2])
+                    all_classes = st.session_state.get('class_options', ['الرابع', 'الخامس'])
+                    contact_cls_choice = col_t1.selectbox("اختر الصف المطلوب:", all_classes, key="contact_cls")
                     
+                    # فلترة الطلاب حسب الصف وترتيبهم أبجدياً
+                    df_contact = df_s[df_s['class'] == contact_cls_choice].sort_values('name')
+                    
+                    if not df_contact.empty:
+                        # تجهيز البيانات (الاسم ورقم الجوال فقط)
+                        df_export = df_contact[['name', 'الجوال']].copy()
+                        df_export = df_export.rename(columns={'name': 'اسم الطالب', 'الجوال': 'رقم الجوال (واتساب)'})
+                        
+                        # إنشاء ملف الإكسيل في الذاكرة
+                        b_contact = io.BytesIO()
+                        with pd.ExcelWriter(b_contact, engine='xlsxwriter') as writer:
+                            df_export.to_excel(writer, index=False, sheet_name='أرقام التواصل')
+                        
+                        col_t2.markdown("<br>", unsafe_allow_html=True) # لضبط المحاذاة مع القائمة المنسدلة
+                        col_t2.download_button(
+                            label=f"📥 تحميل كشف أرقام الجوال (Excel) - {contact_cls_choice}", 
+                            data=b_contact.getvalue(), 
+                            file_name=f"Contacts_{contact_cls_choice}.xlsx", 
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary",
+                            use_container_width=True
+                        )
+                        
+                        # عرض الجدول للمعاينة السريعة داخل المنصة
+                        with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
+                            st.dataframe(df_export, use_container_width=True, hide_index=True)
+                    else:
+                        st.warning("لا يوجد طلاب مسجلين في هذا الصف.")    
         # 📢 التنبيهات
         with tab_alerts:
             st.markdown("### 📢 لوحة الإعلانات والتعاميم")
