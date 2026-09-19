@@ -1300,6 +1300,7 @@ else:
                     st.info("💡 وضع القراءة فقط.")
         
             # --- 3. مساعد التفريغ الورقي ---
+            # --- 3. مساعد التفريغ الورقي ---
             with eval_tabs[2]:
                 st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
                 st.info("هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف المتابعة الورقي بسرعة.")
@@ -1365,6 +1366,106 @@ else:
                         st.info(f"لا توجد أي ملاحظات مسجلة لطلاب (الصف {cls_choice}) حتى الآن.")
                 else:
                     st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
+
+                # ==========================================
+                # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
+                # ==========================================
+                st.divider()
+                st.markdown("#### 📑 استخراج كشف متابعة الدرجات (فارغ للرصد اليدوي)")
+                st.info("يتم سحب أسماء الطلاب تلقائياً وتوزيعهم في كشف رسمي مطابق لنموذج الوزارة جاهز للطباعة.")
+                
+                if not df_s.empty:
+                    col_c1, col_c2 = st.columns([1, 2])
+                    all_classes = st.session_state.get('class_options', ['الرابع', 'الخامس'])
+                    print_cls_choice = col_c1.selectbox("اختر الصف لطباعة الكشف:", all_classes, key="print_cls")
+                    
+                    if col_c1.button("🖨️ توليد الكشف للطباعة", type="primary"):
+                        df_print = df_s[df_s['class'] == print_cls_choice].sort_values('name')
+                        
+                        if not df_print.empty:
+                            rows_html = ""
+                            for i, (_, row) in enumerate(df_print.iterrows(), 1):
+                                # توليد الخلايا الفارغة للرصد اليدوي (25 خلية)
+                                empty_cells = "<td></td>" * 25
+                                rows_html += f"<tr><td></td>{empty_cells}<td style='text-align: right; padding-right: 8px; font-weight: bold;'>{row['name']}</td><td>{i}</td></tr>"
+                                
+                            # تصميم HTML يطابق نموذج الوزارة المرفق
+                            sheet_html = f"""
+                            <!DOCTYPE html>
+                            <html dir="rtl" lang="ar">
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>كشف متابعة الدرجات - {print_cls_choice}</title>
+                                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                                <style>
+                                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                    .header-box {{ background-color: #174A5B; color: white; border-radius: 15px; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
+                                    .header-text {{ text-align: center; font-weight: bold; line-height: 1.5; font-size: 14px; }}
+                                    .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 8px; font-weight: bold; width: 40%; margin: -30px auto 20px auto; border-radius: 8px; border: 3px solid white; }}
+                                    table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }}
+                                    th, td {{ border: 1px solid #b0bec5; padding: 4px; }}
+                                    th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
+                                    .main-th {{ font-size: 13px; padding: 8px; }}
+                                    .sub-th th {{ width: 3%; font-size: 10px; color: #555; }}
+                                    .name-col {{ width: 18%; background-color: #e0e0e0; }}
+                                    td {{ height: 25px; }}
+                                    .footer {{ display: flex; justify-content: space-between; margin-top: 40px; font-weight: bold; padding: 0 50px; }}
+                                    @media print {{ 
+                                        @page {{ size: A4 landscape; margin: 5mm; }}
+                                        body {{ padding: 0; }}
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header-box">
+                                    <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مدرسة: .........................</div>
+                                    <div class="header-text" style="font-size: 24px;">وزارة التعليم<br><span style="font-size: 12px; font-weight:normal;">Ministry of Education</span></div>
+                                    <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
+                                </div>
+                                
+                                <div class="title-box">كشف متابعة الدرجات - مادة اللغة الانجليزية - {print_cls_choice}</div>
+                                
+                                <table>
+                                    <tr>
+                                        <th rowspan="2" style="width: 5%;">المجموع</th>
+                                        <th colspan="5" class="main-th">المشاريع</th>
+                                        <th colspan="5" class="main-th">الواجبات</th>
+                                        <th colspan="5" class="main-th">المشاركة</th>
+                                        <th colspan="10" class="main-th">الحضور</th>
+                                        <th rowspan="2" class="name-col">اسم الطالب</th>
+                                        <th rowspan="2" style="width: 2%;">م</th>
+                                    </tr>
+                                    <tr class="sub-th">
+                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
+                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
+                                        <th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
+                                        <th>10</th><th>9</th><th>8</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th>
+                                    </tr>
+                                    {rows_html}
+                                </table>
+                                
+                                <div class="footer">
+                                    <div>مدير المدرسة / عبدالمجيد الحربي</div>
+                                    <div>المعلم / زياد المعمري</div>
+                                </div>
+                                
+                                <script>window.onload = function() {{ window.print(); }}</script>
+                            </body>
+                            </html>
+                            """
+                            
+                            col_c2.download_button(
+                                label="📥 تحميل الكشف (يُفتح للطباعة مباشرة)", 
+                                data=sheet_html, 
+                                file_name=f"Grading_Sheet_{print_cls_choice}.html", 
+                                mime="text/html",
+                                type="primary",
+                                use_container_width=True
+                            )
+                        else:
+                            st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
+                else:
+                    st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
                     
         # 📢 التنبيهات
         with tab_alerts:
