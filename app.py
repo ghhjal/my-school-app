@@ -931,12 +931,14 @@ else:
 
                         st.markdown("##### 📊 الدرجات الأكاديمية")
                         df_g = st.session_state.df_grades.copy()
+                        # ✳️ التعديل: نقلنا المتغير هنا ليكون معرفاً دائماً سواء كان الجدول فارغاً أم لا
+                        cp_report = st.session_state.get('current_period', 'الفترة الأولى').strip()
+                        
                         if not df_g.empty:
                             df_g['clean_id'] = df_g.iloc[:,0].astype(str).str.split('.').str[0]
                             
                             if 'period' not in df_g.columns: df_g['period'] = 'الفترة الأولى'
                             df_g['period'] = df_g['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
-                            cp_report = st.session_state.get('current_period', 'الفترة الأولى').strip()
                             
                             my_g = df_g[(df_g['clean_id'] == sid) & (df_g['period'] == cp_report)]
                             
