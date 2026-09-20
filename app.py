@@ -1211,6 +1211,7 @@ else:
                                         c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, r.get('type')))
                     
             # --- 2. الرصد الجماعي السريع ---
+            # --- 2. الرصد الجماعي السريع ---
             with eval_tabs[1]:
                 if st.session_state.role == "teacher":
                     st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات")
@@ -1224,6 +1225,9 @@ else:
                         class_students = df_st_bulk[df_st_bulk['clean_class'] == bulk_class.strip()]
                         
                         if not class_students.empty:
+                            # ✳️ التعديل هنا: ترتيب الطلاب أبجدياً قبل عرضهم
+                            class_students = class_students.sort_values('name')
+                            
                             with st.form("bulk_behavior_form", clear_on_submit=True):
                                 beh_options = [
                                     "--- بدون ملاحظة ---",
