@@ -1211,7 +1211,6 @@ else:
                                         c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, r.get('type')))
                     
             # --- 2. الرصد الجماعي السريع ---
-            # --- 2. الرصد الجماعي السريع ---
             with eval_tabs[1]:
                 if st.session_state.role == "teacher":
                     st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات")
@@ -1304,7 +1303,6 @@ else:
                     st.info("💡 وضع القراءة فقط.")
         
             # --- 3. مساعد التفريغ الورقي ---
-            # --- 3. مساعد التفريغ الورقي ---
             with eval_tabs[2]:
                 st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
                 st.info("هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف المتابعة الورقي بسرعة.")
@@ -1392,11 +1390,8 @@ else:
                             for i, (_, row) in enumerate(df_print.iterrows(), 1):
                                 # توليد الخلايا الفارغة للرصد (10 حضور + 5 مشاركة + 5 واجبات + 5 مشاريع = 25)
                                 empty_cells = "<td></td>" * 25
-                                # الترتيب الصحيح: (م) ثم (الاسم) ثم (الخلايا الـ 25) ثم (المجموع)
-                                # ✳️ إضافة أمر nowrap لمنع الاسم الطويل من النزول لسطرين وزيادة ارتفاع الصف
                                 rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells}<td></td></tr>"
                                 
-                            # تصميم HTML يطابق نموذج الوزارة المرفق (مع تصغير الخطوط والمسافات لضغط الصفحات)
                             sheet_html = f"""
                             <!DOCTYPE html>
                             <html dir="rtl" lang="ar">
@@ -1410,16 +1405,20 @@ else:
                                     .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 12px; }}
                                     .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 40%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
                                     table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }}
-                                    th, td {{ border: 1px solid #b0bec5; padding: 2px; }} /* تقليل الحشوة داخل الخلايا */
+                                    th, td {{ border: 1px solid #b0bec5; padding: 2px; }}
                                     th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
                                     .main-th {{ font-size: 12px; padding: 4px; }}
                                     .sub-th th {{ width: 2.5%; font-size: 9px; color: #555; }}
                                     .name-col {{ width: 18%; background-color: #e0e0e0; font-size: 11px; }}
-                                    td {{ height: 18px; }} /* تقليل ارتفاع الصفوف */
+                                    td {{ height: 18px; }}
                                     .footer {{ display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
+                                    
+                                    /* ✳️ أوامر خاصة بالطباعة لتكرار العناوين ومنع قص الصفوف */
                                     @media print {{ 
                                         @page {{ size: A4 landscape; margin: 5mm; }}
                                         body {{ padding: 0; }}
+                                        thead {{ display: table-header-group; }}
+                                        tr {{ page-break-inside: avoid; }}
                                     }}
                                 </style>
                             </head>
@@ -1433,22 +1432,28 @@ else:
                                 <div class="title-box">كشف متابعة الدرجات - مادة اللغة الانجليزية - {print_cls_choice}</div>
                                 
                                 <table>
-                                    <tr>
-                                        <th rowspan="2" style="width: 2%;">م</th>
-                                        <th rowspan="2" class="name-col">اسم الطالب</th>
-                                        <th colspan="10" class="main-th">الحضور</th>
-                                        <th colspan="5" class="main-th">المشاركة</th>
-                                        <th colspan="5" class="main-th">الواجبات</th>
-                                        <th colspan="5" class="main-th">المشاريع</th>
-                                        <th rowspan="2" style="width: 4%;">المجموع</th>
-                                    </tr>
-                                    <tr class="sub-th">
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                                    </tr>
-                                    {rows_html}
+                                    <!-- ✳️ تغليف العناوين بـ thead لتتكرر في كل صفحة -->
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="width: 2%;">م</th>
+                                            <th rowspan="2" class="name-col">اسم الطالب</th>
+                                            <th colspan="10" class="main-th">الحضور</th>
+                                            <th colspan="5" class="main-th">المشاركة</th>
+                                            <th colspan="5" class="main-th">الواجبات</th>
+                                            <th colspan="5" class="main-th">المشاريع</th>
+                                            <th rowspan="2" style="width: 4%;">المجموع</th>
+                                        </tr>
+                                        <tr class="sub-th">
+                                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                        </tr>
+                                    </thead>
+                                    <!-- ✳️ تغليف البيانات بـ tbody -->
+                                    <tbody>
+                                        {rows_html}
+                                    </tbody>
                                 </table>
                                 
                                 <div class="footer">
