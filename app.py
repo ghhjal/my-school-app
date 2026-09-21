@@ -1892,7 +1892,7 @@ else:
                     link_text = str(u.get('الرابط', ''))
                     link_display = f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>" if link_text.startswith('http') else link_text if link_text.lower() != 'none' else ""
                     st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>", unsafe_allow_html=True)
-# ==========================================
+            # ==========================================
             # --- إضافة: إشعار المخالفات السلوكية لولي الأمر ---
             # ==========================================
             if not df_beh.empty:
@@ -1906,10 +1906,13 @@ else:
                     # فحص إذا كان آخر سلوك مسجل هو مخالفة أو تنبيه
                     if "-" in b_type or "سلبي" in b_type or "تنبيه" in b_type or "نقص" in b_type or "تأخر" in b_type:
                         st.markdown(f"""
-                        <div class="urgent-box" style="margin-bottom: 15px;">
+                        <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
                             <h4 style="margin: 0 0 5px 0;">⚠️ إشعار سلوكي لولي الأمر</h4>
                             <p style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.1rem;">{b_type}</p>
-                            <span style="color: #64748B; font-size: 0.9rem;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                            <span style="color: #64748B; font-size: 0.9rem; display:block; margin-bottom: 10px;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                            <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #B91C1C;">
+                                👇 <b>فضلاً:</b> نرجو الانتقال إلى تبويب <b>(📝 السلوك)</b> بالأسفل للاطلاع على السجل التفصيلي.
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)    
             st.markdown(f"""
