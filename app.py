@@ -1892,7 +1892,26 @@ else:
                     link_text = str(u.get('الرابط', ''))
                     link_display = f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>" if link_text.startswith('http') else link_text if link_text.lower() != 'none' else ""
                     st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>", unsafe_allow_html=True)
-
+# ==========================================
+            # --- إضافة: إشعار المخالفات السلوكية لولي الأمر ---
+            # ==========================================
+            if not df_beh.empty:
+                df_beh['clean_id'] = df_beh.iloc[:,0].astype(str).str.split('.').str[0]
+                my_beh_alerts = df_beh[df_beh['clean_id'] == sid]
+                
+                if not my_beh_alerts.empty:
+                    last_record = my_beh_alerts.iloc[-1]
+                    b_type = str(last_record.get('type', ''))
+                    
+                    # فحص إذا كان آخر سلوك مسجل هو مخالفة أو تنبيه
+                    if "-" in b_type or "سلبي" in b_type or "تنبيه" in b_type or "نقص" in b_type or "تأخر" in b_type:
+                        st.markdown(f"""
+                        <div class="urgent-box" style="margin-bottom: 15px;">
+                            <h4 style="margin: 0 0 5px 0;">⚠️ إشعار سلوكي لولي الأمر</h4>
+                            <p style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.1rem;">{b_type}</p>
+                            <span style="color: #64748B; font-size: 0.9rem;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                        </div>
+                        """, unsafe_allow_html=True)    
             st.markdown(f"""
                 <div class="welcome-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
