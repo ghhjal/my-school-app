@@ -1336,6 +1336,7 @@ else:
                         if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
                             st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
                             
+                            # 1. إنشاء الجدول المتقاطع للملاحظات الموجودة
                             pivot_table = pd.crosstab(class_data['name'], class_data[beh_col])
                             pivot_table.index.name = "اسم الطالب"
                             
@@ -1348,9 +1349,25 @@ else:
                                 notes_series = class_data.groupby('name').apply(combine_notes)
                                 pivot_table['الملاحظات النصية التفصيلية'] = notes_series
                             
-                            pivot_table = pivot_table.fillna("") 
-                            pivot_table = pivot_table.astype(str) 
+                            # 2. ✳️ جلب جميع طلاب الفصل لإجبار ظهورهم في الكشف حتى لو لم تكن لهم ملاحظات
+                            all_students = df_s[df_s['class'] == cls_choice].sort_values('name')['name'].tolist()
                             
+                            # إعادة الفهرسة لتشمل جميع الطلاب
+                            pivot_table = pivot_table.reindex(all_students)
+                            
+                            # 3. تنظيف الفراغات للطلاب الجدد (وضع صفر بدل NaN)
+                            for col in pivot_table.columns:
+                                if col == 'الملاحظات النصية التفصيلية':
+                                    pivot_table[col] = pivot_table[col].fillna("")
+                                else:
+                                    # تحويل الفراغات لأصفار ثم لنص نظيف
+                                    pivot_table[col] = pd.to_numeric(pivot_table[col], errors='coerce').fillna(0).astype(int).astype(str)
+                                    # إخفاء الأصفار إذا أردت الكشف أنظف (اختياري، تركناها أصفار لتعرف أنه تمت معالجته)
+                                    # pivot_table[col] = pivot_table[col].replace('0', '')
+                            
+                            # ترتيب أبجدي نهائي
+                            pivot_table = pivot_table.sort_index()
+
                             st.dataframe(pivot_table, use_container_width=True)
                             
                             b_csv = io.BytesIO()
