@@ -1198,22 +1198,97 @@ else:
                                     if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                 except Exception as e: pass
         
+                            # تهيئة متغير التعديل في الذاكرة
+                            if 'edit_beh_idx' not in st.session_state:
+                                st.session_state.edit_beh_idx = None
+                                
+                            beh_options_list = [
+                                "🌟 متميز (+10)", "✅ إيجابي (+5)", "📝 حل الواجب (+5)", "🎯 أداء المهمة (+10)", "📂 ملف الإنجاز (+10)", 
+                                "⚠️ تنبيه (0)", "📚 نقص كتاب (-5)", "✍️ نقص واجب (-5)", "🖊️ نقص أدوات الكتابة (-5)", "💤 النوم داخل الفصل (-3)", 
+                                "🏃 تأخر عن الحصة (-5)", "❌ عدم إحضار ملف الإنجاز (-10)", "🚫 سلبي (-10)"
+                            ]
+
                             for global_idx, r in my_b.iloc[::-1].iterrows():
                                 with st.container():
-                                    color = danger_color if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else success_color
-                                    st.markdown(f"""
-                                    <div class="mobile-list-item" style="border-right: 4px solid {color}">
-                                        <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#64748B">{r.get('note')}</span></div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
                                     
-                                    c_del, c_wa, c_em = st.columns([0.5, 1, 1])
-                                    lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
-                                    c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
-                                    c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
-                                    
-                                    if st.session_state.role == "teacher": 
-                                        c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, r.get('type')))
+                                    # ✳️ وضع التعديل (إذا ضغط المعلم على زر التعديل لهذا السجل)
+                                    if st.session_state.edit_beh_idx == global_idx:
+                                        st.markdown(f"<div style='background: #F8FAFC; padding: 15px; border-radius: 12px; border: 2px dashed {primary_color}; margin-bottom: 10px;'>", unsafe_allow_html=True)
+                                        st.markdown("###### ✏️ تعديل الملاحظة السلوكية")
+                                        
+                                        current_type = str(r.get('type'))
+                                        type_idx = beh_options_list.index(current_type) if current_type in beh_options_list else 0
+                                        
+                                        new_type = st.selectbox("نوع السلوك", beh_options_list, index=type_idx, key=f"edit_type_{global_idx}", label_visibility="collapsed")
+                                        new_note = st.text_input("التفاصيل", value=str(r.get('note', '')), key=f"edit_note_{global_idx}", label_visibility="collapsed")
+                                        
+                                        c_save, c_cancel = st.columns(2)
+                                        if c_save.button("💾 حفظ التعديل", type="primary", key=f"save_{global_idx}", use_container_width=True):
+                                            try:
+                                                with st.spinner("جاري التحديث..."):
+                                                    ws_beh = sh.worksheet("behavior")
+                                                    headers_beh = ws_beh.row_values(1)
+                                                    idx_type = headers_beh.index('type') + 1 if 'type' in headers_beh else 3
+                                                    idx_note = headers_beh.index('note') + 1 if 'note' in headers_beh else 4
+                                                    
+                                                    # تحديث الشيت
+                                                    ws_beh.update_cell(global_idx + 2, idx_type, new_type)
+                                                    ws_beh.update_cell(global_idx + 2, idx_note, new_note)
+                                                    
+                                                    # حساب فرق النقاط في حال تغيير نوع السلوك
+                                                    old_match = re.search(r'\(([\+\-]?\d+)\)', current_type)
+                                                    old_pts = int(old_match.group(1)) if old_match else 0
+                                                    
+                                                    new_match = re.search(r'\(([\+\-]?\d+)\)', new_type)
+                                                    new_pts = int(new_match.group(1)) if new_match else 0
+                                                    
+                                                    diff = new_pts - old_pts
+                                                    
+                                                    # تحديث رصيد الطالب إذا تغيرت النقاط
+                                                    if diff != 0:
+                                                        ws_st = sh.worksheet("students")
+                                                        c = ws_st.find(sid)
+                                                        if c:
+                                                            h = ws_st.row_values(1)
+                                                            if 'النقاط' in h:
+                                                                idx_pts = h.index('النقاط') + 1
+                                                                curr = int(pd.to_numeric(ws_st.cell(c.row, idx_pts).value, errors='coerce') or 0)
+                                                                ws_st.update_cell(c.row, idx_pts, str(curr + diff))
+                                                    
+                                                    st.session_state.edit_beh_idx = None
+                                                    st.cache_data.clear()
+                                                    if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                                    st.toast("✅ تم التعديل بنجاح!", icon="✏️")
+                                                    st.rerun()
+                                            except Exception as e:
+                                                st.error(f"خطأ في التعديل: {e}")
+                                                
+                                        if c_cancel.button("❌ إلغاء", key=f"cancel_{global_idx}", use_container_width=True):
+                                            st.session_state.edit_beh_idx = None
+                                            st.rerun()
+                                        st.markdown("</div>", unsafe_allow_html=True)
+                                        
+                                    # ✳️ وضع العرض الطبيعي
+                                    else:
+                                        color = danger_color if "سلبي" in str(r.get('type')) or "-" in str(r.get('type')) else success_color
+                                        st.markdown(f"""
+                                        <div class="mobile-list-item" style="border-right: 4px solid {color}">
+                                            <div><b>{r.get('type')}</b> | <small>{r.get('date')}</small><br><span style="color:#64748B">{r.get('note')}</span></div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        # إضافة زر التعديل بجوار الحذف
+                                        c_edit, c_del, c_wa, c_em = st.columns([0.5, 0.5, 1, 1])
+                                        lnk = get_professional_msg(s_nm, r.get('type'), r.get('note'), r.get('date'))
+                                        c_wa.link_button("واتساب", f"https://api.whatsapp.com/send?phone={clp}&text={lnk}", use_container_width=True)
+                                        c_em.link_button("إيميل", f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}", use_container_width=True)
+                                        
+                                        if st.session_state.role == "teacher": 
+                                            if c_edit.button("✏️", key=f"ed_beh_{global_idx}", help="تعديل السجل"):
+                                                st.session_state.edit_beh_idx = global_idx
+                                                st.rerun()
+                                                
+                                            c_del.button("❌", key=f"dl_beh_{global_idx}", on_click=delete_behavior, args=(global_idx, r.get('type')), help="حذف نهائي")
                     
             # --- 2. الرصد الجماعي السريع ---
             with eval_tabs[1]:
