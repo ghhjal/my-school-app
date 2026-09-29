@@ -16,7 +16,7 @@ st.set_page_config(page_title="منصة زياد الذكية", layout="wide", i
 
 # --- [الدوال المساعدة والاتصال الذكي] ---
 
-@st.cache_resource(ttl=2700) 
+@st.cache_resource(ttl=3600) 
 def get_gspread_client():
     try:
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
@@ -40,7 +40,8 @@ def clean_phone_number(phone):
     if not p.startswith("966") and p != "": p = "966" + p
     return p
 
-@st.cache_data(ttl=300)
+# ✳️ تم زيادة مدة الحفظ في الذاكرة لتخفيف الضغط
+@st.cache_data(ttl=600)
 def fetch_safe(worksheet_name):
     try:
         current_sh = get_gspread_client()
@@ -69,11 +70,20 @@ def safe_append_row(worksheet_name, data_dict):
         st.error("⚠️ حدث انقطاع، تم التحديث. يرجى الضغط مرة أخرى.")
         return False
 
+# ✳️ دالة مخصصة وسريعة لجلب الإعدادات مرة واحدة
+@st.cache_data(ttl=3600)
+def get_cached_settings():
+    try:
+        current_sh = get_gspread_client()
+        if not current_sh: return {}
+        sett = current_sh.worksheet("settings").get_all_records()
+        return {row['key']: row['value'] for row in sett}
+    except: return {}
+
 # --- تحميل الإعدادات ---
 if "class_options" not in st.session_state:
-    try:
-        sett = sh.worksheet("settings").get_all_records()
-        s_map = {row['key']: row['value'] for row in sett}
+    s_map = get_cached_settings()
+    if s_map:
         st.session_state.max_tasks = int(s_map.get('max_tasks', 60))
         st.session_state.max_quiz = int(s_map.get('max_quiz', 40))
         st.session_state.current_year = str(s_map.get('current_year', '1447هـ'))
@@ -82,7 +92,7 @@ if "class_options" not in st.session_state:
         
         st.session_state.class_options = [x.strip() for x in str(s_map.get('class_list', 'الأول')).split(',') if x.strip()]
         st.session_state.stage_options = [x.strip() for x in str(s_map.get('stage_list', 'ابتدائي')).split(',') if x.strip()]
-    except:
+    else:
         st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
         st.session_state.current_year = "1447هـ"
         st.session_state.current_period = "الفترة الأولى"
@@ -92,7 +102,7 @@ if "class_options" not in st.session_state:
 if "role" not in st.session_state: st.session_state.role = None
 if "username" not in st.session_state: st.session_state.username = None
 
-# --- 🎨 نظام القوالب الديناميكية للمناسبات (مع الرموز والعبارات والنقوش) ---
+# --- 🎨 نظام القوالب الديناميكية للمناسبات ---
 active_theme_name = st.session_state.get('app_theme', 'الرئيسي (الافتراضي)')
 
 themes = {
@@ -130,7 +140,6 @@ themes = {
 
 t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
 
-# متغيرات الألوان الثابتة
 text_color = "#0F172A"
 sub_text = "#64748B"
 border_color = "#E2E8F0"
@@ -139,7 +148,6 @@ warning_color = "#F59E0B"
 danger_color = "#EF4444"
 shadow_val = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
 
-# متغيرات الألوان الديناميكية
 primary_color = t_colors["primary"]
 accent_color = t_colors["accent"]
 header_grad = t_colors["header_grad"]
@@ -350,7 +358,6 @@ if st.session_state.role is None:
                     ud = df[df['username']==u].iloc[0]
                     if hashlib.sha256(p.encode()).hexdigest() == ud['password_hash']:
                         if ud.get('role', 'teacher') in ['teacher', '']:
-                            # ✳️ تسجيل وقت دخول المعلم
                             try:
                                 ws_u = sh.worksheet("users")
                                 c_u = ws_u.find(u)
@@ -387,7 +394,6 @@ if st.session_state.role is None:
                     ud = df_u[df_u['username']==u_admin].iloc[0]
                     if hashlib.sha256(p_admin.encode()).hexdigest() == ud['password_hash']:
                         if ud.get('role', '') == 'viewer':
-                            # ✳️ تسجيل وقت دخول الإدارة
                             try:
                                 ws_u = sh.worksheet("users")
                                 c_u = ws_u.find(u_admin)
@@ -931,7 +937,6 @@ else:
 
                         st.markdown("##### 📊 الدرجات الأكاديمية")
                         df_g = st.session_state.df_grades.copy()
-                        # ✳️ التعديل: نقلنا المتغير هنا ليكون معرفاً دائماً سواء كان الجدول فارغاً أم لا
                         cp_report = st.session_state.get('current_period', 'الفترة الأولى').strip()
                         
                         if not df_g.empty:
@@ -963,7 +968,7 @@ else:
                             else: st.info(f"لم يتم رصد درجات أكاديمية لهذا الطالب في ({cp_report}) بعد.")
                         
                         st.markdown("<br>", unsafe_allow_html=True)
-                        st.markdown("##### 📜 سجل الملاحظات والسلوك التفصيلي")
+                        st.markdown("##### 📜 سجل السلوك والملاحظات")
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             df_b['clean_id'] = df_b.iloc[:,0].astype(str).str.split('.').str[0]
@@ -1224,7 +1229,6 @@ else:
                         class_students = df_st_bulk[df_st_bulk['clean_class'] == bulk_class.strip()]
                         
                         if not class_students.empty:
-                            # ✳️ التعديل هنا: ترتيب الطلاب أبجدياً قبل عرضهم
                             class_students = class_students.sort_values('name')
                             
                             with st.form("bulk_behavior_form", clear_on_submit=True):
@@ -1369,7 +1373,6 @@ else:
                 else:
                     st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
 
-               
                 # ==========================================
                 # --- إضافة: استخراج كشف متابعة الدرجات للرصد اليدوي ---
                 # ==========================================
@@ -1388,7 +1391,6 @@ else:
                         if not df_print.empty:
                             rows_html = ""
                             for i, (_, row) in enumerate(df_print.iterrows(), 1):
-                                # توليد الخلايا الفارغة للرصد (10 حضور + 5 مشاركة + 5 واجبات + 5 مشاريع = 25)
                                 empty_cells = "<td></td>" * 25
                                 rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells}<td></td></tr>"
                                 
@@ -1432,7 +1434,6 @@ else:
                                 <div class="title-box">كشف متابعة الدرجات - مادة اللغة الانجليزية - {print_cls_choice}</div>
                                 
                                 <table>
-                                    <!-- ✳️ تغليف العناوين بـ thead لتتكرر في كل صفحة -->
                                     <thead>
                                         <tr>
                                             <th rowspan="2" style="width: 2%;">م</th>
@@ -1450,7 +1451,6 @@ else:
                                             <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
                                         </tr>
                                     </thead>
-                                    <!-- ✳️ تغليف البيانات بـ tbody -->
                                     <tbody>
                                         {rows_html}
                                     </tbody>
@@ -1478,6 +1478,7 @@ else:
                             st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
                 else:
                     st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
+                
                 # ==========================================
                 # --- إضافة: استخراج كشف أسماء وأرقام تواصل الطلاب ---
                 # ==========================================
@@ -1490,20 +1491,17 @@ else:
                     all_classes = st.session_state.get('class_options', ['الرابع', 'الخامس'])
                     contact_cls_choice = col_t1.selectbox("اختر الصف المطلوب:", all_classes, key="contact_cls")
                     
-                    # فلترة الطلاب حسب الصف وترتيبهم أبجدياً
                     df_contact = df_s[df_s['class'] == contact_cls_choice].sort_values('name')
                     
                     if not df_contact.empty:
-                        # تجهيز البيانات (الاسم ورقم الجوال فقط)
                         df_export = df_contact[['name', 'الجوال']].copy()
                         df_export = df_export.rename(columns={'name': 'اسم الطالب', 'الجوال': 'رقم الجوال (واتساب)'})
                         
-                        # إنشاء ملف الإكسيل في الذاكرة
                         b_contact = io.BytesIO()
                         with pd.ExcelWriter(b_contact, engine='xlsxwriter') as writer:
                             df_export.to_excel(writer, index=False, sheet_name='أرقام التواصل')
                         
-                        col_t2.markdown("<br>", unsafe_allow_html=True) # لضبط المحاذاة مع القائمة المنسدلة
+                        col_t2.markdown("<br>", unsafe_allow_html=True) 
                         col_t2.download_button(
                             label=f"📥 تحميل كشف أرقام الجوال (Excel) - {contact_cls_choice}", 
                             data=b_contact.getvalue(), 
@@ -1513,7 +1511,6 @@ else:
                             use_container_width=True
                         )
                         
-                        # عرض الجدول للمعاينة السريعة داخل المنصة
                         with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
                             st.dataframe(df_export, use_container_width=True, hide_index=True)
                     else:
@@ -1892,29 +1889,29 @@ else:
                     link_text = str(u.get('الرابط', ''))
                     link_display = f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>" if link_text.startswith('http') else link_text if link_text.lower() != 'none' else ""
                     st.markdown(f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>", unsafe_allow_html=True)
-                # ==========================================
-                # --- إضافة: إشعار المخالفات السلوكية لولي الأمر ---
-                # ==========================================
-                if not df_beh.empty:
-                    df_beh['clean_id'] = df_beh.iloc[:,0].astype(str).str.split('.').str[0]
-                    my_beh_alerts = df_beh[df_beh['clean_id'] == sid]
+            # ==========================================
+            # --- إضافة: إشعار المخالفات السلوكية لولي الأمر ---
+            # ==========================================
+            if not df_beh.empty:
+                df_beh['clean_id'] = df_beh.iloc[:,0].astype(str).str.split('.').str[0]
+                my_beh_alerts = df_beh[df_beh['clean_id'] == sid]
+                
+                if not my_beh_alerts.empty:
+                    last_record = my_beh_alerts.iloc[-1]
+                    b_type = str(last_record.get('type', ''))
                     
-                    if not my_beh_alerts.empty:
-                        last_record = my_beh_alerts.iloc[-1]
-                        b_type = str(last_record.get('type', ''))
-                        
-                        # فحص إذا كان آخر سلوك مسجل هو مخالفة أو تنبيه
-                        if "-" in b_type or "سلبي" in b_type or "تنبيه" in b_type or "نقص" in b_type or "تأخر" in b_type:
-                            st.markdown(f"""
-                            <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
-                                <h4 style="margin: 0 0 5px 0;">⚠️ إشعار سلوكي لولي الأمر</h4>
-                                <p style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.1rem;">{b_type}</p>
-                                <span style="color: #64748B; font-size: 0.9rem; display:block; margin-bottom: 10px;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
-                                <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #B91C1C;">
-                                    👇 <b>فضلاً:</b> نرجو الانتقال إلى تبويب <b>(📝 السلوك)</b> بالأسفل للاطلاع على السجل التفصيلي.
-                                </div>
+                    # فحص إذا كان آخر سلوك مسجل هو مخالفة أو تنبيه
+                    if "-" in b_type or "سلبي" in b_type or "تنبيه" in b_type or "نقص" in b_type or "تأخر" in b_type:
+                        st.markdown(f"""
+                        <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
+                            <h4 style="margin: 0 0 5px 0;">⚠️ إشعار سلوكي لولي الأمر</h4>
+                            <p style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.1rem;">{b_type}</p>
+                            <span style="color: #64748B; font-size: 0.9rem; display:block; margin-bottom: 10px;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                            <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #B91C1C;">
+                                👇 <b>فضلاً:</b> نرجو الانتقال إلى تبويب <b>(📝 السلوك)</b> بالأسفل للاطلاع على السجل التفصيلي.
                             </div>
-                            """, unsafe_allow_html=True)    
+                        </div>
+                        """, unsafe_allow_html=True)    
             st.markdown(f"""
                 <div class="welcome-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
