@@ -775,12 +775,12 @@ else:
                             for i, (_, r) in enumerate(top_10.iterrows(), 1):
                                 ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                                 brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
-                                # ✳️ تم إصلاح مشكلة انقسام الرقم 10 هنا باستخدام white-space:nowrap و min-width
+                                # ✳️ تم إضافة text-align: right هنا لمحاذاة الاسم مع الأيقونة
                                 st.markdown(f"""
                                     <div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                                         <div style='display:flex; align-items:center; gap:15px;'>
                                             <span style='font-size:1.5rem; font-weight:bold; min-width:45px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
-                                            <div>
+                                            <div style='text-align: right;'>
                                                 <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
                                                 <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                                             </div>
@@ -794,7 +794,7 @@ else:
                             st.markdown("---")
                             st.subheader("🖨️ أدوات طباعة الشرف والتميز")
                             
-                            # --- 1. تجهيز البطاقات الفردية (موجود مسبقاً) ---
+                            # --- 1. تجهيز البطاقات الفردية ---
                             honor_cards_content = ""
                             for rank, (_, row) in enumerate(top_10.iterrows(), 1):
                                 student_name = row.get('name', 'اسم غير متوفر')
@@ -840,7 +840,7 @@ else:
                             
                             honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                             
-                            # --- 2. ✳️ تجهيز الكشف الشامل (الفكرة الجديدة) ---
+                            # --- 2. ✳️ تجهيز الكشف الشامل (مع أوامر الطباعة الذكية لـ A4) ---
                             summary_list_html = ""
                             for rank, (_, row) in enumerate(top_10.iterrows(), 1):
                                 s_name = row.get('name', '')
@@ -857,16 +857,16 @@ else:
                                     med = f"#{rank}"; bg = "#FFFFFF"; brd = "#E2E8F0"; txt = "#334155"
                                 
                                 summary_list_html += f"""
-                                <div style="display:flex; justify-content:space-between; align-items:center; background:{bg}; border:1px solid {brd}; border-right:6px solid {brd}; padding:12px 20px; border-radius:10px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                                <div class="row-card" style="background:{bg}; border-color:{brd};">
                                     <div style="display:flex; align-items:center; gap:15px;">
-                                        <div style="font-size:24px; font-weight:900; width:45px; text-align:center;">{med}</div>
-                                        <div>
-                                            <div style="font-size:20px; font-weight:900; color:{txt}; font-family:'Cairo', sans-serif;">{s_name}</div>
-                                            <div style="font-size:14px; color:#64748B;">الصف: {s_cls}</div>
+                                        <div class="rank-icon">{med}</div>
+                                        <div style="text-align: right;">
+                                            <div class="student-name" style="color:{txt};">{s_name}</div>
+                                            <div class="student-class">الصف: {s_cls}</div>
                                         </div>
                                     </div>
-                                    <div style="font-size:24px; font-weight:900; color:{txt}; background:rgba(255,255,255,0.7); padding:5px 15px; border-radius:8px; border:1px dashed {brd};">
-                                        {s_pts} <span style="font-size:14px; font-weight:bold;">نقطة</span>
+                                    <div class="score-badge" style="color:{txt}; border-color:{brd};">
+                                        {s_pts} <span>نقطة</span>
                                     </div>
                                 </div>
                                 """
@@ -879,15 +879,32 @@ else:
                                 <title>لوحة الشرف - أفضل 10 طلاب</title>
                                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                                 <style>
-                                    body {{ font-family: 'Cairo', sans-serif; background: #F8FAFC; margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                    body {{ font-family: 'Cairo', sans-serif; background: #F8FAFC; margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; direction: rtl; }}
                                     .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; }}
-                                    .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px dashed #E2E8F0; }}
+                                    .header {{ text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #E2E8F0; }}
                                     .h-title {{ font-size: 32px; font-weight: 900; color: #1E40AF; margin: 0 0 5px 0; }}
                                     .h-sub {{ font-size: 18px; color: #64748B; margin: 0; }}
                                     .h-date {{ display: inline-block; margin-top: 10px; background: #EFF6FF; color: #2563EB; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; }}
+                                    
+                                    .row-card {{ display: flex; justify-content: space-between; align-items: center; border: 1px solid; border-right-width: 6px; padding: 12px 20px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
+                                    .rank-icon {{ font-size: 24px; font-weight: 900; width: 45px; text-align: center; }}
+                                    .student-name {{ font-size: 20px; font-weight: 900; font-family: 'Cairo', sans-serif; }}
+                                    .student-class {{ font-size: 14px; color: #64748B; }}
+                                    .score-badge {{ font-size: 24px; font-weight: 900; background: rgba(255,255,255,0.7); padding: 5px 15px; border-radius: 8px; border: 1px dashed; }}
+                                    .score-badge span {{ font-size: 14px; font-weight: bold; }}
+
+                                    /* ✳️ أوامر تقليص المسافات لكي تتسع في ورقة A4 واحدة */
                                     @media print {{
-                                        body {{ background: white; padding: 0; }}
-                                        .container {{ box-shadow: none; border: none; padding: 0; max-width: 100%; }}
+                                        @page {{ size: A4 portrait; margin: 10mm; }}
+                                        body {{ padding: 0; background: white; }}
+                                        .container {{ padding: 0; border: none; box-shadow: none; }}
+                                        .header {{ margin-bottom: 10px; padding-bottom: 10px; }}
+                                        .h-title {{ font-size: 24px; }}
+                                        .h-sub {{ font-size: 14px; }}
+                                        .row-card {{ padding: 6px 15px; margin-bottom: 7px; }}
+                                        .rank-icon {{ font-size: 20px; width: 35px; }}
+                                        .student-name {{ font-size: 17px; }}
+                                        .score-badge {{ font-size: 18px; padding: 3px 12px; }}
                                     }}
                                 </style>
                             </head>
