@@ -336,6 +336,11 @@ if st.session_state.role is None:
             sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
+                
+                # ✳️ إضافة: تحويل الأرقام المكتوبة بالكيبورد العربي إلى أرقام إنجليزية تلقائياً
+                arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
+                sid = sid.translate(arabic_to_english)
+                
                 df = fetch_safe("students")
                 if not df.empty:
                     df['clean_id'] = df.iloc[:,0].astype(str).str.split('.').str[0].str.strip()
