@@ -1072,10 +1072,16 @@ else:
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             df_b['clean_id'] = df_b.iloc[:,0].astype(str).str.split('.').str[0]
-                            my_b = df_b[df_b['clean_id'] == sid]
+                            my_b = df_b[df_b['clean_id'] == sid].copy()
+                            
                             if not my_b.empty:
+                                # ✳️ السر هنا: تحويل عمود التاريخ إلى صيغة زمنية حقيقية ثم الترتيب تنازلياً (الأحدث أولاً)
+                                my_b['date_parsed'] = pd.to_datetime(my_b['date'], errors='coerce')
+                                my_b = my_b.sort_values(by='date_parsed', ascending=False)
+                                
                                 display_df = my_b[['date', 'type', 'note']].rename(columns={'date':'📅 التاريخ', 'type':'🎯 نوع السلوك', 'note':'📝 التفاصيل'})
                                 st.dataframe(display_df, use_container_width=True, hide_index=True)
+                                
                                 rows_html = ""
                                 for _, r_b in display_df.iterrows():
                                     rows_html += f"<tr><td>{r_b['📅 التاريخ']}</td><td>{r_b['🎯 نوع السلوك']}</td><td>{r_b['📝 التفاصيل']}</td></tr>"
@@ -1269,13 +1275,20 @@ else:
                             st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
         
                         # --- سجل السلوك السفلي ---
+                        # --- سجل السلوك السفلي ---
                         st.markdown("#### 📜 سجل السلوك الأخير")
                         df_b = st.session_state.df_behavior
                         if not df_b.empty:
                             cid = 'student_id' if 'student_id' in df_b.columns else df_b.columns[0]
                             df_b['clean_cid'] = df_b[cid].astype(str).str.strip().str.split('.').str[0]
-                            my_b = df_b[df_b['clean_cid'] == sid]
+                            my_b = df_b[df_b['clean_cid'] == sid].copy()
                             
+                            # ✳️ الترتيب الذكي بالتاريخ
+                            if not my_b.empty:
+                                my_b = my_b.iloc[::-1] # الأحدث إدخالاً أولاً
+                                my_b['date_parsed'] = pd.to_datetime(my_b['date'], errors='coerce')
+                                my_b = my_b.sort_values(by='date_parsed', ascending=False, kind='mergesort')
+                                
                             def delete_behavior(global_idx, b_type):
                                 try: 
                                     sh.worksheet("behavior").delete_rows(int(global_idx) + 2)
@@ -1297,7 +1310,7 @@ else:
                                     st.cache_data.clear()
                                     if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                                 except Exception as e: pass
-        
+
                             # تهيئة متغير التعديل في الذاكرة
                             if 'edit_beh_idx' not in st.session_state:
                                 st.session_state.edit_beh_idx = None
@@ -1308,7 +1321,8 @@ else:
                                 "🏃 تأخر عن الحصة (-5)", "❌ عدم إحضار ملف الإنجاز (-10)", "🚫 سلبي (-10)"
                             ]
 
-                            for global_idx, r in my_b.iloc[::-1].iterrows():
+                            # ✳️ تم تحديث الحلقة لتعتمد الترتيب الجديد
+                            for global_idx, r in my_b.iterrows():
                                 with st.container():
                                     
                                     # ✳️ وضع التعديل (إذا ضغط المعلم على زر التعديل لهذا السجل)
@@ -2145,10 +2159,17 @@ else:
                 st.caption("سجل السلوك والملاحظات")
                 if not df_beh.empty:
                     df_beh['clean_id'] = df_beh.iloc[:,0].astype(str).str.split('.').str[0]
-                    nts = df_beh[df_beh['clean_id']==sid]
+                    nts = df_beh[df_beh['clean_id']==sid].copy()
+                    
                     if not nts.empty:
-                        for _, n in nts.iloc[::-1].iterrows():
-                            color = danger_color if "سلبي" in str(n.get('type')) else primary_color
+                        # ✳️ الترتيب الذكي بالتاريخ لطالب
+                        nts = nts.iloc[::-1]
+                        nts['date_parsed'] = pd.to_datetime(nts['date'], errors='coerce')
+                        nts = nts.sort_values(by='date_parsed', ascending=False, kind='mergesort')
+                        
+                        for _, n in nts.iterrows():
+                            # ✳️ تم تحسين التلوين ليعطي اللون الأحمر لأي ملاحظة فيها خصم
+                            color = danger_color if "سلبي" in str(n.get('type')) or "-" in str(n.get('type')) else primary_color
                             st.markdown(f"<div class='mobile-list-item' style='border-right: 4px solid {color};'><div><b style='color:{color}'>{n.get('type')}</b><p style='margin:0; font-size:0.9rem; color:#334155;'>{n.get('note')}</p><small style='color:#94A3B8;'>{n.get('date')}</small></div></div>", unsafe_allow_html=True)
                     else: st.success("🌟 سجلك نظيف تماماً!")
 
