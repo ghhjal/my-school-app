@@ -2376,7 +2376,17 @@ else:
                     for i, (_, r) in enumerate(active_students.sort_values('p_num', ascending=False).head(10).iterrows(), 1):
                         ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                         sty = f"border:2px solid {primary_color}; background:var(--secondary-background-color);" if str(r['clean_id']) == sid else ""
-                        st.markdown(f"<div class='mobile-list-item' style='{sty}'><div style='display:flex; align-items:center; gap:10px;'><span style='font-weight:900; font-size:1.2rem; width:30px;'>{ic}</span><span>{r['name']}</span></div><span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span></div>", unsafe_allow_html=True)
+                        
+                        # ✳️ تم إصلاح مشكلة الرقم 10 للطلاب بإضافة min-width و white-space:nowrap
+                        st.markdown(f"""
+                        <div class='mobile-list-item' style='{sty}'>
+                            <div style='display:flex; align-items:center; gap:10px;'>
+                                <span style='font-weight:900; font-size:1.2rem; min-width:40px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
+                                <span>{r['name']}</span>
+                            </div>
+                            <span style='color:{warning_color}; font-weight:900;'>{int(r['p_num'])}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
                     st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
 
