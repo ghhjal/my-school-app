@@ -775,10 +775,11 @@ else:
                             for i, (_, r) in enumerate(top_10.iterrows(), 1):
                                 ic = "🥇" if i==1 else "🥈" if i==2 else "🥉" if i==3 else f"#{i}"
                                 brd_col = "#F59E0B" if i<=3 else "#E2E8F0"
+                                # ✳️ تم إصلاح مشكلة انقسام الرقم 10 هنا باستخدام white-space:nowrap و min-width
                                 st.markdown(f"""
                                     <div style='background:var(--secondary-background-color); border:1px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                                         <div style='display:flex; align-items:center; gap:15px;'>
-                                            <span style='font-size:1.5rem; font-weight:bold; width:30px; text-align:center;'>{ic}</span>
+                                            <span style='font-size:1.5rem; font-weight:bold; min-width:45px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
                                             <div>
                                                 <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
                                                 <small style='color:#64748B;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
@@ -791,8 +792,9 @@ else:
                                 """, unsafe_allow_html=True)
                             
                             st.markdown("---")
-                            st.subheader("🖨️ طباعة بطاقات لوحة الشرف")
+                            st.subheader("🖨️ أدوات طباعة الشرف والتميز")
                             
+                            # --- 1. تجهيز البطاقات الفردية (موجود مسبقاً) ---
                             honor_cards_content = ""
                             for rank, (_, row) in enumerate(top_10.iterrows(), 1):
                                 student_name = row.get('name', 'اسم غير متوفر')
@@ -838,13 +840,89 @@ else:
                             
                             honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
                             
-                            st.download_button(
-                                label="🌐 تحميل بطاقات الشرف (تصميم واقعي للطباعة)", 
+                            # --- 2. ✳️ تجهيز الكشف الشامل (الفكرة الجديدة) ---
+                            summary_list_html = ""
+                            for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+                                s_name = row.get('name', '')
+                                s_cls = row.get('class', '')
+                                s_pts = int(row.get('النقاط', 0))
+                                
+                                if rank == 1:
+                                    med = "🥇"; bg = "linear-gradient(135deg, #FFF8DC, #FFFAF0)"; brd = "#DAA520"; txt = "#8B4513"
+                                elif rank == 2:
+                                    med = "🥈"; bg = "linear-gradient(135deg, #F8F9FA, #FFFFFF)"; brd = "#94A3B8"; txt = "#1E293B"
+                                elif rank == 3:
+                                    med = "🥉"; bg = "linear-gradient(135deg, #FFF1F2, #FFFBFB)"; brd = "#CD7F32"; txt = "#92400E"
+                                else:
+                                    med = f"#{rank}"; bg = "#FFFFFF"; brd = "#E2E8F0"; txt = "#334155"
+                                
+                                summary_list_html += f"""
+                                <div style="display:flex; justify-content:space-between; align-items:center; background:{bg}; border:1px solid {brd}; border-right:6px solid {brd}; padding:12px 20px; border-radius:10px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                                    <div style="display:flex; align-items:center; gap:15px;">
+                                        <div style="font-size:24px; font-weight:900; width:45px; text-align:center;">{med}</div>
+                                        <div>
+                                            <div style="font-size:20px; font-weight:900; color:{txt}; font-family:'Cairo', sans-serif;">{s_name}</div>
+                                            <div style="font-size:14px; color:#64748B;">الصف: {s_cls}</div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size:24px; font-weight:900; color:{txt}; background:rgba(255,255,255,0.7); padding:5px 15px; border-radius:8px; border:1px dashed {brd};">
+                                        {s_pts} <span style="font-size:14px; font-weight:bold;">نقطة</span>
+                                    </div>
+                                </div>
+                                """
+                                
+                            top10_summary_html = f"""
+                            <!DOCTYPE html>
+                            <html dir="rtl" lang="ar">
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>لوحة الشرف - أفضل 10 طلاب</title>
+                                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                                <style>
+                                    body {{ font-family: 'Cairo', sans-serif; background: #F8FAFC; margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                    .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; }}
+                                    .header {{ text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px dashed #E2E8F0; }}
+                                    .h-title {{ font-size: 32px; font-weight: 900; color: #1E40AF; margin: 0 0 5px 0; }}
+                                    .h-sub {{ font-size: 18px; color: #64748B; margin: 0; }}
+                                    .h-date {{ display: inline-block; margin-top: 10px; background: #EFF6FF; color: #2563EB; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; }}
+                                    @media print {{
+                                        body {{ background: white; padding: 0; }}
+                                        .container {{ box-shadow: none; border: none; padding: 0; max-width: 100%; }}
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h1 class="h-title">🌟 لوحة الشرف والتميز 🌟</h1>
+                                        <p class="h-sub">أفضل 10 طلاب متصدرين في المنصة بإشراف الأستاذ/ زياد المعمري</p>
+                                        <div class="h-date">تاريخ الإصدار: {datetime.date.today().strftime('%Y-%m-%d')}</div>
+                                    </div>
+                                    <div class="list-container">
+                                        {summary_list_html}
+                                    </div>
+                                </div>
+                                <script>window.onload = function() {{ window.print(); }}</script>
+                            </body>
+                            </html>
+                            """
+                            
+                            c_btn1, c_btn2 = st.columns(2)
+                            c_btn1.download_button(
+                                label="🎴 طباعة البطاقات الفردية للمتصدرين", 
                                 data=honor_full_html, 
                                 file_name=f"Honor_Cards_{datetime.date.today()}.html", 
                                 mime="text/html", 
                                 use_container_width=True,
                                 type="primary"
+                            )
+                            c_btn2.download_button(
+                                label="📋 طباعة كشف الشرف الشامل (أفضل 10)", 
+                                data=top10_summary_html, 
+                                file_name=f"Top10_Summary_{datetime.date.today()}.html", 
+                                mime="text/html", 
+                                use_container_width=True,
+                                type="secondary"
                             )
                         else:
                             st.info("لم يحصل أي طالب على نقاط تميز حتى الآن. لوحة الشرف بانتظار الأبطال! 🌟")
