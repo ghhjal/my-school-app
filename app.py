@@ -1684,7 +1684,142 @@ else:
                             st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
                 else:
                     st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
+                # ==========================================
+                # --- إضافة: استخراج كشف متابعة مرن (مخصص) للرصد اليدوي ---
+                # ==========================================
+                st.divider()
+                st.markdown("#### 📑 استخراج كشف متابعة مرن (فارغ للرصد اليدوي)")
+                st.info("صمم كشفك بنفسك! اختر الصف، وحدد اتجاه الورقة، ثم اختر الحقول التي تريدها ليتم رسم الكشف تلقائياً.")
                 
+                if not df_s.empty:
+                    col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 2])
+                    
+                    all_classes = st.session_state.get('class_options', ['الرابع', 'الخامس'])
+                    print_cls_choice = col_opt1.selectbox("1️⃣ اختر الصف:", all_classes, key="print_cls_flex")
+                    
+                    page_orientation = col_opt2.radio("2️⃣ اتجاه الطباعة:", ["أفقي (Landscape)", "عمودي (Portrait)"])
+                    css_orientation = "landscape" if "أفقي" in page_orientation else "portrait"
+                    
+                    # الخيارات المتاحة مع عدد الخانات الفرعية لكل خيار
+                    available_fields = {
+                        "الحضور والغياب": 10,
+                        "المشاركة والتفاعل": 5,
+                        "الواجبات والمهام": 5,
+                        "الاختبارات القصيرة": 4,
+                        "المشاريع والبحوث": 5,
+                        "السلوك والانضباط": 5
+                    }
+                    
+                    selected_fields = col_opt3.multiselect(
+                        "3️⃣ اختر الحقول المطلوبة في الكشف:", 
+                        list(available_fields.keys()), 
+                        default=["المشاركة والتفاعل", "الواجبات والمهام", "الاختبارات القصيرة"]
+                    )
+                    
+                    if st.button("🖨️ توليد الكشف المرن للطباعة", type="primary"):
+                        if not selected_fields:
+                            st.warning("⚠️ الرجاء اختيار حقل واحد على الأقل ليتم رسم الكشف.")
+                        else:
+                            df_print = df_s[df_s['class'] == print_cls_choice].sort_values('name')
+                            
+                            if not df_print.empty:
+                                # --- بناء رؤوس الجدول ديناميكياً ---
+                                main_th_html = ""
+                                sub_th_html = ""
+                                total_empty_cells = 0
+                                
+                                for field in selected_fields:
+                                    colspan = available_fields[field]
+                                    main_th_html += f'<th colspan="{colspan}" class="main-th">{field}</th>'
+                                    for i in range(1, colspan + 1):
+                                        sub_th_html += f'<th>{i}</th>'
+                                    total_empty_cells += colspan
+                                    
+                                # --- بناء صفوف الطلاب ديناميكياً ---
+                                rows_html = ""
+                                empty_cells_str = "<td></td>" * total_empty_cells
+                                
+                                for i, (_, row) in enumerate(df_print.iterrows(), 1):
+                                    rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells_str}<td class='total-col'></td></tr>"
+                                    
+                                sheet_html = f"""
+                                <!DOCTYPE html>
+                                <html dir="rtl" lang="ar">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>كشف متابعة مخصص - {print_cls_choice}</title>
+                                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                                    <style>
+                                        body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                        .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
+                                        .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 12px; }}
+                                        .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 50%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
+                                        table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }}
+                                        th, td {{ border: 1px solid #b0bec5; padding: 2px; }}
+                                        th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
+                                        .main-th {{ font-size: 12px; padding: 4px; background-color: #cfd8dc; }}
+                                        .sub-th th {{ width: 2.5%; font-size: 9px; color: #555; }}
+                                        .name-col {{ width: 22%; background-color: #e0e0e0; font-size: 11px; }}
+                                        .total-col {{ width: 5%; background-color: #f5f5f5; }}
+                                        td {{ height: 20px; }}
+                                        .footer {{ display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
+                                        
+                                        @media print {{ 
+                                            @page {{ size: A4 {css_orientation}; margin: 5mm; }}
+                                            body {{ padding: 0; }}
+                                            thead {{ display: table-header-group; }}
+                                            tr {{ page-break-inside: avoid; }}
+                                        }}
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header-box">
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مدرسة: .........................</div>
+                                        <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
+                                        <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
+                                    </div>
+                                    
+                                    <div class="title-box">كشف متابعة (مرن) - مادة اللغة الانجليزية - {print_cls_choice}</div>
+                                    
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th rowspan="2" style="width: 2%;">م</th>
+                                                <th rowspan="2" class="name-col">اسم الطالب</th>
+                                                {main_th_html}
+                                                <th rowspan="2" class="total-col">المجموع</th>
+                                            </tr>
+                                            <tr class="sub-th">
+                                                {sub_th_html}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {rows_html}
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div class="footer">
+                                        <div>مدير المدرسة / .........................</div>
+                                        <div>المعلم / زياد المعمري</div>
+                                    </div>
+                                    
+                                    <script>window.onload = function() {{ window.print(); }}</script>
+                                </body>
+                                </html>
+                                """
+                                
+                                st.download_button(
+                                    label="📥 تحميل الكشف المخصص (يُفتح للطباعة مباشرة)", 
+                                    data=sheet_html, 
+                                    file_name=f"Custom_Grading_Sheet_{print_cls_choice}.html", 
+                                    mime="text/html",
+                                    type="primary",
+                                    use_container_width=True
+                                )
+                            else:
+                                st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
+                else:
+                    st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
                 # ==========================================
                 # --- إضافة: استخراج كشف أسماء وأرقام تواصل الطلاب ---
                 # ==========================================
