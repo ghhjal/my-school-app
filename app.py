@@ -1695,7 +1695,7 @@ else:
                                         <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
                                     </div>
                                     
-                                    <div class="title-box">كشف متابعة (مرن) - مادة اللغة الانجليزية - {print_cls_choice}</div>
+                                    <div class="title-box">كشف متابعة  - مادة اللغة الانجليزية - {print_cls_choice}</div>
                                     
                                     <table>
                                         <thead>
