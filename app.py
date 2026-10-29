@@ -649,8 +649,28 @@ else:
                                     
                                     for col_idx, col_name in enumerate(valid_columns):
                                         with cols[col_idx % 3]:
-                                            current_val = "" if pd.isna(df_st.loc[selected_idx, col_name]) else str(df_st.loc[selected_idx, col_name])
-                                            val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
+                                            current_val = "" if pd.isna(df_st.loc[selected_idx, col_name]) else str(df_st.loc[selected_idx, col_name]).strip()
+                                            
+                                            # ✳️ تحويل حقل الصف إلى قائمة منسدلة
+                                            if col_name == 'class':
+                                                c_opts = st.session_state.get('class_options', [])
+                                                if current_val not in c_opts and current_val != "": c_opts.insert(0, current_val)
+                                                try: c_idx = c_opts.index(current_val) if current_val else 0
+                                                except: c_idx = 0
+                                                val = st.selectbox(col_name, c_opts, index=c_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
+                                                
+                                            # ✳️ تحويل حقل المرحلة إلى قائمة منسدلة
+                                            elif col_name == 'sem':
+                                                s_opts = st.session_state.get('stage_options', [])
+                                                if current_val not in s_opts and current_val != "": s_opts.insert(0, current_val)
+                                                try: s_idx = s_opts.index(current_val) if current_val else 0
+                                                except: s_idx = 0
+                                                val = st.selectbox(col_name, s_opts, index=s_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
+                                                
+                                            # ✳️ بقية الحقول تبقى كنص حر
+                                            else:
+                                                val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
+                                                
                                             new_vals.append(val)
                                     
                                     if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
