@@ -1946,7 +1946,7 @@ else:
                                 else:
                                     school_name = "ابتدائية عبادة بن قيس الأنصاري"
 
-                                # تصميم الكشف المطبوع (بنفس الهوية البصرية للكشف اليدوي)
+                                # تصميم الكشف المطبوع (بمسافات مضغوطة لتناسب صفحة A4)
                                 grades_sheet_html = f"""
                                 <!DOCTYPE html>
                                 <html dir="rtl" lang="ar">
@@ -1956,14 +1956,15 @@ else:
                                     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                                     <style>
                                         body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                        .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
-                                        .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 13px; }}
-                                        .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 6px; font-weight: bold; width: 60%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 14px; }}
-                                        table {{ width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; margin-top: 20px; }}
-                                        th, td {{ border: 1px solid #b0bec5; padding: 6px; }}
-                                        th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
+                                        .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
+                                        .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 11px; }}
+                                        .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 60%; margin: -20px auto 5px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
+                                        table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; margin-top: 10px; }}
+                                        /* ✳️ السر هنا: تقليل الـ padding وتحديد ارتفاع ثابت للخلية */
+                                        th, td {{ border: 1px solid #b0bec5; padding: 3px 5px; height: 22px; }}
+                                        th {{ background-color: #e0e0e0; font-weight: bold; color: #333; font-size: 12px; }}
                                         .name-col {{ width: 40%; background-color: #f8fafc; text-align: right; padding-right: 10px !important; font-weight: bold; }}
-                                        .footer {{ display: flex; justify-content: space-between; margin-top: 30px; font-weight: bold; padding: 0 50px; font-size: 14px; }}
+                                        .footer {{ display: flex; justify-content: space-between; margin-top: 20px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
                                         @media print {{ 
                                             @page {{ size: A4 portrait; margin: 10mm; }}
                                             body {{ padding: 0; }}
@@ -1975,7 +1976,7 @@ else:
                                 <body>
                                     <div class="header-box">
                                         <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                                        <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
+                                        <div class="header-text" style="font-size: 18px;">وزارة التعليم<br><span style="font-size: 9px; font-weight:normal;">Ministry of Education</span></div>
                                         <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{grades_print_period}</div>
                                     </div>
                                     
