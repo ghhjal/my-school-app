@@ -2927,85 +2927,91 @@ else:
                     with st.form("learning_style_quiz"):
                         st.info("تخيل نفسك في هذه المواقف، واختر الإجابة التي تشبهك أكثر:")
                         
+                        # ✳️ تم إضافة index=None لجعل الخيارات فارغة في البداية
                         q1 = st.radio("1️⃣ عندما تلعب لعبة جديدة (إلكترونية أو ورقية)، كيف تتعلمها؟", [
                             "👀 أقرأ التعليمات أو أشاهد الصور التوضيحية (بصري)", 
                             "👂 أطلب من صديقي أن يشرح لي طريقة اللعب (سمعي)", 
                             "✋ أبدأ باللعب فوراً وأتعلم من أخطائي والتجربة (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q2 = st.radio("2️⃣ عندما تذاكر لاختبار مهم، ما هي طريقتك المفضلة؟", [
                             "🖼️ أستخدم الأقلام الملونة، التخطيط، وقراءة الملخصات (بصري)", 
                             "🗣️ أقرأ بصوت عالٍ أو أسمع شرح المعلم في عقلي (سمعي)", 
                             "🚶 أتحرك في الغرفة أثناء الحفظ أو أكتب بيدي عدة مرات (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q3 = st.radio("3️⃣ في وقت فراغك بالمنزل، ما هو نشاطك المفضل؟", [
                             "🎨 مشاهدة اليوتيوب، أو الرسم والتلوين (بصري)", 
                             "🎧 الاستماع للأناشيد، البودكاست، أو التحدث مع الأصدقاء (سمعي)", 
                             "⚽ اللعب بالكرة، الألعاب الحركية، أو الفك والتركيب (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q4 = st.radio("4️⃣ إذا ذهبت في رحلة لمكان جديد، ما أكثر شيء تتذكره بعد العودة؟", [
                             "📸 شكل المكان والأشياء الجميلة التي رأيتها (بصري)", 
                             "💬 الأصوات، الأناشيد، والأحاديث التي دارت في الرحلة (سمعي)", 
                             "🏃 الألعاب والأنشطة التي قمت بها وحركتي هناك (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q5 = st.radio("5️⃣ عندما يطلب منك المعلم تركيب جهاز أو عمل مشروع، كيف تبدأ؟", [
                             "📖 أنظر إلى صورة الشكل النهائي لأعرف كيف سيكون (بصري)", 
                             "❓ أسأل المعلم أو زملائي عن الخطوة الأولى (سمعي)", 
                             "🛠️ أمسك القطع بيدي وأبدأ بمحاولة تركيبها مباشرة (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q6 = st.radio("6️⃣ عندما تحفظ قصة أو آيات من القرآن، ماذا تفعل غالباً؟", [
                             "👁️ أتذكر شكل الصفحة ومكان الكلمات فيها (بصري)", 
                             "🎤 أكررها بصوت عالٍ أو أستمع لقارئ (سمعي)", 
                             "🖐️ أستخدم أصابعي للعد أو أتحرك ذهاباً وإياباً أثناء الحفظ (حركي)"
-                        ])
+                        ], index=None)
                         st.write("---")
                         
                         q7 = st.radio("7️⃣ عندما تشتري جهازاً أو لعبة جديدة، ما الذي يلفت انتباهك أولاً؟", [
                             "✨ الألوان والتصميم وشكل العلبة الخارجي (بصري)", 
                             "🔊 الأصوات التي تصدرها اللعبة أو ما يقوله أصدقاؤك عنها (سمعي)", 
                             "🕹️ الأزرار وملمسها وكيفية تحريكها واللعب بها (حركي)"
-                        ])
+                        ], index=None)
                         
                         if st.form_submit_button("🚀 إرسال الإجابات واكتشاف نمطي", type="primary", use_container_width=True):
-                            # تحليل إجابات الطالب
                             answers = [q1, q2, q3, q4, q5, q6, q7]
-                            v_count = sum(1 for a in answers if "بصري" in a)
-                            a_count = sum(1 for a in answers if "سمعي" in a)
-                            k_count = sum(1 for a in answers if "حركي" in a)
                             
-                            # تحديد النمط الغالب (الأعلى نقاطاً)
-                            if v_count > a_count and v_count > k_count: final_style = "بصري 👀"
-                            elif a_count > v_count and a_count > k_count: final_style = "سمعي 👂"
-                            elif k_count > v_count and k_count > a_count: final_style = "حركي ✋"
-                            else: final_style = "متعدد الأنماط 🌟" # في حال التساوي
-                            
-                            try:
-                                # حفظ النتيجة في جوجل شيت مباشرة
-                                ws = sh.worksheet("students")
-                                headers = ws.row_values(1)
+                            # ✳️ التحقق من أن الطالب أجاب على جميع الأسئلة
+                            if None in answers:
+                                st.warning("⚠️ عذراً يا بطل، يجب عليك اختيار إجابة لجميع المواقف السبعة قبل إرسال النتيجة.")
+                            else:
+                                # تحليل إجابات الطالب
+                                v_count = sum(1 for a in answers if "بصري" in a)
+                                a_count = sum(1 for a in answers if "سمعي" in a)
+                                k_count = sum(1 for a in answers if "حركي" in a)
                                 
-                                if 'نمط التعلم' in headers:
-                                    style_col_idx = headers.index('نمط التعلم') + 1
-                                    cell = ws.find(sid)
-                                    if cell:
-                                        ws.update_cell(cell.row, style_col_idx, final_style)
-                                        st.success(f"🎉 رائع! نمط تعلمك هو: {final_style}")
-                                        if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
-                                        st.cache_data.clear()
-                                        st.rerun()
-                                else:
-                                    st.error("❌ لم يتم العثور على عمود 'نمط التعلم' في قاعدة البيانات.")
-                            except Exception as e:
-                                st.error(f"❌ حدث خطأ أثناء حفظ النتيجة، حاول مرة أخرى. ({e})")
+                                # تحديد النمط الغالب
+                                if v_count > a_count and v_count > k_count: final_style = "بصري 👀"
+                                elif a_count > v_count and a_count > k_count: final_style = "سمعي 👂"
+                                elif k_count > v_count and k_count > a_count: final_style = "حركي ✋"
+                                else: final_style = "متعدد الأنماط 🌟"
+                                
+                                try:
+                                    # حفظ النتيجة في جوجل شيت مباشرة
+                                    ws = sh.worksheet("students")
+                                    headers = ws.row_values(1)
+                                    
+                                    if 'نمط التعلم' in headers:
+                                        style_col_idx = headers.index('نمط التعلم') + 1
+                                        cell = ws.find(sid)
+                                        if cell:
+                                            ws.update_cell(cell.row, style_col_idx, final_style)
+                                            st.success(f"🎉 رائع! تم حفظ النتيجة. نمط تعلمك هو: {final_style}")
+                                            if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
+                                            st.cache_data.clear()
+                                            st.rerun()
+                                    else:
+                                        st.error("❌ لم يتم العثور على عمود 'نمط التعلم' في قاعدة البيانات.")
+                                except Exception as e:
+                                    st.error(f"❌ حدث خطأ أثناء حفظ النتيجة، حاول مرة أخرى. ({e})")
             with tabs[5]:
                 st.caption("إدارة الملف الشخصي")
                 with st.form("my_profile"):
