@@ -756,16 +756,6 @@ else:
                                     # تلوين النمط
                                     clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#94A3B8"
                                     
-                                    # بناء صفوف الجدول
-                                rows_html = ""
-                                for i, (_, r) in enumerate(df_filtered.sort_values('name').iterrows(), 1):
-                                    s_val = r.get('نمط التعلم', '')
-                                    if pd.isna(s_val) or str(s_val).strip() == "":
-                                        s_val = "لم يختبر ⏳"
-                                    
-                                    # تلوين النمط
-                                    clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#94A3B8"
-                                    
                                     rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
                                 
                                 # تصميم HTML بتنسيق مضغوط للطباعة ونصوص محدثة
