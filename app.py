@@ -2031,7 +2031,7 @@ else:
                         rep_type = c3.selectbox("🎯 الفئة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
                         
                         # تحديد الدرجة الفاصلة بشكل افتراضي وتركها قابلة للتعديل
-                        default_thresh = 90 if "المتفوقين" in rep_type else 60
+                        default_thresh = 54 if "المتفوقين" in rep_type else 36
                         threshold = c4.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key="rep_lvl_thresh")
                         
                         if st.button("🖨️ توليد تقرير الحصر للطباعة", type="primary", use_container_width=True):
