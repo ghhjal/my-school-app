@@ -756,9 +756,19 @@ else:
                                     # تلوين النمط
                                     clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#94A3B8"
                                     
+                                    # بناء صفوف الجدول
+                                rows_html = ""
+                                for i, (_, r) in enumerate(df_filtered.sort_values('name').iterrows(), 1):
+                                    s_val = r.get('نمط التعلم', '')
+                                    if pd.isna(s_val) or str(s_val).strip() == "":
+                                        s_val = "لم يختبر ⏳"
+                                    
+                                    # تلوين النمط
+                                    clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#94A3B8"
+                                    
                                     rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
                                 
-                                # تصميم HTML رسمي وموثق
+                                # تصميم HTML بتنسيق مضغوط للطباعة ونصوص محدثة
                                 ls_report_html = f"""
                                 <!DOCTYPE html>
                                 <html dir="rtl" lang="ar">
@@ -767,33 +777,38 @@ else:
                                     <title>تقرير أنماط التعلم</title>
                                     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                                     <style>
-                                        body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 20px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                        .header-box {{ border: 2px solid #1e293b; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; margin-bottom: 20px; }}
-                                        .header-text {{ text-align: center; font-weight: bold; font-size: 14px; line-height: 1.6; }}
-                                        .title-container {{ text-align: center; margin-bottom: 30px; }}
-                                        .main-title {{ font-size: 24px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 10px 30px; border-radius: 30px; margin-bottom: 10px; }}
+                                        body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 10px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px; }}
+                                        .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 10px; }}
+                                        .header-text {{ text-align: center; font-weight: bold; font-size: 13px; line-height: 1.4; }}
+                                        .title-container {{ text-align: center; margin-bottom: 15px; }}
+                                        .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
                                         .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
-                                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; }}
-                                        th, td {{ border: 1px solid #cbd5e1; padding: 12px; }}
-                                        th {{ background-color: #f1f5f9; font-weight: 900; }}
-                                        .footer-sigs {{ margin-top: 50px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; }}
-                                        @media print {{ @page {{ size: A4 portrait; margin: 15mm; }} body {{ padding: 0; }} }}
+                                        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
+                                        th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }} /* تم تقليل المسافات هنا بشكل كبير */
+                                        th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
+                                        .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
+                                        @media print {{ 
+                                            @page {{ size: A4 portrait; margin: 10mm; }} 
+                                            body {{ padding: 0; }} 
+                                            table {{ page-break-inside: auto; }}
+                                            tr {{ page-break-inside: avoid; page-break-after: auto; }}
+                                        }}
                                     </style>
                                 </head>
                                 <body>
                                     <div class="header-box">
-                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مكتب تعليم أُحُد</div>
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>ابتدائية عبادة بن قيس الأنصاري</div>
                                         <div class="header-text" style="align-self: center;">
-                                            <div class="sub-title">إحصائية رسمية لأنماط تعلم الطلاب</div>
-                                            <div style="font-size: 12px; color: #64748B; margin-top:5px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                                            <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
+                                            <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
                                         </div>
                                         <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
                                     </div>
                                     
                                     <div class="title-container">
                                         <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
-                                        <div class="sub-title">يُعد هذا التقرير من شواهد تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب وتوجيه الأنشطة بناءً عليها.</div>
-                                        <div style="margin-top: 15px; font-size: 15px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:5px 20px; border-radius:10px; border:1px dashed #3b82f6;">
+                                        <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (حركي - سمعي - بصري)</div>
+                                        <div style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed #3b82f6;">
                                             الفئة المستهدفة: (الصف: {sel_class}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
                                         </div>
                                     </div>
