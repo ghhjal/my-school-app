@@ -1893,6 +1893,128 @@ else:
                 else:
                     st.warning("قاعدة بيانات الطلاب فارغة، يرجى إضافة طلاب أولاً.")
                 # ==========================================
+                # --- إضافة: استخراج كشف الدرجات المرصودة (مطبوع) ---
+                # ==========================================
+                st.divider()
+                st.markdown("#### 📊 استخراج كشف الدرجات المرصودة (شاهد إثبات)")
+                st.info("قم بطباعة كشف درجات الطلاب معبأً بالدرجات من قاعدة البيانات للفصل والفترة المحددة.")
+
+                if not df_s.empty:
+                    col_g1, col_g2 = st.columns(2)
+                    grades_print_cls = col_g1.selectbox("1️⃣ اختر الصف:", st.session_state.get('class_options', []), key="grades_print_cls")
+                    grades_print_period = col_g2.selectbox("2️⃣ اختر الفترة:", ["الفترة الأولى", "الفترة الثانية", "الفترة الثالثة"], key="grades_print_period")
+
+                    if st.button("🖨️ توليد كشف الدرجات للطباعة", type="primary", use_container_width=True):
+                        # فلترة الطلاب حسب الصف
+                        df_cls_students = df_s[df_s['class'] == grades_print_cls].sort_values('name')
+
+                        if df_cls_students.empty:
+                            st.warning("⚠️ لا يوجد طلاب مسجلين في هذا الصف.")
+                        else:
+                            # سحب الدرجات من قاعدة البيانات
+                            df_g = st.session_state.get('df_grades', pd.DataFrame()).copy()
+                            
+                            if df_g.empty:
+                                st.warning("⚠️ لا توجد أي درجات مرصودة في قاعدة البيانات بعد.")
+                            else:
+                                # تنظيف رقم الهوية للربط الصحيح
+                                df_g['clean_id'] = df_g.iloc[:, 0].astype(str).str.split('.').str[0]
+                                if 'period' not in df_g.columns: 
+                                    df_g['period'] = 'الفترة الأولى'
+                                
+                                df_g['period'] = df_g['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
+                                
+                                # فلترة الدرجات حسب الفترة المختارة
+                                df_g_period = df_g[df_g['period'] == grades_print_period]
+
+                                # دمج بيانات الطلاب مع درجاتهم
+                                df_merged = pd.merge(df_cls_students, df_g_period, on='clean_id', how='left')
+
+                                # بناء صفوف الجدول الديناميكية
+                                rows_html = ""
+                                for i, (_, row) in enumerate(df_merged.iterrows(), 1):
+                                    # سحب الدرجات، وإذا كانت فارغة نضع مسافة
+                                    p1 = str(row.get('p1', '')) if pd.notna(row.get('p1')) else ''
+                                    p2 = str(row.get('p2', '')) if pd.notna(row.get('p2')) else ''
+                                    perf = str(row.get('perf', '')) if pd.notna(row.get('perf')) else ''
+                                    
+                                    rows_html += f"<tr><td>{i}</td><td class='name-col'>{row['name']}</td><td>{p1}</td><td>{p2}</td><td style='font-weight:bold; color:#174A5B; font-size:14px; background-color:#f5f5f5;'>{perf}</td></tr>"
+
+                                # ✳️ تحديد اسم المدرسة ديناميكياً بناءً على الصف المختار
+                                if "متوسط" in grades_print_cls:
+                                    school_name = "متوسطة عبدالرحمن الناصر"
+                                else:
+                                    school_name = "ابتدائية عبادة بن قيس الأنصاري"
+
+                                # تصميم الكشف المطبوع (بنفس الهوية البصرية للكشف اليدوي)
+                                grades_sheet_html = f"""
+                                <!DOCTYPE html>
+                                <html dir="rtl" lang="ar">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>كشف الدرجات - {grades_print_cls}</title>
+                                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                                    <style>
+                                        body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                        .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
+                                        .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 13px; }}
+                                        .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 6px; font-weight: bold; width: 60%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 14px; }}
+                                        table {{ width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; margin-top: 20px; }}
+                                        th, td {{ border: 1px solid #b0bec5; padding: 6px; }}
+                                        th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
+                                        .name-col {{ width: 40%; background-color: #f8fafc; text-align: right; padding-right: 10px !important; font-weight: bold; }}
+                                        .footer {{ display: flex; justify-content: space-between; margin-top: 30px; font-weight: bold; padding: 0 50px; font-size: 14px; }}
+                                        @media print {{ 
+                                            @page {{ size: A4 portrait; margin: 10mm; }}
+                                            body {{ padding: 0; }}
+                                            thead {{ display: table-header-group; }}
+                                            tr {{ page-break-inside: avoid; }}
+                                        }}
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header-box">
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                                        <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
+                                        <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{grades_print_period}</div>
+                                    </div>
+                                    
+                                    <div class="title-box">كشف الدرجات الأكاديمية المرصودة - مادة اللغة الانجليزية - {grades_print_cls}</div>
+                                    
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 5%;">م</th>
+                                                <th class="name-col">اسم الطالب</th>
+                                                <th style="width: 20%;">المشاركة والمهام</th>
+                                                <th style="width: 20%;">الاختبارات القصيرة</th>
+                                                <th style="width: 15%;">المجموع الكلي</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {rows_html}
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div class="footer">
+                                        <div>مدير المدرسة / .........................</div>
+                                        <div>المعلم / زياد المعمري</div>
+                                    </div>
+                                    
+                                    <script>window.onload = function() {{ window.print(); }}</script>
+                                </body>
+                                </html>
+                                """
+                                
+                                st.download_button(
+                                    label="📥 تحميل كشف الدرجات (يُفتح للطباعة مباشرة)", 
+                                    data=grades_sheet_html, 
+                                    file_name=f"Filled_Grades_{grades_print_cls}.html", 
+                                    mime="text/html",
+                                    type="primary",
+                                    use_container_width=True
+                                )
+                # ==========================================
                 # --- إضافة: استخراج كشف أسماء وأرقام تواصل الطلاب ---
                 # ==========================================
                 st.divider()
