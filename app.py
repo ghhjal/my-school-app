@@ -1045,11 +1045,34 @@ else:
                         sid = st_dict[sel_rep]
                         s_inf = df_st[df_st['clean_id'] == sid].iloc[0]
                         st.markdown("---")
-                        c1, c2, c3, c4 = st.columns(4)
-                        c1.info(f"👤 الاسم:\n\n**{s_inf['name']}**")
-                        c2.success(f"🆔 الرقم الأكاديمي:\n\n**{sid}**")
-                        c3.warning(f"🏫 الصف:\n\n**{s_inf.get('class', 'غير محدد')}**")
-                        c4.error(f"🌟 إجمالي النقاط:\n\n**{int(s_inf['النقاط'])}**")
+                        
+                        # ✳️ دمج نمط التعلم في واجهة المنصة العلوية 
+                        l_style = "لم يختبر ⏳"
+                        if 'نمط التعلم' in df_st.columns:
+                            val = s_inf.get('نمط التعلم', '')
+                            if pd.notna(val) and str(val).strip() != "":
+                                l_style = str(val).strip()
+                                
+                        style_color = "#3B82F6" if "بصري" in l_style else "#10B981" if "سمعي" in l_style else "#F59E0B" if "حركي" in l_style else "#64748B"
+                        
+                        st.markdown(f"""
+                        <div style='background:var(--secondary-background-color); padding:15px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;'>
+                            <div>
+                                <div style='color:var(--text-color); font-size:1.2rem;'><b>الاسم:</b> <span style='color:{primary_color};'>{s_inf['name']}</span></div>
+                                <div style='color:#64748B; margin-top:5px;'><b>الصف:</b> {s_inf.get('class', 'غير محدد')} | <b>الرقم الأكاديمي:</b> {sid}</div>
+                            </div>
+                            <div style='display:flex; gap:15px; text-align:center;'>
+                                <div style='background:{style_color}20; border:1px solid {style_color}; padding:8px 15px; border-radius:8px;'>
+                                    <div style='font-size:0.8rem; color:#64748B; font-weight:bold;'>🧠 نمط التعلم</div>
+                                    <div style='font-size:1.1rem; font-weight:bold; color:{style_color};'>{l_style}</div>
+                                </div>
+                                <div style='background:rgba(245, 158, 11, 0.1); border:1px solid #F59E0B; padding:8px 15px; border-radius:8px;'>
+                                    <div style='font-size:0.8rem; color:#B45309; font-weight:bold;'>🌟 رصيد النقاط</div>
+                                    <div style='font-size:1.3rem; font-weight:900; color:#B45309;'>{int(s_inf['النقاط'])}</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         st.markdown("<br>", unsafe_allow_html=True)
                         
                         grades_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>لا توجد درجات مرصودة لهذا الطالب في هذه الفترة.</div>"
@@ -1095,7 +1118,6 @@ else:
                             my_b = df_b[df_b['clean_id'] == sid].copy()
                             
                             if not my_b.empty:
-                                # ✳️ السر هنا: تحويل عمود التاريخ إلى صيغة زمنية حقيقية ثم الترتيب تنازلياً (الأحدث أولاً)
                                 my_b['date_parsed'] = pd.to_datetime(my_b['date'], errors='coerce')
                                 my_b = my_b.sort_values(by='date_parsed', ascending=False)
                                 
@@ -1125,7 +1147,7 @@ else:
                                 .header h1 {{ color: #0F172A; margin-bottom: 5px; font-weight: 800; font-size: 28px; }}
                                 .header p {{ color: #64748B; font-size: 14px; margin-top: 0; }}
                                 .student-card {{ background: #F8FAFC; border-right: 5px solid {primary_color}; padding: 25px; border-radius: 12px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }}
-                                .student-card h2 {{ grid-column: 1 / -1; margin-top: 0; color: {accent_color}; border-bottom: 1px dashed {border_color}; padding-bottom: 15px; margin-bottom: 10px; }}
+                                .student-card h2 {{ grid-column: 1 / -1; margin-top: 0; color: {accent_color}; border-bottom: 1px dashed {border_color}; padding-bottom: 15px; margin-bottom: 10px; display:flex; justify-content:space-between; }}
                                 .student-card .info-item {{ font-size: 16px; }}
                                 .student-card .info-item span {{ font-weight: 800; color: #475569; margin-left: 5px; }}
                                 h3 {{ color: {accent_color}; display: flex; align-items: center; gap: 10px; margin-top: 40px; border-bottom: 2px solid {border_color}; padding-bottom: 10px; }}
@@ -1146,7 +1168,7 @@ else:
                                 <div class="banner">✨ منصة زياد الذكية ✨</div>
                                 <div class="header"><h1>تقرير متابعة طالب</h1><p>تاريخ استخراج التقرير: {pd.Timestamp.now().strftime('%Y-%m-%d')}</p></div>
                                 <div class="student-card">
-                                    <h2>👤 {s_inf['name']}</h2>
+                                    <h2><span>👤 {s_inf['name']}</span> <span style="font-size:16px; background:#e2e8f0; padding:5px 15px; border-radius:8px; color:#475569;">🧠 {l_style}</span></h2>
                                     <div class="info-item"><span>🆔 الرقم الأكاديمي:</span> {sid}</div>
                                     <div class="info-item"><span>🏫 الصف:</span> {s_inf.get('class', 'غير محدد')}</div>
                                     <div class="info-item"><span>⭐ نقاط التميز:</span> <span style="color:#d97706; font-size:1.2em;">{int(s_inf['النقاط'])}</span></div>
