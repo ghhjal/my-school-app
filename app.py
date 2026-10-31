@@ -2016,6 +2016,147 @@ else:
                                     use_container_width=True
                                 )
                 # ==========================================
+                # --- إضافة: تقرير حصر المتفوقين ومتدني المستوى (شاهد إثبات) ---
+                # ==========================================
+                st.markdown("---")
+                with st.expander("📈 🖨️ تقرير حصر المتفوقين ومتدني المستوى (للخطط العلاجية والتعزيز)", expanded=False):
+                    st.info("💡 استخدم هذا التقرير كشاهد رسمي لإدارة المدرسة يثبت متابعتك لمستويات الطلاب وتطبيقك للخطط العلاجية وبرامج الرعاية.")
+                    
+                    if not df_s.empty:
+                        c1, c2, c3, c4 = st.columns(4)
+                        
+                        all_cls_rep = ["الكل"] + st.session_state.get('class_options', [])
+                        rep_cls = c1.selectbox("🏫 اختر الصف:", all_cls_rep, key="rep_lvl_cls")
+                        rep_per = c2.selectbox("📅 الفترة:", ["الفترة الأولى", "الفترة الثانية", "الفترة الثالثة"], key="rep_lvl_per")
+                        rep_type = c3.selectbox("🎯 الفئة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
+                        
+                        # تحديد الدرجة الفاصلة بشكل افتراضي وتركها قابلة للتعديل
+                        default_thresh = 90 if "المتفوقين" in rep_type else 60
+                        threshold = c4.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key="rep_lvl_thresh")
+                        
+                        if st.button("🖨️ توليد تقرير الحصر للطباعة", type="primary", use_container_width=True):
+                            df_g_all = st.session_state.get('df_grades', pd.DataFrame()).copy()
+                            
+                            if df_g_all.empty:
+                                st.warning("⚠️ لا توجد درجات مرصودة في قاعدة البيانات بعد.")
+                            else:
+                                # تجهيز البيانات
+                                df_st_copy = df_s.copy()
+                                if rep_cls != "الكل":
+                                    df_st_copy = df_st_copy[df_st_copy['class'] == rep_cls]
+                                    
+                                df_g_all['clean_id'] = df_g_all.iloc[:, 0].astype(str).str.split('.').str[0]
+                                if 'period' not in df_g_all.columns: df_g_all['period'] = 'الفترة الأولى'
+                                df_g_all['period'] = df_g_all['period'].replace(['', None, 'nan', 'NaN'], 'الفترة الأولى').astype(str).str.strip()
+                                
+                                df_g_filtered = df_g_all[df_g_all['period'] == rep_per]
+                                df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on='clean_id', how='inner')
+                                
+                                # تحويل عمود المجموع إلى أرقام صحيحة للمقارنة
+                                df_merged_lvl['perf_num'] = pd.to_numeric(df_merged_lvl['perf'], errors='coerce').fillna(0)
+                                
+                                # الفلترة حسب الفئة والدرجة
+                                if "المتفوقين" in rep_type:
+                                    final_df = df_merged_lvl[df_merged_lvl['perf_num'] >= threshold].sort_values(by='perf_num', ascending=False)
+                                    report_title = "حصر الطلاب المتفوقين"
+                                    action_text = "تكريم في لوحة الشرف / تعزيز إيجابي"
+                                    color_theme = "#10B981" # أخضر
+                                else:
+                                    final_df = df_merged_lvl[df_merged_lvl['perf_num'] < threshold].sort_values(by='perf_num', ascending=True)
+                                    report_title = "حصر الطلاب متدني المستوى"
+                                    action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
+                                    color_theme = "#EF4444" # أحمر
+                                
+                                if final_df.empty:
+                                    st.success(f"✅ لا يوجد طلاب يطابقون معيار ({report_title}) في هذا الصف/الفترة.")
+                                else:
+                                    # تحديد اسم المدرسة ديناميكياً
+                                    if rep_cls == "الكل":
+                                        school_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
+                                    elif "متوسط" in rep_cls:
+                                        school_name = "متوسطة عبدالرحمن الناصر"
+                                    else:
+                                        school_name = "ابتدائية عبادة بن قيس الأنصاري"
+                                        
+                                    # بناء صفوف الجدول
+                                    rows_lvl = ""
+                                    for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                                        rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+
+                                    # تصميم HTML المطبوع
+                                    lvl_report_html = f"""
+                                    <!DOCTYPE html>
+                                    <html dir="rtl" lang="ar">
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <title>{report_title}</title>
+                                        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                                        <style>
+                                            body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                            .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
+                                            .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
+                                            .title-container {{ text-align: center; margin-bottom: 15px; }}
+                                            .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+                                            .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
+                                            table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
+                                            th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
+                                            th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
+                                            .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
+                                            @media print {{ 
+                                                @page {{ size: A4 portrait; margin: 10mm; }} 
+                                                body {{ padding: 0; }} 
+                                                table {{ page-break-inside: auto; }}
+                                                tr {{ page-break-inside: avoid; page-break-after: auto; }}
+                                            }}
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="header-box">
+                                            <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                                            <div class="header-text" style="align-self: center;">
+                                                <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
+                                                <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                                            </div>
+                                            <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>{rep_per}<br>المعلم: زياد المعمري</div>
+                                        </div>
+                                        
+                                        <div class="title-container">
+                                            <div class="main-title">{report_title}</div>
+                                            <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
+                                            <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
+                                                (الصف: {rep_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
+                                            </div>
+                                        </div>
+                                        
+                                        <table>
+                                            <tr>
+                                                <th style="width: 5%;">م</th>
+                                                <th style="width: 35%; text-align: right;">اسم الطالب</th>
+                                                <th style="width: 15%;">الصف</th>
+                                                <th style="width: 15%;">المجموع ({rep_per})</th>
+                                                <th style="width: 30%;">الإجراء المتخذ (مقترح)</th>
+                                            </tr>
+                                            {rows_lvl}
+                                        </table>
+                                        
+                                        <div class="footer-sigs">
+                                            <div>الموجه الطلابي <br><br>........................</div>
+                                            <div>معلم المادة <br><br>زياد المعمري</div>
+                                            <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                                        </div>
+                                        <script>window.onload = function() {{ window.print(); }}</script>
+                                    </body>
+                                    </html>
+                                    """
+                                    st.download_button(
+                                        label=f"📥 تحميل التقرير (يفتح للطباعة مباشرة)", 
+                                        data=lvl_report_html, 
+                                        file_name=f"Performance_Report_{rep_cls}.html", 
+                                        mime="text/html",
+                                        type="primary",
+                                        use_container_width=True
+                                    )
+                # ==========================================
                 # --- إضافة: استخراج كشف أسماء وأرقام تواصل الطلاب ---
                 # ==========================================
                 st.divider()
