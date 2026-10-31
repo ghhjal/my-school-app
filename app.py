@@ -711,6 +711,120 @@ else:
                                     st.rerun()
                             else:
                                 st.info("لا توجد بيانات للطلاب بعد.")
+                # ==========================================
+                # --- إضافة: تقرير حصر أنماط التعلم (شاهد إثبات) ---
+                # ==========================================
+                st.markdown("---")
+                with st.expander("🧠 🖨️ استخراج تقرير أنماط التعلم (للإدارة والتوثيق)", expanded=False):
+                    st.info("💡 يمكنك طباعة هذا التقرير كـ 'شاهد إثبات' رسمي لمدير المدرسة والمشرف التربوي على تطبيقك لاستراتيجية (التعليم المتمايز) ومراعاة الفروق الفردية.")
+                    
+                    if not df_st.empty:
+                        c1, c2 = st.columns(2)
+                        c_opts = ["الكل"] + list(df_st['class'].dropna().unique())
+                        sel_class = c1.selectbox("🏫 اختر الصف:", c_opts, key="ls_class")
+                        
+                        style_opts = ["الكل", "بصري 👀", "سمعي 👂", "حركي ✋", "لم يختبر ⏳"]
+                        sel_style = c2.selectbox("🎯 اختر النمط المستهدف:", style_opts, key="ls_style")
+                        
+                        if st.button("🖨️ توليد تقرير الأنماط للطباعة", type="primary", use_container_width=True):
+                            df_filtered = df_st.copy()
+                            
+                            # 1. فلترة الصف
+                            if sel_class != "الكل":
+                                df_filtered = df_filtered[df_filtered['class'] == sel_class]
+                            
+                            # 2. فلترة النمط
+                            if 'نمط التعلم' not in df_filtered.columns:
+                                df_filtered['نمط التعلم'] = ""
+                            
+                            if sel_style == "لم يختبر ⏳":
+                                df_filtered = df_filtered[df_filtered['نمط التعلم'].isna() | (df_filtered['نمط التعلم'].astype(str).str.strip() == "")]
+                            elif sel_style != "الكل":
+                                keyword = sel_style.split()[0] # أخذ الكلمة الأولى فقط للبحث
+                                df_filtered = df_filtered[df_filtered['نمط التعلم'].astype(str).str.contains(keyword, na=False)]
+                            
+                            if df_filtered.empty:
+                                st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
+                            else:
+                                # بناء صفوف الجدول
+                                rows_html = ""
+                                for i, (_, r) in enumerate(df_filtered.sort_values('name').iterrows(), 1):
+                                    s_val = r.get('نمط التعلم', '')
+                                    if pd.isna(s_val) or str(s_val).strip() == "":
+                                        s_val = "لم يختبر ⏳"
+                                    
+                                    # تلوين النمط
+                                    clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#94A3B8"
+                                    
+                                    rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                                
+                                # تصميم HTML رسمي وموثق
+                                ls_report_html = f"""
+                                <!DOCTYPE html>
+                                <html dir="rtl" lang="ar">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>تقرير أنماط التعلم</title>
+                                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                                    <style>
+                                        body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 20px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                                        .header-box {{ border: 2px solid #1e293b; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; margin-bottom: 20px; }}
+                                        .header-text {{ text-align: center; font-weight: bold; font-size: 14px; line-height: 1.6; }}
+                                        .title-container {{ text-align: center; margin-bottom: 30px; }}
+                                        .main-title {{ font-size: 24px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 10px 30px; border-radius: 30px; margin-bottom: 10px; }}
+                                        .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
+                                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; }}
+                                        th, td {{ border: 1px solid #cbd5e1; padding: 12px; }}
+                                        th {{ background-color: #f1f5f9; font-weight: 900; }}
+                                        .footer-sigs {{ margin-top: 50px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; }}
+                                        @media print {{ @page {{ size: A4 portrait; margin: 15mm; }} body {{ padding: 0; }} }}
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header-box">
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مكتب تعليم أُحُد</div>
+                                        <div class="header-text" style="align-self: center;">
+                                            <div class="sub-title">إحصائية رسمية لأنماط تعلم الطلاب</div>
+                                            <div style="font-size: 12px; color: #64748B; margin-top:5px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                                        </div>
+                                        <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
+                                    </div>
+                                    
+                                    <div class="title-container">
+                                        <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
+                                        <div class="sub-title">يُعد هذا التقرير من شواهد تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب وتوجيه الأنشطة بناءً عليها.</div>
+                                        <div style="margin-top: 15px; font-size: 15px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:5px 20px; border-radius:10px; border:1px dashed #3b82f6;">
+                                            الفئة المستهدفة: (الصف: {sel_class}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
+                                        </div>
+                                    </div>
+                                    
+                                    <table>
+                                        <tr>
+                                            <th style="width: 5%;">م</th>
+                                            <th style="width: 45%; text-align: right;">اسم الطالب</th>
+                                            <th style="width: 25%;">الصف</th>
+                                            <th style="width: 25%;">نمط التعلم</th>
+                                        </tr>
+                                        {rows_html}
+                                    </table>
+                                    
+                                    <div class="footer-sigs">
+                                        <div>الموجه الطلابي <br><br>........................</div>
+                                        <div>معلم المادة <br><br>زياد المعمري</div>
+                                        <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                                    </div>
+                                    <script>window.onload = function() {{ window.print(); }}</script>
+                                </body>
+                                </html>
+                                """
+                                st.download_button(
+                                    label="📥 تحميل التقرير (يفتح للطباعة مباشرة)", 
+                                    data=ls_report_html, 
+                                    file_name=f"Learning_Styles_Report.html", 
+                                    mime="text/html",
+                                    type="primary",
+                                    use_container_width=True
+                                )
                 
                 # --- 2. لوحة الشرف (النقاط والسلوك) ---
                 with sub_tabs[1]:
