@@ -758,6 +758,14 @@ else:
                                     
                                     rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
                                 
+                                # ✳️ تحديد اسم المدرسة ديناميكياً بناءً على الصف المختار
+                                if sel_class == "الكل":
+                                    school_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
+                                elif "متوسط" in sel_class:
+                                    school_name = "متوسطة عبدالرحمن الناصر"
+                                else:
+                                    school_name = "ابتدائية عبادة بن قيس الأنصاري"
+
                                 # تصميم HTML بتنسيق مضغوط للطباعة ونصوص محدثة
                                 ls_report_html = f"""
                                 <!DOCTYPE html>
@@ -774,7 +782,7 @@ else:
                                         .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
                                         .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
                                         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
-                                        th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }} /* تم تقليل المسافات هنا بشكل كبير */
+                                        th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }}
                                         th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
                                         .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
                                         @media print {{ 
@@ -787,7 +795,7 @@ else:
                                 </head>
                                 <body>
                                     <div class="header-box">
-                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>ابتدائية عبادة بن قيس الأنصاري</div>
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
                                         <div class="header-text" style="align-self: center;">
                                             <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
                                             <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
