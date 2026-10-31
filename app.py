@@ -2032,7 +2032,7 @@ else:
                         
                         # تحديد الدرجة الفاصلة بشكل افتراضي وتركها قابلة للتعديل
                         default_thresh = 54 if "المتفوقين" in rep_type else 36
-                        threshold = c4.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key="rep_lvl_thresh")
+                        threshold = c4.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}")
                         
                         if st.button("🖨️ توليد تقرير الحصر للطباعة", type="primary", use_container_width=True):
                             df_g_all = st.session_state.get('df_grades', pd.DataFrame()).copy()
