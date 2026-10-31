@@ -1807,6 +1807,12 @@ else:
                                 for i, (_, row) in enumerate(df_print.iterrows(), 1):
                                     rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells_str}<td class='total-col'></td></tr>"
                                     
+                                # ✳️ تحديد اسم المدرسة ديناميكياً بناءً على الصف المختار
+                                if "متوسط" in print_cls_choice:
+                                    school_name = "متوسطة عبدالرحمن الناصر"
+                                else:
+                                    school_name = "ابتدائية عبادة بن قيس الأنصاري"
+                                    
                                 sheet_html = f"""
                                 <!DOCTYPE html>
                                 <html dir="rtl" lang="ar">
@@ -1839,7 +1845,8 @@ else:
                                 </head>
                                 <body>
                                     <div class="header-box">
-                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم<br>مدرسة: .........................</div>
+                                        <!-- ✳️ تم تغيير الترويسة لتعرض اسم المدرسة ديناميكياً -->
+                                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
                                         <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
                                         <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
                                     </div>
