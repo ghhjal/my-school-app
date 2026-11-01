@@ -1388,7 +1388,7 @@ else:
                             st.container(border=True)
                             cp = st.session_state.get('current_period', 'الفترة الأولى').strip()
                             st.markdown(f"##### 📝 رصد الدرجات ({cp})")
-                            
+                            st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام** (الحد الأقصى 40 درجة).\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة** (الحد الأقصى 20 درجة).")
                             df_g = st.session_state.df_grades.copy()
                             cur_p1, cur_p2 = 0, 0
                             
