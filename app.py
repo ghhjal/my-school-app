@@ -2363,7 +2363,7 @@ else:
                         st.success(f"✅ تم الحفظ بنجاح! المنصة تعمل بهوية: {selected_theme}")
                         if 'db_loaded' in st.session_state: del st.session_state['db_loaded']
                         st.cache_data.clear(); st.rerun()
-                st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام** (الحد الأقصى 40 درجة).\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة** (الحد الأقصى 20 درجة).")
+                
                 with st.expander("📤 استيراد البيانات (Excel) - سريع"):
                     up = st.file_uploader("رفع ملف Excel", type=['xlsx'])
                     ts = st.radio("نوع البيانات", ["students", "grades"], horizontal=True, format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات")
