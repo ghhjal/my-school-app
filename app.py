@@ -2365,6 +2365,7 @@ else:
                         st.cache_data.clear(); st.rerun()
                 
                 with st.expander("📤 استيراد البيانات (Excel) - سريع"):
+                st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام** (الحد الأقصى 40 درجة).\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة** (الحد الأقصى 20 درجة).")
                     up = st.file_uploader("رفع ملف Excel", type=['xlsx'])
                     ts = st.radio("نوع البيانات", ["students", "grades"], horizontal=True, format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات")
                     if st.button("🚀 بدء المزامنة السريعة", type="primary") and up:
@@ -2430,7 +2431,7 @@ else:
                     c1.download_button("📥 قالب فارغ (طلاب)", b1.getvalue(), "students_template.xlsx", use_container_width=True)
                     b2 = io.BytesIO(); pd.DataFrame(columns=["student_id", "p1", "p2"]).to_excel(b2, index=False)
                     c2.download_button("📥 قالب فارغ (درجات)", b2.getvalue(), "grades_template.xlsx", use_container_width=True)
-                st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام** (الحد الأقصى 40 درجة).\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة** (الحد الأقصى 20 درجة).")
+                
                 with st.expander("🔍 مدقق رصد الدرجات (كشف النواقص)", expanded=False):
                     st.markdown("##### قائمة الطلاب الذين لم يتم رصد درجاتهم بعد")
                     
