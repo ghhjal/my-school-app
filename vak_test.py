@@ -143,4 +143,11 @@ else:
                         idx = r['options'].index(r['choice'])
                         scores[r['keys'][idx]] += 1
                     
-                    labels = {"V": "بصري 👁️", "A": "
+                    # السطر الذي تم تصحيحه
+                    labels = {"V": "بصري 👁️", "A": "سمعي 👂", "K": "حركي 🏃‍♂️"}
+                    final_result = labels[max(scores, key=scores.get)]
+                    
+                    save_result(student['id'], final_result)
+                    st.session_state.test_done = True
+                    st.session_state.student_data['vak_result'] = final_result
+                    st.rerun()
