@@ -7,12 +7,14 @@ st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="�
 # ==========================================
 # 1. الاتصال بـ Google Sheets
 # ==========================================
-# سيقوم Streamlit بالبحث عن بيانات الاتصال في إعدادات Secrets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# ضع رابط ملف جوجل شيت الخاص بالاختبار هنا
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit?gid=0#gid=0"
+
 def get_all_students():
-    # قراءة البيانات كنصوص لتجنب تحول أرقام الهوية إلى أرقام عشرية
-    df = conn.read(ttl=0, dtype=str)
+    # قراءة البيانات مع تحديد الرابط صراحة
+    df = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
     # ملء الفراغات بكلمة غير مختبر لتجنب الأخطاء
     df['vak_result'] = df['vak_result'].fillna("غير مختبر")
     return df
@@ -26,8 +28,8 @@ def save_result(student_id, result):
     df = get_all_students()
     # تحديث الخلية الخاصة بنتيجة الطالب المطابق
     df.loc[df['id'] == str(student_id), 'vak_result'] = result
-    # إرسال التحديث إلى جوجل شيت
-    conn.update(data=df)
+    # إرسال التحديث إلى جوجل شيت مع تحديد الرابط صراحة
+    conn.update(spreadsheet=SHEET_URL, data=df)
 
 # ==========================================
 # 2. القائمة الجانبية: لوحة تحكم الإدارة
