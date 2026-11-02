@@ -1,73 +1,44 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
+from streamlit_gsheets import GSheetsConnection
+
+st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="🧠", layout="wide")
 
 # ==========================================
-# 1. إعداد قاعدة البيانات (مستقلة لهذا التطبيق)
+# 1. الاتصال بـ Google Sheets
 # ==========================================
-DB_NAME = "vak_database.db"
+# سيقوم Streamlit بالبحث عن بيانات الاتصال في إعدادات Secrets
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS students (
-                    id TEXT PRIMARY KEY,
-                    name TEXT,
-                    grade TEXT,
-                    class_name TEXT,
-                    vak_result TEXT
-                 )''')
-    
-    # بيانات تجريبية تُضاف فقط إذا كانت القاعدة فارغة
-    c.execute("SELECT COUNT(*) FROM students")
-    if c.fetchone()[0] == 0:
-        sample_students = [
-            ('1111', 'أحمد محمد', 'الأول متوسط', 'أ/1', 'غير مختبر'),
-            ('2222', 'خالد عبدالله', 'الثالث الابتدائي', 'ج/3', 'غير مختبر'),
-            ('3333', 'سعد فهد', 'الخامس الابتدائي', 'ب/5', 'غير مختبر')
-        ]
-        c.executemany("INSERT INTO students VALUES (?, ?, ?, ?, ?)", sample_students)
-        conn.commit()
-    conn.close()
+def get_all_students():
+    # قراءة البيانات كنصوص لتجنب تحول أرقام الهوية إلى أرقام عشرية
+    df = conn.read(ttl=0, dtype=str)
+    # ملء الفراغات بكلمة غير مختبر لتجنب الأخطاء
+    df['vak_result'] = df['vak_result'].fillna("غير مختبر")
+    return df
 
 def get_student_by_id(student_id):
-    conn = sqlite3.connect(DB_NAME)
-    student = pd.read_sql_query(f"SELECT * FROM students WHERE id = '{student_id}'", conn)
-    conn.close()
+    df = get_all_students()
+    student = df[df['id'] == str(student_id)]
     return student
 
 def save_result(student_id, result):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("UPDATE students SET vak_result = ? WHERE id = ?", (result, student_id))
-    conn.commit()
-    conn.close()
-
-def get_all_students():
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT id AS 'رقم الهوية', name AS 'اسم الطالب', grade AS 'الصف', class_name AS 'الفصل', vak_result AS 'النتيجة' FROM students", conn)
-    conn.close()
-    return df
+    df = get_all_students()
+    # تحديث الخلية الخاصة بنتيجة الطالب المطابق
+    df.loc[df['id'] == str(student_id), 'vak_result'] = result
+    # إرسال التحديث إلى جوجل شيت
+    conn.update(data=df)
 
 # ==========================================
-# 2. إعداد الصفحة الأساسية
-# ==========================================
-st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="🧠", layout="wide")
-
-init_db()
-
-# ==========================================
-# 3. القائمة الجانبية: لوحة تحكم الإدارة (Admin Panel)
+# 2. القائمة الجانبية: لوحة تحكم الإدارة
 # ==========================================
 with st.sidebar:
     st.header("⚙️ دخول المعلمين والإدارة")
     admin_password = st.text_input("كلمة المرور للوحة التحكم:", type="password")
-    
-    # يمكنك تغيير كلمة المرور هذه إلى أي كلمة تريدها
     is_admin = (admin_password == "admin123") 
 
 # ==========================================
-# 4. مسار الإدارة (يظهر فقط عند إدخال الباسورد الصحيح)
+# 3. مسار الإدارة
 # ==========================================
 if is_admin:
     st.title("📊 لوحة تحكم نتائج أنماط التعلم")
@@ -75,18 +46,25 @@ if is_admin:
     
     df_all = get_all_students()
     
-    # أدوات الفلترة
+    # تغيير أسماء الأعمدة للعرض باللغة العربية
+    display_df = df_all.rename(columns={
+        'id': 'رقم الهوية', 
+        'name': 'اسم الطالب', 
+        'grade': 'الصف', 
+        'class_name': 'الفصل', 
+        'vak_result': 'النتيجة'
+    })
+    
     col1, col2 = st.columns(2)
     with col1:
-        classes = ["الكل"] + list(df_all['الفصل'].unique())
+        classes = ["الكل"] + list(display_df['الفصل'].unique())
         selected_class = st.selectbox("فرز حسب الفصل:", classes)
     
     with col2:
         status = ["الكل", "مختبر", "غير مختبر"]
         selected_status = st.selectbox("حالة الاختبار:", status)
     
-    # تطبيق الفلاتر
-    filtered_df = df_all.copy()
+    filtered_df = display_df.copy()
     if selected_class != "الكل":
         filtered_df = filtered_df[filtered_df['الفصل'] == selected_class]
     
@@ -96,24 +74,15 @@ if is_admin:
         filtered_df = filtered_df[filtered_df['النتيجة'] == "غير مختبر"]
     
     st.write(f"عدد الطلاب في هذا العرض: **{len(filtered_df)}**")
-    
-    # عرض الجدول
     st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     
-    # زر تصدير النتائج إلى Excel/CSV لطباعتها
     csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 تحميل التقرير (CSV) لطباعته",
-        data=csv,
-        file_name='VAK_Results.csv',
-        mime='text/csv',
-    )
+    st.download_button(label="📥 تحميل التقرير (CSV) لطباعته", data=csv, file_name='VAK_Results.csv', mime='text/csv')
 
 # ==========================================
-# 5. مسار الطلاب (الواجهة الرئيسية للاختبار)
+# 4. مسار الطلاب (الواجهة الرئيسية للاختبار)
 # ==========================================
 else:
-    # --- إدارة حالة الجلسة للطالب ---
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
     if 'student_data' not in st.session_state:
@@ -125,7 +94,6 @@ else:
     st.write("حدد نمط تعلمك لتساعد معلميك في تقديم الدروس بالطريقة التي تناسبك!")
     st.markdown("---")
 
-    # --- واجهة تسجيل دخول الطالب ---
     if not st.session_state.logged_in:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -146,7 +114,6 @@ else:
                 else:
                     st.warning("أدخل الرقم أولاً.")
 
-    # --- واجهة إجراء الاختبار ---
     elif st.session_state.logged_in and not st.session_state.test_done:
         student = st.session_state.student_data
         st.success(f"أهلاً بك: **{student['name']}** | **{student['grade']}** - فصل: **{student['class_name']}**")
@@ -182,7 +149,6 @@ else:
                     st.session_state.student_data['vak_result'] = final_result
                     st.rerun()
 
-    # --- واجهة النتيجة النهائية ---
     elif st.session_state.logged_in and st.session_state.test_done:
         student = st.session_state.student_data
         st.success("تم تسجيل نتيجتك بنجاح!")
