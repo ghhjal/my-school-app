@@ -9,11 +9,12 @@ st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="�
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# المعرف الصحيح لملفك
-SHEET_ID = "1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs"
+# الرابط الكامل لملفك لحل مشكلة SpreadsheetNotFound
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
+
 def get_all_students():
-    # قراءة البيانات مع تحديد الـ ID
-    df = conn.read(spreadsheet=SHEET_ID, ttl=0, dtype=str)
+    # قراءة البيانات مع تحديد الرابط
+    df = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
     # ملء الفراغات بكلمة غير مختبر لتجنب الأخطاء
     df['vak_result'] = df['vak_result'].fillna("غير مختبر")
     return df
@@ -28,7 +29,7 @@ def save_result(student_id, result):
     # تحديث الخلية الخاصة بنتيجة الطالب المطابق
     df.loc[df['id'] == str(student_id), 'vak_result'] = result
     # إرسال التحديث إلى جوجل شيت 
-    conn.update(spreadsheet=SHEET_ID, data=df)
+    conn.update(spreadsheet=SHEET_URL, data=df)
 
 # ==========================================
 # 2. القائمة الجانبية: لوحة تحكم الإدارة
@@ -142,19 +143,4 @@ else:
                         idx = r['options'].index(r['choice'])
                         scores[r['keys'][idx]] += 1
                     
-                    labels = {"V": "بصري 👁️", "A": "سمعي 👂", "K": "حركي 🏃‍♂️"}
-                    final_result = labels[max(scores, key=scores.get)]
-                    
-                    save_result(student['id'], final_result)
-                    st.session_state.test_done = True
-                    st.session_state.student_data['vak_result'] = final_result
-                    st.rerun()
-
-    elif st.session_state.logged_in and st.session_state.test_done:
-        student = st.session_state.student_data
-        st.success("تم تسجيل نتيجتك بنجاح!")
-        st.markdown(f"### النمط الغالب لديك هو: **{student['vak_result']}**")
-        if st.button("خروج"):
-            st.session_state.logged_in = False
-            st.session_state.test_done = False
-            st.rerun()
+                    labels = {"V": "بصري 👁️", "A": "
