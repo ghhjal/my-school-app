@@ -8,3 +8,4 @@ xlsxwriter
 oauth2client
 openpyxl
 weasyprint
+st-gsheets-connection
