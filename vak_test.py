@@ -11,7 +11,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # المعرف الصحيح لملفك
 SHEET_ID = "1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs"
-
 def get_all_students():
     # قراءة البيانات مع تحديد الـ ID
     df = conn.read(spreadsheet=SHEET_ID, ttl=0, dtype=str)
