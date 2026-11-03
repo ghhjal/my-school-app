@@ -27,7 +27,43 @@ st.markdown("""
     .dash-card.pending { border-color: #f1c40f; } 
     .dash-title { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
     .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
-    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 12px 20px; color: #2980b9; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; height: 100%;}
+    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 12px 20px; color: #2980b9; font-size: 16px; font-weight: bold; }
+    
+    /* 💡 تنسيق أزرار الإدارة (جلب النتائج والتحديث) لتكون بخلفية أنيقة */
+    button[kind="secondary"] {
+        background-color: #f8f9fa !important;
+        border: 1px solid #d1d8e0 !important;
+        border-radius: 8px !important;
+        color: #2c3e50 !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #eef2f5 !important;
+        border-color: #2980b9 !important;
+        color: #2980b9 !important;
+    }
+    
+    /* 💡 زر الخروج - أحمر فاتح ومستقل */
+    button[kind="primary"] {
+        background-color: #ffeaeb !important;
+        color: #d63031 !important;
+        border: 1px solid #ffb8b8 !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #ffc2c2 !important;
+        color: #c0392b !important;
+        border-color: #ff9999 !important;
+    }
+    
+    /* 💡 منع قص النصوص نهائياً وتصغيرها لتتناسب مع جميع الشاشات */
+    div[data-testid="stButton"] button p {
+        font-size: 14.5px !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
     
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
@@ -127,7 +163,6 @@ def sync_google_forms():
     try:
         try: df_students_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
         except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
-        
         df_forms_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
         st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق.")
@@ -181,8 +216,8 @@ def sync_google_forms():
         except: conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
         fetch_all_data.clear()
         st.toast(f"تم استيراد وتحديث نتائج {updates_count} طالب بنجاح! 🎉", icon="✅")
-        time.sleep(1) # تأخير بسيط ليظهر الـ Toast قبل التحديث
-        st.rerun() # تحديث الصفحة تلقائياً لتعكس الأرقام الجديدة بدون بقاء رسائل معلقة
+        time.sleep(1) # تأخير لثانية واحدة لتظهر الرسالة قبل التحديث
+        st.rerun()
     else:
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
@@ -238,27 +273,37 @@ if st.session_state.current_user is None:
 else:
     user = st.session_state.current_user
     
-    # 💡 تعديل عرض الأعمدة لتوفير مساحة أكبر للأزرار
-    col_user, col_sync, col_refresh, col_logout = st.columns([4, 3, 2, 2])
-    with col_user:
-        role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
-        st.markdown(f'<div class="welcome-box">مرحباً بك: {user["name"]} {role_text}</div>', unsafe_allow_html=True)
-    
-    # 💡 إخفاء الأزرار عن المعلمين وإظهارها فقط للمدير
+    # 💡 بناء الواجهة العلوية بشكل ذكي ومتجاوب
     if user['role'] == 'admin':
-        with col_sync:
-            if st.button("📥 جلب النتائج", use_container_width=True, help="استيراد وتصحيح إجابات الطلاب تلقائياً"):
+        # تخصيص مساحة واسعة للاسم، مساحة للأزرار المكدسة، ومساحة كافية لزر الخروج
+        col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
+        
+        with col_user:
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 100px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير النظام)</div>', unsafe_allow_html=True)
+            
+        with col_actions:
+            if st.button("📥 جلب النتائج", use_container_width=True):
                 with st.spinner("جاري جلب وتصحيح الإجابات..."):
                     sync_google_forms()
-        with col_refresh:
             if st.button("🔄 تحديث الشاشة", use_container_width=True):
                 fetch_all_data.clear()
-                st.rerun() # استخدام rerun أفضل من toast هنا لتحديث الأرقام مباشرة
-    
-    with col_logout:
-        if st.button("تسجيل الخروج", use_container_width=True, key="logout"):
-            st.session_state.current_user = None
-            st.rerun()
+                st.rerun()
+                
+        with col_logout:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True) # مسافة لضبط المحاذاة العمودية
+            if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
+                st.session_state.current_user = None
+                st.rerun()
+                
+    else:
+        # واجهة المعلم العادية (بدون أزرار الإدارة)
+        col_user, col_logout = st.columns([8, 2])
+        with col_user:
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]}</div>', unsafe_allow_html=True)
+        with col_logout:
+            if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
+                st.session_state.current_user = None
+                st.rerun()
             
     df_all = get_all_students()
     df_tested = df_all[df_all['vak_result'] != 'غير مختبر'].copy()
