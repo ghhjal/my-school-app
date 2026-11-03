@@ -3,6 +3,7 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import base64
+import io
 
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
@@ -25,16 +26,29 @@ st.markdown("""
     /* تصميم بطاقات الإحصائيات العلوية */
     .dashboard-stats-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
     .dash-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
-    .dash-card.total { border-color: #9b59b6; } /* لون بنفسجي لإجمالي الطلاب */
-    .dash-card.completed { border-color: #2ecc71; } /* لون أخضر للمكتملة */
-    .dash-card.pending { border-color: #f1c40f; } /* لون أصفر للمتأخرين */
+    .dash-card.total { border-color: #9b59b6; } 
+    .dash-card.completed { border-color: #2ecc71; } 
+    .dash-card.pending { border-color: #f1c40f; } 
     .dash-title { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
     .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
+    
+    /* تصميم الترحيب المخصص */
+    .welcome-box {
+        background-color: #ebf5fb;
+        border: 1px solid #3498db;
+        border-radius: 8px;
+        padding: 12px 20px;
+        color: #2980b9;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+    }
     
     /* تصميم الرسم البياني المخصص */
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
-    .chart-value { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #e74c3c; } /* الأرقام حمراء كما في الصورة */
+    .chart-value { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #e74c3c; } 
     .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
     .chart-label { margin-top: 10px; font-weight: bold; font-size: 14px; color: #333; }
 </style>
@@ -83,6 +97,16 @@ def save_result(student_id, result, v, a, k):
     conn.update(spreadsheet=SHEET_URL, data=df)
     fetch_all_data.clear()
 
+def overwrite_student_data(new_df):
+    """رفع ومزامنة البيانات الجديدة مع الشيت"""
+    current_df = get_all_students()
+    # الحفاظ على نتائج الطلاب الذين اختبروا مسبقاً بناءً على رقم الهوية
+    merged_df = pd.merge(new_df, current_df[['id', 'vak_result', 'v_score', 'a_score', 'k_score']], on='id', how='left')
+    merged_df['vak_result'] = merged_df['vak_result'].fillna("غير مختبر")
+    for col in ['v_score', 'a_score', 'k_score']: merged_df[col] = merged_df[col].fillna("0")
+    conn.update(spreadsheet=SHEET_URL, data=merged_df)
+    fetch_all_data.clear()
+
 # ==========================================
 # 3. الترويسة الذكية وتوليد تقارير HTML
 # ==========================================
@@ -90,7 +114,6 @@ def get_school_name(df_subset):
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
     has_primary = "ابتدائي" in text_to_search or "ابتدائية" in text_to_search
     has_middle = "متوسط" in text_to_search or "متوسطة" in text_to_search
-    
     if has_primary and has_middle: return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
     elif has_middle: return "متوسطة عبدالرحمن الناصر"
     else: return "ابتدائية عبادة بن قيس الأنصاري"
@@ -120,9 +143,9 @@ def generate_html_page(title, content, school_names_html):
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
             .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }}
-            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; }}
-            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; }}
-            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; }}
+            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
             .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
             .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
@@ -195,10 +218,11 @@ with tab_admin:
     else:
         user = st.session_state.current_user
         
+        # الترويسة العلوية للإدارة بتصميم المربع (Box) والتحديث
         col_user, col_refresh, col_logout = st.columns([6, 2, 2])
         with col_user:
             role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
-            st.markdown(f"<h4 style='color: #2980b9; margin-bottom: 0;'>مرحباً بك: {user['name']} {role_text}</h4>", unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-box">مرحباً بك: {user["name"]} {role_text}</div>', unsafe_allow_html=True)
         with col_refresh:
             if st.button("🔄 تحديث البيانات", use_container_width=True):
                 fetch_all_data.clear()
@@ -239,7 +263,7 @@ with tab_admin:
 
         st.markdown('<div class="admin-tabs">', unsafe_allow_html=True)
         if user['role'] == 'admin':
-            tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات"])
+            tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات (استيراد/تصدير)"])
             tab_main, tab_reports, tab_data = tabs
         else:
             tabs = st.tabs(["📊 التقارير (طباعة)"])
@@ -258,12 +282,10 @@ with tab_admin:
                     k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                     
                     max_val = max(v_count, a_count, k_count)
-                    # حساب الارتفاع النسبي لكل عمود بالنسبة لأكبر قيمة ليكون الرسم متناسقاً
                     h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
                     h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
                     h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
                     
-                    # كود HTML لإنشاء رسم بياني احترافي يظهر الأرقام في الأعلى
                     chart_html = f"""
                     <div class="custom-chart-container">
                         <div class="chart-bar-wrapper">
@@ -370,29 +392,57 @@ with tab_admin:
                                     summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
                                     recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
 
-                                v_display = f"بصري Visual"
-                                a_display = f"سمعي Auditory"
-                                k_display = f"حركي Kinesthetic"
-
                                 student_content = f"""
                                 <div class="summary-box"><p><b>اسم الطالب:</b> {s['name']}</p><p><b>الصف والفصل:</b> {s['grade']} - {s['class_name']}</p><p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p></div>
                                 <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{v_display}</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{a_display}</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{k_display}</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>بصري Visual</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>سمعي Auditory</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>حركي Kinesthetic</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
                                 <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
                                 full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
                                 st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
-        # --- التبويب 3: البيانات ---
+        # --- التبويب 3: البيانات (الاستيراد والتصدير) ---
         if tab_data is not None:
             with tab_data:
                 st.subheader("إدارة قاعدة بيانات الطلاب")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    # زر تحميل قالب فارغ
+                    template_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
+                    csv = template_df.to_csv(index=False).encode('utf-8-sig') # utf-8-sig لدعم اللغة العربية في Excel
+                    st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=csv, file_name='students_template.csv', mime='text/csv', use_container_width=True)
+                with col2:
+                    # زر أخذ نسخة احتياطية
+                    backup_csv = df_all.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(label="💾 تحميل نسخة احتياطية للبيانات كاملة", data=backup_csv, file_name=f'vak_backup_{datetime.now().strftime("%Y%m%d")}.csv', mime='text/csv', use_container_width=True)
+
+                st.markdown("---")
+                st.write("**📤 رفع بيانات الطلاب من ملف Excel (CSV):**")
+                st.info("تأكد أن الملف المرفوع يحتوي على نفس عناوين القالب (id, name, grade, class_name) وأن الأرقام باللغة الإنجليزية.")
+                uploaded_file = st.file_uploader("اختر ملف CSV", type=['csv'])
+                
+                if uploaded_file is not None:
+                    try:
+                        new_data = pd.read_csv(uploaded_file)
+                        if all(col in new_data.columns for col in ['id', 'name', 'grade', 'class_name']):
+                            st.write("معاينة للبيانات المرفوعة:")
+                            st.dataframe(new_data.head(), use_container_width=True)
+                            if st.button("✅ تأكيد واعتماد البيانات (سيتم استبدال القائمة الحالية)"):
+                                overwrite_student_data(new_data)
+                                st.success("تم تحديث قاعدة البيانات بنجاح!")
+                                st.rerun()
+                        else:
+                            st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة. استخدم القالب المخصص.")
+                    except Exception as e:
+                        st.error("حدث خطأ أثناء قراءة الملف.")
+                
+                st.markdown("---")
                 display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
                 st.dataframe(display_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
-                st.info("💡 للتعديل أو الحذف، يرجى إجراء التغييرات مباشرة داخل ملف Google Sheets الخاص بالمنصة، ثم الضغط على 'تحديث البيانات' في أعلى الصفحة.")
 
 # ==========================================
 # 6. تبويب دخول الطلاب (الاختبار)
