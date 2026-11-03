@@ -14,56 +14,67 @@ st.set_page_config(page_title="منصة زياد الذكية - أنماط ال�
 
 st.markdown("""
 <style>
-    /* 💡 التخلص من المسافة العلوية البيضاء الزائدة في Streamlit */
+    /* 💡 التخلص من المساحة العلوية الفارغة وإخفاء شريط ستريمليت المخفي */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 1rem !important;
     }
 
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; }
+    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { 
+        direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; 
+    }
     
-    /* 💡 الهيدر المخصص - شريط نحيف وأنيق (Banner) */
+    /* 💡 شريط البنر النحيف والمدمج - مصمم خصيصاً ليناسب الجوال */
     .custom-header {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 15px 20px; /* تقليل الارتفاع */
-        border-radius: 8px; /* حواف أنعم */
+        padding: 10px 15px; /* حشوة صغيرة جداً لجعله شريطاً رفيعاً */
+        border-radius: 8px; 
         text-align: center;
         color: white;
         margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(41, 128, 185, 0.2);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .title-wrapper {
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 8px;
+        margin-bottom: 2px;
     }
     .header-main-title {
-        font-size: 26px; /* تصغير الخط الرئيسي */
+        font-size: 20px !important; /* خط مناسب للجوال */
         font-weight: bold;
-        margin: 0;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        gap: 10px; /* مسافة بين القبعة والنص */
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.2;
+    }
+    .header-icon {
+        font-size: 22px;
     }
     .header-sub-title {
-        font-size: 14px; /* تصغير الخط الفرعي بشكل ملحوظ */
-        color: #e0f7fa;
-        margin: 4px 0 0 0;
+        font-size: 11px !important; /* خط صغير جداً وأنيق */
+        color: #d1d8e0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         font-weight: normal;
     }
 
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
-    .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 15px; padding: 10px 15px; color: #555; font-weight: bold; }
+    .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 14px; padding: 10px 15px; color: #555; font-weight: bold; }
     .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
-    #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
-    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
-    .dash-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
+    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+    .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
     .dash-card.total { border-color: #9b59b6; } 
     .dash-card.completed { border-color: #2ecc71; } 
     .dash-card.pending { border-color: #f1c40f; } 
-    .dash-title { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
-    .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
-    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 12px 20px; color: #2980b9; font-size: 16px; font-weight: bold; }
+    .dash-title { font-size: 12px; margin-bottom: 5px; color: #555; font-weight: bold; }
+    .dash-value { font-size: 22px; font-weight: bold; color: #2c3e50; }
+    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; color: #2980b9; font-size: 14px; font-weight: bold; }
     
     button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #d1d8e0 !important; border-radius: 8px !important; color: #2c3e50 !important; font-weight: bold !important; transition: all 0.3s ease !important; }
     button[kind="secondary"]:hover { background-color: #eef2f5 !important; border-color: #2980b9 !important; color: #2980b9 !important; }
@@ -71,13 +82,13 @@ st.markdown("""
     button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
     button[kind="primary"]:hover { background-color: #ffc2c2 !important; color: #c0392b !important; border-color: #ff9999 !important; }
     
-    div[data-testid="stButton"] button p { font-size: 14.5px !important; white-space: nowrap !important; overflow: visible !important; }
+    div[data-testid="stButton"] button p { font-size: 13.5px !important; white-space: nowrap !important; overflow: visible !important; }
     
-    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
+    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
-    .chart-value { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #e74c3c; } 
+    .chart-value { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #e74c3c; } 
     .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
-    .chart-label { margin-top: 10px; font-weight: bold; font-size: 14px; color: #333; }
+    .chart-label { margin-top: 10px; font-weight: bold; font-size: 12px; color: #333; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -259,10 +270,13 @@ def create_excel_download(df):
 # 5. الواجهة الإدارية الرئيسية
 # ==========================================
 
-# 💡 الهيدر المخصص المعدّل - شريط نحيف وأنيق
+# 💡 الهيدر المخصص الجديد - مصمم بشكل أفقي متناسق
 st.markdown("""
 <div class="custom-header">
-    <h1 class="header-main-title">🎓 منصة زياد الذكية</h1>
+    <div class="title-wrapper">
+        <span class="header-icon">🎓</span>
+        <h1 class="header-main-title">منصة زياد الذكية</h1>
+    </div>
     <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
 </div>
 """, unsafe_allow_html=True)
@@ -292,7 +306,7 @@ else:
         col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
         
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 100px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير النظام)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 80px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير)</div>', unsafe_allow_html=True)
             
         with col_actions:
             if st.button("📥 جلب النتائج", use_container_width=True):
