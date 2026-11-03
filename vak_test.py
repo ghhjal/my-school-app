@@ -10,11 +10,39 @@ import time
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
 # ==========================================
-st.set_page_config(page_title="إدارة منصة أنماط التعلم", page_icon="⚙️", layout="centered")
+st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
     .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; }
+    
+    /* 💡 الهيدر المخصص - يعكس هوية المنصة */
+    .custom-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
+        padding: 25px 20px;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(41, 128, 185, 0.2);
+    }
+    .header-main-title {
+        font-size: 36px;
+        font-weight: bold;
+        margin: 0;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+    .header-sub-title {
+        font-size: 18px;
+        color: #e0f7fa;
+        margin: 5px 0 0 0;
+        font-weight: normal;
+    }
+    .header-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+    }
+
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
     .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 15px; padding: 10px 15px; color: #555; font-weight: bold; }
     .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
@@ -29,41 +57,13 @@ st.markdown("""
     .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
     .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 12px 20px; color: #2980b9; font-size: 16px; font-weight: bold; }
     
-    /* 💡 تنسيق أزرار الإدارة (جلب النتائج والتحديث) لتكون بخلفية أنيقة */
-    button[kind="secondary"] {
-        background-color: #f8f9fa !important;
-        border: 1px solid #d1d8e0 !important;
-        border-radius: 8px !important;
-        color: #2c3e50 !important;
-        font-weight: bold !important;
-        transition: all 0.3s ease !important;
-    }
-    button[kind="secondary"]:hover {
-        background-color: #eef2f5 !important;
-        border-color: #2980b9 !important;
-        color: #2980b9 !important;
-    }
+    button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #d1d8e0 !important; border-radius: 8px !important; color: #2c3e50 !important; font-weight: bold !important; transition: all 0.3s ease !important; }
+    button[kind="secondary"]:hover { background-color: #eef2f5 !important; border-color: #2980b9 !important; color: #2980b9 !important; }
     
-    /* 💡 زر الخروج - أحمر فاتح ومستقل */
-    button[kind="primary"] {
-        background-color: #ffeaeb !important;
-        color: #d63031 !important;
-        border: 1px solid #ffb8b8 !important;
-        border-radius: 8px !important;
-        font-weight: bold !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #ffc2c2 !important;
-        color: #c0392b !important;
-        border-color: #ff9999 !important;
-    }
+    button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
+    button[kind="primary"]:hover { background-color: #ffc2c2 !important; color: #c0392b !important; border-color: #ff9999 !important; }
     
-    /* 💡 منع قص النصوص نهائياً وتصغيرها لتتناسب مع جميع الشاشات */
-    div[data-testid="stButton"] button p {
-        font-size: 14.5px !important;
-        white-space: nowrap !important;
-        overflow: visible !important;
-    }
+    div[data-testid="stButton"] button p { font-size: 14.5px !important; white-space: nowrap !important; overflow: visible !important; }
     
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
@@ -216,7 +216,7 @@ def sync_google_forms():
         except: conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
         fetch_all_data.clear()
         st.toast(f"تم استيراد وتحديث نتائج {updates_count} طالب بنجاح! 🎉", icon="✅")
-        time.sleep(1) # تأخير لثانية واحدة لتظهر الرسالة قبل التحديث
+        time.sleep(1) 
         st.rerun()
     else:
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
@@ -250,7 +250,14 @@ def create_excel_download(df):
 # ==========================================
 # 5. الواجهة الإدارية الرئيسية
 # ==========================================
-st.title("🧠 منصة أنماط التعلم (VAK) - لوحة الإدارة")
+# 💡 الهيدر المخصص الجديد
+st.markdown("""
+<div class="custom-header">
+    <div class="header-icon">🎓</div>
+    <h1 class="header-main-title">منصة زياد الذكية</h1>
+    <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
+</div>
+""", unsafe_allow_html=True)
 
 if 'current_user' not in st.session_state: st.session_state.current_user = None
 
@@ -273,9 +280,7 @@ if st.session_state.current_user is None:
 else:
     user = st.session_state.current_user
     
-    # 💡 بناء الواجهة العلوية بشكل ذكي ومتجاوب
     if user['role'] == 'admin':
-        # تخصيص مساحة واسعة للاسم، مساحة للأزرار المكدسة، ومساحة كافية لزر الخروج
         col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
         
         with col_user:
@@ -290,13 +295,12 @@ else:
                 st.rerun()
                 
         with col_logout:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True) # مسافة لضبط المحاذاة العمودية
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
                 st.rerun()
                 
     else:
-        # واجهة المعلم العادية (بدون أزرار الإدارة)
         col_user, col_logout = st.columns([8, 2])
         with col_user:
             st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]}</div>', unsafe_allow_html=True)
