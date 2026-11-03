@@ -49,7 +49,6 @@ st.markdown("""
         width: 100%;
     }
     
-    /* 💡 تكبير الخط قليلاً */
     .header-main-title {
         font-size: 24px !important; 
         font-weight: bold;
@@ -59,7 +58,7 @@ st.markdown("""
         text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
     }
     
-    /* 💡 حركات الأنيميشن للقبعة (تطفو وتتمايل برفق) */
+    /* 💡 حركات الأنيميشن للقبعة */
     @keyframes float-cap {
         0%, 100% { transform: translateY(0) rotate(0deg); }
         25% { transform: translateY(-3px) rotate(-10deg); }
@@ -69,10 +68,10 @@ st.markdown("""
     .header-icon {
         font-size: 26px;
         display: inline-block;
-        animation: float-cap 3.5s ease-in-out infinite; /* تطبيق الحركة بشكل مستمر */
+        animation: float-cap 3.5s ease-in-out infinite; 
     }
     
-    /* 💡 توسيط دقيق وتكبير طفيف للعنوان الفرعي */
+    /* 💡 العنوان الفرعي مع الإزاحة الدقيقة لليسار */
     .header-sub-title {
         font-size: 13px !important; 
         color: #d1d8e0 !important;
@@ -81,6 +80,8 @@ st.markdown("""
         font-weight: normal;
         text-align: center !important;
         width: 100% !important;
+        position: relative;
+        right: 25px; /* إزاحة لليسار بمقدار 25 بيكسل لضبط التمركز البصري */
     }
 
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
@@ -110,6 +111,17 @@ st.markdown("""
     .chart-value { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #e74c3c; } 
     .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
     .chart-label { margin-top: 10px; font-weight: bold; font-size: 12px; color: #333; }
+    
+    /* 💡 تنسيق قسم الحقوق (الفوتر) */
+    .custom-footer {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 13px;
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        font-family: 'Tajawal', sans-serif;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -291,7 +303,6 @@ def create_excel_download(df):
 # 5. الواجهة الإدارية الرئيسية
 # ==========================================
 
-# 💡 الهيدر المخصص الجديد
 st.markdown("""
 <div class="custom-header">
     <div class="title-wrapper">
@@ -528,3 +539,12 @@ else:
                 st.markdown("---")
                 display_t_df = df_teachers.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول'})
                 st.dataframe(display_t_df, use_container_width=True, hide_index=True)
+
+# ==========================================
+# 6. تذييل الصفحة (الحقوق)
+# ==========================================
+st.markdown("""
+<div class="custom-footer">
+    جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026
+</div>
+""", unsafe_allow_html=True)
