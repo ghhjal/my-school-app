@@ -55,7 +55,6 @@ def get_all_teachers():
 # 3. الترويسة الذكية وتوليد تقارير HTML
 # ==========================================
 def get_school_name(df_subset):
-    """تحديد اسم المدرسة بذكاء من خلال البحث عن الكلمات المفتاحية في عمودي الصف والفصل"""
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
     
     has_primary = "ابتدائي" in text_to_search or "ابتدائية" in text_to_search
@@ -80,35 +79,43 @@ def generate_html_page(title, content, school_names_html):
             @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
             body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }}
             
-            /* التنسيق للطباعة والشاشة */
+            /* تنسيق الترويسة (3 أقسام متساوية) */
             .official-header {{
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-start;
+                align-items: center;
                 border-bottom: 3px double #000;
                 padding-bottom: 15px;
                 margin-bottom: 30px;
-                font-size: 16px;
-                line-height: 1.6;
                 font-weight: bold;
             }}
-            .header-right {{ text-align: right; }}
-            .header-left {{ text-align: left; }}
+            .header-right {{ text-align: right; flex: 1; font-size: 15px; line-height: 1.6; }}
+            .header-center {{ text-align: center; flex: 1; font-size: 18px; color: #2c3e50; line-height: 1.4; }}
+            .header-left {{ text-align: left; flex: 1; font-size: 15px; line-height: 1.6; }}
             
             .report-main-title {{ text-align: center; color: #2980b9; margin-bottom: 30px; font-size: 24px; text-decoration: underline; }}
             
             table {{ width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }}
-            th, td {{ border: 1px solid #000; padding: 10px; text-align: center; }}
+            th, td {{ border: 1px solid #000; padding: 12px; text-align: center; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             
-            .summary-box {{ border: 1px solid #000; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size:18px; line-height:1.6; background-color: #fafafa; }}
+            .summary-box {{ border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: #fafafa; }}
             
-            /* أشرطة النسب */
+            /* أشرطة النسب - للتقرير الفردي */
             .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 15px; margin-bottom: 10px; border: 1px solid #ccc; }}
             .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px; }}
             .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px; }}
             .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px; }}
+            
+            /* بطاقات النسب - للتقرير الجماعي */
+            .stats-container {{ display: flex; justify-content: space-between; margin-top: 20px; gap: 15px; }}
+            .stat-card {{ flex: 1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
+            .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
+            .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }}
+            .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }}
+            .stat-title {{ font-size: 18px; margin-bottom: 10px; font-weight: bold; }}
+            .stat-value {{ font-size: 24px; font-weight: bold; }}
             
             .no-print {{ text-align: center; margin-bottom: 20px; }}
             .print-btn {{ background: #2980b9; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
@@ -116,6 +123,9 @@ def generate_html_page(title, content, school_names_html):
             @media print {{ 
                 .no-print {{ display: none !important; }} 
                 body {{ padding: 0; margin: 0; }} 
+                .stat-card {{ box-shadow: none; }}
+                .official-header {{ border-bottom: 2px solid #000; }}
+                .header-center {{ color: #000; }}
             }}
         </style>
     </head>
@@ -127,8 +137,11 @@ def generate_html_page(title, content, school_names_html):
         <div class="official-header">
             <div class="header-right">
                 المملكة العربية السعودية<br>
-                وزارة التعليم<br>
                 {school_names_html}
+            </div>
+            <div class="header-center">
+                وزارة التعليم<br>
+                <span style="font-size: 14px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span>
             </div>
             <div class="header-left">
                 العام الدراسي: 1448 هـ<br>
@@ -252,7 +265,6 @@ with tab_admin:
                 display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'})
                 st.dataframe(display_cols, use_container_width=True, hide_index=True)
                 
-                # استخراج ترويسة المدرسة المطلوبة بشكل ديناميكي
                 school_names_html = get_school_name(df_class_tested)
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
@@ -260,27 +272,42 @@ with tab_admin:
                 a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
                 k_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('حركي', na=False)]) / len(df_class_tested) * 100, 1)
                 
+                # التصميم الجديد الملون للإحصائية الجماعية
                 class_content = f"""
                 <div class="summary-box">
-                    <h3>الإحصائية الإجمالية:</h3>
-                    <p>عدد الطلاب المنجزين للاختبار في هذا البيان: {len(df_class_tested)}</p>
-                    <p>نسبة النمط البصري: {v_pct}% | نسبة النمط السمعي: {a_pct}% | نسبة النمط الحركي: {k_pct}%</p>
+                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 20px;">عدد الطلاب المنجزين لهذا الاختبار: {len(df_class_tested)}</span>
+                    </h3>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card visual">
+                            <div class="stat-title">👁️ بصري</div>
+                            <div class="stat-value">{v_pct}%</div>
+                        </div>
+                        <div class="stat-card auditory">
+                            <div class="stat-title">👂 سمعي</div>
+                            <div class="stat-value">{a_pct}%</div>
+                        </div>
+                        <div class="stat-card kinesthetic">
+                            <div class="stat-title">🏃‍♂️ حركي</div>
+                            <div class="stat-value">{k_pct}%</div>
+                        </div>
+                    </div>
                 </div>
-                <h3>قائمة بيانات الطلاب:</h3>
+                
+                <h3 style="margin-top: 30px;">قائمة بيانات الطلاب:</h3>
                 {html_table}
                 """
                 
                 report_title = "التقرير الشامل لأنماط التعلم - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير أنماط التعلم - فصل {selected_class}"
                 full_html = generate_html_page(report_title, class_content, school_names_html)
                 
-                # إضافة طابع زمني لتفادي مشكلة الذاكرة المؤقتة (Cache)
                 ts = datetime.now().strftime('%H%M%S')
                 file_name = f"Group_Report_{selected_class}_{ts}.html"
-                
                 st.markdown(get_download_link(full_html, file_name, "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
 
         # ------------------------------------
-        # التقرير الفردي (بحث مفتوح)
+        # التقرير الفردي للطالب
         # ------------------------------------
         elif section == "📄 التقرير الفردي للطالب (طباعة)":
             st.subheader("استخراج تقرير الطالب")
@@ -303,7 +330,6 @@ with tab_admin:
                         if s['vak_result'] == 'غير مختبر':
                             st.error("هذا الطالب لم يجرِ الاختبار بعد، لا يمكن استخراج تقرير له.")
                         else:
-                            # تحديد ترويسة المدرسة للطالب الفردي
                             school_names_html = get_school_name(pd.DataFrame([s]))
                             
                             v_pct = int(float(s['v_score'])) * 10
@@ -349,7 +375,6 @@ with tab_admin:
                             
                             ts = datetime.now().strftime('%H%M%S')
                             file_name = f"Student_{s['id']}_Report_{ts}.html"
-                            
                             st.markdown(get_download_link(full_html, file_name, f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
                     
         # ------------------------------------
