@@ -5,16 +5,6 @@ from datetime import datetime
 import base64
 
 # ==========================================
-# 0. إعدادات المستخدمين والصلاحيات
-# ==========================================
-# يمكنك إضافة أو تعديل المعلمين وفصولهم من هنا
-USERS = {
-    "admin": {"name": "مدير المدرسة", "password": "admin", "role": "admin", "class": "all"},
-    "t_math": {"name": "معلم الرياضيات", "password": "123", "role": "teacher", "class": "1"}, # يرى الفصل 1 فقط
-    "t_science": {"name": "معلم العلوم", "password": "456", "role": "teacher", "class": "2"}, # يرى الفصل 2 فقط
-}
-
-# ==========================================
 # 1. إعدادات الصفحة والـ CSS
 # ==========================================
 st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="🧠", layout="centered")
@@ -36,8 +26,10 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
+# --- دوال الطلاب ---
 def get_all_students():
     df = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+    if 'vak_result' not in df.columns: df['vak_result'] = "غير مختبر"
     df['vak_result'] = df['vak_result'].fillna("غير مختبر")
     for col in ['v_score', 'a_score', 'k_score']:
         if col not in df.columns: df[col] = "0"
@@ -56,11 +48,16 @@ def save_result(student_id, result, v, a, k):
     df.loc[df['id'] == str(student_id), 'k_score'] = str(k)
     conn.update(spreadsheet=SHEET_URL, data=df)
 
+# --- دوال المعلمين ---
+def get_all_teachers():
+    # قراءة الورقة الخاصة بالمعلمين التي قمت بإنشائها
+    df = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
+    return df
+
 # ==========================================
 # 3. محرك توليد تقارير HTML للطباعة
 # ==========================================
 def generate_html_page(title, content):
-    """تغليف المحتوى بصفحة HTML تدعم الطباعة بشكل احترافي"""
     return f"""
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
@@ -112,26 +109,45 @@ st.title("🧠 منصة أنماط التعلم (VAK)")
 tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ الإدارة والمعلمين"])
 
 # ==========================================
-# 5. تبويب الإدارة والمعلمين (نظام الدخول المخصص)
+# 5. تبويب الإدارة والمعلمين (دخول برقم الهوية)
 # ==========================================
 with tab_admin:
     if 'current_user' not in st.session_state:
         st.session_state.current_user = None
 
     if st.session_state.current_user is None:
-        st.header("تسجيل الدخول (للمعلمين والإدارة)")
-        username = st.text_input("اسم المستخدم:")
-        password = st.text_input("كلمة المرور:", type="password")
+        st.header("تسجيل دخول الإدارة والمعلمين")
+        st.info("💡 يرجى إدخال رقم الهوية الخاص بك للوصول إلى لوحة التحكم.")
+        teacher_id_input = st.text_input("رقم الهوية:", placeholder="أدخل رقم هويتك هنا...")
         
         if st.button("تسجيل الدخول 🔑", use_container_width=True):
-            if username in USERS and USERS[username]['password'] == password:
-                st.session_state.current_user = USERS[username]
-                st.rerun()
+            if teacher_id_input:
+                try:
+                    df_teachers = get_all_teachers()
+                    t_row = df_teachers[df_teachers['id'] == str(teacher_id_input)]
+                    
+                    if not t_row.empty:
+                        t_data = t_row.iloc[0]
+                        st.session_state.current_user = {
+                            "name": t_data['name'],
+                            "role": t_data['role'],
+                            "class": t_data['class_name']
+                        }
+                        st.rerun()
+                    else:
+                        st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
+                except Exception as e:
+                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets. يرجى إنشاء ورقة جديدة وتسميتها 'teachers' أولاً.")
             else:
-                st.error("اسم المستخدم أو كلمة المرور غير صحيحة.")
+                st.warning("الرجاء إدخال رقم الهوية أولاً.")
     else:
         user = st.session_state.current_user
-        st.success(f"أهلاً بك: **{user['name']}**")
+        
+        # رسالة ترحيبية مخصصة بناءً على الصلاحية
+        if user['role'] == 'admin':
+            st.success(f"أهلاً بك يا أستاذ/ة: **{user['name']}** (مدير النظام)")
+        else:
+            st.success(f"أهلاً بك يا أستاذ/ة: **{user['name']}**")
         
         if st.button("تسجيل الخروج", key="logout"):
             st.session_state.current_user = None
@@ -194,7 +210,6 @@ with tab_admin:
                 display_cols = df_class_tested[['id', 'name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'vak_result': 'النمط الغالب'})
                 st.dataframe(display_cols, use_container_width=True, hide_index=True)
                 
-                # إنشاء HTML لتقرير الفصل
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
                 a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
@@ -262,7 +277,7 @@ with tab_admin:
             st.dataframe(display_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة']], use_container_width=True, hide_index=True)
 
 # ==========================================
-# 6. تبويب دخول الطلاب (الاختبار) [تم الإبقاء عليه كما هو لدعم الجوال]
+# 6. تبويب دخول الطلاب (الاختبار)
 # ==========================================
 with tab_student:
     if 'logged_in' not in st.session_state: st.session_state.logged_in = False
