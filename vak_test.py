@@ -59,7 +59,7 @@ def fetch_all_data():
     try:
         df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
     except Exception:
-        df_teachers = pd.DataFrame()
+        df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
         
     return df_students, df_teachers
 
@@ -85,25 +85,33 @@ def save_result(student_id, result, v, a, k):
     fetch_all_data.clear()
 
 def intelligent_merge_students(new_df):
-    """دمج ذكي: يضيف الطلاب الجدد ويتجاهل الموجودين مسبقاً"""
+    """دمج ذكي للطلاب"""
     current_df = get_all_students()
-    
-    # تحويل معرفات الهوية إلى نصوص لضمان المقارنة الصحيحة
     current_df['id'] = current_df['id'].astype(str).str.strip()
     new_df['id'] = new_df['id'].astype(str).str.strip()
     
-    # تحديد الطلاب الجدد (الذين أرقام هوياتهم غير موجودة في القاعدة الحالية)
     new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
-    
     if not new_students.empty:
         new_students['vak_result'] = "غير مختبر"
         for col in ['v_score', 'a_score', 'k_score']: new_students[col] = "0"
-        
-        # دمج الطلاب الجدد مع القاعدة الحالية
         updated_df = pd.concat([current_df, new_students], ignore_index=True)
         conn.update(spreadsheet=SHEET_URL, data=updated_df)
         fetch_all_data.clear()
         return len(new_students)
+    return 0
+
+def intelligent_merge_teachers(new_df):
+    """دمج ذكي للمعلمين"""
+    current_df = get_all_teachers()
+    current_df['id'] = current_df['id'].astype(str).str.strip()
+    new_df['id'] = new_df['id'].astype(str).str.strip()
+    
+    new_teachers = new_df[~new_df['id'].isin(current_df['id'])].copy()
+    if not new_teachers.empty:
+        updated_df = pd.concat([current_df, new_teachers], ignore_index=True)
+        conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=updated_df)
+        fetch_all_data.clear()
+        return len(new_teachers)
     return 0
 
 # ==========================================
@@ -186,12 +194,10 @@ def normalize_numbers(text):
     return text.translate(arabic_to_english).strip()
 
 def create_excel_download(df):
-    """توليد ملف Excel (xlsx) حقيقي لتجنب مشاكل ترميز CSV والأعمدة المدمجة"""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Sheet1')
-    processed_data = output.getvalue()
-    return processed_data
+    return output.getvalue()
 
 # ==========================================
 # 4. الواجهة الرئيسية
@@ -230,7 +236,7 @@ with tab_admin:
             role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
             st.markdown(f'<div class="welcome-box">مرحباً بك: {user["name"]} {role_text}</div>', unsafe_allow_html=True)
         with col_refresh:
-            if st.button("🔄 تحديث البيانات", use_container_width=True):
+            if st.button("🔄 تحديث البيانات", use_container_width=True, key="btn_refresh_main"):
                 fetch_all_data.clear()
                 st.toast("تم تحديث البيانات بنجاح.")
         with col_logout:
@@ -373,46 +379,81 @@ with tab_admin:
         # --- التبويب 3: البيانات (الاستيراد والتصدير الذكي بملفات Excel .xlsx) ---
         if tab_data is not None:
             with tab_data:
-                st.subheader("إدارة قاعدة بيانات الطلاب")
+                st.subheader("إدارة قواعد البيانات (الاستيراد والتصدير)")
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    # زر تحميل قالب Excel فارغ (.xlsx)
-                    template_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
-                    excel_data = create_excel_download(template_df)
-                    st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=excel_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-                with col2:
-                    # زر أخذ نسخة احتياطية بصيغة Excel (.xlsx)
-                    backup_excel = create_excel_download(df_all)
-                    st.download_button(label="💾 تحميل نسخة احتياطية (Excel)", data=backup_excel, file_name=f'vak_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+                sub_tab_students, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "👨‍🏫 بيانات المعلمين (وصلاحيات الدخول)"])
+                
+                # --- بيانات الطلاب ---
+                with sub_tab_students:
+                    col1_s, col2_s = st.columns(2)
+                    with col1_s:
+                        template_s_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
+                        excel_s_data = create_excel_download(template_s_df)
+                        st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=excel_s_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
+                    with col2_s:
+                        backup_s_excel = create_excel_download(df_all)
+                        st.download_button(label="💾 تحميل نسخة احتياطية (للطلاب)", data=backup_s_excel, file_name=f'students_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
 
-                st.markdown("---")
-                st.write("**📤 الاستيراد الذكي لبيانات الطلاب (رفع ملف Excel):**")
-                st.info("💡 النظام سيتجاهل الهويات الموجودة مسبقاً للحفاظ على نتائجها، وسيضيف فقط الطلاب الجدد الموجودين في الملف كـ 'غير مختبر'.")
-                uploaded_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv)", type=['xlsx', 'csv'])
-                
-                if uploaded_file is not None:
-                    try:
-                        if uploaded_file.name.endswith('.csv'):
-                            new_data = pd.read_csv(uploaded_file)
-                        else:
-                            new_data = pd.read_excel(uploaded_file)
-                            
-                        if all(col in new_data.columns for col in ['id', 'name', 'grade', 'class_name']):
-                            added_count = intelligent_merge_students(new_data)
-                            if added_count > 0:
-                                st.success(f"✅ تم إضافة {added_count} طالب جديد بنجاح وتجاهل الطلاب الموجودين مسبقاً!")
-                                st.rerun()
-                            else:
-                                st.warning("⚠️ جميع الطلاب الموجودين في الملف مسجلون بالفعل في النظام. لم تتم إضافة أي طالب جديد.")
-                        else:
-                            st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name, grade, class_name).")
-                    except Exception as e:
-                        st.error("حدث خطأ أثناء قراءة الملف. تأكد من صحة التنسيق.")
-                
-                st.markdown("---")
-                display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
-                st.dataframe(display_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
+                    st.markdown("---")
+                    st.write("**📤 الاستيراد الذكي لبيانات الطلاب:**")
+                    st.info("💡 النظام سيتجاهل الهويات الموجودة مسبقاً للحفاظ على نتائجها، وسيضيف الجدد فقط كـ 'غير مختبر'.")
+                    uploaded_s_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للطلاب", type=['xlsx', 'csv'], key="up_s")
+                    
+                    if uploaded_s_file is not None:
+                        try:
+                            if uploaded_s_file.name.endswith('.csv'): new_s_data = pd.read_csv(uploaded_s_file)
+                            else: new_s_data = pd.read_excel(uploaded_s_file)
+                                
+                            if all(col in new_s_data.columns for col in ['id', 'name', 'grade', 'class_name']):
+                                added_s_count = intelligent_merge_students(new_s_data)
+                                if added_s_count > 0:
+                                    st.success(f"✅ تم إضافة {added_s_count} طالب جديد بنجاح وتجاهل الطلاب الموجودين مسبقاً!")
+                                    st.rerun()
+                                else:
+                                    st.warning("⚠️ جميع الطلاب الموجودين في الملف مسجلون بالفعل في النظام.")
+                            else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name, grade, class_name).")
+                        except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
+                    
+                    st.markdown("---")
+                    display_s_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
+                    st.dataframe(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
+
+                # --- بيانات المعلمين ---
+                with sub_tab_teachers:
+                    col1_t, col2_t = st.columns(2)
+                    with col1_t:
+                        template_t_df = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+                        excel_t_data = create_excel_download(template_t_df)
+                        st.download_button(label="📥 تحميل قالب Excel لإضافة المعلمين", data=excel_t_data, file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
+                    with col2_t:
+                        try: df_teachers = get_all_teachers()
+                        except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+                        backup_t_excel = create_excel_download(df_teachers)
+                        st.download_button(label="💾 تحميل نسخة احتياطية (للمعلمين)", data=backup_t_excel, file_name=f'teachers_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+
+                    st.markdown("---")
+                    st.write("**📤 الاستيراد الذكي لبيانات المعلمين:**")
+                    st.info("💡 ملاحظة مهمة: في عمود (role) اكتب 'admin' للمدير، و 'teacher' للمعلم. وفي عمود (class_name) يفضل كتابة 'all'.")
+                    uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
+                    
+                    if uploaded_t_file is not None:
+                        try:
+                            if uploaded_t_file.name.endswith('.csv'): new_t_data = pd.read_csv(uploaded_t_file)
+                            else: new_t_data = pd.read_excel(uploaded_t_file)
+                                
+                            if all(col in new_t_data.columns for col in ['id', 'name', 'role', 'class_name']):
+                                added_t_count = intelligent_merge_teachers(new_t_data)
+                                if added_t_count > 0:
+                                    st.success(f"✅ تم إضافة {added_t_count} حساب معلم/مدير جديد بنجاح وتجاهل الموجود مسبقاً!")
+                                    st.rerun()
+                                else:
+                                    st.warning("⚠️ جميع المعلمين الموجودين في الملف مسجلون بالفعل في النظام.")
+                            else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name, role, class_name).")
+                        except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
+                    
+                    st.markdown("---")
+                    display_t_df = df_teachers.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول'})
+                    st.dataframe(display_t_df, use_container_width=True, hide_index=True)
 
 # ==========================================
 # 6. تبويب دخول الطلاب (الاختبار)
