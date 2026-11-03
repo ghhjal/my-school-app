@@ -4,6 +4,7 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import base64
 import io
+import re
 
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
@@ -48,7 +49,6 @@ def fetch_all_data():
     except:
         df_students = pd.DataFrame()
         
-    # حماية ضد نقص الأعمدة
     required_cols = ['id', 'name', 'grade', 'class_name']
     for col in required_cols:
         if col not in df_students.columns: df_students[col] = ""
@@ -59,6 +59,9 @@ def fetch_all_data():
     for col in ['v_score', 'a_score', 'k_score']:
         if col not in df_students.columns: df_students[col] = "0"
         df_students[col] = df_students[col].fillna("0")
+        
+    # توحيد نوع الهوية كنص لمنع الأخطاء
+    df_students['id'] = df_students['id'].astype(str).str.strip().str.replace('.0', '', regex=False)
         
     try: df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
     except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
@@ -104,51 +107,63 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 # ==========================================
-# 3. محرك التصحيح الآلي (من Google Forms المربوط)
+# 3. محرك التصحيح الآلي (قوي ومحصن)
 # ==========================================
+def clean_text(text):
+    """دالة لتنظيف النص من المسافات الزائدة والتشكيل لمطابقة أفضل"""
+    if pd.isna(text): return ""
+    text = str(text).replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').replace('.', '').strip()
+    return re.sub(r'\s+', ' ', text)
+
 def sync_google_forms():
     df_students = get_all_students()
     try:
-        # يقرأ ورقة "responses" مباشرة
         df_forms = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
-        st.error(f"⚠️ لم يتم العثور على ورقة باسم 'responses'. يرجى التأكد من اسم الورقة في Google Sheets. الخطأ: {e}")
+        st.error(f"⚠️ لم يتم العثور على ورقة 'responses'. تأكد من تسمية ورقة الردود في الشيت.")
         return
 
-    # البحث عن عمود الهوية
-    id_col = next((col for col in df_forms.columns if 'هوية' in str(col) or 'رقم' in str(col)), None)
+    # بحث مرن جداً عن عمود الهوية
+    id_col = None
+    for col in df_forms.columns:
+        if 'هوي' in str(col) or 'رقم' in str(col) or 'id' in str(col).lower():
+            id_col = col
+            break
+            
     if not id_col:
-        st.error("⚠️ لم يتم العثور على عمود 'رقم الهوية' في ردود النموذج.")
+        st.error(f"⚠️ لم يتعرف النظام على عمود 'رقم الهوية'. الأعمدة الموجودة هي: {list(df_forms.columns)}")
         return
 
-    scoring_map = {
-        "أشاهد صوراً أو فيديو أو أقرأ من السبورة.": "V", "أستمع لشرح المعلم وأردد المعلومات.": "A", "أقوم بتجربة الأمر بنفسي وأتحرك.": "K",
-        "أتخيل الأحداث والصور في عقلي كأنها فيلم.": "V", "أقرأ بصوت مسموع أو أحرك شفتي أثناء القراءة.": "A", "أشعر بالملل من الجلوس وأحب أن أتحرك أثناء القراءة.": "K",
-        "استخدام الأقلام الملونة والتخطيط على الكتاب.": "V", "تكرار قراءة الدرس بصوت عالٍ أو الاستماع لتسجيل.": "A", "المشي والحركة أثناء الحفظ والمراجعة.": "K",
-        "الرسم، التلوين، أو قراءة القصص المصورة.": "V", "التحدث مع الأصدقاء أو الاستماع للقصص.": "A", "ممارسة الرياضة، الركض، أو اللعب بالأشياء وتركيبها.": "K",
-        "أرسم له خريطة أو أجعله يشاهدني وأنا ألعب.": "V", "أشرح له القوانين والخطوات بالكلام.": "A", "أجعله يمسك اللعبة ويجربها بنفسه ليتعلم.": "K",
-        "الفوضى في الغرفة أو حركة الأشخاص من حولي.": "V", "الأصوات المزعجة والضجيج أو تحدث الآخرين.": "A", "الجلوس لفترة طويلة على الكرسي دون حركة.": "K",
-        "أنظر إلى صورة الشكل النهائي أولاً لأعرف كيف يبدو.": "V", "أسأل المعلم أو أطلب من أحد أن يخبرني بالخطوات.": "A", "أبدأ بمسك القطع وتجربتها فوراً حتى أصل للحل.": "K",
-        "أتذكر شكله وملامح وجهه، لكن قد أنسى اسمه.": "V", "أتذكر اسمه وصوته بوضوح.": "A", "أتذكر ماذا فعلنا معاً (أين لعبنا، كيف سلمنا على بعض).": "K",
-        "أبتسم كثيراً وتلمع عيناي.": "V", "أضحك بصوت عالٍ أو أتحدث بحماس ومرح.": "A", "أقفز، أتحرك بسرعة، أو أصفق بيدي.": "K",
-        "أتخيل شكل الكلمة مكتوبة في رأسي.": "V", "أتهجى حروف الكلمة بصوت مسموع.": "A", "أكتبها بيدي عدة مرات في ورقة خارجية حتى أتعود عليها.": "K",
+    # خريطة التصحيح المرنة (تعتمد على الكلمات المفتاحية في كل إجابة لتفادي أخطاء النسخ واللصق)
+    scoring_keywords = {
+        "V": ["اشاهد صور", "فيديو", "اقرا من السبوره", "اتخيل الاحداث", "الصور في عقلي", "كأنها فيلم", "الاقلام الملونه", "التخطيط على الكتاب", "الرسم", "التلوين", "قصص مصوره", "ارسم له خريطه", "يشاهدني وانا العب", "الفوضى في الغرفه", "حركه الاشخاص", "صوره الشكل النهائي", "كيف يبدو", "شكله وملامح وجهه", "ابتسم كثيرا", "تلمع عيناي", "شكل الكلمه مكتوبه"],
+        "A": ["استمع لشرح", "اردد المعلومات", "بصوت مسموع", "احرك شفتي", "تكرار قراءه", "الاستماع لتسجيل", "التحدث مع الاصدقاء", "الاستماع للقصص", "اشرح له القوانين", "بالكلام", "الاصوات المزعجه", "الضجيج", "تحدث الاخرين", "اسال المعلم", "اطلب من احد", "اسمه وصوته بوضوح", "اضحك بصوت", "اتحدث بحماس", "اتهجى حروف الكلمه"],
+        "K": ["تجربه الامر", "اتحرك", "اشعر بالملل من الجلوس", "احب ان اتحرك", "المشي والحركه", "اثناء الحفظ", "ممارسه الرياضه", "الركض", "العب بالاشياء", "وتركيبها", "يمسك اللعبه", "يجربها بنفسه", "الجلوس لفتره طويله", "دون حركه", "ابدا بمسك القطع", "تجربتها فورا", "ماذا فعلنا معا", "اين لعبنا", "اقفز", "اصفق بيدي", "اكتبها بيدي عده مرات"]
     }
 
     updates_count = 0
-    df_forms[id_col] = df_forms[id_col].astype(str).str.strip().apply(normalize_numbers)
+    # توحيد تنسيق أرقام الهوية في الفورم
+    df_forms[id_col] = df_forms[id_col].astype(str).str.strip().str.replace('.0', '', regex=False)
     
     for _, row in df_forms.iterrows():
         s_id = str(row.get(id_col, ''))
-        mask = (df_students['id'] == s_id) & (df_students['vak_result'] == 'غير مختبر')
+        mask = (df_students['id'] == s_id)
+        
+        # التأكد أن الطالب موجود (حتى لو كان مختبراً مسبقاً، سنحدث نتيجته بأحدث رد)
         if mask.any():
             v, a, k = 0, 0, 0
             for col in df_forms.columns:
-                if col not in [id_col] and not any(skip in str(col).lower() for skip in ['time', 'email', 'name', 'اسم', 'إيميل', 'تاريخ', 'طابع زمني']):
-                    ans = str(row[col]).strip()
-                    style = scoring_map.get(ans)
-                    if style == 'V': v += 1
-                    elif style == 'A': a += 1
-                    elif style == 'K': k += 1
+                # تجاهل الأعمدة الإدارية
+                if col != id_col and not any(skip in str(col).lower() for skip in ['time', 'email', 'name', 'اسم', 'إيميل', 'تاريخ', 'طابع', 'score']):
+                    ans_cleaned = clean_text(row[col])
+                    
+                    # البحث في الكلمات المفتاحية
+                    for style, keywords in scoring_keywords.items():
+                        if any(kw in ans_cleaned for kw in keywords):
+                            if style == 'V': v += 1
+                            elif style == 'A': a += 1
+                            elif style == 'K': k += 1
+                            break # إذا وجد التطابق، انتقل للسؤال التالي
             
             if (v + a + k) > 0:
                 scores = {"V": v, "A": a, "K": k}
@@ -164,9 +179,9 @@ def sync_google_forms():
     if updates_count > 0:
         conn.update(spreadsheet=SHEET_URL, data=df_students)
         fetch_all_data.clear()
-        st.success(f"🎉 تم استيراد وتصحيح نتائج {updates_count} طالب بنجاح من نموذج جوجل!")
+        st.success(f"🎉 رائع! تم استيراد وتحديث نتائج {updates_count} طالب بنجاح.")
     else:
-        st.info("💡 لا توجد ردود جديدة لطلاب غير مختبرين.")
+        st.info("💡 تم فحص النموذج، لا توجد ردود جديدة أو لم تتطابق أرقام الهوية المكتوبة مع قاعدة البيانات.")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
@@ -189,7 +204,6 @@ def get_download_link(html_content, filename, link_text):
     b64 = base64.b64encode(html_content.encode('utf-8')).decode()
     return f'<a href="data:text/html;base64,{b64}" download="{filename}" style="display: block; text-align: center; background-color: #27ae60; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">{link_text}</a>'
 
-def normalize_text(text): return text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').strip() if isinstance(text, str) else ""
 def normalize_numbers(text): return text.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')).strip() if isinstance(text, str) else ""
 def create_excel_download(df):
     output = io.BytesIO()
@@ -329,8 +343,8 @@ else:
             st.info("💡 ابحث بكتابة جزء من اسم الطالب، ثم اختره من القائمة.")
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
             if search_query:
-                norm_query = normalize_text(search_query)
-                matches = df_all[df_all['name'].apply(lambda x: norm_query in normalize_text(x))]
+                norm_query = clean_text(search_query)
+                matches = df_all[df_all['name'].apply(lambda x: norm_query in clean_text(x))]
                 if matches.empty: st.warning("لم يتم العثور على طالب يطابق هذا الاسم.")
                 else:
                     options = matches['name'] + " | الهوية: " + matches['id'] + " | الصف: " + matches['grade']
