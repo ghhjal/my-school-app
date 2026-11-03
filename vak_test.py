@@ -14,33 +14,41 @@ st.set_page_config(page_title="منصة زياد الذكية - أنماط ال�
 
 st.markdown("""
 <style>
+    /* 💡 التخلص من المسافة العلوية البيضاء الزائدة في Streamlit */
+    .block-container {
+        padding-top: 2rem !important;
+    }
+
     .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; }
     
-    /* 💡 الهيدر المخصص - يعكس هوية المنصة */
+    /* 💡 الهيدر المخصص - شريط نحيف وأنيق (Banner) */
     .custom-header {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 25px 20px;
-        border-radius: 12px;
+        padding: 15px 20px; /* تقليل الارتفاع */
+        border-radius: 8px; /* حواف أنعم */
         text-align: center;
         color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 15px rgba(41, 128, 185, 0.2);
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(41, 128, 185, 0.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
     .header-main-title {
-        font-size: 36px;
+        font-size: 26px; /* تصغير الخط الرئيسي */
         font-weight: bold;
         margin: 0;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px; /* مسافة بين القبعة والنص */
     }
     .header-sub-title {
-        font-size: 18px;
+        font-size: 14px; /* تصغير الخط الفرعي بشكل ملحوظ */
         color: #e0f7fa;
-        margin: 5px 0 0 0;
+        margin: 4px 0 0 0;
         font-weight: normal;
-    }
-    .header-icon {
-        font-size: 40px;
-        margin-bottom: 10px;
     }
 
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
@@ -250,11 +258,11 @@ def create_excel_download(df):
 # ==========================================
 # 5. الواجهة الإدارية الرئيسية
 # ==========================================
-# 💡 الهيدر المخصص الجديد
+
+# 💡 الهيدر المخصص المعدّل - شريط نحيف وأنيق
 st.markdown("""
 <div class="custom-header">
-    <div class="header-icon">🎓</div>
-    <h1 class="header-main-title">منصة زياد الذكية</h1>
+    <h1 class="header-main-title">🎓 منصة زياد الذكية</h1>
     <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
 </div>
 """, unsafe_allow_html=True)
