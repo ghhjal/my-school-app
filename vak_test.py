@@ -60,7 +60,7 @@ def fetch_all_data():
         if col not in df_students.columns: df_students[col] = "0"
         df_students[col] = df_students[col].fillna("0")
         
-    # توحيد نوع الهوية كنص لمنع الأخطاء
+    # توحيد نوع الهوية كنص لمنع الأخطاء وتنظيفه
     df_students['id'] = df_students['id'].astype(str).str.strip().str.replace('.0', '', regex=False)
         
     try: df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
@@ -142,7 +142,7 @@ def sync_google_forms():
     }
 
     updates_count = 0
-    # توحيد تنسيق أرقام الهوية في الفورم
+    # تنظيف وتوحيد أرقام الهوية في الفورم
     df_forms[id_col] = df_forms[id_col].astype(str).str.strip().str.replace('.0', '', regex=False)
     
     for _, row in df_forms.iterrows():
