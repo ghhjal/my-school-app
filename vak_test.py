@@ -5,6 +5,7 @@ from datetime import datetime
 import base64
 import io
 import re
+import time
 
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
@@ -43,14 +44,12 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
 def clean_id(val):
-    """منظف أرقام الهوية: يحول الأرقام العربية لإنجليزية، يزيل الفواصل والمسافات"""
     if pd.isna(val): return ""
     val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
     return val.split('.')[0].strip()
 
 @st.cache_data(ttl=600)
 def fetch_all_data():
-    # 💡 التوجيه الصارم: اقرأ من ورقة الطلاب فقط
     try: 
         df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
     except: 
@@ -115,7 +114,7 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 # ==========================================
-# 3. محرك التصحيح الآلي (تجاوز الذاكرة المخبأة)
+# 3. محرك التصحيح الآلي
 # ==========================================
 def get_vak_style(answer):
     ans = str(answer).strip().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه")
@@ -126,22 +125,19 @@ def get_vak_style(answer):
 
 def sync_google_forms():
     try:
-        # 💡 التوجيه الصارم: اقرأ من ورقة الطلاب بشكل مباشر متجاوزاً الذاكرة
         try: df_students_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
         except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
         
         df_forms_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
-        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق. تأكد من الأسماء في جوجل شيت.")
+        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق.")
         return
 
-    # تنظيف وتجهيز قاعدة الطلاب
     required_cols = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
     for col in required_cols:
         if col not in df_students_fresh.columns: df_students_fresh[col] = ""
     df_students_fresh['id'] = df_students_fresh['id'].apply(clean_id)
     
-    # تحديد عمود الهوية في الفورم وتنظيفه
     id_col = None
     for col in df_forms_fresh.columns:
         if 'هوي' in str(col) or 'رقم' in str(col) or 'id' in str(col).lower():
@@ -149,7 +145,7 @@ def sync_google_forms():
             break
             
     if not id_col:
-        st.error(f"⚠️ لم يتعرف النظام على عمود 'رقم الهوية'.")
+        st.toast("⚠️ لم يتعرف النظام على عمود الهوية في النموذج.", icon="❌")
         return
 
     df_forms_fresh[id_col] = df_forms_fresh[id_col].apply(clean_id)
@@ -181,16 +177,14 @@ def sync_google_forms():
                 updates_count += 1
                 
     if updates_count > 0:
-        # 💡 التوجيه الصارم: تحديث ورقة الطلاب بالتحديد
         try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=df_students_fresh)
         except: conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
         fetch_all_data.clear()
-        st.success(f"🎉 رائع! تم استيراد وتحديث نتائج {updates_count} طالب بنجاح.")
+        st.toast(f"تم استيراد وتحديث نتائج {updates_count} طالب بنجاح! 🎉", icon="✅")
+        time.sleep(1) # تأخير بسيط ليظهر الـ Toast قبل التحديث
+        st.rerun() # تحديث الصفحة تلقائياً لتعكس الأرقام الجديدة بدون بقاء رسائل معلقة
     else:
-        st.warning("⚠️ اكتمل الفحص ولم يتم رصد درجات جديدة.")
-        with st.expander("🔍 اضغط هنا لعرض بيانات التشخيص (لمعرفة سبب المشكلة)"):
-            st.write("**أرقام الهوية المقروءة من استجابات الفورم:**", list(df_forms_fresh[id_col].dropna().unique()))
-            st.write("**أرقام الهوية المقروءة من قاعدة الطلاب:**", list(df_students_fresh['id'].dropna().unique()))
+        st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
@@ -244,18 +238,23 @@ if st.session_state.current_user is None:
 else:
     user = st.session_state.current_user
     
-    col_user, col_sync, col_refresh, col_logout = st.columns([5, 2, 2, 2])
+    # 💡 تعديل عرض الأعمدة لتوفير مساحة أكبر للأزرار
+    col_user, col_sync, col_refresh, col_logout = st.columns([4, 3, 2, 2])
     with col_user:
         role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
         st.markdown(f'<div class="welcome-box">مرحباً بك: {user["name"]} {role_text}</div>', unsafe_allow_html=True)
-    with col_sync:
-        if st.button("📥 جلب نتائج جوجل", use_container_width=True, help="استيراد وتصحيح إجابات الطلاب تلقائياً"):
-            with st.spinner("جاري جلب وتصحيح الإجابات..."):
-                sync_google_forms()
-    with col_refresh:
-        if st.button("🔄 تحديث الشاشة", use_container_width=True):
-            fetch_all_data.clear()
-            st.toast("تم تحديث البيانات بنجاح.")
+    
+    # 💡 إخفاء الأزرار عن المعلمين وإظهارها فقط للمدير
+    if user['role'] == 'admin':
+        with col_sync:
+            if st.button("📥 جلب النتائج", use_container_width=True, help="استيراد وتصحيح إجابات الطلاب تلقائياً"):
+                with st.spinner("جاري جلب وتصحيح الإجابات..."):
+                    sync_google_forms()
+        with col_refresh:
+            if st.button("🔄 تحديث الشاشة", use_container_width=True):
+                fetch_all_data.clear()
+                st.rerun() # استخدام rerun أفضل من toast هنا لتحديث الأرقام مباشرة
+    
     with col_logout:
         if st.button("تسجيل الخروج", use_container_width=True, key="logout"):
             st.session_state.current_user = None
