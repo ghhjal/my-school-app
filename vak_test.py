@@ -4,6 +4,7 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import base64
 import io
+import re
 
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
@@ -49,8 +50,12 @@ def clean_id(val):
 
 @st.cache_data(ttl=600)
 def fetch_all_data():
-    try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
-    except: df_students = pd.DataFrame()
+    # 💡 التوجيه الصارم: اقرأ من ورقة الطلاب فقط
+    try: 
+        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
+    except: 
+        try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        except: df_students = pd.DataFrame()
         
     required_cols = ['id', 'name', 'grade', 'class_name']
     for col in required_cols:
@@ -87,7 +92,8 @@ def intelligent_merge_students(new_df):
         new_students['vak_result'] = "غير مختبر"
         for col in ['v_score', 'a_score', 'k_score']: new_students[col] = "0"
         updated_df = pd.concat([current_df, new_students], ignore_index=True)
-        conn.update(spreadsheet=SHEET_URL, data=updated_df)
+        try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=updated_df)
+        except: conn.update(spreadsheet=SHEET_URL, data=updated_df)
         fetch_all_data.clear()
         return len(new_students)
     return 0
@@ -112,7 +118,6 @@ def intelligent_merge_teachers(new_df):
 # 3. محرك التصحيح الآلي (تجاوز الذاكرة المخبأة)
 # ==========================================
 def get_vak_style(answer):
-    """محرك بحث ذكي يتجاهل الحركات والمسافات ويصطاد الكلمة المفتاحية للإجابة"""
     ans = str(answer).strip().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه")
     if any(x in ans for x in ["فيديو", "السبوره", "الاحداث", "فيلم", "الاقلام", "التخطيط", "الرسم", "التلوين", "مصوره", "خريطه", "يشاهدني", "الفوضى", "حركه", "النهائي", "كيف يبدو", "شكله", "ملامح", "ابتسم", "تلمع", "الكلمه مكتوبه", "راسي"]): return 'V'
     if any(x in ans for x in ["استمع", "اردد", "شفتي", "مسموع", "تكرار", "تسجيل", "الاصدقاء", "للقصص", "القوانين", "بالكلام", "الاصوات", "الضجيج", "تحدث", "اسال", "يخبرني", "وصوته", "اضحك", "بحماس", "اتهجى", "حروف"]): return 'A'
@@ -121,20 +126,22 @@ def get_vak_style(answer):
 
 def sync_google_forms():
     try:
-        # قراءة مباشرة وجديدة تماماً متجاوزة الذاكرة المخبأة
-        df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        # 💡 التوجيه الصارم: اقرأ من ورقة الطلاب بشكل مباشر متجاوزاً الذاكرة
+        try: df_students_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
+        except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        
         df_forms_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
-        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق. تأكد من اسم 'responses'.")
+        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق. تأكد من الأسماء في جوجل شيت.")
         return
 
-    # تنظيف الأعمدة الأساسية في الشيت الرئيسي
+    # تنظيف وتجهيز قاعدة الطلاب
     required_cols = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
     for col in required_cols:
         if col not in df_students_fresh.columns: df_students_fresh[col] = ""
     df_students_fresh['id'] = df_students_fresh['id'].apply(clean_id)
     
-    # تحديد عمود الهوية في الفورم
+    # تحديد عمود الهوية في الفورم وتنظيفه
     id_col = None
     for col in df_forms_fresh.columns:
         if 'هوي' in str(col) or 'رقم' in str(col) or 'id' in str(col).lower():
@@ -174,7 +181,9 @@ def sync_google_forms():
                 updates_count += 1
                 
     if updates_count > 0:
-        conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
+        # 💡 التوجيه الصارم: تحديث ورقة الطلاب بالتحديد
+        try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=df_students_fresh)
+        except: conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
         fetch_all_data.clear()
         st.success(f"🎉 رائع! تم استيراد وتحديث نتائج {updates_count} طالب بنجاح.")
     else:
@@ -182,7 +191,6 @@ def sync_google_forms():
         with st.expander("🔍 اضغط هنا لعرض بيانات التشخيص (لمعرفة سبب المشكلة)"):
             st.write("**أرقام الهوية المقروءة من استجابات الفورم:**", list(df_forms_fresh[id_col].dropna().unique()))
             st.write("**أرقام الهوية المقروءة من قاعدة الطلاب:**", list(df_students_fresh['id'].dropna().unique()))
-            st.info("إذا لم تجد الأرقام متطابقة بين القائمتين أعلاه، فهذا يفسر سبب عدم السحب.")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
