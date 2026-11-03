@@ -4,7 +4,6 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import base64
 import io
-import re
 
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS
@@ -37,22 +36,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. الاتصال بـ Google Sheets والتخزين المؤقت
+# 2. الاتصال والتنظيف الجذري للبيانات
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
-# دالة لتنظيف أرقام الهوية من المسافات والفواصل
 def clean_id(val):
+    """منظف أرقام الهوية: يحول الأرقام العربية لإنجليزية، يزيل الفواصل والمسافات"""
     if pd.isna(val): return ""
-    return str(val).split('.')[0].strip()
+    val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    return val.split('.')[0].strip()
 
 @st.cache_data(ttl=600)
 def fetch_all_data():
-    try:
-        df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
-    except:
-        df_students = pd.DataFrame()
+    try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+    except: df_students = pd.DataFrame()
         
     required_cols = ['id', 'name', 'grade', 'class_name']
     for col in required_cols:
@@ -65,7 +63,6 @@ def fetch_all_data():
         if col not in df_students.columns: df_students[col] = "0"
         df_students[col] = df_students[col].fillna("0")
         
-    # تطبيق دالة التنظيف الصارمة على عمود الهوية
     df_students['id'] = df_students['id'].apply(clean_id)
         
     try: df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
@@ -112,80 +109,80 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 # ==========================================
-# 3. محرك التصحيح الآلي (قوي ومحصن)
+# 3. محرك التصحيح الآلي (تجاوز الذاكرة المخبأة)
 # ==========================================
-def clean_text(text):
-    if pd.isna(text): return ""
-    text = str(text).replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').replace('.', '').strip()
-    return re.sub(r'\s+', ' ', text)
+def get_vak_style(answer):
+    """محرك بحث ذكي يتجاهل الحركات والمسافات ويصطاد الكلمة المفتاحية للإجابة"""
+    ans = str(answer).strip().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه")
+    if any(x in ans for x in ["فيديو", "السبوره", "الاحداث", "فيلم", "الاقلام", "التخطيط", "الرسم", "التلوين", "مصوره", "خريطه", "يشاهدني", "الفوضى", "حركه", "النهائي", "كيف يبدو", "شكله", "ملامح", "ابتسم", "تلمع", "الكلمه مكتوبه", "راسي"]): return 'V'
+    if any(x in ans for x in ["استمع", "اردد", "شفتي", "مسموع", "تكرار", "تسجيل", "الاصدقاء", "للقصص", "القوانين", "بالكلام", "الاصوات", "الضجيج", "تحدث", "اسال", "يخبرني", "وصوته", "اضحك", "بحماس", "اتهجى", "حروف"]): return 'A'
+    if any(x in ans for x in ["تجربه", "اتحرك", "بالملل", "المشي", "الحفظ", "الرياضه", "الركض", "تركيب", "يمسك", "يجربها", "الجلوس", "دون حركه", "القطع", "فورا", "فعلنا", "اين لعبنا", "سلمنا", "اقفز", "اصفق", "ورقه", "مرات"]): return 'K'
+    return None
 
 def sync_google_forms():
-    df_students = get_all_students()
     try:
-        df_forms = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
+        # قراءة مباشرة وجديدة تماماً متجاوزة الذاكرة المخبأة
+        df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        df_forms_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
-        st.error(f"⚠️ لم يتم العثور على ورقة 'responses'. تأكد من تسمية ورقة الردود في الشيت.")
+        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق. تأكد من اسم 'responses'.")
         return
 
-    # بحث مرن جداً عن عمود الهوية
+    # تنظيف الأعمدة الأساسية في الشيت الرئيسي
+    required_cols = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
+    for col in required_cols:
+        if col not in df_students_fresh.columns: df_students_fresh[col] = ""
+    df_students_fresh['id'] = df_students_fresh['id'].apply(clean_id)
+    
+    # تحديد عمود الهوية في الفورم
     id_col = None
-    for col in df_forms.columns:
+    for col in df_forms_fresh.columns:
         if 'هوي' in str(col) or 'رقم' in str(col) or 'id' in str(col).lower():
             id_col = col
             break
             
     if not id_col:
-        st.error(f"⚠️ لم يتعرف النظام على عمود 'رقم الهوية'. الأعمدة الموجودة هي: {list(df_forms.columns)}")
+        st.error(f"⚠️ لم يتعرف النظام على عمود 'رقم الهوية'.")
         return
 
-    scoring_keywords = {
-        "V": ["اشاهد صور", "فيديو", "اقرا من السبوره", "اتخيل الاحداث", "الصور في عقلي", "كأنها فيلم", "الاقلام الملونه", "التخطيط على الكتاب", "الرسم", "التلوين", "قصص مصوره", "ارسم له خريطه", "يشاهدني وانا العب", "الفوضى في الغرفه", "حركه الاشخاص", "صوره الشكل النهائي", "كيف يبدو", "شكله وملامح وجهه", "ابتسم كثيرا", "تلمع عيناي", "شكل الكلمه مكتوبه"],
-        "A": ["استمع لشرح", "اردد المعلومات", "بصوت مسموع", "احرك شفتي", "تكرار قراءه", "الاستماع لتسجيل", "التحدث مع الاصدقاء", "الاستماع للقصص", "اشرح له القوانين", "بالكلام", "الاصوات المزعجه", "الضجيج", "تحدث الاخرين", "اسال المعلم", "اطلب من احد", "اسمه وصوته بوضوح", "اضحك بصوت", "اتحدث بحماس", "اتهجى حروف الكلمه"],
-        "K": ["تجربه الامر", "اتحرك", "اشعر بالملل من الجلوس", "احب ان اتحرك", "المشي والحركه", "اثناء الحفظ", "ممارسه الرياضه", "الركض", "العب بالاشياء", "وتركيبها", "يمسك اللعبه", "يجربها بنفسه", "الجلوس لفتره طويله", "دون حركه", "ابدا بمسك القطع", "تجربتها فورا", "ماذا فعلنا معا", "اين لعبنا", "اقفز", "اصفق بيدي", "اكتبها بيدي عده مرات"]
-    }
-
+    df_forms_fresh[id_col] = df_forms_fresh[id_col].apply(clean_id)
     updates_count = 0
-    # تطبيق دالة التنظيف الصارمة على أرقام هوية الفورم
-    df_forms[id_col] = df_forms[id_col].apply(clean_id)
     
-    for _, row in df_forms.iterrows():
-        s_id = clean_id(row.get(id_col, ''))
-        mask = (df_students['id'] == s_id)
-        
-        # التأكد أن الطالب موجود (حتى لو كان مختبراً مسبقاً، سنحدث نتيجته بأحدث رد)
+    for _, row in df_forms_fresh.iterrows():
+        s_id = row.get(id_col, '')
+        if not s_id: continue
+            
+        mask = (df_students_fresh['id'] == s_id)
         if mask.any():
             v, a, k = 0, 0, 0
-            for col in df_forms.columns:
-                # تجاهل الأعمدة الإدارية
+            for col in df_forms_fresh.columns:
                 if col != id_col and not any(skip in str(col).lower() for skip in ['time', 'email', 'name', 'اسم', 'إيميل', 'تاريخ', 'طابع', 'score']):
-                    ans_cleaned = clean_text(row[col])
-                    
-                    # البحث في الكلمات المفتاحية
-                    for style, keywords in scoring_keywords.items():
-                        if any(kw in ans_cleaned for kw in keywords):
-                            if style == 'V': v += 1
-                            elif style == 'A': a += 1
-                            elif style == 'K': k += 1
-                            break # إذا وجد التطابق، انتقل للسؤال التالي
+                    style = get_vak_style(row[col])
+                    if style == 'V': v += 1
+                    elif style == 'A': a += 1
+                    elif style == 'K': k += 1
             
             if (v + a + k) > 0:
                 scores = {"V": v, "A": a, "K": k}
                 labels = {"V": "بصري 👁️", "A": "سمعي 👂", "K": "حركي 🏃‍♂️"}
                 final_result = labels[max(scores, key=scores.get)]
                 
-                df_students.loc[df_students['id'] == s_id, 'vak_result'] = final_result
-                df_students.loc[df_students['id'] == s_id, 'v_score'] = str(v)
-                df_students.loc[df_students['id'] == s_id, 'a_score'] = str(a)
-                df_students.loc[df_students['id'] == s_id, 'k_score'] = str(k)
+                df_students_fresh.loc[mask, 'vak_result'] = final_result
+                df_students_fresh.loc[mask, 'v_score'] = str(v)
+                df_students_fresh.loc[mask, 'a_score'] = str(a)
+                df_students_fresh.loc[mask, 'k_score'] = str(k)
                 updates_count += 1
                 
     if updates_count > 0:
-        conn.update(spreadsheet=SHEET_URL, data=df_students)
+        conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
         fetch_all_data.clear()
         st.success(f"🎉 رائع! تم استيراد وتحديث نتائج {updates_count} طالب بنجاح.")
     else:
-        # رسالة تصحيح (Debug) لتساعدنا إذا فشل مرة أخرى
-        st.info(f"💡 تم الفحص ولم توجد ردود متطابقة. أرقام هوية الفورم: {list(df_forms[id_col].unique())[:5]} ... أرقام الشيت الأساسي: {list(df_students['id'].unique())[:5]} ...")
+        st.warning("⚠️ اكتمل الفحص ولم يتم رصد درجات جديدة.")
+        with st.expander("🔍 اضغط هنا لعرض بيانات التشخيص (لمعرفة سبب المشكلة)"):
+            st.write("**أرقام الهوية المقروءة من استجابات الفورم:**", list(df_forms_fresh[id_col].dropna().unique()))
+            st.write("**أرقام الهوية المقروءة من قاعدة الطلاب:**", list(df_students_fresh['id'].dropna().unique()))
+            st.info("إذا لم تجد الأرقام متطابقة بين القائمتين أعلاه، فهذا يفسر سبب عدم السحب.")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
@@ -346,8 +343,8 @@ else:
             st.info("💡 ابحث بكتابة جزء من اسم الطالب، ثم اختره من القائمة.")
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
             if search_query:
-                norm_query = clean_text(search_query)
-                matches = df_all[df_all['name'].apply(lambda x: norm_query in clean_text(x))]
+                norm_query = search_query.strip()
+                matches = df_all[df_all['name'].apply(lambda x: norm_query in str(x))]
                 if matches.empty: st.warning("لم يتم العثور على طالب يطابق هذا الاسم.")
                 else:
                     options = matches['name'] + " | الهوية: " + matches['id'] + " | الصف: " + matches['grade']
