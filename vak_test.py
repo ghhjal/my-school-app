@@ -21,18 +21,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. الاتصال بـ Google Sheets
+# 2. الاتصال بـ Google Sheets والتخزين المؤقت
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
-def get_all_students():
-    df = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
-    if 'vak_result' not in df.columns: df['vak_result'] = "غير مختبر"
-    df['vak_result'] = df['vak_result'].fillna("غير مختبر")
+# دالة ذكية تقوم بجلب البيانات مرة واحدة وتخزينها في الذاكرة لمدة 10 دقائق
+@st.cache_data(ttl=600)
+def fetch_all_data():
+    df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+    if 'vak_result' not in df_students.columns: df_students['vak_result'] = "غير مختبر"
+    df_students['vak_result'] = df_students['vak_result'].fillna("غير مختبر")
     for col in ['v_score', 'a_score', 'k_score']:
-        if col not in df.columns: df[col] = "0"
-        df[col] = df[col].fillna("0")
+        if col not in df_students.columns: df_students[col] = "0"
+        df_students[col] = df_students[col].fillna("0")
+        
+    try:
+        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
+    except Exception:
+        df_teachers = pd.DataFrame()
+        
+    return df_students, df_teachers
+
+def get_all_students():
+    df, _ = fetch_all_data()
+    return df
+
+def get_all_teachers():
+    _, df = fetch_all_data()
     return df
 
 def get_student_by_id(student_id):
@@ -46,10 +62,8 @@ def save_result(student_id, result, v, a, k):
     df.loc[df['id'] == str(student_id), 'a_score'] = str(a)
     df.loc[df['id'] == str(student_id), 'k_score'] = str(k)
     conn.update(spreadsheet=SHEET_URL, data=df)
-
-def get_all_teachers():
-    df = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
-    return df
+    # مسح التخزين المؤقت لكي تظهر النتيجة الجديدة للإدارة فوراً
+    fetch_all_data.clear()
 
 # ==========================================
 # 3. الترويسة الذكية وتوليد تقارير HTML
@@ -67,7 +81,6 @@ def get_school_name(df_subset):
         return "ابتدائية عبادة بن قيس الأنصاري"
 
 def generate_html_page(title, content, school_names_html):
-    """توليد صفحة HTML احترافية للطباعة مع دعم تكرار الترويسة"""
     return f"""
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
@@ -87,7 +100,6 @@ def generate_html_page(title, content, school_names_html):
             .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }}
             .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }}
             .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }}
-            
             .report-main-title {{ 
                 text-align: center; color: #2980b9; background-color: #ebf5fb;
                 border: 1px solid #3498db; border-radius: 8px; padding: 10px;
@@ -98,15 +110,11 @@ def generate_html_page(title, content, school_names_html):
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
-            
             .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
-            
-            /* تصميم أشرطة النسب التفاعلية للتقرير الفردي */
             .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }}
             .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
             .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
             .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
-            
             .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
             .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
@@ -114,7 +122,6 @@ def generate_html_page(title, content, school_names_html):
             .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }}
             .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }}
             .stat-value {{ font-size: 18px; font-weight: bold; }}
-            
             .no-print {{ text-align: center; margin-bottom: 15px; }}
             .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
             @media print {{ 
@@ -176,6 +183,11 @@ tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ �
 # 5. تبويب الإدارة والمعلمين
 # ==========================================
 with tab_admin:
+    # إضافة زر لتحديث البيانات يدوياً إذا تطلب الأمر
+    if st.button("🔄 تحديث البيانات", use_container_width=True):
+        fetch_all_data.clear()
+        st.success("تم جلب أحدث البيانات من Google Sheets.")
+        
     if 'current_user' not in st.session_state: st.session_state.current_user = None
 
     if st.session_state.current_user is None:
@@ -185,8 +197,10 @@ with tab_admin:
         
         if st.button("تسجيل الدخول 🔑", use_container_width=True):
             if teacher_id_input:
-                try:
-                    df_teachers = get_all_teachers()
+                df_teachers = get_all_teachers()
+                if df_teachers.empty:
+                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets. يرجى إنشاؤها أولاً.")
+                else:
                     norm_id = normalize_numbers(teacher_id_input)
                     t_row = df_teachers[df_teachers['id'] == str(norm_id)]
                     if not t_row.empty:
@@ -195,8 +209,6 @@ with tab_admin:
                         st.rerun()
                     else:
                         st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
-                except Exception as e:
-                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets. يرجى إنشاؤها أولاً.")
             else:
                 st.warning("الرجاء إدخال رقم الهوية أولاً.")
     else:
@@ -215,7 +227,6 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
-        # إضافة تقرير غير المختبرين للقائمة لكلا الصلاحيتين
         if user['role'] == 'teacher':
             st.info("صلاحياتك تتيح لك استعراض وطباعة تقارير جميع الفصول والطلاب بمرونة.")
             available_reports = ["📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)", "📋 تقرير غير المختبرين (طباعة)"]
@@ -226,9 +237,6 @@ with tab_admin:
         section = st.selectbox("اختر التقرير المطلوب:", available_reports)
         st.markdown("---")
         
-        # ------------------------------------
-        # التقرير الإحصائي للمدرسة
-        # ------------------------------------
         if section == "🏫 التقرير الإحصائي للمدرسة" and user['role'] == 'admin':
             st.subheader("إحصائيات المدرسة العامة")
             total, tested = len(df_all), len(df_tested)
@@ -241,9 +249,6 @@ with tab_admin:
                 k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                 st.bar_chart({"بصري 👁️": v_count, "سمعي 👂": a_count, "حركي 🏃‍♂️": k_count})
 
-        # ------------------------------------
-        # التقرير الجماعي للفصل
-        # ------------------------------------
         elif section == "📊 التقرير الجماعي (الفصول)":
             st.subheader("تقرير الفصول الشامل وتصدير الطباعة")
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
@@ -283,9 +288,6 @@ with tab_admin:
                 full_html = generate_html_page(report_title, class_content, school_names_html)
                 st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
 
-        # ------------------------------------
-        # تقرير غير المختبرين
-        # ------------------------------------
         elif section == "📋 تقرير غير المختبرين (طباعة)":
             st.subheader("حصر الطلاب المتأخرين عن أداء الاختبار")
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
@@ -320,9 +322,6 @@ with tab_admin:
             else:
                 st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
-        # ------------------------------------
-        # التقرير الفردي للطالب
-        # ------------------------------------
         elif section == "📄 التقرير الفردي للطالب (طباعة)":
             st.subheader("استخراج تقرير الطالب")
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
