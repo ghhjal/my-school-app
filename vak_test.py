@@ -79,46 +79,63 @@ def generate_html_page(title, content, school_names_html):
             @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
             body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }}
             
-            /* تنسيق الترويسة (3 أقسام متساوية) */
+            /* تنسيق الترويسة لتتكرر في كل صفحة */
+            @page {{ margin: 15mm; }}
+            thead {{ display: table-header-group; }}
+            tfoot {{ display: table-footer-group; }}
+            
             .official-header {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 border-bottom: 3px double #000;
-                padding-bottom: 15px;
-                margin-bottom: 30px;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
                 font-weight: bold;
             }}
-            .header-right {{ text-align: right; flex: 1; font-size: 15px; line-height: 1.6; }}
-            .header-center {{ text-align: center; flex: 1; font-size: 18px; color: #2c3e50; line-height: 1.4; }}
-            .header-left {{ text-align: left; flex: 1; font-size: 15px; line-height: 1.6; }}
+            .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }}
+            .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }}
+            .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }}
             
-            .report-main-title {{ text-align: center; color: #2980b9; margin-bottom: 30px; font-size: 24px; text-decoration: underline; }}
+            /* تصميم عنوان التقرير (إطار ملون) */
+            .report-main-title {{ 
+                text-align: center; 
+                color: #2980b9; 
+                background-color: #ebf5fb;
+                border: 1px solid #3498db;
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 20px; 
+                font-size: 20px; 
+                font-weight: bold;
+            }}
             
-            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }}
-            th, td {{ border: 1px solid #000; padding: 12px; text-align: center; }}
+            /* تنسيق الجدول ليكون مدمجاً */
+            table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; }}
+            tr {{ page-break-inside: avoid; page-break-after: auto; }}
+            th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             
-            .summary-box {{ border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: #fafafa; }}
+            .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
             
             /* أشرطة النسب - للتقرير الفردي */
-            .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 15px; margin-bottom: 10px; border: 1px solid #ccc; }}
+            .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 12px; margin-bottom: 8px; border: 1px solid #ccc; }}
             .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px; }}
             .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px; }}
             .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px; }}
             
-            /* بطاقات النسب - للتقرير الجماعي */
-            .stats-container {{ display: flex; justify-content: space-between; margin-top: 20px; gap: 15px; }}
-            .stat-card {{ flex: 1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }}
+            /* بطاقات النسب مصغرة - للتقرير الجماعي */
+            .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
+            .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
             .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }}
             .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }}
-            .stat-title {{ font-size: 18px; margin-bottom: 10px; font-weight: bold; }}
-            .stat-value {{ font-size: 24px; font-weight: bold; }}
+            .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }}
+            .stat-value {{ font-size: 18px; font-weight: bold; }}
             
-            .no-print {{ text-align: center; margin-bottom: 20px; }}
-            .print-btn {{ background: #2980b9; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
+            .no-print {{ text-align: center; margin-bottom: 15px; }}
+            .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
             
             @media print {{ 
                 .no-print {{ display: none !important; }} 
@@ -134,23 +151,36 @@ def generate_html_page(title, content, school_names_html):
             <button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير الرسمي</button>
         </div>
         
-        <div class="official-header">
-            <div class="header-right">
-                المملكة العربية السعودية<br>
-                {school_names_html}
-            </div>
-            <div class="header-center">
-                وزارة التعليم<br>
-                <span style="font-size: 14px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span>
-            </div>
-            <div class="header-left">
-                العام الدراسي: 1448 هـ<br>
-                تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}
-            </div>
-        </div>
-        
-        <h2 class="report-main-title">{title}</h2>
-        {content}
+        <table style="width: 100%; border: none;">
+            <thead style="border: none;">
+                <tr style="border: none;">
+                    <td style="border: none; padding: 0;">
+                        <div class="official-header">
+                            <div class="header-right">
+                                المملكة العربية السعودية<br>
+                                {school_names_html}
+                            </div>
+                            <div class="header-center">
+                                وزارة التعليم<br>
+                                <span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span>
+                            </div>
+                            <div class="header-left">
+                                العام الدراسي: 1448 هـ<br>
+                                تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </thead>
+            <tbody style="border: none;">
+                <tr style="border: none;">
+                    <td style="border: none; padding: 0; text-align: right;">
+                        <div class="report-main-title">{title}</div>
+                        {content}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </body>
     </html>
     """
@@ -272,11 +302,10 @@ with tab_admin:
                 a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
                 k_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('حركي', na=False)]) / len(df_class_tested) * 100, 1)
                 
-                # التصميم الجديد الملون للإحصائية الجماعية
                 class_content = f"""
                 <div class="summary-box">
-                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                        الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 20px;">عدد الطلاب المنجزين لهذا الاختبار: {len(df_class_tested)}</span>
+                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
+                        الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 15px;">عدد الطلاب المنجزين لهذا الاختبار: {len(df_class_tested)}</span>
                     </h3>
                     
                     <div class="stats-container">
@@ -295,7 +324,7 @@ with tab_admin:
                     </div>
                 </div>
                 
-                <h3 style="margin-top: 30px;">قائمة بيانات الطلاب:</h3>
+                <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>
                 {html_table}
                 """
                 
@@ -353,23 +382,23 @@ with tab_admin:
                                 <p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p>
                             </div>
                             
-                            <h3>النتيجة التفصيلية:</h3>
-                            <div style="font-weight: bold; margin-bottom: 5px;">بصري Visual ({v_pct}%)</div>
+                            <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
+                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">بصري Visual ({v_pct}%)</div>
                             <div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
                             
-                            <div style="font-weight: bold; margin-bottom: 5px;">سمعي Auditory ({a_pct}%)</div>
+                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">سمعي Auditory ({a_pct}%)</div>
                             <div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
                             
-                            <div style="font-weight: bold; margin-bottom: 5px;">حركي Kinesthetic ({k_pct}%)</div>
+                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">حركي Kinesthetic ({k_pct}%)</div>
                             <div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
                             
                             <div class="summary-box" style="margin-top: 20px;">
-                                <h3 style="color:#2c3e50; text-align:center;">النمط الغالب: {s['vak_result']}</h3>
-                                <p style="text-align:center;">{summary}</p>
+                                <h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3>
+                                <p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p>
                             </div>
                             
-                            <h3>مقترحات تعليمية للطالب:</h3>
-                            <ul style="font-size: 18px; line-height: 1.8;">{recs}</ul>
+                            <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3>
+                            <ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                             """
                             full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
                             
