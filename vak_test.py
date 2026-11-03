@@ -106,11 +106,9 @@ def intelligent_merge_teachers(new_df):
     
     new_teachers = new_df[~new_df['id'].isin(current_df['id'])].copy()
     if not new_teachers.empty:
-        # إضافة الصلاحيات الافتراضية بذكاء
         new_teachers['role'] = 'teacher'
         new_teachers['class_name'] = 'all'
         
-        # التأكد من ترتيب الأعمدة لتطابق قاعدة البيانات
         if 'role' not in current_df.columns: current_df['role'] = 'teacher'
         if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
         
@@ -351,6 +349,8 @@ with tab_admin:
                 else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
             elif report_type == "التقرير الفردي لطالب":
+                st.subheader("استخراج تقرير الطالب")
+                st.info("💡 ابحث بكتابة جزء من اسم الطالب، ثم اختره من القائمة.")
                 search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
                 if search_query:
                     norm_query = normalize_text(search_query)
@@ -390,7 +390,6 @@ with tab_admin:
                 
                 sub_tab_students, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "👨‍🏫 بيانات المعلمين (وصلاحيات الدخول)"])
                 
-                # --- بيانات الطلاب ---
                 with sub_tab_students:
                     col1_s, col2_s = st.columns(2)
                     with col1_s:
@@ -425,11 +424,9 @@ with tab_admin:
                     display_s_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
                     st.dataframe(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
 
-                # --- بيانات المعلمين (استيراد ذكي محسّن ومخفي الصلاحيات) ---
                 with sub_tab_teachers:
                     col1_t, col2_t = st.columns(2)
                     with col1_t:
-                        # القالب الجديد يحتاج فقط لاسم ورقم هوية، والنظام سيتكفل بالباقي
                         template_t_df = pd.DataFrame(columns=['id', 'name'])
                         excel_t_data = create_excel_download(template_t_df)
                         st.download_button(label="📥 تحميل قالب إضافة المعلمين", data=excel_t_data, file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
