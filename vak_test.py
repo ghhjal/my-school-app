@@ -8,81 +8,34 @@ import re
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS
+# 1. إعدادات الصفحة والـ CSS (تحميل فوري)
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
-    /* 💡 التخلص من المساحة العلوية الفارغة وإخفاء شريط ستريمليت المخفي */
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 1rem !important;
-    }
-
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { 
-        direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; 
-    }
+    header[data-testid="stHeader"] { display: none !important; }
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; }
     
-    /* 💡 شريط البنر المحدث */
     .custom-header {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 12px 15px;
-        border-radius: 8px; 
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        padding: 12px 15px; border-radius: 8px; color: white; margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
     }
-    .title-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 4px;
-        width: 100%;
-    }
+    .title-wrapper { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; width: 100%; }
+    .header-main-title { font-size: 24px !important; font-weight: bold; margin: 0 !important; padding: 0 !important; line-height: 1.2; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
     
-    .header-main-title {
-        font-size: 24px !important; 
-        font-weight: bold;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1.2;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-    }
-    
-    /* 💡 حركات الأنيميشن للقبعة */
     @keyframes float-cap {
         0%, 100% { transform: translateY(0) rotate(0deg); }
         25% { transform: translateY(-3px) rotate(-10deg); }
         50% { transform: translateY(-5px) rotate(0deg); }
         75% { transform: translateY(-3px) rotate(10deg); }
     }
-    .header-icon {
-        font-size: 26px;
-        display: inline-block;
-        animation: float-cap 3.5s ease-in-out infinite; 
-    }
+    .header-icon { font-size: 26px; display: inline-block; animation: float-cap 3.5s ease-in-out infinite; }
     
-    /* 💡 العنوان الفرعي مع الإزاحة الدقيقة لليسار */
-    .header-sub-title {
-        font-size: 13px !important; 
-        color: #d1d8e0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        font-weight: normal;
-        text-align: center !important;
-        width: 100% !important;
-        position: relative;
-        right: 25px; /* إزاحة لليسار بمقدار 25 بيكسل لضبط التمركز البصري */
-    }
+    .header-sub-title { font-size: 13px !important; color: #d1d8e0 !important; margin: 0 !important; padding: 0 !important; font-weight: normal; text-align: center !important; width: 100% !important; position: relative; right: 25px; }
 
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
     .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 14px; padding: 10px 15px; color: #555; font-weight: bold; }
@@ -100,10 +53,8 @@ st.markdown("""
     
     button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #d1d8e0 !important; border-radius: 8px !important; color: #2c3e50 !important; font-weight: bold !important; transition: all 0.3s ease !important; }
     button[kind="secondary"]:hover { background-color: #eef2f5 !important; border-color: #2980b9 !important; color: #2980b9 !important; }
-    
     button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
     button[kind="primary"]:hover { background-color: #ffc2c2 !important; color: #c0392b !important; border-color: #ff9999 !important; }
-    
     div[data-testid="stButton"] button p { font-size: 13.5px !important; white-space: nowrap !important; overflow: visible !important; }
     
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
@@ -112,32 +63,38 @@ st.markdown("""
     .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
     .chart-label { margin-top: 10px; font-weight: bold; font-size: 12px; color: #333; }
     
-    /* 💡 تنسيق قسم الحقوق (الفوتر) */
-    .custom-footer {
-        text-align: center;
-        color: #7f8c8d;
-        font-size: 13px;
-        margin-top: 50px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        font-family: 'Tajawal', sans-serif;
-    }
+    .custom-footer { text-align: center; color: #7f8c8d; font-size: 13px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-family: 'Tajawal', sans-serif; }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. الاتصال والتنظيف الجذري للبيانات
-# ==========================================
-conn = st.connection("gsheets", type=GSheetsConnection)
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
+# رسم الهيدر فوراً قبل أي اتصال بقاعدة البيانات
+st.markdown("""
+<div class="custom-header">
+    <div class="title-wrapper">
+        <span class="header-icon">🎓</span>
+        <h1 class="header-main-title">منصة زياد الذكية</h1>
+    </div>
+    <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
+</div>
+""", unsafe_allow_html=True)
 
+# ==========================================
+# 2. التهيئة وتعريف دوال جلب البيانات
+# ==========================================
 def clean_id(val):
     if pd.isna(val): return ""
     val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
     return val.split('.')[0].strip()
 
+@st.cache_resource
+def get_connection():
+    return st.connection("gsheets", type=GSheetsConnection)
+
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
+
 @st.cache_data(ttl=600)
 def fetch_all_data():
+    conn = get_connection()
     try: 
         df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
     except: 
@@ -170,6 +127,7 @@ def get_all_teachers():
     _, df = fetch_all_data()
     return df
 
+# ... (باقي الدوال الذكية ظلت كما هي: intelligent_merge_students, intelligent_merge_teachers, get_vak_style) ...
 def intelligent_merge_students(new_df):
     current_df = get_all_students()
     current_df['id'] = current_df['id'].apply(clean_id)
@@ -179,6 +137,7 @@ def intelligent_merge_students(new_df):
         new_students['vak_result'] = "غير مختبر"
         for col in ['v_score', 'a_score', 'k_score']: new_students[col] = "0"
         updated_df = pd.concat([current_df, new_students], ignore_index=True)
+        conn = get_connection()
         try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=updated_df)
         except: conn.update(spreadsheet=SHEET_URL, data=updated_df)
         fetch_all_data.clear()
@@ -196,14 +155,12 @@ def intelligent_merge_teachers(new_df):
         if 'role' not in current_df.columns: current_df['role'] = 'teacher'
         if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
         updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name']]], ignore_index=True)
+        conn = get_connection()
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=updated_df)
         fetch_all_data.clear()
         return len(new_teachers)
     return 0
 
-# ==========================================
-# 3. محرك التصحيح الآلي
-# ==========================================
 def get_vak_style(answer):
     ans = str(answer).strip().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه")
     if any(x in ans for x in ["فيديو", "السبوره", "الاحداث", "فيلم", "الاقلام", "التخطيط", "الرسم", "التلوين", "مصوره", "خريطه", "يشاهدني", "الفوضى", "حركه", "النهائي", "كيف يبدو", "شكله", "ملامح", "ابتسم", "تلمع", "الكلمه مكتوبه", "راسي"]): return 'V'
@@ -212,6 +169,7 @@ def get_vak_style(answer):
     return None
 
 def sync_google_forms():
+    conn = get_connection()
     try:
         try: df_students_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
         except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
@@ -273,9 +231,6 @@ def sync_google_forms():
     else:
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
-# ==========================================
-# 4. الترويسة الذكية وتوليد تقارير HTML
-# ==========================================
 def get_school_name(df_subset):
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
     if "ابتدائي" in text_to_search and "متوسط" in text_to_search: return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
@@ -300,36 +255,28 @@ def create_excel_download(df):
     return output.getvalue()
 
 # ==========================================
-# 5. الواجهة الإدارية الرئيسية
+# 5. منطق تسجيل الدخول (يحدث بعد رسم الهيدر)
 # ==========================================
-
-st.markdown("""
-<div class="custom-header">
-    <div class="title-wrapper">
-        <span class="header-icon">🎓</span>
-        <h1 class="header-main-title">منصة زياد الذكية</h1>
-    </div>
-    <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
-</div>
-""", unsafe_allow_html=True)
-
 if 'current_user' not in st.session_state: st.session_state.current_user = None
 
 if st.session_state.current_user is None:
     st.info("💡 يرجى إدخال رقم الهوية الخاص بك للوصول إلى لوحة التحكم.")
     teacher_id_input = st.text_input("رقم الهوية:", placeholder="أدخل رقم هويتك هنا...")
+    
+    # 💡 الكود لن يتصل بـ Google Sheets ولن يبطئ الشاشة إلا إذا ضغط المستخدم هذا الزر
     if st.button("تسجيل الدخول 🔑", use_container_width=True):
         if teacher_id_input:
-            try:
-                df_teachers = get_all_teachers()
-                norm_id = clean_id(teacher_id_input)
-                t_row = df_teachers[df_teachers['id'] == str(norm_id)]
-                if not t_row.empty:
-                    t_data = t_row.iloc[0]
-                    st.session_state.current_user = {"name": t_data['name'], "role": t_data['role']}
-                    st.rerun()
-                else: st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
-            except Exception as e: st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
+            with st.spinner("جاري التحقق من الهوية..."):
+                try:
+                    df_teachers = get_all_teachers()
+                    norm_id = clean_id(teacher_id_input)
+                    t_row = df_teachers[df_teachers['id'] == str(norm_id)]
+                    if not t_row.empty:
+                        t_data = t_row.iloc[0]
+                        st.session_state.current_user = {"name": t_data['name'], "role": t_data['role']}
+                        st.rerun()
+                    else: st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
+                except Exception as e: st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
         else: st.warning("الرجاء إدخال رقم الهوية أولاً.")
 else:
     user = st.session_state.current_user
