@@ -43,9 +43,19 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0p
 
 @st.cache_data(ttl=600)
 def fetch_all_data():
-    df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+    try:
+        df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+    except:
+        df_students = pd.DataFrame()
+        
+    # حماية ضد نقص الأعمدة
+    required_cols = ['id', 'name', 'grade', 'class_name']
+    for col in required_cols:
+        if col not in df_students.columns: df_students[col] = ""
+            
     if 'vak_result' not in df_students.columns: df_students['vak_result'] = "غير مختبر"
     df_students['vak_result'] = df_students['vak_result'].fillna("غير مختبر")
+    
     for col in ['v_score', 'a_score', 'k_score']:
         if col not in df_students.columns: df_students[col] = "0"
         df_students[col] = df_students[col].fillna("0")
@@ -94,19 +104,21 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 # ==========================================
-# 3. محرك التصحيح الذكي لجوجل فورم
+# 3. محرك التصحيح الآلي (من Google Forms المربوط)
 # ==========================================
 def sync_google_forms():
     df_students = get_all_students()
     try:
+        # يقرأ ورقة "responses" مباشرة
         df_forms = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
-    except Exception:
-        st.error("⚠️ لم يتم العثور على ورقة باسم 'responses'. يرجى التأكد من ربط النموذج وتغيير اسم الورقة في Google Sheets.")
+    except Exception as e:
+        st.error(f"⚠️ لم يتم العثور على ورقة باسم 'responses'. يرجى التأكد من اسم الورقة في Google Sheets. الخطأ: {e}")
         return
-        
-    id_col = next((col for col in df_forms.columns if 'هوية' in col or 'رقم' in col), None)
+
+    # البحث عن عمود الهوية
+    id_col = next((col for col in df_forms.columns if 'هوية' in str(col) or 'رقم' in str(col)), None)
     if not id_col:
-        st.error("⚠️ لم يتم العثور على عمود 'رقم الهوية' في ردود النموذج. يرجى التأكد من اسم الحقل في الفورم.")
+        st.error("⚠️ لم يتم العثور على عمود 'رقم الهوية' في ردود النموذج.")
         return
 
     scoring_map = {
@@ -131,7 +143,7 @@ def sync_google_forms():
         if mask.any():
             v, a, k = 0, 0, 0
             for col in df_forms.columns:
-                if col not in ['Timestamp', 'طابع زمني', id_col]:
+                if col not in [id_col] and not any(skip in str(col).lower() for skip in ['time', 'email', 'name', 'اسم', 'إيميل', 'تاريخ', 'طابع زمني']):
                     ans = str(row[col]).strip()
                     style = scoring_map.get(ans)
                     if style == 'V': v += 1
@@ -154,7 +166,7 @@ def sync_google_forms():
         fetch_all_data.clear()
         st.success(f"🎉 تم استيراد وتصحيح نتائج {updates_count} طالب بنجاح من نموذج جوجل!")
     else:
-        st.info("💡 تم فحص النموذج، لا توجد ردود جديدة لطلاب غير مختبرين.")
+        st.info("💡 لا توجد ردود جديدة لطلاب غير مختبرين.")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
@@ -210,14 +222,13 @@ if st.session_state.current_user is None:
 else:
     user = st.session_state.current_user
     
-    # الترويسة العلوية للإدارة بتصميم المربع (Box) وأزرار التحديث والسحب
     col_user, col_sync, col_refresh, col_logout = st.columns([5, 2, 2, 2])
     with col_user:
         role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
         st.markdown(f'<div class="welcome-box">مرحباً بك: {user["name"]} {role_text}</div>', unsafe_allow_html=True)
     with col_sync:
-        if st.button("📥 جلب نتائج جوجل", use_container_width=True, help="استيراد وتصحيح إجابات الطلاب من جوجل فورم تلقائياً"):
-            with st.spinner("جاري قراءة وتصحيح الإجابات..."):
+        if st.button("📥 جلب نتائج جوجل", use_container_width=True, help="استيراد وتصحيح إجابات الطلاب تلقائياً"):
+            with st.spinner("جاري جلب وتصحيح الإجابات..."):
                 sync_google_forms()
     with col_refresh:
         if st.button("🔄 تحديث الشاشة", use_container_width=True):
@@ -254,7 +265,6 @@ else:
         tab_reports = tabs[0]
         tab_main, tab_data = None, None
 
-    # --- التبويب 1: الرئيسية ---
     if tab_main is not None:
         with tab_main:
             st.markdown("<h3 style='text-align: center; color: #2c3e50;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
@@ -276,7 +286,6 @@ else:
                 st.markdown(chart_html, unsafe_allow_html=True)
             else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
-    # --- التبويب 2: التقارير ---
     with tab_reports:
         report_type = st.radio("حدد نوع التقرير الذي تود استخراجه:", ["تقرير الفصول الشامل", "تقرير غير المختبرين", "التقرير الفردي لطالب"], horizontal=True)
         st.markdown("---")
@@ -317,6 +326,7 @@ else:
 
         elif report_type == "التقرير الفردي لطالب":
             st.subheader("استخراج تقرير الطالب")
+            st.info("💡 ابحث بكتابة جزء من اسم الطالب، ثم اختره من القائمة.")
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
             if search_query:
                 norm_query = normalize_text(search_query)
@@ -349,7 +359,6 @@ else:
                             full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
                             st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
-    # --- التبويب 3: البيانات ---
     if tab_data is not None:
         with tab_data:
             st.subheader("إدارة قواعد البيانات (الاستيراد والتصدير)")
