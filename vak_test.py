@@ -18,12 +18,17 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { font-weight: bold; font-size: 16px; }
     #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
-    /* تصميم خاص لتبويبات الإدارة الداخلية */
-    .admin-tabs [data-baseweb="tab-list"] {
-        background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto;
-    }
+    .admin-tabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; }
     .admin-tabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 15px; padding: 10px 15px; color: #555; }
     .admin-tabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
+    
+    /* تصميم خاص للإحصائيات العلوية في لوحة التحكم لتطابق الصورة المطلوبة */
+    div[data-testid="metric-container"] {
+        text-align: center;
+    }
+    div[data-testid="metric-container"] > div {
+        justify-content: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -107,9 +112,9 @@ def generate_html_page(title, content, school_names_html):
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
             .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }}
-            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; }}
-            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; }}
-            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; }}
+            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
             .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
             .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
@@ -157,7 +162,7 @@ st.title("🧠 منصة أنماط التعلم (VAK)")
 tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ الإدارة والمعلمين"])
 
 # ==========================================
-# 5. تبويب الإدارة والمعلمين (اللوحة الاحترافية)
+# 5. تبويب الإدارة والمعلمين
 # ==========================================
 with tab_admin:
     if 'current_user' not in st.session_state: st.session_state.current_user = None
@@ -182,7 +187,7 @@ with tab_admin:
     else:
         user = st.session_state.current_user
         
-        # ترويسة اللوحة وتحديث البيانات
+        # الترويسة العلوية للإدارة وتحديث البيانات
         col_user, col_refresh, col_logout = st.columns([6, 2, 2])
         with col_user:
             role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
@@ -198,16 +203,17 @@ with tab_admin:
                 
         df_all = get_all_students()
         df_tested = df_all[df_all['vak_result'] != 'غير مختبر'].copy()
-        
-        # مؤشرات لوحة التحكم العلوية (تظهر للجميع)
-        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+        for col in ['v_score', 'a_score', 'k_score']:
+            df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
+
+        # الشريط الإحصائي العلوي (يظهر بشكل أنيق للجميع)
+        st.markdown("<hr style='margin: 10px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         c1.metric("👥 إجمالي الطلاب", len(df_all))
         c2.metric("✅ الاختبارات المكتملة", len(df_tested))
         c3.metric("⏳ لم يؤدوا الاختبار", len(df_all) - len(df_tested))
-        st.markdown("<hr style='margin: 10px 0 20px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 10px 0 20px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
-        # إنشاء تبويبات الأقسام بناءً على الصلاحيات
         st.markdown('<div class="admin-tabs">', unsafe_allow_html=True)
         if user['role'] == 'admin':
             tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات"])
@@ -219,29 +225,27 @@ with tab_admin:
             tab_data = None
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- التبويب 1: الرئيسية (متاح للمدير) ---
+        # --- التبويب 1: الرئيسية (الإحصائيات للمدير) ---
         if tab_main is not None:
             with tab_main:
-                st.subheader("توزيع أنماط التعلم في المدرسة")
+                st.markdown("<h3 style='text-align: center; color: #2c3e50;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
                 if len(df_tested) > 0:
                     v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
                     a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
                     k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                     
-                    # رسم بياني محسّن
+                    # إنشاء رسم بياني واضح مع تسمية المحاور بدقة بدلاً من الرموز التعبيرية فقط
                     chart_data = pd.DataFrame({
-                        "النمط": ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"],
+                        "النمط": ["البصري", "السمعي", "الحركي"],
                         "عدد الطلاب": [v_count, a_count, k_count]
                     })
-                    st.bar_chart(chart_data.set_index("النمط"))
+                    st.bar_chart(chart_data.set_index("النمط"), color="#005b96")
                 else:
                     st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
-        # --- التبويب 2: التقارير (متاح للجميع) ---
+        # --- التبويب 2: التقارير ---
         with tab_reports:
-            report_type = st.radio("حدد نوع التقرير الذي تود استخراجه:", 
-                                   ["تقرير الفصول الشامل", "تقرير غير المختبرين", "التقرير الفردي لطالب"], 
-                                   horizontal=True)
+            report_type = st.radio("حدد نوع التقرير الذي تود استخراجه:", ["تقرير الفصول الشامل", "تقرير غير المختبرين", "التقرير الفردي لطالب"], horizontal=True)
             st.markdown("---")
             
             if report_type == "تقرير الفصول الشامل":
@@ -339,7 +343,7 @@ with tab_admin:
                 st.subheader("إدارة قاعدة بيانات الطلاب")
                 display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
                 st.dataframe(display_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
-                st.info("💡 للتعديل أو الحذف، يرجى إجراء التغييرات مباشرة داخل ملف Google Sheets الخاص بالمنصة، ثم الضغط على 'تحديث البيانات'.")
+                st.info("💡 للتعديل أو الحذف، يرجى إجراء التغييرات مباشرة داخل ملف Google Sheets الخاص بالمنصة، ثم الضغط على 'تحديث البيانات' في أعلى الصفحة.")
 
 # ==========================================
 # 6. تبويب دخول الطلاب (الاختبار)
