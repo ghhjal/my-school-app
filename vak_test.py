@@ -42,6 +42,11 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
+# دالة لتنظيف أرقام الهوية من المسافات والفواصل
+def clean_id(val):
+    if pd.isna(val): return ""
+    return str(val).split('.')[0].strip()
+
 @st.cache_data(ttl=600)
 def fetch_all_data():
     try:
@@ -60,8 +65,8 @@ def fetch_all_data():
         if col not in df_students.columns: df_students[col] = "0"
         df_students[col] = df_students[col].fillna("0")
         
-    # توحيد نوع الهوية كنص لمنع الأخطاء وتنظيفه
-    df_students['id'] = df_students['id'].astype(str).str.strip().str.replace('.0', '', regex=False)
+    # تطبيق دالة التنظيف الصارمة على عمود الهوية
+    df_students['id'] = df_students['id'].apply(clean_id)
         
     try: df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
     except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
@@ -78,8 +83,8 @@ def get_all_teachers():
 
 def intelligent_merge_students(new_df):
     current_df = get_all_students()
-    current_df['id'] = current_df['id'].astype(str).str.strip()
-    new_df['id'] = new_df['id'].astype(str).str.strip()
+    current_df['id'] = current_df['id'].apply(clean_id)
+    new_df['id'] = new_df['id'].apply(clean_id)
     new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
     if not new_students.empty:
         new_students['vak_result'] = "غير مختبر"
@@ -92,8 +97,8 @@ def intelligent_merge_students(new_df):
 
 def intelligent_merge_teachers(new_df):
     current_df = get_all_teachers()
-    current_df['id'] = current_df['id'].astype(str).str.strip()
-    new_df['id'] = new_df['id'].astype(str).str.strip()
+    current_df['id'] = current_df['id'].apply(clean_id)
+    new_df['id'] = new_df['id'].apply(clean_id)
     new_teachers = new_df[~new_df['id'].isin(current_df['id'])].copy()
     if not new_teachers.empty:
         new_teachers['role'] = 'teacher'
@@ -110,7 +115,6 @@ def intelligent_merge_teachers(new_df):
 # 3. محرك التصحيح الآلي (قوي ومحصن)
 # ==========================================
 def clean_text(text):
-    """دالة لتنظيف النص من المسافات الزائدة والتشكيل لمطابقة أفضل"""
     if pd.isna(text): return ""
     text = str(text).replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').replace('.', '').strip()
     return re.sub(r'\s+', ' ', text)
@@ -134,7 +138,6 @@ def sync_google_forms():
         st.error(f"⚠️ لم يتعرف النظام على عمود 'رقم الهوية'. الأعمدة الموجودة هي: {list(df_forms.columns)}")
         return
 
-    # خريطة التصحيح المرنة (تعتمد على الكلمات المفتاحية في كل إجابة لتفادي أخطاء النسخ واللصق)
     scoring_keywords = {
         "V": ["اشاهد صور", "فيديو", "اقرا من السبوره", "اتخيل الاحداث", "الصور في عقلي", "كأنها فيلم", "الاقلام الملونه", "التخطيط على الكتاب", "الرسم", "التلوين", "قصص مصوره", "ارسم له خريطه", "يشاهدني وانا العب", "الفوضى في الغرفه", "حركه الاشخاص", "صوره الشكل النهائي", "كيف يبدو", "شكله وملامح وجهه", "ابتسم كثيرا", "تلمع عيناي", "شكل الكلمه مكتوبه"],
         "A": ["استمع لشرح", "اردد المعلومات", "بصوت مسموع", "احرك شفتي", "تكرار قراءه", "الاستماع لتسجيل", "التحدث مع الاصدقاء", "الاستماع للقصص", "اشرح له القوانين", "بالكلام", "الاصوات المزعجه", "الضجيج", "تحدث الاخرين", "اسال المعلم", "اطلب من احد", "اسمه وصوته بوضوح", "اضحك بصوت", "اتحدث بحماس", "اتهجى حروف الكلمه"],
@@ -142,11 +145,11 @@ def sync_google_forms():
     }
 
     updates_count = 0
-    # تنظيف وتوحيد أرقام الهوية في الفورم
-    df_forms[id_col] = df_forms[id_col].astype(str).str.strip().str.replace('.0', '', regex=False)
+    # تطبيق دالة التنظيف الصارمة على أرقام هوية الفورم
+    df_forms[id_col] = df_forms[id_col].apply(clean_id)
     
     for _, row in df_forms.iterrows():
-        s_id = str(row.get(id_col, ''))
+        s_id = clean_id(row.get(id_col, ''))
         mask = (df_students['id'] == s_id)
         
         # التأكد أن الطالب موجود (حتى لو كان مختبراً مسبقاً، سنحدث نتيجته بأحدث رد)
@@ -181,7 +184,8 @@ def sync_google_forms():
         fetch_all_data.clear()
         st.success(f"🎉 رائع! تم استيراد وتحديث نتائج {updates_count} طالب بنجاح.")
     else:
-        st.info("💡 تم فحص النموذج، لا توجد ردود جديدة أو لم تتطابق أرقام الهوية المكتوبة مع قاعدة البيانات.")
+        # رسالة تصحيح (Debug) لتساعدنا إذا فشل مرة أخرى
+        st.info(f"💡 تم الفحص ولم توجد ردود متطابقة. أرقام هوية الفورم: {list(df_forms[id_col].unique())[:5]} ... أرقام الشيت الأساسي: {list(df_students['id'].unique())[:5]} ...")
 
 # ==========================================
 # 4. الترويسة الذكية وتوليد تقارير HTML
@@ -204,7 +208,6 @@ def get_download_link(html_content, filename, link_text):
     b64 = base64.b64encode(html_content.encode('utf-8')).decode()
     return f'<a href="data:text/html;base64,{b64}" download="{filename}" style="display: block; text-align: center; background-color: #27ae60; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">{link_text}</a>'
 
-def normalize_numbers(text): return text.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')).strip() if isinstance(text, str) else ""
 def create_excel_download(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df.to_excel(writer, index=False, sheet_name='Sheet1')
@@ -224,7 +227,7 @@ if st.session_state.current_user is None:
         if teacher_id_input:
             try:
                 df_teachers = get_all_teachers()
-                norm_id = normalize_numbers(teacher_id_input)
+                norm_id = clean_id(teacher_id_input)
                 t_row = df_teachers[df_teachers['id'] == str(norm_id)]
                 if not t_row.empty:
                     t_data = t_row.iloc[0]
