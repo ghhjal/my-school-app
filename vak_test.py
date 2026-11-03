@@ -26,7 +26,6 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
-# --- دوال الطلاب ---
 def get_all_students():
     df = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
     if 'vak_result' not in df.columns: df['vak_result'] = "غير مختبر"
@@ -48,15 +47,29 @@ def save_result(student_id, result, v, a, k):
     df.loc[df['id'] == str(student_id), 'k_score'] = str(k)
     conn.update(spreadsheet=SHEET_URL, data=df)
 
-# --- دوال المعلمين ---
 def get_all_teachers():
     df = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
     return df
 
 # ==========================================
-# 3. محرك توليد تقارير HTML للطباعة
+# 3. الترويسة الذكية وتوليد تقارير HTML
 # ==========================================
-def generate_html_page(title, content):
+def get_school_name(df_subset):
+    """تحديد اسم المدرسة بذكاء من خلال البحث عن الكلمات المفتاحية في عمودي الصف والفصل"""
+    text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
+    
+    has_primary = "ابتدائي" in text_to_search or "ابتدائية" in text_to_search
+    has_middle = "متوسط" in text_to_search or "متوسطة" in text_to_search
+    
+    if has_primary and has_middle:
+        return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
+    elif has_middle:
+        return "متوسطة عبدالرحمن الناصر"
+    else:
+        return "ابتدائية عبادة بن قيس الأنصاري"
+
+def generate_html_page(title, content, school_names_html):
+    """توليد صفحة HTML احترافية مع الترويسة الرسمية للطباعة"""
     return f"""
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
@@ -65,32 +78,65 @@ def generate_html_page(title, content):
         <title>{title}</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-            body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #333; }}
-            .header {{ text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px; }}
-            .header h1 {{ color: #2c3e50; margin: 0; }}
-            .header p {{ color: #7f8c8d; margin: 5px 0 0 0; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ border: 1px solid #bdc3c7; padding: 12px; text-align: center; }}
-            th {{ background-color: #ecf0f1; color: #2c3e50; font-weight: bold; }}
+            body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }}
+            
+            /* التنسيق للطباعة والشاشة */
+            .official-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 3px double #000;
+                padding-bottom: 15px;
+                margin-bottom: 30px;
+                font-size: 16px;
+                line-height: 1.6;
+                font-weight: bold;
+            }}
+            .header-right {{ text-align: right; }}
+            .header-left {{ text-align: left; }}
+            
+            .report-main-title {{ text-align: center; color: #2980b9; margin-bottom: 30px; font-size: 24px; text-decoration: underline; }}
+            
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }}
+            th, td {{ border: 1px solid #000; padding: 10px; text-align: center; }}
+            th {{ background-color: #f2f2f2; font-weight: bold; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
-            .summary-box {{ background: #fdfefe; border: 1px solid #e5e8e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size:18px; line-height:1.6;}}
-            .bar-bg {{ background-color: #ecf0f1; border-radius: 5px; width: 100%; height: 15px; margin-bottom: 10px; }}
+            
+            .summary-box {{ border: 1px solid #000; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size:18px; line-height:1.6; background-color: #fafafa; }}
+            
+            /* أشرطة النسب */
+            .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 15px; margin-bottom: 10px; border: 1px solid #ccc; }}
             .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px; }}
             .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px; }}
             .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px; }}
+            
             .no-print {{ text-align: center; margin-bottom: 20px; }}
             .print-btn {{ background: #2980b9; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
-            @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; }} }}
+            
+            @media print {{ 
+                .no-print {{ display: none !important; }} 
+                body {{ padding: 0; margin: 0; }} 
+            }}
         </style>
     </head>
     <body>
         <div class="no-print">
-            <button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير</button>
+            <button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير الرسمي</button>
         </div>
-        <div class="header">
-            <h1>{title}</h1>
-            <p>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</p>
+        
+        <div class="official-header">
+            <div class="header-right">
+                المملكة العربية السعودية<br>
+                وزارة التعليم<br>
+                {school_names_html}
+            </div>
+            <div class="header-left">
+                العام الدراسي: 1448 هـ<br>
+                تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}
+            </div>
         </div>
+        
+        <h2 class="report-main-title">{title}</h2>
         {content}
     </body>
     </html>
@@ -144,7 +190,6 @@ with tab_admin:
                 st.warning("الرجاء إدخال رقم الهوية أولاً.")
     else:
         user = st.session_state.current_user
-        
         if user['role'] == 'admin':
             st.success(f"أهلاً بك يا أستاذ/ة: **{user['name']}** (مدير النظام)")
         else:
@@ -159,7 +204,6 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
-        # تحديد الأقسام المتاحة: المعلم يرى التقارير الجماعية والفردية، والمدير يرى الإحصائيات وإدارة البيانات
         if user['role'] == 'teacher':
             st.info("صلاحياتك تتيح لك استعراض وطباعة تقارير جميع الفصول والطلاب بمرونة.")
             available_reports = ["📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)"]
@@ -187,12 +231,11 @@ with tab_admin:
                 st.bar_chart({"بصري 👁️": v_count, "سمعي 👂": a_count, "حركي 🏃‍♂️": k_count})
 
         # ------------------------------------
-        # التقرير الجماعي للفصل (مفتوح للجميع)
+        # التقرير الجماعي للفصل
         # ------------------------------------
         elif section == "📊 التقرير الجماعي (الفصول)":
             st.subheader("تقرير الفصول الشامل وتصدير الطباعة")
             
-            # خيار "جميع الفصول" متاح للجميع (مدير ومعلم)
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
             selected_class = st.selectbox("اختر النطاق:", classes)
             
@@ -209,6 +252,9 @@ with tab_admin:
                 display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'})
                 st.dataframe(display_cols, use_container_width=True, hide_index=True)
                 
+                # استخراج ترويسة المدرسة المطلوبة بشكل ديناميكي
+                school_names_html = get_school_name(df_class_tested)
+                
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
                 a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
@@ -216,23 +262,28 @@ with tab_admin:
                 
                 class_content = f"""
                 <div class="summary-box">
-                    <h3>إحصائيات ({selected_class}):</h3>
-                    <p>عدد الطلاب المنجزين للاختبار: {len(df_class_tested)}</p>
+                    <h3>الإحصائية الإجمالية:</h3>
+                    <p>عدد الطلاب المنجزين للاختبار في هذا البيان: {len(df_class_tested)}</p>
                     <p>نسبة النمط البصري: {v_pct}% | نسبة النمط السمعي: {a_pct}% | نسبة النمط الحركي: {k_pct}%</p>
                 </div>
-                <h3>قائمة الطلاب ونتائجهم:</h3>
+                <h3>قائمة بيانات الطلاب:</h3>
                 {html_table}
                 """
-                full_html = generate_html_page(f"تقرير قياس أنماط التعلم - {selected_class}", class_content)
-                st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}.html", "📥 تحميل التقرير الجماعي للطباعة (HTML)"), unsafe_allow_html=True)
+                
+                report_title = "التقرير الشامل لأنماط التعلم - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير أنماط التعلم - فصل {selected_class}"
+                full_html = generate_html_page(report_title, class_content, school_names_html)
+                
+                # إضافة طابع زمني لتفادي مشكلة الذاكرة المؤقتة (Cache)
+                ts = datetime.now().strftime('%H%M%S')
+                file_name = f"Group_Report_{selected_class}_{ts}.html"
+                
+                st.markdown(get_download_link(full_html, file_name, "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
 
         # ------------------------------------
-        # التقرير الفردي (بحث مفتوح للجميع)
+        # التقرير الفردي (بحث مفتوح)
         # ------------------------------------
         elif section == "📄 التقرير الفردي للطالب (طباعة)":
             st.subheader("استخراج تقرير الطالب")
-            st.info("💡 اكتب أي جزء من اسم الطالب للبحث عنه (لا داعي للقلق بشأن الهمزات أو التاء المربوطة).")
-            
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
             
             if search_query:
@@ -252,6 +303,9 @@ with tab_admin:
                         if s['vak_result'] == 'غير مختبر':
                             st.error("هذا الطالب لم يجرِ الاختبار بعد، لا يمكن استخراج تقرير له.")
                         else:
+                            # تحديد ترويسة المدرسة للطالب الفردي
+                            school_names_html = get_school_name(pd.DataFrame([s]))
+                            
                             v_pct = int(float(s['v_score'])) * 10
                             a_pct = int(float(s['a_score'])) * 10
                             k_pct = int(float(s['k_score'])) * 10
@@ -284,15 +338,19 @@ with tab_admin:
                             <div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
                             
                             <div class="summary-box" style="margin-top: 20px;">
-                                <h3 style="color:#2c3e50;">النمط الغالب: {s['vak_result']}</h3>
-                                <p>{summary}</p>
+                                <h3 style="color:#2c3e50; text-align:center;">النمط الغالب: {s['vak_result']}</h3>
+                                <p style="text-align:center;">{summary}</p>
                             </div>
                             
                             <h3>مقترحات تعليمية للطالب:</h3>
                             <ul style="font-size: 18px; line-height: 1.8;">{recs}</ul>
                             """
-                            full_html = generate_html_page(f"التقرير الفردي - {s['name']}", student_content)
-                            st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report.html", f"📥 تحميل التقرير الجاهز للطباعة للطالب ({s['name']})"), unsafe_allow_html=True)
+                            full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
+                            
+                            ts = datetime.now().strftime('%H%M%S')
+                            file_name = f"Student_{s['id']}_Report_{ts}.html"
+                            
+                            st.markdown(get_download_link(full_html, file_name, f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
                     
         # ------------------------------------
         # إدارة قائمة الطلاب
