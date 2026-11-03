@@ -215,16 +215,20 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
+        # إضافة تقرير غير المختبرين للقائمة لكلا الصلاحيتين
         if user['role'] == 'teacher':
             st.info("صلاحياتك تتيح لك استعراض وطباعة تقارير جميع الفصول والطلاب بمرونة.")
-            available_reports = ["📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)"]
+            available_reports = ["📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)", "📋 تقرير غير المختبرين (طباعة)"]
         else:
-            available_reports = ["🏫 التقرير الإحصائي للمدرسة", "📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)", "👥 إدارة قائمة الطلاب"]
+            available_reports = ["🏫 التقرير الإحصائي للمدرسة", "📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)", "📋 تقرير غير المختبرين (طباعة)", "👥 إدارة قائمة الطلاب"]
             
         st.markdown("### 🎛️ مركز التقارير")
         section = st.selectbox("اختر التقرير المطلوب:", available_reports)
         st.markdown("---")
         
+        # ------------------------------------
+        # التقرير الإحصائي للمدرسة
+        # ------------------------------------
         if section == "🏫 التقرير الإحصائي للمدرسة" and user['role'] == 'admin':
             st.subheader("إحصائيات المدرسة العامة")
             total, tested = len(df_all), len(df_tested)
@@ -237,6 +241,9 @@ with tab_admin:
                 k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                 st.bar_chart({"بصري 👁️": v_count, "سمعي 👂": a_count, "حركي 🏃‍♂️": k_count})
 
+        # ------------------------------------
+        # التقرير الجماعي للفصل
+        # ------------------------------------
         elif section == "📊 التقرير الجماعي (الفصول)":
             st.subheader("تقرير الفصول الشامل وتصدير الطباعة")
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
@@ -276,6 +283,46 @@ with tab_admin:
                 full_html = generate_html_page(report_title, class_content, school_names_html)
                 st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
 
+        # ------------------------------------
+        # تقرير غير المختبرين
+        # ------------------------------------
+        elif section == "📋 تقرير غير المختبرين (طباعة)":
+            st.subheader("حصر الطلاب المتأخرين عن أداء الاختبار")
+            classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
+            selected_class = st.selectbox("اختر النطاق:", classes)
+            
+            if selected_class == "جميع الفصول":
+                df_untested = df_all[df_all['vak_result'] == 'غير مختبر'].copy()
+            else:
+                df_untested = df_all[(df_all['class_name'] == selected_class) & (df_all['vak_result'] == 'غير مختبر')].copy()
+                
+            st.write(f"عدد الطلاب غير المختبرين في هذا العرض: **{len(df_untested)}**")
+            
+            if len(df_untested) > 0:
+                display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
+                st.dataframe(display_cols, use_container_width=True, hide_index=True)
+                
+                school_names_html = get_school_name(df_untested)
+                html_table = display_cols.to_html(index=False, classes="table", justify="center")
+                
+                untested_content = f"""
+                <div class="summary-box">
+                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
+                        إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span>
+                    </h3>
+                </div>
+                <h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>
+                {html_table}
+                """
+                report_title = "تقرير حصر الطلاب غير المختبرين - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير حصر الطلاب غير المختبرين - فصل {selected_class}"
+                full_html = generate_html_page(report_title, untested_content, school_names_html)
+                st.markdown(get_download_link(full_html, f"Untested_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل تقرير غير المختبرين للطباعة (A4)"), unsafe_allow_html=True)
+            else:
+                st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
+
+        # ------------------------------------
+        # التقرير الفردي للطالب
+        # ------------------------------------
         elif section == "📄 التقرير الفردي للطالب (طباعة)":
             st.subheader("استخراج تقرير الطالب")
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
@@ -308,7 +355,6 @@ with tab_admin:
                                 summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
                                 recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
 
-                            # النسب الديناميكية التفاعلية لعرض البيانات بشكل احترافي
                             v_display = f"بصري Visual"
                             a_display = f"سمعي Auditory"
                             k_display = f"حركي Kinesthetic"
