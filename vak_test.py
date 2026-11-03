@@ -10,14 +10,12 @@ st.set_page_config(page_title="مقياس أنماط التعلم", page_icon="�
 # ==========================================
 st.markdown("""
 <style>
-    /* توجيه كامل التطبيق من اليمين لليسار */
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio {
+    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox {
         direction: rtl;
         text-align: right;
         font-family: 'Tajawal', 'Arial', sans-serif;
     }
     
-    /* تنسيق أزرار التبويبات لتكون واضحة في الجوال */
     .stTabs [data-baseweb="tab-list"] {
         display: flex;
         justify-content: space-evenly;
@@ -31,7 +29,15 @@ st.markdown("""
         font-size: 16px;
     }
     
-    /* إخفاء القائمة العلوية الافتراضية الخاصة بـ Streamlit لتنظيف الواجهة للجوال */
+    /* تنسيق بطاقات الإحصائيات */
+    div[data-testid="metric-container"] {
+        background-color: #ffffff;
+        border: 1px solid #e6e6e6;
+        padding: 5% 5% 5% 10%;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
@@ -59,55 +65,125 @@ def save_result(student_id, result):
     conn.update(spreadsheet=SHEET_URL, data=df)
 
 # ==========================================
-# 2. الواجهة الرئيسية (التبويبات بدلاً من القائمة الجانبية)
+# 2. الواجهة الرئيسية
 # ==========================================
 st.title("🧠 مقياس أنماط التعلم (VAK)")
 st.write("مرحباً بك! حدد نمط تعلمك لتساعد معلميك في تقديم الدروس بالطريقة التي تناسبك.")
 st.markdown("---")
 
-# إنشاء تبويبين
 tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ لوحة الإدارة"])
 
 # ==========================================
-# 3. تبويب لوحة الإدارة
+# 3. تبويب لوحة الإدارة (المركزية)
 # ==========================================
 with tab_admin:
-    st.header("تسجيل دخول المعلمين")
-    admin_password = st.text_input("كلمة المرور للوحة التحكم:", type="password", key="admin_pass")
+    st.header("تسجيل دخول الإدارة")
+    admin_password = st.text_input("كلمة المرور:", type="password", key="admin_pass", placeholder="أدخل كلمة مرور الإدارة...")
     
     if admin_password == "admin123":
-        st.success("تم تسجيل الدخول كمسؤول بنجاح.")
+        st.success("✅ تم تسجيل الدخول كمسؤول.")
         df_all = get_all_students()
         
-        display_df = df_all.rename(columns={
-            'id': 'رقم الهوية', 
-            'name': 'اسم الطالب', 
-            'grade': 'الصف', 
-            'class_name': 'الفصل', 
-            'vak_result': 'النتيجة'
-        })
+        # قائمة التنقل الذكية للجوال
+        st.markdown("### 🎛️ مركز إدارة النظام")
+        section = st.selectbox("اختر القسم الذي تود إدارته:", [
+            "📊 الإحصائيات العامة",
+            "👥 إدارة الطلاب",
+            "📝 سجل الاختبارات",
+            "📄 تقارير الطلاب",
+            "💾 إدارة البيانات",
+            "👨‍🏫 إدارة المعلمين (قريباً)",
+            "🛡️ الأمان والصلاحيات (قريباً)",
+            "❓ إدارة الأسئلة (قريباً)"
+        ])
         
-        col1, col2 = st.columns(2)
-        with col1:
-            classes = ["الكل"] + list(display_df['الفصل'].unique())
+        st.markdown("---")
+        
+        # ------------------------------------
+        # قسم 1: الإحصائيات العامة
+        # ------------------------------------
+        if section == "📊 الإحصائيات العامة":
+            st.subheader("نظرة عامة على الأداء والتوزيع")
+            
+            total_students = len(df_all)
+            tested = len(df_all[df_all['vak_result'] != 'غير مختبر'])
+            untested = total_students - tested
+            
+            v_count = len(df_all[df_all['vak_result'].str.contains('بصري', na=False)])
+            a_count = len(df_all[df_all['vak_result'].str.contains('سمعي', na=False)])
+            k_count = len(df_all[df_all['vak_result'].str.contains('حركي', na=False)])
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("إجمالي الطلاب", total_students)
+            col2.metric("أكملوا الاختبار", tested)
+            col3.metric("لم يختبروا", untested)
+            
+            st.markdown("#### توزيع أنماط التعلم:")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("👁️ بصري", v_count)
+            c2.metric("👂 سمعي", a_count)
+            c3.metric("🏃‍♂️ حركي", k_count)
+
+        # ------------------------------------
+        # قسم 2: إدارة الطلاب
+        # ------------------------------------
+        elif section == "👥 إدارة الطلاب":
+            st.subheader("قائمة الطلاب والفصول")
+            
+            display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة'})
+            
+            classes = ["الكل"] + list(display_df['الفصل'].dropna().unique())
             selected_class = st.selectbox("فرز حسب الفصل:", classes, key="filter_class")
-        with col2:
-            status = ["الكل", "مختبر", "غير مختبر"]
-            selected_status = st.selectbox("حالة الاختبار:", status, key="filter_status")
-        
-        filtered_df = display_df.copy()
-        if selected_class != "الكل":
-            filtered_df = filtered_df[filtered_df['الفصل'] == selected_class]
-        if selected_status == "مختبر":
-            filtered_df = filtered_df[filtered_df['النتيجة'] != "غير مختبر"]
-        elif selected_status == "غير مختبر":
-            filtered_df = filtered_df[filtered_df['النتيجة'] == "غير مختبر"]
-        
-        st.write(f"عدد الطلاب في هذا العرض: **{len(filtered_df)}**")
-        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-        
-        csv = filtered_df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 تحميل التقرير (CSV)", data=csv, file_name='VAK_Results.csv', mime='text/csv', use_container_width=True)
+            
+            if selected_class != "الكل":
+                display_df = display_df[display_df['الفصل'] == selected_class]
+                
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            st.info("💡 لإضافة طلاب جدد أو حذفهم، يرجى التعديل مباشرة على ملف Google Sheets لضمان استقرار القاعدة.")
+
+        # ------------------------------------
+        # قسم 3: سجل الاختبارات
+        # ------------------------------------
+        elif section == "📝 سجل الاختبارات":
+            st.subheader("الطلاب المنجزين للاختبار")
+            tested_df = df_all[df_all['vak_result'] != 'غير مختبر']
+            display_tested = tested_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة'})
+            
+            st.write(f"عدد الطلاب المنجزين: **{len(display_tested)}**")
+            st.dataframe(display_tested, use_container_width=True, hide_index=True)
+
+        # ------------------------------------
+        # قسم 4: تقارير الطلاب
+        # ------------------------------------
+        elif section == "📄 تقارير الطلاب":
+            st.subheader("البحث الفردي عن طالب")
+            search_id = st.text_input("أدخل رقم هوية الطالب للبحث:")
+            if search_id:
+                student = df_all[df_all['id'] == str(search_id)]
+                if not student.empty:
+                    s_data = student.iloc[0]
+                    st.success(f"الاسم: {s_data['name']} | الصف: {s_data['grade']} | الفصل: {s_data['class_name']}")
+                    st.info(f"النتيجة: **{s_data['vak_result']}**")
+                else:
+                    st.error("لم يتم العثور على طالب بهذا الرقم.")
+
+        # ------------------------------------
+        # قسم 5: إدارة البيانات
+        # ------------------------------------
+        elif section == "💾 إدارة البيانات":
+            st.subheader("تصدير قاعدة البيانات")
+            st.write("يمكنك تحميل نسخة احتياطية من جميع النتائج والبيانات بصيغة Excel (CSV).")
+            display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة'})
+            csv = display_df.to_csv(index=False).encode('utf-8')
+            st.download_button(label="📥 تحميل النسخة الاحتياطية (CSV)", data=csv, file_name='VAK_Full_Backup.csv', mime='text/csv', use_container_width=True)
+
+        # ------------------------------------
+        # الأقسام المستقبلية (Placeholders)
+        # ------------------------------------
+        else:
+            st.info(f"🚧 قسم **{section.replace(' (قريباً)', '')}** قيد التطوير.")
+            st.write("سيتم تفعيل هذه الميزة في التحديث القادم للنظام لتعمل بشكل مستقل وموثوق.")
+            
     elif admin_password:
         st.error("كلمة المرور غير صحيحة.")
 
@@ -115,17 +191,11 @@ with tab_admin:
 # 4. تبويب دخول الطلاب (الاختبار)
 # ==========================================
 with tab_student:
-    # تهيئة متغيرات الجلسة
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-    if 'student_data' not in st.session_state:
-        st.session_state.student_data = None
-    if 'test_done' not in st.session_state:
-        st.session_state.test_done = False
-    if 'already_tested' not in st.session_state:
-        st.session_state.already_tested = False
+    if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+    if 'student_data' not in st.session_state: st.session_state.student_data = None
+    if 'test_done' not in st.session_state: st.session_state.test_done = False
+    if 'already_tested' not in st.session_state: st.session_state.already_tested = False
 
-    # حالة 1: لم يسجل الدخول بعد
     if not st.session_state.logged_in:
         st.info("الرجاء إدخال رقم الهوية للبدء")
         student_id_input = st.text_input("رقم الهوية / الإقامة:", placeholder="أدخل رقمك هنا...")
@@ -136,55 +206,45 @@ with tab_student:
                 if not df_student.empty:
                     st.session_state.student_data = df_student.iloc[0]
                     st.session_state.logged_in = True
-                    
-                    # التحقق مما إذا كان الطالب قد أجرى الاختبار مسبقاً
                     if st.session_state.student_data['vak_result'] != 'غير مختبر':
                         st.session_state.test_done = True
                         st.session_state.already_tested = True
                     else:
                         st.session_state.test_done = False
                         st.session_state.already_tested = False
-                        
                     st.rerun()
                 else:
                     st.error("رقم الهوية غير مسجل، راجع إدارة المدرسة.")
             else:
                 st.warning("أدخل الرقم أولاً.")
 
-    # حالة 2: سجل الدخول وكان قد اختبر مسبقاً
     elif st.session_state.logged_in and st.session_state.already_tested:
         student = st.session_state.student_data
         st.success(f"أهلاً بك يا **{student['name']}**")
         st.warning("✅ لقد أجريت هذا الاختبار مسبقاً، وتم حفظ نتيجتك بنجاح.")
         st.markdown(f"<h3 style='text-align: center;'>نمط التعلم الخاص بك هو: <br><br> <b>{student['vak_result']}</b></h3>", unsafe_allow_html=True)
-        
         if st.button("تسجيل الخروج", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.test_done = False
             st.session_state.already_tested = False
             st.rerun()
 
-    # حالة 3: سجل الدخول وأنهى الاختبار للتو (رسالة النجاح)
     elif st.session_state.logged_in and st.session_state.test_done and not st.session_state.already_tested:
         student = st.session_state.student_data
         st.balloons()
         st.success("🎉 رائع! تم إرسال نتيجتك وحفظها بنجاح.")
         st.markdown(f"<h3 style='text-align: center;'>النمط الغالب لديك هو: <br><br> <b>{student['vak_result']}</b></h3>", unsafe_allow_html=True)
-        
         if st.button("خروج وإنهاء", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.test_done = False
             st.session_state.already_tested = False
             st.rerun()
 
-    # حالة 4: سجل الدخول ويقوم بإجراء الاختبار الآن (الأسئلة العشرة)
     elif st.session_state.logged_in and not st.session_state.test_done:
         student = st.session_state.student_data
         st.success(f"أهلاً بك: **{student['name']}** | الصف: **{student['grade']}**")
-        
         st.write("أجب عن جميع الأسئلة التالية بصراحة:")
         
-        # 10 أسئلة احترافية مخصصة لأنماط التعلم (VAK)
         questions = [
             {"q": "1. عندما أتعلم درساً جديداً، أفضل أن:", "options": ["أشاهد صوراً أو فيديو أو أقرأ من السبورة.", "أستمع لشرح المعلم وأردد المعلومات.", "أقوم بتجربة الأمر بنفسي وأتحرك."], "keys": ["V", "A", "K"]},
             {"q": "2. عندما أقرأ قصة، فإنني غالباً:", "options": ["أتخيل الأحداث والصور في عقلي كأنها فيلم.", "أقرأ بصوت مسموع أو أحرك شفتي أثناء القراءة.", "أشعر بالملل من الجلوس وأحب أن أتحرك أثناء القراءة."], "keys": ["V", "A", "K"]},
