@@ -23,7 +23,6 @@ st.markdown("""
     .admin-tabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 15px; padding: 10px 15px; color: #555; }
     .admin-tabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
     
-    /* تصميم بطاقات الإحصائيات العلوية */
     .dashboard-stats-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
     .dash-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
     .dash-card.total { border-color: #9b59b6; } 
@@ -32,20 +31,8 @@ st.markdown("""
     .dash-title { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
     .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
     
-    /* تصميم الترحيب المخصص */
-    .welcome-box {
-        background-color: #ebf5fb;
-        border: 1px solid #3498db;
-        border-radius: 8px;
-        padding: 12px 20px;
-        color: #2980b9;
-        font-size: 18px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-    }
+    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 12px 20px; color: #2980b9; font-size: 18px; font-weight: bold; display: flex; align-items: center; }
     
-    /* تصميم الرسم البياني المخصص */
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
     .chart-value { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #e74c3c; } 
@@ -97,18 +84,30 @@ def save_result(student_id, result, v, a, k):
     conn.update(spreadsheet=SHEET_URL, data=df)
     fetch_all_data.clear()
 
-def overwrite_student_data(new_df):
-    """رفع ومزامنة البيانات الجديدة مع الشيت"""
+def intelligent_merge_students(new_df):
+    """دمج ذكي: يضيف الطلاب الجدد ويتجاهل الموجودين مسبقاً"""
     current_df = get_all_students()
-    # الحفاظ على نتائج الطلاب الذين اختبروا مسبقاً بناءً على رقم الهوية
-    merged_df = pd.merge(new_df, current_df[['id', 'vak_result', 'v_score', 'a_score', 'k_score']], on='id', how='left')
-    merged_df['vak_result'] = merged_df['vak_result'].fillna("غير مختبر")
-    for col in ['v_score', 'a_score', 'k_score']: merged_df[col] = merged_df[col].fillna("0")
-    conn.update(spreadsheet=SHEET_URL, data=merged_df)
-    fetch_all_data.clear()
+    
+    # تحويل معرفات الهوية إلى نصوص لضمان المقارنة الصحيحة
+    current_df['id'] = current_df['id'].astype(str).str.strip()
+    new_df['id'] = new_df['id'].astype(str).str.strip()
+    
+    # تحديد الطلاب الجدد (الذين أرقام هوياتهم غير موجودة في القاعدة الحالية)
+    new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
+    
+    if not new_students.empty:
+        new_students['vak_result'] = "غير مختبر"
+        for col in ['v_score', 'a_score', 'k_score']: new_students[col] = "0"
+        
+        # دمج الطلاب الجدد مع القاعدة الحالية
+        updated_df = pd.concat([current_df, new_students], ignore_index=True)
+        conn.update(spreadsheet=SHEET_URL, data=updated_df)
+        fetch_all_data.clear()
+        return len(new_students)
+    return 0
 
 # ==========================================
-# 3. الترويسة الذكية وتوليد تقارير HTML
+# 3. الترويسة الذكية وتوليد تقارير HTML ودوال الإكسل
 # ==========================================
 def get_school_name(df_subset):
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
@@ -186,6 +185,14 @@ def normalize_numbers(text):
     arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
     return text.translate(arabic_to_english).strip()
 
+def create_excel_download(df):
+    """توليد ملف Excel (xlsx) حقيقي لتجنب مشاكل ترميز CSV والأعمدة المدمجة"""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    processed_data = output.getvalue()
+    return processed_data
+
 # ==========================================
 # 4. الواجهة الرئيسية
 # ==========================================
@@ -218,7 +225,6 @@ with tab_admin:
     else:
         user = st.session_state.current_user
         
-        # الترويسة العلوية للإدارة بتصميم المربع (Box) والتحديث
         col_user, col_refresh, col_logout = st.columns([6, 2, 2])
         with col_user:
             role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
@@ -237,7 +243,6 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
-        # تصميم البطاقات العلوية المتطابق مع الصورة (HTML مخصص)
         total_students = len(df_all)
         completed_tests = len(df_tested)
         pending_tests = total_students - completed_tests
@@ -272,7 +277,7 @@ with tab_admin:
             tab_data = None
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- التبويب 1: الرئيسية (الرسم البياني المخصص) ---
+        # --- التبويب 1: الرئيسية ---
         if tab_main is not None:
             with tab_main:
                 st.markdown("<h3 style='text-align: center; color: #2c3e50;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
@@ -280,34 +285,19 @@ with tab_admin:
                     v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
                     a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
                     k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
-                    
                     max_val = max(v_count, a_count, k_count)
                     h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
                     h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
                     h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
-                    
                     chart_html = f"""
                     <div class="custom-chart-container">
-                        <div class="chart-bar-wrapper">
-                            <div class="chart-value">{v_count}</div>
-                            <div class="chart-bar" style="height: {h_v}%;"></div>
-                            <div class="chart-label">بصري 👁️</div>
-                        </div>
-                        <div class="chart-bar-wrapper">
-                            <div class="chart-value">{k_count}</div>
-                            <div class="chart-bar" style="height: {h_k}%;"></div>
-                            <div class="chart-label">حركي 🏃‍♂️</div>
-                        </div>
-                        <div class="chart-bar-wrapper">
-                            <div class="chart-value">{a_count}</div>
-                            <div class="chart-bar" style="height: {h_a}%;"></div>
-                            <div class="chart-label">سمعي 👂</div>
-                        </div>
+                        <div class="chart-bar-wrapper"><div class="chart-value">{v_count}</div><div class="chart-bar" style="height: {h_v}%;"></div><div class="chart-label">بصري 👁️</div></div>
+                        <div class="chart-bar-wrapper"><div class="chart-value">{k_count}</div><div class="chart-bar" style="height: {h_k}%;"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
+                        <div class="chart-bar-wrapper"><div class="chart-value">{a_count}</div><div class="chart-bar" style="height: {h_a}%;"></div><div class="chart-label">سمعي 👂</div></div>
                     </div>
                     """
                     st.markdown(chart_html, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
+                else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
         # --- التبويب 2: التقارير ---
         with tab_reports:
@@ -317,32 +307,19 @@ with tab_admin:
             if report_type == "تقرير الفصول الشامل":
                 classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
                 selected_class = st.selectbox("اختر النطاق (الفصل):", classes)
-                
                 df_class = df_all.copy() if selected_class == "جميع الفصول" else df_all[df_all['class_name'] == selected_class].copy()
                 df_class_tested = df_class[df_class['vak_result'] != 'غير مختبر'].copy()
                 
                 if len(df_class_tested) > 0:
                     display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'})
                     html_table = display_cols.to_html(index=False, classes="table", justify="center")
-                    
                     v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
                     a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
                     k_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('حركي', na=False)]) / len(df_class_tested) * 100, 1)
-                    
                     class_content = f"""
-                    <div class="summary-box">
-                        <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
-                            الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 15px;">عدد الطلاب المنجزين لهذا الاختبار: {len(df_class_tested)}</span>
-                        </h3>
-                        <div class="stats-container">
-                            <div class="stat-card visual"><div class="stat-title">👁️ بصري</div><div class="stat-value">{v_pct}%</div></div>
-                            <div class="stat-card auditory"><div class="stat-title">👂 سمعي</div><div class="stat-value">{a_pct}%</div></div>
-                            <div class="stat-card kinesthetic"><div class="stat-title">🏃‍♂️ حركي</div><div class="stat-value">{k_pct}%</div></div>
-                        </div>
-                    </div>
-                    <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>
-                    {html_table}
-                    """
+                    <div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 15px;">عدد الطلاب المنجزين لهذا الاختبار: {len(df_class_tested)}</span></h3>
+                    <div class="stats-container"><div class="stat-card visual"><div class="stat-title">👁️ بصري</div><div class="stat-value">{v_pct}%</div></div><div class="stat-card auditory"><div class="stat-title">👂 سمعي</div><div class="stat-value">{a_pct}%</div></div><div class="stat-card kinesthetic"><div class="stat-title">🏃‍♂️ حركي</div><div class="stat-value">{k_pct}%</div></div></div></div>
+                    <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>{html_table}"""
                     report_title = "التقرير الشامل لأنماط التعلم - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير أنماط التعلم - فصل {selected_class}"
                     full_html = generate_html_page(report_title, class_content, get_school_name(df_class_tested))
                     st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
@@ -351,9 +328,7 @@ with tab_admin:
             elif report_type == "تقرير غير المختبرين":
                 classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
                 selected_class = st.selectbox("اختر النطاق (الفصل):", classes)
-                
                 df_untested = df_all[df_all['vak_result'] == 'غير مختبر'].copy() if selected_class == "جميع الفصول" else df_all[(df_all['class_name'] == selected_class) & (df_all['vak_result'] == 'غير مختبر')].copy()
-                
                 if len(df_untested) > 0:
                     display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
                     html_table = display_cols.to_html(index=False, classes="table", justify="center")
@@ -377,21 +352,12 @@ with tab_admin:
                             s = df_all[df_all['id'] == exact_id].iloc[0]
                             if s['vak_result'] == 'غير مختبر': st.error("هذا الطالب لم يجرِ الاختبار بعد.")
                             else:
-                                school_names_html = get_school_name(pd.DataFrame([s]))
                                 v_pct = int(float(s['v_score'])) * 10
                                 a_pct = int(float(s['a_score'])) * 10
                                 k_pct = int(float(s['k_score'])) * 10
-                                
-                                if "بصري" in s['vak_result']:
-                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."
-                                    recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
-                                elif "سمعي" in s['vak_result']:
-                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل السمعية والحوارية."
-                                    recs = "<li>توظيف الشرح الشفهي والنقاشات الجماعية.</li><li>الاعتماد على الترديد والتسجيلات الصوتية.</li><li>تشجيع الطالب على القراءة بصوت مسموع.</li>"
-                                else:
-                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
-                                    recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
-
+                                if "بصري" in s['vak_result']: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."; recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
+                                elif "سمعي" in s['vak_result']: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل السمعية والحوارية."; recs = "<li>توظيف الشرح الشفهي والنقاشات الجماعية.</li><li>الاعتماد على الترديد والتسجيلات الصوتية.</li><li>تشجيع الطالب على القراءة بصوت مسموع.</li>"
+                                else: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."; recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
                                 student_content = f"""
                                 <div class="summary-box"><p><b>اسم الطالب:</b> {s['name']}</p><p><b>الصف والفصل:</b> {s['grade']} - {s['class_name']}</p><p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p></div>
                                 <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
@@ -401,44 +367,48 @@ with tab_admin:
                                 <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
-                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
+                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, get_school_name(pd.DataFrame([s])))
                                 st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
-        # --- التبويب 3: البيانات (الاستيراد والتصدير) ---
+        # --- التبويب 3: البيانات (الاستيراد والتصدير الذكي بملفات Excel .xlsx) ---
         if tab_data is not None:
             with tab_data:
                 st.subheader("إدارة قاعدة بيانات الطلاب")
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    # زر تحميل قالب فارغ
+                    # زر تحميل قالب Excel فارغ (.xlsx)
                     template_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
-                    csv = template_df.to_csv(index=False).encode('utf-8-sig') # utf-8-sig لدعم اللغة العربية في Excel
-                    st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=csv, file_name='students_template.csv', mime='text/csv', use_container_width=True)
+                    excel_data = create_excel_download(template_df)
+                    st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=excel_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
                 with col2:
-                    # زر أخذ نسخة احتياطية
-                    backup_csv = df_all.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button(label="💾 تحميل نسخة احتياطية للبيانات كاملة", data=backup_csv, file_name=f'vak_backup_{datetime.now().strftime("%Y%m%d")}.csv', mime='text/csv', use_container_width=True)
+                    # زر أخذ نسخة احتياطية بصيغة Excel (.xlsx)
+                    backup_excel = create_excel_download(df_all)
+                    st.download_button(label="💾 تحميل نسخة احتياطية (Excel)", data=backup_excel, file_name=f'vak_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
 
                 st.markdown("---")
-                st.write("**📤 رفع بيانات الطلاب من ملف Excel (CSV):**")
-                st.info("تأكد أن الملف المرفوع يحتوي على نفس عناوين القالب (id, name, grade, class_name) وأن الأرقام باللغة الإنجليزية.")
-                uploaded_file = st.file_uploader("اختر ملف CSV", type=['csv'])
+                st.write("**📤 الاستيراد الذكي لبيانات الطلاب (رفع ملف Excel):**")
+                st.info("💡 النظام سيتجاهل الهويات الموجودة مسبقاً للحفاظ على نتائجها، وسيضيف فقط الطلاب الجدد الموجودين في الملف كـ 'غير مختبر'.")
+                uploaded_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv)", type=['xlsx', 'csv'])
                 
                 if uploaded_file is not None:
                     try:
-                        new_data = pd.read_csv(uploaded_file)
-                        if all(col in new_data.columns for col in ['id', 'name', 'grade', 'class_name']):
-                            st.write("معاينة للبيانات المرفوعة:")
-                            st.dataframe(new_data.head(), use_container_width=True)
-                            if st.button("✅ تأكيد واعتماد البيانات (سيتم استبدال القائمة الحالية)"):
-                                overwrite_student_data(new_data)
-                                st.success("تم تحديث قاعدة البيانات بنجاح!")
-                                st.rerun()
+                        if uploaded_file.name.endswith('.csv'):
+                            new_data = pd.read_csv(uploaded_file)
                         else:
-                            st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة. استخدم القالب المخصص.")
+                            new_data = pd.read_excel(uploaded_file)
+                            
+                        if all(col in new_data.columns for col in ['id', 'name', 'grade', 'class_name']):
+                            added_count = intelligent_merge_students(new_data)
+                            if added_count > 0:
+                                st.success(f"✅ تم إضافة {added_count} طالب جديد بنجاح وتجاهل الطلاب الموجودين مسبقاً!")
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ جميع الطلاب الموجودين في الملف مسجلون بالفعل في النظام. لم تتم إضافة أي طالب جديد.")
+                        else:
+                            st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name, grade, class_name).")
                     except Exception as e:
-                        st.error("حدث خطأ أثناء قراءة الملف.")
+                        st.error("حدث خطأ أثناء قراءة الملف. تأكد من صحة التنسيق.")
                 
                 st.markdown("---")
                 display_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
