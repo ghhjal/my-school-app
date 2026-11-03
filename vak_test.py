@@ -27,39 +27,60 @@ st.markdown("""
         direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; 
     }
     
-    /* 💡 شريط البنر النحيف والمدمج - مصمم خصيصاً ليناسب الجوال */
+    /* 💡 شريط البنر المحدث */
     .custom-header {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 10px 15px; /* حشوة صغيرة جداً لجعله شريطاً رفيعاً */
+        padding: 12px 15px;
         border-radius: 8px; 
-        text-align: center;
         color: white;
         margin-bottom: 20px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
     .title-wrapper {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        margin-bottom: 2px;
+        gap: 10px;
+        margin-bottom: 4px;
+        width: 100%;
     }
+    
+    /* 💡 تكبير الخط قليلاً */
     .header-main-title {
-        font-size: 20px !important; /* خط مناسب للجوال */
+        font-size: 24px !important; 
         font-weight: bold;
         margin: 0 !important;
         padding: 0 !important;
         line-height: 1.2;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    /* 💡 حركات الأنيميشن للقبعة (تطفو وتتمايل برفق) */
+    @keyframes float-cap {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-3px) rotate(-10deg); }
+        50% { transform: translateY(-5px) rotate(0deg); }
+        75% { transform: translateY(-3px) rotate(10deg); }
     }
     .header-icon {
-        font-size: 22px;
+        font-size: 26px;
+        display: inline-block;
+        animation: float-cap 3.5s ease-in-out infinite; /* تطبيق الحركة بشكل مستمر */
     }
+    
+    /* 💡 توسيط دقيق وتكبير طفيف للعنوان الفرعي */
     .header-sub-title {
-        font-size: 11px !important; /* خط صغير جداً وأنيق */
+        font-size: 13px !important; 
         color: #d1d8e0 !important;
         margin: 0 !important;
         padding: 0 !important;
         font-weight: normal;
+        text-align: center !important;
+        width: 100% !important;
     }
 
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
@@ -270,7 +291,7 @@ def create_excel_download(df):
 # 5. الواجهة الإدارية الرئيسية
 # ==========================================
 
-# 💡 الهيدر المخصص الجديد - مصمم بشكل أفقي متناسق
+# 💡 الهيدر المخصص الجديد
 st.markdown("""
 <div class="custom-header">
     <div class="title-wrapper">
