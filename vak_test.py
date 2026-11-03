@@ -26,7 +26,6 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
-# دالة ذكية تقوم بجلب البيانات مرة واحدة وتخزينها في الذاكرة لمدة 10 دقائق
 @st.cache_data(ttl=600)
 def fetch_all_data():
     df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
@@ -62,7 +61,6 @@ def save_result(student_id, result, v, a, k):
     df.loc[df['id'] == str(student_id), 'a_score'] = str(a)
     df.loc[df['id'] == str(student_id), 'k_score'] = str(k)
     conn.update(spreadsheet=SHEET_URL, data=df)
-    # مسح التخزين المؤقت لكي تظهر النتيجة الجديدة للإدارة فوراً
     fetch_all_data.clear()
 
 # ==========================================
@@ -183,11 +181,6 @@ tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ �
 # 5. تبويب الإدارة والمعلمين
 # ==========================================
 with tab_admin:
-    # إضافة زر لتحديث البيانات يدوياً إذا تطلب الأمر
-    if st.button("🔄 تحديث البيانات", use_container_width=True):
-        fetch_all_data.clear()
-        st.success("تم جلب أحدث البيانات من Google Sheets.")
-        
     if 'current_user' not in st.session_state: st.session_state.current_user = None
 
     if st.session_state.current_user is None:
@@ -197,10 +190,8 @@ with tab_admin:
         
         if st.button("تسجيل الدخول 🔑", use_container_width=True):
             if teacher_id_input:
-                df_teachers = get_all_teachers()
-                if df_teachers.empty:
-                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets. يرجى إنشاؤها أولاً.")
-                else:
+                try:
+                    df_teachers = get_all_teachers()
                     norm_id = normalize_numbers(teacher_id_input)
                     t_row = df_teachers[df_teachers['id'] == str(norm_id)]
                     if not t_row.empty:
@@ -209,14 +200,23 @@ with tab_admin:
                         st.rerun()
                     else:
                         st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
+                except Exception as e:
+                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets. يرجى إنشاؤها أولاً.")
             else:
                 st.warning("الرجاء إدخال رقم الهوية أولاً.")
     else:
         user = st.session_state.current_user
-        if user['role'] == 'admin':
-            st.success(f"أهلاً بك: **{user['name']}** (مدير النظام)")
-        else:
-            st.success(f"أهلاً بك: **{user['name']}**")
+        
+        col_user, col_refresh = st.columns([3, 1])
+        with col_user:
+            if user['role'] == 'admin':
+                st.success(f"أهلاً بك: **{user['name']}** (مدير النظام)")
+            else:
+                st.success(f"أهلاً بك: **{user['name']}**")
+        with col_refresh:
+            if st.button("🔄 تحديث البيانات", use_container_width=True):
+                fetch_all_data.clear()
+                st.toast("تم تحديث البيانات بنجاح.")
         
         if st.button("تسجيل الخروج", key="logout"):
             st.session_state.current_user = None
