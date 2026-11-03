@@ -85,7 +85,6 @@ def save_result(student_id, result, v, a, k):
     fetch_all_data.clear()
 
 def intelligent_merge_students(new_df):
-    """دمج ذكي للطلاب"""
     current_df = get_all_students()
     current_df['id'] = current_df['id'].astype(str).str.strip()
     new_df['id'] = new_df['id'].astype(str).str.strip()
@@ -101,14 +100,21 @@ def intelligent_merge_students(new_df):
     return 0
 
 def intelligent_merge_teachers(new_df):
-    """دمج ذكي للمعلمين"""
     current_df = get_all_teachers()
     current_df['id'] = current_df['id'].astype(str).str.strip()
     new_df['id'] = new_df['id'].astype(str).str.strip()
     
     new_teachers = new_df[~new_df['id'].isin(current_df['id'])].copy()
     if not new_teachers.empty:
-        updated_df = pd.concat([current_df, new_teachers], ignore_index=True)
+        # إضافة الصلاحيات الافتراضية بذكاء
+        new_teachers['role'] = 'teacher'
+        new_teachers['class_name'] = 'all'
+        
+        # التأكد من ترتيب الأعمدة لتطابق قاعدة البيانات
+        if 'role' not in current_df.columns: current_df['role'] = 'teacher'
+        if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
+        
+        updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name']]], ignore_index=True)
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=updated_df)
         fetch_all_data.clear()
         return len(new_teachers)
@@ -358,6 +364,7 @@ with tab_admin:
                             s = df_all[df_all['id'] == exact_id].iloc[0]
                             if s['vak_result'] == 'غير مختبر': st.error("هذا الطالب لم يجرِ الاختبار بعد.")
                             else:
+                                school_names_html = get_school_name(pd.DataFrame([s]))
                                 v_pct = int(float(s['v_score'])) * 10
                                 a_pct = int(float(s['a_score'])) * 10
                                 k_pct = int(float(s['k_score'])) * 10
@@ -373,7 +380,7 @@ with tab_admin:
                                 <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
-                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, get_school_name(pd.DataFrame([s])))
+                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
                                 st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
         # --- التبويب 3: البيانات (الاستيراد والتصدير الذكي بملفات Excel .xlsx) ---
@@ -389,10 +396,10 @@ with tab_admin:
                     with col1_s:
                         template_s_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
                         excel_s_data = create_excel_download(template_s_df)
-                        st.download_button(label="📥 تحميل قالب Excel لإضافة الطلاب", data=excel_s_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
+                        st.download_button(label="📥 تحميل قالب إضافة الطلاب", data=excel_s_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
                     with col2_s:
                         backup_s_excel = create_excel_download(df_all)
-                        st.download_button(label="💾 تحميل نسخة احتياطية (للطلاب)", data=backup_s_excel, file_name=f'students_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
+                        st.download_button(label="💾 تحميل نسخة احتياطية (الطلاب)", data=backup_s_excel, file_name=f'students_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
 
                     st.markdown("---")
                     st.write("**📤 الاستيراد الذكي لبيانات الطلاب:**")
@@ -418,22 +425,23 @@ with tab_admin:
                     display_s_df = df_all.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
                     st.dataframe(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']], use_container_width=True, hide_index=True)
 
-                # --- بيانات المعلمين ---
+                # --- بيانات المعلمين (استيراد ذكي محسّن ومخفي الصلاحيات) ---
                 with sub_tab_teachers:
                     col1_t, col2_t = st.columns(2)
                     with col1_t:
-                        template_t_df = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+                        # القالب الجديد يحتاج فقط لاسم ورقم هوية، والنظام سيتكفل بالباقي
+                        template_t_df = pd.DataFrame(columns=['id', 'name'])
                         excel_t_data = create_excel_download(template_t_df)
-                        st.download_button(label="📥 تحميل قالب Excel لإضافة المعلمين", data=excel_t_data, file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
+                        st.download_button(label="📥 تحميل قالب إضافة المعلمين", data=excel_t_data, file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
                     with col2_t:
                         try: df_teachers = get_all_teachers()
                         except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
                         backup_t_excel = create_excel_download(df_teachers)
-                        st.download_button(label="💾 تحميل نسخة احتياطية (للمعلمين)", data=backup_t_excel, file_name=f'teachers_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+                        st.download_button(label="💾 تحميل نسخة احتياطية (المعلمين)", data=backup_t_excel, file_name=f'teachers_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
 
                     st.markdown("---")
-                    st.write("**📤 الاستيراد الذكي لبيانات المعلمين:**")
-                    st.info("💡 ملاحظة مهمة: في عمود (role) اكتب 'admin' للمدير، و 'teacher' للمعلم. وفي عمود (class_name) يفضل كتابة 'all'.")
+                    st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
+                    st.info("💡 النظام سيمنح أي معلم مرفوع في الملف صلاحية معلم (Teacher) ورؤية شاملة (All) تلقائياً دون الحاجة لكتابتها.")
                     uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
                     
                     if uploaded_t_file is not None:
@@ -441,14 +449,14 @@ with tab_admin:
                             if uploaded_t_file.name.endswith('.csv'): new_t_data = pd.read_csv(uploaded_t_file)
                             else: new_t_data = pd.read_excel(uploaded_t_file)
                                 
-                            if all(col in new_t_data.columns for col in ['id', 'name', 'role', 'class_name']):
+                            if all(col in new_t_data.columns for col in ['id', 'name']):
                                 added_t_count = intelligent_merge_teachers(new_t_data)
                                 if added_t_count > 0:
-                                    st.success(f"✅ تم إضافة {added_t_count} حساب معلم/مدير جديد بنجاح وتجاهل الموجود مسبقاً!")
+                                    st.success(f"✅ تم إضافة {added_t_count} حساب معلم جديد بنجاح بصلاحيات قياسية وتجاهل الموجود مسبقاً!")
                                     st.rerun()
                                 else:
                                     st.warning("⚠️ جميع المعلمين الموجودين في الملف مسجلون بالفعل في النظام.")
-                            else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name, role, class_name).")
+                            else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name).")
                         except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
                     
                     st.markdown("---")
