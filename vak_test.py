@@ -101,7 +101,6 @@ def get_download_link(html_content, filename, link_text):
     href = f'<a href="data:text/html;base64,{b64}" download="{filename}" style="display: block; text-align: center; background-color: #27ae60; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">{link_text}</a>'
     return href
 
-# دالة ذكية لمعالجة النصوص (إزالة الهمزات والتاء المربوطة) لتسهيل البحث
 def normalize_text(text):
     if not isinstance(text, str): return ""
     return text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').strip()
@@ -113,7 +112,7 @@ st.title("🧠 منصة أنماط التعلم (VAK)")
 tab_student, tab_admin = st.tabs(["👨‍🎓 دخول الطلاب", "⚙️ الإدارة والمعلمين"])
 
 # ==========================================
-# 5. تبويب الإدارة والمعلمين (دخول برقم الهوية)
+# 5. تبويب الإدارة والمعلمين
 # ==========================================
 with tab_admin:
     if 'current_user' not in st.session_state:
@@ -134,8 +133,7 @@ with tab_admin:
                         t_data = t_row.iloc[0]
                         st.session_state.current_user = {
                             "name": t_data['name'],
-                            "role": t_data['role'],
-                            "class": t_data['class_name']
+                            "role": t_data['role']
                         }
                         st.rerun()
                     else:
@@ -161,14 +159,12 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
-        # فلترة البيانات بناءً على صلاحية المعلم
+        # تحديد الأقسام المتاحة: المعلم يرى التقارير الجماعية والفردية، والمدير يرى الإحصائيات وإدارة البيانات
         if user['role'] == 'teacher':
-            st.info(f"صلاحياتك تتيح لك استعراض وطباعة تقارير الفصل: **{user['class']}** فقط.")
-            df_all = df_all[df_all['class_name'] == str(user['class'])]
-            df_tested = df_tested[df_tested['class_name'] == str(user['class'])]
-            available_reports = ["📊 التقرير الجماعي للفصل", "📄 التقرير الفردي للطالب (طباعة)"]
+            st.info("صلاحياتك تتيح لك استعراض وطباعة تقارير جميع الفصول والطلاب بمرونة.")
+            available_reports = ["📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)"]
         else:
-            available_reports = ["🏫 التقرير الإحصائي للمدرسة", "📊 التقرير الجماعي للفصل", "📄 التقرير الفردي للطالب (طباعة)", "👥 إدارة قائمة الطلاب"]
+            available_reports = ["🏫 التقرير الإحصائي للمدرسة", "📊 التقرير الجماعي (الفصول)", "📄 التقرير الفردي للطالب (طباعة)", "👥 إدارة قائمة الطلاب"]
             
         st.markdown("### 🎛️ مركز التقارير")
         section = st.selectbox("اختر التقرير المطلوب:", available_reports)
@@ -191,24 +187,26 @@ with tab_admin:
                 st.bar_chart({"بصري 👁️": v_count, "سمعي 👂": a_count, "حركي 🏃‍♂️": k_count})
 
         # ------------------------------------
-        # التقرير الجماعي للفصل
+        # التقرير الجماعي للفصل (مفتوح للجميع)
         # ------------------------------------
-        elif section == "📊 التقرير الجماعي للفصل":
-            st.subheader("تقرير الفصل الشامل وتصدير الطباعة")
-            if user['role'] == 'admin':
-                classes = list(df_all['class_name'].dropna().unique())
-                selected_class = st.selectbox("اختر الفصل:", classes)
-                df_class = df_all[df_all['class_name'] == selected_class].copy()
-            else:
-                selected_class = user['class']
+        elif section == "📊 التقرير الجماعي (الفصول)":
+            st.subheader("تقرير الفصول الشامل وتصدير الطباعة")
+            
+            # خيار "جميع الفصول" متاح للجميع (مدير ومعلم)
+            classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
+            selected_class = st.selectbox("اختر النطاق:", classes)
+            
+            if selected_class == "جميع الفصول":
                 df_class = df_all.copy()
+            else:
+                df_class = df_all[df_all['class_name'] == selected_class].copy()
                 
             df_class_tested = df_class[df_class['vak_result'] != 'غير مختبر'].copy()
             
-            st.write(f"إجمالي طلاب الفصل: **{len(df_class)}** | من أدوا الاختبار: **{len(df_class_tested)}**")
+            st.write(f"إجمالي الطلاب في هذا العرض: **{len(df_class)}** | من أدوا الاختبار: **{len(df_class_tested)}**")
             
             if len(df_class_tested) > 0:
-                display_cols = df_class_tested[['id', 'name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'vak_result': 'النمط الغالب'})
+                display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'})
                 st.dataframe(display_cols, use_container_width=True, hide_index=True)
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
@@ -218,18 +216,18 @@ with tab_admin:
                 
                 class_content = f"""
                 <div class="summary-box">
-                    <h3>إحصائيات الفصل ({selected_class}):</h3>
+                    <h3>إحصائيات ({selected_class}):</h3>
                     <p>عدد الطلاب المنجزين للاختبار: {len(df_class_tested)}</p>
                     <p>نسبة النمط البصري: {v_pct}% | نسبة النمط السمعي: {a_pct}% | نسبة النمط الحركي: {k_pct}%</p>
                 </div>
                 <h3>قائمة الطلاب ونتائجهم:</h3>
                 {html_table}
                 """
-                full_html = generate_html_page(f"تقرير قياس أنماط التعلم - فصل {selected_class}", class_content)
-                st.markdown(get_download_link(full_html, f"Class_{selected_class}_Report.html", "📥 تحميل تقرير الفصل للطباعة (HTML)"), unsafe_allow_html=True)
+                full_html = generate_html_page(f"تقرير قياس أنماط التعلم - {selected_class}", class_content)
+                st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}.html", "📥 تحميل التقرير الجماعي للطباعة (HTML)"), unsafe_allow_html=True)
 
         # ------------------------------------
-        # التقرير الفردي (استخراج ذكي بالاسم)
+        # التقرير الفردي (بحث مفتوح للجميع)
         # ------------------------------------
         elif section == "📄 التقرير الفردي للطالب (طباعة)":
             st.subheader("استخراج تقرير الطالب")
@@ -238,19 +236,16 @@ with tab_admin:
             search_query = st.text_input("🔍 ابحث عن اسم الطالب:")
             
             if search_query:
-                # تصفية الطلاب بناءً على البحث الذكي (تجاهل الهمزات)
                 norm_query = normalize_text(search_query)
                 matches = df_all[df_all['name'].apply(lambda x: norm_query in normalize_text(x))]
                 
                 if matches.empty:
-                    st.warning("لم يتم العثور على طالب يطابق هذا الاسم ضمن نطاق صلاحياتك.")
+                    st.warning("لم يتم العثور على طالب يطابق هذا الاسم.")
                 else:
-                    # دمج الاسم والهوية والصف لتسهيل الاختيار في حالة تشابه الأسماء
                     options = matches['name'] + " | الهوية: " + matches['id'] + " | الصف: " + matches['grade']
                     selected_choice = st.selectbox("الطلاب المطابقين (اختر الطالب المطلوب):", options)
                     
                     if st.button("📄 إنشاء تقرير الطالب المحدد", use_container_width=True):
-                        # استخراج الهوية من النص المحدد
                         exact_id = selected_choice.split("الهوية: ")[1].split(" |")[0]
                         s = df_all[df_all['id'] == exact_id].iloc[0]
                         
@@ -261,7 +256,6 @@ with tab_admin:
                             a_pct = int(float(s['a_score'])) * 10
                             k_pct = int(float(s['k_score'])) * 10
                             
-                            # تحديد التوصيات بناءً على النمط
                             if "بصري" in s['vak_result']:
                                 summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."
                                 recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
