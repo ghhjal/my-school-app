@@ -22,13 +22,21 @@ st.markdown("""
     .admin-tabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 15px; padding: 10px 15px; color: #555; }
     .admin-tabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
     
-    /* تصميم خاص للإحصائيات العلوية في لوحة التحكم لتطابق الصورة المطلوبة */
-    div[data-testid="metric-container"] {
-        text-align: center;
-    }
-    div[data-testid="metric-container"] > div {
-        justify-content: center;
-    }
+    /* تصميم بطاقات الإحصائيات العلوية */
+    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+    .dash-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
+    .dash-card.total { border-color: #9b59b6; } /* لون بنفسجي لإجمالي الطلاب */
+    .dash-card.completed { border-color: #2ecc71; } /* لون أخضر للمكتملة */
+    .dash-card.pending { border-color: #f1c40f; } /* لون أصفر للمتأخرين */
+    .dash-title { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
+    .dash-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
+    
+    /* تصميم الرسم البياني المخصص */
+    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
+    .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
+    .chart-value { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #e74c3c; } /* الأرقام حمراء كما في الصورة */
+    .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
+    .chart-label { margin-top: 10px; font-weight: bold; font-size: 14px; color: #333; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -112,9 +120,9 @@ def generate_html_page(title, content, school_names_html):
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
             .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
             .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }}
-            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
-            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
-            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; }}
+            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; }}
+            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; }}
             .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
             .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
@@ -187,7 +195,6 @@ with tab_admin:
     else:
         user = st.session_state.current_user
         
-        # الترويسة العلوية للإدارة وتحديث البيانات
         col_user, col_refresh, col_logout = st.columns([6, 2, 2])
         with col_user:
             role_text = "(مدير النظام)" if user['role'] == 'admin' else ""
@@ -206,12 +213,28 @@ with tab_admin:
         for col in ['v_score', 'a_score', 'k_score']:
             df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
-        # الشريط الإحصائي العلوي (يظهر بشكل أنيق للجميع)
+        # تصميم البطاقات العلوية المتطابق مع الصورة (HTML مخصص)
+        total_students = len(df_all)
+        completed_tests = len(df_tested)
+        pending_tests = total_students - completed_tests
+        
         st.markdown("<hr style='margin: 10px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("👥 إجمالي الطلاب", len(df_all))
-        c2.metric("✅ الاختبارات المكتملة", len(df_tested))
-        c3.metric("⏳ لم يؤدوا الاختبار", len(df_all) - len(df_tested))
+        st.markdown(f"""
+        <div class="dashboard-stats-container">
+            <div class="dash-card pending">
+                <div class="dash-title">⏳ لم يؤدوا الاختبار</div>
+                <div class="dash-value">{pending_tests}</div>
+            </div>
+            <div class="dash-card completed">
+                <div class="dash-title">✅ الاختبارات المكتملة</div>
+                <div class="dash-value">{completed_tests}</div>
+            </div>
+            <div class="dash-card total">
+                <div class="dash-title">👥 إجمالي الطلاب</div>
+                <div class="dash-value">{total_students}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown("<hr style='margin: 10px 0 20px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
         st.markdown('<div class="admin-tabs">', unsafe_allow_html=True)
@@ -225,7 +248,7 @@ with tab_admin:
             tab_data = None
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- التبويب 1: الرئيسية (الإحصائيات للمدير) ---
+        # --- التبويب 1: الرئيسية (الرسم البياني المخصص) ---
         if tab_main is not None:
             with tab_main:
                 st.markdown("<h3 style='text-align: center; color: #2c3e50;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
@@ -234,12 +257,33 @@ with tab_admin:
                     a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
                     k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                     
-                    # إنشاء رسم بياني واضح مع تسمية المحاور بدقة بدلاً من الرموز التعبيرية فقط
-                    chart_data = pd.DataFrame({
-                        "النمط": ["البصري", "السمعي", "الحركي"],
-                        "عدد الطلاب": [v_count, a_count, k_count]
-                    })
-                    st.bar_chart(chart_data.set_index("النمط"), color="#005b96")
+                    max_val = max(v_count, a_count, k_count)
+                    # حساب الارتفاع النسبي لكل عمود بالنسبة لأكبر قيمة ليكون الرسم متناسقاً
+                    h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
+                    h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
+                    h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
+                    
+                    # كود HTML لإنشاء رسم بياني احترافي يظهر الأرقام في الأعلى
+                    chart_html = f"""
+                    <div class="custom-chart-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value">{v_count}</div>
+                            <div class="chart-bar" style="height: {h_v}%;"></div>
+                            <div class="chart-label">بصري 👁️</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value">{k_count}</div>
+                            <div class="chart-bar" style="height: {h_k}%;"></div>
+                            <div class="chart-label">حركي 🏃‍♂️</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value">{a_count}</div>
+                            <div class="chart-bar" style="height: {h_a}%;"></div>
+                            <div class="chart-label">سمعي 👂</div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(chart_html, unsafe_allow_html=True)
                 else:
                     st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
@@ -311,6 +355,7 @@ with tab_admin:
                             s = df_all[df_all['id'] == exact_id].iloc[0]
                             if s['vak_result'] == 'غير مختبر': st.error("هذا الطالب لم يجرِ الاختبار بعد.")
                             else:
+                                school_names_html = get_school_name(pd.DataFrame([s]))
                                 v_pct = int(float(s['v_score'])) * 10
                                 a_pct = int(float(s['a_score'])) * 10
                                 k_pct = int(float(s['k_score'])) * 10
@@ -325,19 +370,23 @@ with tab_admin:
                                     summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
                                     recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
 
+                                v_display = f"بصري Visual"
+                                a_display = f"سمعي Auditory"
+                                k_display = f"حركي Kinesthetic"
+
                                 student_content = f"""
                                 <div class="summary-box"><p><b>اسم الطالب:</b> {s['name']}</p><p><b>الصف والفصل:</b> {s['grade']} - {s['class_name']}</p><p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p></div>
                                 <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>بصري Visual</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>سمعي Auditory</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
-                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>حركي Kinesthetic</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{v_display}</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{a_display}</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>{k_display}</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
                                 <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
-                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, get_school_name(pd.DataFrame([s])))
+                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
                                 st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
-        # --- التبويب 3: البيانات (متاح للمدير) ---
+        # --- التبويب 3: البيانات ---
         if tab_data is not None:
             with tab_data:
                 st.subheader("إدارة قاعدة بيانات الطلاب")
@@ -357,7 +406,6 @@ with tab_student:
     if not st.session_state.logged_in:
         st.info("الرجاء إدخال رقم الهوية للبدء")
         student_id_input = st.text_input("رقم الهوية / الإقامة:", placeholder="أدخل رقمك هنا...", key="student_login")
-        
         if st.button("تسجيل الدخول للاختبار 🚀", use_container_width=True):
             if student_id_input:
                 norm_id = normalize_numbers(student_id_input)
@@ -372,8 +420,7 @@ with tab_student:
                         st.session_state.test_done = False
                         st.session_state.already_tested = False
                     st.rerun()
-                else:
-                    st.error("رقم الهوية غير مسجل.")
+                else: st.error("رقم الهوية غير مسجل.")
 
     elif st.session_state.logged_in and st.session_state.already_tested:
         student = st.session_state.student_data
@@ -418,17 +465,14 @@ with tab_student:
                 st.write("---")
                 
             if st.form_submit_button("إرسال النتيجة واعتمادها 📤", use_container_width=True):
-                if None in [r['choice'] for r in responses]:
-                    st.error("⚠️ الرجاء الإجابة على جميع الأسئلة قبل الإرسال.")
+                if None in [r['choice'] for r in responses]: st.error("⚠️ الرجاء الإجابة على جميع الأسئلة قبل الإرسال.")
                 else:
                     scores = {"V": 0, "A": 0, "K": 0}
                     for r in responses:
                         idx = r['options'].index(r['choice'])
                         scores[r['keys'][idx]] += 1
-                    
                     labels = {"V": "بصري 👁️", "A": "سمعي 👂", "K": "حركي 🏃‍♂️"}
                     final_result = labels[max(scores, key=scores.get)]
-                    
                     save_result(student['id'], final_result, scores["V"], scores["A"], scores["K"])
                     st.session_state.test_done = True
                     st.session_state.already_tested = False
