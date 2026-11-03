@@ -67,7 +67,7 @@ def get_school_name(df_subset):
         return "ابتدائية عبادة بن قيس الأنصاري"
 
 def generate_html_page(title, content, school_names_html):
-    """توليد صفحة HTML احترافية للطباعة"""
+    """توليد صفحة HTML احترافية للطباعة مع دعم تكرار الترويسة"""
     return f"""
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
@@ -87,6 +87,7 @@ def generate_html_page(title, content, school_names_html):
             .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }}
             .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }}
             .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }}
+            
             .report-main-title {{ 
                 text-align: center; color: #2980b9; background-color: #ebf5fb;
                 border: 1px solid #3498db; border-radius: 8px; padding: 10px;
@@ -97,11 +98,15 @@ def generate_html_page(title, content, school_names_html):
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            
             .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }}
-            .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 12px; margin-bottom: 8px; border: 1px solid #ccc; }}
-            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px; }}
-            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px; }}
-            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px; }}
+            
+            /* تصميم أشرطة النسب التفاعلية للتقرير الفردي */
+            .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }}
+            .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }}
+            
             .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }}
             .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }}
             .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }}
@@ -109,6 +114,7 @@ def generate_html_page(title, content, school_names_html):
             .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }}
             .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }}
             .stat-value {{ font-size: 18px; font-weight: bold; }}
+            
             .no-print {{ text-align: center; margin-bottom: 15px; }}
             .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }}
             @media print {{ 
@@ -155,7 +161,6 @@ def normalize_text(text):
     if not isinstance(text, str): return ""
     return text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').strip()
 
-# دالة لتحويل الأرقام العربية إلى إنجليزية لتفادي خطأ الهوية
 def normalize_numbers(text):
     if not isinstance(text, str): return ""
     arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
@@ -295,7 +300,7 @@ with tab_admin:
                             
                             if "بصري" in s['vak_result']:
                                 summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."
-                                recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص.</li>"
+                                recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
                             elif "سمعي" in s['vak_result']:
                                 summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل السمعية والحوارية."
                                 recs = "<li>توظيف الشرح الشفهي والنقاشات الجماعية.</li><li>الاعتماد على الترديد والتسجيلات الصوتية.</li><li>تشجيع الطالب على القراءة بصوت مسموع.</li>"
@@ -303,10 +308,10 @@ with tab_admin:
                                 summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
                                 recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
 
-                            # إخفاء الأصفار من النتيجة التفصيلية في التقرير الفردي
-                            v_display = f"بصري Visual ({v_pct}%)" if v_pct > 0 else "بصري Visual"
-                            a_display = f"سمعي Auditory ({a_pct}%)" if a_pct > 0 else "سمعي Auditory"
-                            k_display = f"حركي Kinesthetic ({k_pct}%)" if k_pct > 0 else "حركي Kinesthetic"
+                            # النسب الديناميكية التفاعلية لعرض البيانات بشكل احترافي
+                            v_display = f"بصري Visual"
+                            a_display = f"سمعي Auditory"
+                            k_display = f"حركي Kinesthetic"
 
                             student_content = f"""
                             <div class="summary-box">
@@ -316,13 +321,22 @@ with tab_admin:
                             </div>
                             
                             <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
-                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">{v_display}</div>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;">
+                                <span>{v_display}</span>
+                                <span>{v_pct}%</span>
+                            </div>
                             <div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
                             
-                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">{a_display}</div>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;">
+                                <span>{a_display}</span>
+                                <span>{a_pct}%</span>
+                            </div>
                             <div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
                             
-                            <div style="font-weight: bold; margin-bottom: 5px; font-size: 14px;">{k_display}</div>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;">
+                                <span>{k_display}</span>
+                                <span>{k_pct}%</span>
+                            </div>
                             <div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
                             
                             <div class="summary-box" style="margin-top: 20px;">
