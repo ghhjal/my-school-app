@@ -6,7 +6,7 @@ import io
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS (تحميل فوري بدون عوائق)
+# 1. إعدادات الصفحة والـ CSS الاحترافي
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
 
@@ -35,10 +35,98 @@ st.markdown("""
     
     .header-sub-title { font-size: 13px !important; color: #d1d8e0 !important; margin: 0 !important; padding: 0 !important; font-weight: normal; text-align: center !important; width: 100% !important; position: relative; right: 25px; }
 
-    .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
-    .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 14px; padding: 10px 15px; color: #555; font-weight: bold; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9 !important; border-bottom: 3px solid #2980b9 !important; }
-    .stTabs [data-baseweb="tab-highlight"] { background-color: #2980b9 !important; }
+    /* 💡 تصميم التبويبات الرئيسية بأسلوب الكبسولات الاحترافية (Pills) */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: transparent;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 8px;
+        gap: 10px;
+        justify-content: right;
+        margin-bottom: 18px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #f8f9fa !important;
+        border: 1px solid #d1d8e0 !important;
+        border-radius: 8px !important;
+        padding: 8px 18px !important;
+        color: #2c3e50 !important;
+        font-weight: bold !important;
+        transition: all 0.25s ease !important;
+    }
+    .stTabs [data-baseweb="tab"] p {
+        color: #2c3e50 !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        margin: 0 !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #ebf5fb !important;
+        border-color: #3498db !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%) !important;
+        border-color: #1f618d !important;
+        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.25) !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] p {
+        color: #ffffff !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+
+    /* 💡 تحويل خيارات التقارير (Radio Buttons) إلى بطاقات تفاعلية أنيقة */
+    div[role="radiogroup"] {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        justify-content: space-between !important;
+        background-color: #f4f6f9 !important;
+        padding: 8px !important;
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    div[role="radiogroup"] > label {
+        flex: 1 1 calc(25% - 10px) !important;
+        min-width: 140px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #dce1e7 !important;
+        border-radius: 8px !important;
+        padding: 10px 12px !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+    }
+    div[role="radiogroup"] > label:hover {
+        border-color: #2980b9 !important;
+        background-color: #ebf5fb !important;
+        transform: translateY(-1px);
+    }
+    /* إخفاء الدائرة الحمراء التقليدية نهائياً */
+    div[role="radiogroup"] > label > div:first-child {
+        display: none !important;
+    }
+    div[role="radiogroup"] > label p {
+        font-size: 13.5px !important;
+        font-weight: bold !important;
+        color: #2c3e50 !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+    }
+    /* تلوين البطاقة المختارة بالأزرق الاحترافي */
+    div[role="radiogroup"] > label:has(input:checked) {
+        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%) !important;
+        border-color: #2980b9 !important;
+        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.3) !important;
+    }
+    div[role="radiogroup"] > label:has(input:checked) p {
+        color: #ffffff !important;
+    }
     
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
@@ -253,7 +341,6 @@ def get_school_name(df_subset):
     else: return "ابتدائية عبادة بن قيس الأنصاري"
 
 def generate_html_page(title, content, school_names_html):
-    # التعرف على اسم المعلم تلقائياً إذا لم يكن الحساب حساب مدير النظام
     curr_user = st.session_state.get('current_user')
     if curr_user and curr_user.get('role') != 'admin':
         teacher_name_display = f"أ. {curr_user.get('name')}"
@@ -400,15 +487,17 @@ else:
             else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
+        # 💡 بطاقات اختيار نوع التقرير المزودة بالأيقونات (بدون عنوان تقليدي مزدحم)
         report_type = st.radio(
-            "حدد نوع التقرير الذي تود استخراجه:",
-            ["تقرير الفصول الشامل", "تقرير فرز الأنماط (بصري / سمعي / حركي)", "تقرير غير المختبرين", "التقرير الفردي لطالب"],
-            horizontal=True
+            "نوع التقرير:",
+            ["📋 تقرير الفصول الشامل", "🎨 فرز الأنماط (بصري/سمعي/حركي)", "⏳ تقرير غير المختبرين", "👤 التقرير الفردي لطالب"],
+            horizontal=True,
+            label_visibility="collapsed"
         )
-        st.markdown("---")
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         
         # 1️⃣ تقرير الفصول الشامل
-        if report_type == "تقرير الفصول الشامل":
+        if report_type == "📋 تقرير الفصول الشامل":
             col_f1, col_f2 = st.columns(2)
             with col_f1:
                 classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
@@ -448,7 +537,7 @@ else:
                 st.warning("لا يوجد طلاب مطابقين لهذا الفلتر في النطاق المحدد.")
 
         # 2️⃣ تقرير فرز الأنماط المخصص
-        elif report_type == "تقرير فرز الأنماط (بصري / سمعي / حركي)":
+        elif report_type == "🎨 فرز الأنماط (بصري/سمعي/حركي)":
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 chosen_style_label = st.selectbox("اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
@@ -494,7 +583,7 @@ else:
                 st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
 
         # 3️⃣ تقرير غير المختبرين
-        elif report_type == "تقرير غير المختبرين":
+        elif report_type == "⏳ تقرير غير المختبرين":
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
             selected_class = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_untested")
             df_untested = df_all[df_all['vak_result'] == 'غير مختبر'].copy() if selected_class == "جميع الفصول" else df_all[(df_all['class_name'] == selected_class) & (df_all['vak_result'] == 'غير مختبر')].copy()
@@ -511,8 +600,7 @@ else:
             else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
         # 4️⃣ التقرير الفردي لطالب
-        elif report_type == "التقرير الفردي لطالب":
-            st.subheader("استخراج تقرير الطالب")
+        elif report_type == "👤 التقرير الفردي لطالب":
             st.info("💡 اكتب اسم الطالب أو رقم هويته ثم اضغط على زر (بحث).")
             
             col_search_in, col_search_btn = st.columns([4, 1.2])
