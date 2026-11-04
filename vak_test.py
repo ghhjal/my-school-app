@@ -181,7 +181,7 @@ def sync_google_forms():
         except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
         df_forms_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="responses", ttl=0, dtype=str)
     except Exception as e:
-        st.error(f"⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق.")
+        st.error("⚠️ خطأ في الاتصال أو لم يتم العثور على الأوراق.")
         return
 
     required_cols = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
@@ -253,11 +253,36 @@ def get_school_name(df_subset):
     else: return "ابتدائية عبادة بن قيس الأنصاري"
 
 def generate_html_page(title, content, school_names_html):
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #2980b9; background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }} .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }} .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    # التعرف على اسم المعلم تلقائياً إذا لم يكن الحساب حساب مدير النظام
+    curr_user = st.session_state.get('current_user')
+    if curr_user and curr_user.get('role') != 'admin':
+        teacher_name_display = f"أ. {curr_user.get('name')}"
+    else:
+        teacher_name_display = "............................................."
+
+    signature_html = f"""
+    <div class="signature-section">
+        <div class="sig-box">
+            <div class="sig-title">معلم المادة / المختص</div>
+            <div class="sig-line">الاسم: {teacher_name_display}</div>
+            <div class="sig-line">التوقيع: .............................................</div>
+        </div>
+        <div class="sig-stamp">
+            <div class="stamp-circle">الختم الرسمي</div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-title">يعتمد ،، مدير المدرسة</div>
+            <div class="sig-line">الاسم: أ. عبدالمجيد الحربي</div>
+            <div class="sig-line">التوقيع: .............................................</div>
+        </div>
+    </div>
+    """
+
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #2980b9; background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }} .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }} .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #2c3e50; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
-    </td></tr></thead><tbody style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; text-align: right; font-weight: normal; background: none;"><div class="report-main-title">{title}</div>{content}</td></tr></tbody></table>
+    </td></tr></thead><tbody style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; text-align: right; font-weight: normal; background: none;"><div class="report-main-title">{title}</div>{content}{signature_html}</td></tr></tbody></table>
     </body></html>"""
 
 def get_download_link(html_content, filename, link_text):
@@ -382,7 +407,7 @@ else:
         )
         st.markdown("---")
         
-        # 1️⃣ تقرير الفصول الشامل (مع إمكانية الفلترة ومع رقم تسلسلي)
+        # 1️⃣ تقرير الفصول الشامل
         if report_type == "تقرير الفصول الشامل":
             col_f1, col_f2 = st.columns(2)
             with col_f1:
@@ -422,12 +447,12 @@ else:
             else:
                 st.warning("لا يوجد طلاب مطابقين لهذا الفلتر في النطاق المحدد.")
 
-        # 2️⃣ تقرير فرز الأنماط المخصص (بصري / سمعي / حركي)
+        # 2️⃣ تقرير فرز الأنماط المخصص
         elif report_type == "تقرير فرز الأنماط (بصري / سمعي / حركي)":
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 chosen_style_label = st.selectbox("اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
-                chosen_style_key = chosen_style_label.split()[0] # يأخذ كلمة بصري أو سمعي أو حركي
+                chosen_style_key = chosen_style_label.split()[0]
             with col_s2:
                 classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
                 selected_class_style = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_style_only")
@@ -468,7 +493,7 @@ else:
             else:
                 st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
 
-        # 3️⃣ تقرير غير المختبرين (مع رقم تسلسلي م)
+        # 3️⃣ تقرير غير المختبرين
         elif report_type == "تقرير غير المختبرين":
             classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
             selected_class = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_untested")
@@ -485,7 +510,7 @@ else:
                 st.markdown(get_download_link(full_html, f"Untested_Report_{selected_class}.html", "📥 تحميل تقرير غير المختبرين للطباعة (A4)"), unsafe_allow_html=True)
             else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
-        # 4️⃣ التقرير الفردي لطالب (مع زر بحث صريح)
+        # 4️⃣ التقرير الفردي لطالب
         elif report_type == "التقرير الفردي لطالب":
             st.subheader("استخراج تقرير الطالب")
             st.info("💡 اكتب اسم الطالب أو رقم هويته ثم اضغط على زر (بحث).")
@@ -565,7 +590,6 @@ else:
                     except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
                 st.markdown("---")
                 
-                # 💡 إضافة شريط وزر بحث سريع داخل جدول الطلاب
                 col_db_q, col_db_b = st.columns([4, 1.2])
                 with col_db_q:
                     db_search_q = st.text_input("🔍 بحث سريع في سجل الطلاب:", placeholder="ابحث بالاسم أو الهوية أو الفصل...", key="db_s_q")
