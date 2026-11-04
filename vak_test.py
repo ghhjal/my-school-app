@@ -1,14 +1,12 @@
 import streamlit as st
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import base64
 import io
-import re
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS (تحميل فوري)
+# 1. إعدادات الصفحة والـ CSS (تحميل فوري بدون عوائق)
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
 
@@ -67,7 +65,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر فوراً قبل أي اتصال بقاعدة البيانات
+# رسم الهيدر فوراً على الشاشة
 st.markdown("""
 <div class="custom-header">
     <div class="title-wrapper">
@@ -79,26 +77,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. التهيئة وتعريف دوال جلب البيانات
+# 2. دوال الاتصال الكسول (لا تعمل إلا عند الطلب)
 # ==========================================
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
+
 def clean_id(val):
     if pd.isna(val): return ""
     val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
     return val.split('.')[0].strip()
 
-@st.cache_resource
-def get_connection():
+def get_gsheets_conn():
+    # استيراد المكتبة عند الحاجة فقط لتسريع فتح الموقع
+    from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
+@st.cache_data(ttl=600)
+def get_all_teachers():
+    conn = get_gsheets_conn()
+    try:
+        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", dtype=str)
+        df_teachers['id'] = df_teachers['id'].apply(clean_id)
+        return df_teachers
+    except:
+        return pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
 
 @st.cache_data(ttl=600)
-def fetch_all_data():
-    conn = get_connection()
+def get_all_students():
+    conn = get_gsheets_conn()
     try: 
-        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
+        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", dtype=str)
     except: 
-        try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        try: df_students = conn.read(spreadsheet=SHEET_URL, dtype=str)
         except: df_students = pd.DataFrame()
         
     required_cols = ['id', 'name', 'grade', 'class_name']
@@ -113,21 +122,13 @@ def fetch_all_data():
         df_students[col] = df_students[col].fillna("0")
         
     df_students['id'] = df_students['id'].apply(clean_id)
-        
-    try: df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
-    except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-        
-    return df_students, df_teachers
+    return df_students
 
-def get_all_students():
-    df, _ = fetch_all_data()
-    return df
+def clear_all_caches():
+    get_all_students.clear()
+    get_all_teachers.clear()
+    st.cache_data.clear()
 
-def get_all_teachers():
-    _, df = fetch_all_data()
-    return df
-
-# ... (باقي الدوال الذكية ظلت كما هي: intelligent_merge_students, intelligent_merge_teachers, get_vak_style) ...
 def intelligent_merge_students(new_df):
     current_df = get_all_students()
     current_df['id'] = current_df['id'].apply(clean_id)
@@ -137,10 +138,10 @@ def intelligent_merge_students(new_df):
         new_students['vak_result'] = "غير مختبر"
         for col in ['v_score', 'a_score', 'k_score']: new_students[col] = "0"
         updated_df = pd.concat([current_df, new_students], ignore_index=True)
-        conn = get_connection()
+        conn = get_gsheets_conn()
         try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=updated_df)
         except: conn.update(spreadsheet=SHEET_URL, data=updated_df)
-        fetch_all_data.clear()
+        clear_all_caches()
         return len(new_students)
     return 0
 
@@ -155,12 +156,15 @@ def intelligent_merge_teachers(new_df):
         if 'role' not in current_df.columns: current_df['role'] = 'teacher'
         if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
         updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name']]], ignore_index=True)
-        conn = get_connection()
+        conn = get_gsheets_conn()
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=updated_df)
-        fetch_all_data.clear()
+        clear_all_caches()
         return len(new_teachers)
     return 0
 
+# ==========================================
+# 3. محرك التصحيح الآلي
+# ==========================================
 def get_vak_style(answer):
     ans = str(answer).strip().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ة", "ه")
     if any(x in ans for x in ["فيديو", "السبوره", "الاحداث", "فيلم", "الاقلام", "التخطيط", "الرسم", "التلوين", "مصوره", "خريطه", "يشاهدني", "الفوضى", "حركه", "النهائي", "كيف يبدو", "شكله", "ملامح", "ابتسم", "تلمع", "الكلمه مكتوبه", "راسي"]): return 'V'
@@ -169,7 +173,7 @@ def get_vak_style(answer):
     return None
 
 def sync_google_forms():
-    conn = get_connection()
+    conn = get_gsheets_conn()
     try:
         try: df_students_fresh = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
         except: df_students_fresh = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
@@ -224,13 +228,16 @@ def sync_google_forms():
     if updates_count > 0:
         try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=df_students_fresh)
         except: conn.update(spreadsheet=SHEET_URL, data=df_students_fresh)
-        fetch_all_data.clear()
+        clear_all_caches()
         st.toast(f"تم استيراد وتحديث نتائج {updates_count} طالب بنجاح! 🎉", icon="✅")
         time.sleep(1) 
         st.rerun()
     else:
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
+# ==========================================
+# 4. الترويسة الذكية وتوليد تقارير HTML والملفات (مع تخزين مؤقت للسرعة)
+# ==========================================
 def get_school_name(df_subset):
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
     if "ابتدائي" in text_to_search and "متوسط" in text_to_search: return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
@@ -249,13 +256,15 @@ def get_download_link(html_content, filename, link_text):
     b64 = base64.b64encode(html_content.encode('utf-8')).decode()
     return f'<a href="data:text/html;base64,{b64}" download="{filename}" style="display: block; text-align: center; background-color: #27ae60; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">{link_text}</a>'
 
+@st.cache_data
 def create_excel_download(df):
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df.to_excel(writer, index=False, sheet_name='Sheet1')
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
     return output.getvalue()
 
 # ==========================================
-# 5. منطق تسجيل الدخول (يحدث بعد رسم الهيدر)
+# 5. منطق تسجيل الدخول والواجهة الإدارية
 # ==========================================
 if 'current_user' not in st.session_state: st.session_state.current_user = None
 
@@ -263,7 +272,6 @@ if st.session_state.current_user is None:
     st.info("💡 يرجى إدخال رقم الهوية الخاص بك للوصول إلى لوحة التحكم.")
     teacher_id_input = st.text_input("رقم الهوية:", placeholder="أدخل رقم هويتك هنا...")
     
-    # 💡 الكود لن يتصل بـ Google Sheets ولن يبطئ الشاشة إلا إذا ضغط المستخدم هذا الزر
     if st.button("تسجيل الدخول 🔑", use_container_width=True):
         if teacher_id_input:
             with st.spinner("جاري التحقق من الهوية..."):
@@ -292,7 +300,7 @@ else:
                 with st.spinner("جاري جلب وتصحيح الإجابات..."):
                     sync_google_forms()
             if st.button("🔄 تحديث الشاشة", use_container_width=True):
-                fetch_all_data.clear()
+                clear_all_caches()
                 st.rerun()
                 
         with col_logout:
@@ -379,7 +387,7 @@ else:
                 <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>{html_table}"""
                 report_title = "التقرير الشامل لأنماط التعلم - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير أنماط التعلم - فصل {selected_class}"
                 full_html = generate_html_page(report_title, class_content, get_school_name(df_class_tested))
-                st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
+                st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
             else: st.warning("لا يوجد طلاب مختبرين في هذا النطاق.")
 
         elif report_type == "تقرير غير المختبرين":
@@ -392,7 +400,7 @@ else:
                 untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
                 report_title = "تقرير حصر الطلاب غير المختبرين - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير حصر الطلاب غير المختبرين - فصل {selected_class}"
                 full_html = generate_html_page(report_title, untested_content, get_school_name(df_untested))
-                st.markdown(get_download_link(full_html, f"Untested_Report_{selected_class}_{datetime.now().strftime('%H%M%S')}.html", "📥 تحميل تقرير غير المختبرين للطباعة (A4)"), unsafe_allow_html=True)
+                st.markdown(get_download_link(full_html, f"Untested_Report_{selected_class}.html", "📥 تحميل تقرير غير المختبرين للطباعة (A4)"), unsafe_allow_html=True)
             else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
         elif report_type == "التقرير الفردي لطالب":
@@ -428,7 +436,7 @@ else:
                             <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                             """
                             full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
-                            st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report_{datetime.now().strftime('%H%M%S')}.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
+                            st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report.html", f"📥 تحميل التقرير الفردي للطباعة"), unsafe_allow_html=True)
 
     if tab_data is not None:
         with tab_data:
@@ -443,7 +451,7 @@ else:
                     st.download_button("📥 تحميل قالب إضافة الطلاب", data=excel_s_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
                 with col2_s:
                     backup_s_excel = create_excel_download(df_all)
-                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=backup_s_excel, file_name=f'students_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
+                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=backup_s_excel, file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي لبيانات الطلاب:**")
                 uploaded_s_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للطلاب", type=['xlsx', 'csv'], key="up_s")
@@ -470,7 +478,7 @@ else:
                     try: df_teachers = get_all_teachers()
                     except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
                     backup_t_excel = create_excel_download(df_teachers)
-                    st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=backup_t_excel, file_name=f'teachers_backup_{datetime.now().strftime("%Y%m%d")}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+                    st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=backup_t_excel, file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
                 uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
