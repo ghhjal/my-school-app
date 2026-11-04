@@ -35,9 +35,12 @@ st.markdown("""
     
     .header-sub-title { font-size: 13px !important; color: #d1d8e0 !important; margin: 0 !important; padding: 0 !important; font-weight: normal; text-align: center !important; width: 100% !important; position: relative; right: 25px; }
 
+    /* 💡 تنسيق التبويبات وتوحيد الخط السفلي النشط باللون الأزرق */
     .stTabs [data-baseweb="tab-list"] { background-color: transparent; border-bottom: 2px solid #e0e0e0; border-radius: 0; padding: 0; gap: 20px; justify-content: right; overflow-x: auto; margin-bottom: 15px;}
     .stTabs [data-baseweb="tab"] { background-color: transparent; border: none; font-size: 14px; padding: 10px 15px; color: #555; font-weight: bold; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9; border-bottom: 3px solid #2980b9; }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2980b9 !important; border-bottom: 3px solid #2980b9 !important; }
+    .stTabs [data-baseweb="tab-highlight"] { background-color: #2980b9 !important; }
+    
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
     .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
@@ -57,9 +60,9 @@ st.markdown("""
     
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
-    .chart-value { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #e74c3c; } 
-    .chart-bar { width: 100%; background-color: #005b96; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
-    .chart-label { margin-top: 10px; font-weight: bold; font-size: 12px; color: #333; }
+    .chart-value { font-weight: bold; font-size: 15px; margin-bottom: 5px; } 
+    .chart-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .chart-label { margin-top: 10px; font-weight: bold; font-size: 13px; color: #333; }
     
     .custom-footer { text-align: center; color: #7f8c8d; font-size: 13px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-family: 'Tajawal', sans-serif; }
 </style>
@@ -77,7 +80,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. دوال الاتصال الكسول (لا تعمل إلا عند الطلب)
+# 2. دوال الاتصال المشترك والتخزين المؤقت طويل الأمد
 # ==========================================
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
@@ -86,12 +89,13 @@ def clean_id(val):
     val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
     return val.split('.')[0].strip()
 
+@st.cache_resource
 def get_gsheets_conn():
-    # استيراد المكتبة عند الحاجة فقط لتسريع فتح الموقع
+    # 💡 حفظ قناة الاتصال في ذاكرة السيرفر الدائمة ليتشاركها جميع المستخدمين فوراً
     from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=7200)
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
@@ -101,7 +105,7 @@ def get_all_teachers():
     except:
         return pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=7200)
 def get_all_students():
     conn = get_gsheets_conn()
     try: 
@@ -236,7 +240,7 @@ def sync_google_forms():
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
 # ==========================================
-# 4. الترويسة الذكية وتوليد تقارير HTML والملفات (مع تخزين مؤقت للسرعة)
+# 4. الترويسة الذكية وتوليد تقارير HTML والملفات
 # ==========================================
 def get_school_name(df_subset):
     text_to_search = " ".join(df_subset['grade'].fillna("").astype(str)) + " " + " ".join(df_subset['class_name'].fillna("").astype(str))
@@ -293,7 +297,8 @@ else:
         col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
         
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 80px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير)</div>', unsafe_allow_html=True)
+            # 💡 محاذاة ارتفاع صندوق الترحيب (95px) ليتطابق مع الأزرار المجاورة
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 95px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير)</div>', unsafe_allow_html=True)
             
         with col_actions:
             if st.button("📥 جلب النتائج", use_container_width=True):
@@ -355,11 +360,13 @@ else:
                 h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
                 h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
                 h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
+                
+                # 💡 تلوين كل عمود في الرسم البياني بلونه المميز المتناسق مع التقارير
                 chart_html = f"""
                 <div class="custom-chart-container">
-                    <div class="chart-bar-wrapper"><div class="chart-value">{v_count}</div><div class="chart-bar" style="height: {h_v}%;"></div><div class="chart-label">بصري 👁️</div></div>
-                    <div class="chart-bar-wrapper"><div class="chart-value">{k_count}</div><div class="chart-bar" style="height: {h_k}%;"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
-                    <div class="chart-bar-wrapper"><div class="chart-value">{a_count}</div><div class="chart-bar" style="height: {h_a}%;"></div><div class="chart-label">سمعي 👂</div></div>
+                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #2980b9;">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, #3498db, #2980b9);"></div><div class="chart-label">بصري 👁️</div></div>
+                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #27ae60;">{k_count}</div><div class="chart-bar" style="height: {h_k}%; background: linear-gradient(180deg, #2ecc71, #27ae60);"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
+                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #d35400;">{a_count}</div><div class="chart-bar" style="height: {h_a}%; background: linear-gradient(180deg, #e67e22, #d35400);"></div><div class="chart-label">سمعي 👂</div></div>
                 </div>
                 """
                 st.markdown(chart_html, unsafe_allow_html=True)
