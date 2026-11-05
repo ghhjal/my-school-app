@@ -723,7 +723,6 @@ else:
                         c_opts = ["الكل"] + list(df_st['class'].dropna().unique())
                         sel_class = c1.selectbox("🏫 اختر الصف:", c_opts, key="ls_class")
                         
-                        # ✳️ تمت إضافة خيار "تم الاختبار ✅" للقائمة
                         style_opts = ["الكل", "تم الاختبار ✅", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟", "لم يختبر ⏳"]
                         sel_style = c2.selectbox("🎯 اختر النمط المستهدف:", style_opts, key="ls_style")
                         
@@ -741,28 +740,30 @@ else:
                             if sel_style == "لم يختبر ⏳":
                                 df_filtered = df_filtered[df_filtered['نمط التعلم'].isna() | (df_filtered['نمط التعلم'].astype(str).str.strip().isin(["", "nan", "None"]))]
                             elif sel_style == "تم الاختبار ✅":
-                                # ✳️ فلترة جميع الطلاب الذين لديهم نتيجة مسجلة واستبعاد الفارغين
                                 df_filtered = df_filtered[df_filtered['نمط التعلم'].notna() & (~df_filtered['نمط التعلم'].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))]
                             elif sel_style != "الكل":
-                                keyword = sel_style.split()[0] # أخذ الكلمة الأولى فقط للبحث
+                                keyword = sel_style.split()[0]
                                 df_filtered = df_filtered[df_filtered['نمط التعلم'].astype(str).str.contains(keyword, na=False)]
                             
                             if df_filtered.empty:
                                 st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
                             else:
+                                # ✳️ الفرز حسب الصف أولاً، ثم حسب اسم الطالب أبجدياً
+                                df_sorted = df_filtered.sort_values(by=['class', 'name'])
+                                
                                 # بناء صفوف الجدول
                                 rows_html = ""
-                                for i, (_, r) in enumerate(df_filtered.sort_values('name').iterrows(), 1):
+                                for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
                                     s_val = r.get('نمط التعلم', '')
                                     if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
                                         s_val = "لم يختبر ⏳"
                                     
-                                    # تلوين النمط (تم إضافة اللون البنفسجي لمتعدد الأنماط)
+                                    # تلوين النمط
                                     clr = "#3B82F6" if "بصري" in s_val else "#10B981" if "سمعي" in s_val else "#F59E0B" if "حركي" in s_val else "#8B5CF6" if "متعدد" in s_val else "#94A3B8"
                                     
                                     rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
                                 
-                                # ✳️ تحديد اسم المدرسة ديناميكياً بناءً على الصف المختار
+                                # تحديد اسم المدرسة ديناميكياً بناءً على الصف المختار
                                 if sel_class == "الكل":
                                     school_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
                                 elif "متوسط" in sel_class:
@@ -770,7 +771,7 @@ else:
                                 else:
                                     school_name = "ابتدائية عبادة بن قيس الأنصاري"
 
-                                # تصميم HTML بتنسيق مضغوط للطباعة ونصوص محدثة
+                                # تصميم HTML بتنسيق مضغوط للطباعة
                                 ls_report_html = f"""
                                 <!DOCTYPE html>
                                 <html dir="rtl" lang="ar">
