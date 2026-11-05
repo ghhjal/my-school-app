@@ -8,7 +8,7 @@ import time
 # ==========================================
 # 1. إعدادات الصفحة والـ CSS المتوافق مع الوضع الليلي والنهاري
 # ==========================================
-st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="منصة زياد الذكية | أنماط التعلم (VAK)", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
@@ -18,17 +18,37 @@ st.markdown("""
         direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif;
     }
     
+    /* 💡 الهيدر المطور بهوية المنصة وشارة قسم أنماط التعلم */
     .custom-header {
-        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 12px 15px; border-radius: 8px; color: white !important; margin-bottom: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #2980b9 100%);
+        padding: 16px 15px;
+        border-radius: 12px;
+        color: white !important;
+        margin-bottom: 22px;
+        box-shadow: 0 4px 12px rgba(30, 60, 114, 0.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
-    .title-wrapper { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; width: 100%; }
+    .title-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 8px;
+        width: 100%;
+    }
     .header-main-title {
-        font-size: 24px !important; font-weight: bold; margin: 0 !important; padding: 0 !important;
-        line-height: 1.2; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        font-size: 25px !important;
+        font-weight: bold;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.2;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
     }
     
     @keyframes float-cap {
@@ -37,12 +57,44 @@ st.markdown("""
         50% { transform: translateY(-5px) rotate(0deg); }
         75% { transform: translateY(-3px) rotate(10deg); }
     }
-    .header-icon { font-size: 26px; display: inline-block; animation: float-cap 3.5s ease-in-out infinite; }
+    .header-icon { font-size: 27px; display: inline-block; animation: float-cap 3.5s ease-in-out infinite; }
     
-    .header-sub-title {
-        font-size: 13px !important; color: #e0f7fa !important; -webkit-text-fill-color: #e0f7fa !important;
-        margin: 0 !important; padding: 0 !important; font-weight: normal;
-        text-align: center !important; width: 100% !important; position: relative; right: 25px;
+    .header-badge {
+        background-color: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 13px !important;
+        color: #f1f5f9 !important;
+        -webkit-text-fill-color: #f1f5f9 !important;
+        font-weight: bold;
+        display: inline-block;
+        margin: 0 auto !important;
+        text-align: center !important;
+    }
+
+    /* 💡 بطاقة تسجيل الدخول الاحترافية المتناسقة مع المنصة الأم */
+    .login-card-header {
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1;
+        border-right: 4px solid #2980b9;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    .login-card-title {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        margin-bottom: 5px;
+    }
+    .login-card-sub {
+        font-size: 13px !important;
+        color: #475569 !important;
+        -webkit-text-fill-color: #475569 !important;
+        margin: 0;
     }
 
     .stTabs [data-baseweb="tab-list"] {
@@ -160,14 +212,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر فوراً على الشاشة
+# رسم الهيدر فوراً على الشاشة بالهوية الموحدة والشارة التخصصية
 st.markdown("""
 <div class="custom-header">
     <div class="title-wrapper">
         <span class="header-icon">🎓</span>
         <h1 class="header-main-title">منصة زياد الذكية</h1>
     </div>
-    <h2 class="header-sub-title">أنماط التعلم - لوحة الإدارة</h2>
+    <div class="header-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -433,10 +485,16 @@ if 'current_user' not in st.session_state: st.session_state.current_user = None
 if 'active_report' not in st.session_state: st.session_state.active_report = "comp"
 
 if st.session_state.current_user is None:
-    st.info("💡 يرجى إدخال رقم الهوية الخاص بك للوصول إلى لوحة التحكم.")
+    st.markdown("""
+    <div class="login-card-header">
+        <div class="login-card-title">👨‍🏫 تسجيل دخول المعلمين والإدارة</div>
+        <p class="login-card-sub">أدخل رقم الهوية لاستعراض الإحصائيات وطباعة تقارير أنماط التعلم المعتمدة للطلاب والفصول</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     teacher_id_input = st.text_input("رقم الهوية:", placeholder="أدخل رقم هويتك هنا...")
     
-    if st.button("تسجيل الدخول 🔑", use_container_width=True):
+    if st.button("تسجيل الدخول للمنصة 🚀", use_container_width=True):
         if teacher_id_input:
             with st.spinner("جاري التحقق من الهوية..."):
                 try:
@@ -457,7 +515,7 @@ else:
         col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
         
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 95px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 95px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير النظام)</div>', unsafe_allow_html=True)
             
         with col_actions:
             if st.button("📥 جلب النتائج", use_container_width=True):
@@ -476,7 +534,7 @@ else:
     else:
         col_user, col_logout = st.columns([8, 2])
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">مرحباً بك: أ. {user["name"]}</div>', unsafe_allow_html=True)
         with col_logout:
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
@@ -531,7 +589,6 @@ else:
             else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
-        # 💡 شبكة أزرار تفاعلية حقيقية (2×2) واضحة 100% في الوضع الليلي والنهاري
         curr_rep = st.session_state.active_report
         
         r_col1, r_col2 = st.columns(2)
