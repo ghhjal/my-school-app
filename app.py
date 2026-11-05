@@ -723,7 +723,7 @@ else:
                         c_opts = ["الكل"] + list(df_st['class'].dropna().unique())
                         sel_class = c1.selectbox("🏫 اختر الصف:", c_opts, key="ls_class")
                         
-                         style_opts = ["الكل", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟", "لم يختبر ⏳"]
+                        style_opts = ["الكل", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟", "لم يختبر ⏳"]
                         sel_style = c2.selectbox("🎯 اختر النمط المستهدف:", style_opts, key="ls_style")
                         
                         if st.button("🖨️ توليد تقرير الأنماط للطباعة", type="primary", use_container_width=True):
