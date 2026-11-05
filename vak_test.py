@@ -6,7 +6,7 @@ import io
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS الاحترافي
+# 1. إعدادات الصفحة والـ CSS المتوافق مع الوضع الليلي والنهاري
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية - أنماط التعلم", page_icon="🎓", layout="centered")
 
@@ -14,16 +14,22 @@ st.markdown("""
 <style>
     header[data-testid="stHeader"] { display: none !important; }
     .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput { direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif; }
+    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput {
+        direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif;
+    }
     
     .custom-header {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%);
-        padding: 12px 15px; border-radius: 8px; color: white; margin-bottom: 20px;
+        padding: 12px 15px; border-radius: 8px; color: white !important; margin-bottom: 20px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column;
         align-items: center; justify-content: center;
     }
     .title-wrapper { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; width: 100%; }
-    .header-main-title { font-size: 24px !important; font-weight: bold; margin: 0 !important; padding: 0 !important; line-height: 1.2; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+    .header-main-title {
+        font-size: 24px !important; font-weight: bold; margin: 0 !important; padding: 0 !important;
+        line-height: 1.2; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
     
     @keyframes float-cap {
         0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -33,123 +39,118 @@ st.markdown("""
     }
     .header-icon { font-size: 26px; display: inline-block; animation: float-cap 3.5s ease-in-out infinite; }
     
-    .header-sub-title { font-size: 13px !important; color: #d1d8e0 !important; margin: 0 !important; padding: 0 !important; font-weight: normal; text-align: center !important; width: 100% !important; position: relative; right: 25px; }
+    .header-sub-title {
+        font-size: 13px !important; color: #e0f7fa !important; -webkit-text-fill-color: #e0f7fa !important;
+        margin: 0 !important; padding: 0 !important; font-weight: normal;
+        text-align: center !important; width: 100% !important; position: relative; right: 25px;
+    }
 
-    /* 💡 تصميم التبويبات الرئيسية بأسلوب الكبسولات الاحترافية (Pills) */
+    /* 💡 تصميم التبويبات الرئيسية المتوافق مع الدارك مود */
     .stTabs [data-baseweb="tab-list"] {
         background-color: transparent;
-        border-bottom: 2px solid #e0e0e0;
+        border-bottom: 2px solid #cbd5e1;
         padding-bottom: 8px;
-        gap: 10px;
+        gap: 8px;
         justify-content: right;
         margin-bottom: 18px;
     }
     .stTabs [data-baseweb="tab"] {
-        background-color: #f8f9fa !important;
-        border: 1px solid #d1d8e0 !important;
+        background-color: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
-        padding: 8px 18px !important;
-        color: #2c3e50 !important;
+        padding: 8px 14px !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
         font-weight: bold !important;
-        transition: all 0.25s ease !important;
     }
-    .stTabs [data-baseweb="tab"] p {
-        color: #2c3e50 !important;
-        font-size: 14px !important;
+    .stTabs [data-baseweb="tab"] * {
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-size: 13.5px !important;
         font-weight: bold !important;
         margin: 0 !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #ebf5fb !important;
-        border-color: #3498db !important;
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
         background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%) !important;
         border-color: #1f618d !important;
         box-shadow: 0 3px 8px rgba(41, 128, 185, 0.25) !important;
     }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] p {
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none !important;
-    }
+    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
 
-    /* 💡 تحويل خيارات التقارير (Radio Buttons) إلى بطاقات تفاعلية أنيقة */
-    div[role="radiogroup"] {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 10px !important;
-        justify-content: space-between !important;
-        background-color: #f4f6f9 !important;
+    /* 💡 إصلاح جذري لبطاقات التقارير في الوضع الليلي والنهاري بالجوال */
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        background-color: #e2e8f0 !important;
         padding: 8px !important;
         border-radius: 10px !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid #cbd5e1 !important;
     }
-    div[role="radiogroup"] > label {
-        flex: 1 1 calc(25% - 10px) !important;
-        min-width: 140px !important;
+    div[data-testid="stRadio"] div[role="radiogroup"] > label {
         background-color: #ffffff !important;
-        border: 1px solid #dce1e7 !important;
+        border: 1.5px solid #cbd5e1 !important;
         border-radius: 8px !important;
-        padding: 10px 12px !important;
+        padding: 10px 8px !important;
         margin: 0 !important;
         cursor: pointer !important;
-        transition: all 0.2s ease !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         text-align: center !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        width: 100% !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
     }
-    div[role="radiogroup"] > label:hover {
-        border-color: #2980b9 !important;
-        background-color: #ebf5fb !important;
-        transform: translateY(-1px);
+    /* إجبار النص داخل البطاقة غير النشطة على اللون الداكن الواضح دائماً */
+    div[data-testid="stRadio"] div[role="radiogroup"] > label * {
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        margin: 0 !important;
     }
-    /* إخفاء الدائرة الحمراء التقليدية نهائياً */
-    div[role="radiogroup"] > label > div:first-child {
+    /* إخفاء دوائر الراديو الافتراضية في الجوال والكمبيوتر */
+    div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
         display: none !important;
     }
-    div[role="radiogroup"] > label p {
-        font-size: 13.5px !important;
-        font-weight: bold !important;
-        color: #2c3e50 !important;
-        margin: 0 !important;
-        white-space: nowrap !important;
-    }
-    /* تلوين البطاقة المختارة بالأزرق الاحترافي */
-    div[role="radiogroup"] > label:has(input:checked) {
+    /* تلوين البطاقة المختارة بالأزرق والنص الأبيض الساطع */
+    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {
         background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%) !important;
-        border-color: #2980b9 !important;
-        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.3) !important;
+        border-color: #1f618d !important;
+        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.35) !important;
     }
-    div[role="radiogroup"] > label:has(input:checked) p {
+    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) * {
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
+    /* 💡 تثبيت ألوان بطاقات الإحصائيات وصندوق الترحيب ضد تغير الثيم */
     .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
-    .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
+    .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
     .dash-card.total { border-color: #9b59b6; } 
     .dash-card.completed { border-color: #2ecc71; } 
     .dash-card.pending { border-color: #f1c40f; } 
-    .dash-title { font-size: 12px; margin-bottom: 5px; color: #555; font-weight: bold; }
-    .dash-value { font-size: 22px; font-weight: bold; color: #2c3e50; }
-    .welcome-box { background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; color: #2980b9; font-size: 14px; font-weight: bold; }
+    .dash-title { font-size: 12px; margin-bottom: 5px; color: #475569 !important; -webkit-text-fill-color: #475569 !important; font-weight: bold; }
+    .dash-value { font-size: 22px; font-weight: bold; color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; }
+    .welcome-box { background-color: #ebf5fb !important; border: 1px solid #3498db; border-radius: 8px; padding: 10px; color: #1f618d !important; -webkit-text-fill-color: #1f618d !important; font-size: 14px; font-weight: bold; }
     
-    button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #d1d8e0 !important; border-radius: 8px !important; color: #2c3e50 !important; font-weight: bold !important; transition: all 0.3s ease !important; }
-    button[kind="secondary"]:hover { background-color: #eef2f5 !important; border-color: #2980b9 !important; color: #2980b9 !important; }
-    button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
-    button[kind="primary"]:hover { background-color: #ffc2c2 !important; color: #c0392b !important; border-color: #ff9999 !important; }
+    button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; font-weight: bold !important; }
+    button[kind="secondary"] * { color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; }
+    button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; -webkit-text-fill-color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
+    button[kind="primary"] * { color: #d63031 !important; -webkit-text-fill-color: #d63031 !important; }
     div[data-testid="stButton"] button p { font-size: 13.5px !important; white-space: nowrap !important; overflow: visible !important; }
     
-    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #eee; margin-top: 20px; }
+    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #cbd5e1; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
     .chart-value { font-weight: bold; font-size: 15px; margin-bottom: 5px; } 
     .chart-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .chart-label { margin-top: 10px; font-weight: bold; font-size: 13px; color: #333; }
+    .chart-label { margin-top: 10px; font-weight: bold; font-size: 13px; }
     
     .custom-footer { text-align: center; color: #7f8c8d; font-size: 13px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-family: 'Tajawal', sans-serif; }
 </style>
@@ -167,7 +168,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. دوال الاتصال المشترك والتخزين المؤقت طويل الأمد
+# 2. دوال الاتصال المشترك والتخزين المؤقت الآمن
 # ==========================================
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
@@ -181,7 +182,7 @@ def get_gsheets_conn():
     from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=7200)
+@st.cache_data(ttl=7200, max_entries=5)
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
@@ -191,7 +192,7 @@ def get_all_teachers():
     except:
         return pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
 
-@st.cache_data(ttl=7200)
+@st.cache_data(ttl=7200, max_entries=5)
 def get_all_students():
     conn = get_gsheets_conn()
     try: 
@@ -203,21 +204,68 @@ def get_all_students():
     required_cols = ['id', 'name', 'grade', 'class_name']
     for col in required_cols:
         if col not in df_students.columns: df_students[col] = ""
+        df_students[col] = df_students[col].fillna("").astype(str).str.strip()
             
     if 'vak_result' not in df_students.columns: df_students['vak_result'] = "غير مختبر"
-    df_students['vak_result'] = df_students['vak_result'].fillna("غير مختبر")
+    df_students['vak_result'] = df_students['vak_result'].replace("", "غير مختبر").fillna("غير مختبر")
     
     for col in ['v_score', 'a_score', 'k_score']:
         if col not in df_students.columns: df_students[col] = "0"
-        df_students[col] = df_students[col].fillna("0")
+        df_students[col] = df_students[col].replace("", "0").fillna("0")
         
     df_students['id'] = df_students['id'].apply(clean_id)
     return df_students
 
 def clear_all_caches():
+    # 💡 مسح ذاكرة البيانات المحددة فقط لمنع خطأ WebSocket Cached ForwardMsg MISS
     get_all_students.clear()
     get_all_teachers.clear()
-    st.cache_data.clear()
+
+# ==========================================
+# 💡 دالة الفلترة الذكية المقسمة (الصف الدراسي -> الفصل)
+# ==========================================
+def infer_grade_name(row):
+    """التعرف الذكي على الصف الدراسي من عمود الصف أو استنتاجه من اسم الفصل"""
+    g = str(row.get('grade', '')).strip()
+    c = str(row.get('class_name', '')).strip()
+    if g and g not in ['nan', 'None', '']:
+        return g
+    if '/' in c:
+        return c.split('/')[0].strip()
+    return c if c else "غير محدد"
+
+def render_grade_class_Selector(df_source, key_prefix):
+    """إنشاء قائمتين منسدلتين متتاليتين: الأولى للصف والثانية للفصل لتجنب طول القائمة"""
+    df_temp = df_source.copy()
+    df_temp['_grade_group'] = df_temp.apply(infer_grade_name, axis=1)
+    
+    unique_grades = sorted([g for g in df_temp['_grade_group'].unique() if g])
+    
+    col_g, col_c = st.columns(2)
+    with col_g:
+        selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", ["جميع الصفوف"] + unique_grades, key=f"{key_prefix}_grade")
+    
+    if selected_grade != "جميع الصفوف":
+        df_filtered_grade = df_temp[df_temp['_grade_group'] == selected_grade].copy()
+    else:
+        df_filtered_grade = df_temp.copy()
+        
+    unique_classes = sorted([c for c in df_filtered_grade['class_name'].unique() if c])
+    
+    with col_c:
+        selected_class = st.selectbox("2️⃣ اختر الفصل:", ["جميع الفصول"] + unique_classes, key=f"{key_prefix}_class")
+        
+    if selected_class != "جميع الفصول":
+        df_final = df_filtered_grade[df_filtered_grade['class_name'] == selected_class].copy()
+        scope_label = f"فصل {selected_class}"
+    elif selected_grade != "جميع الصفوف":
+        df_final = df_filtered_grade.copy()
+        scope_label = f"صف {selected_grade}"
+    else:
+        df_final = df_filtered_grade.copy()
+        scope_label = "جميع الفصول"
+        
+    return df_final.drop(columns=['_grade_group'], errors='ignore'), scope_label
 
 def intelligent_merge_students(new_df):
     current_df = get_all_students()
@@ -329,7 +377,6 @@ def sync_google_forms():
 # 4. الترويسة الذكية وتوليد تقارير HTML والملفات
 # ==========================================
 def add_serial_column(df):
-    """إضافة عمود الرقم التسلسلي (م) في بداية الجدول ليظهر يمين التقرير"""
     df_out = df.copy().reset_index(drop=True)
     df_out.insert(0, 'م', range(1, len(df_out) + 1))
     return df_out
@@ -372,12 +419,7 @@ def generate_html_page(title, content, school_names_html):
     </td></tr></thead><tbody style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; text-align: right; font-weight: normal; background: none;"><div class="report-main-title">{title}</div>{content}{signature_html}</td></tr></tbody></table>
     </body></html>"""
 
-def get_download_link(html_content, filename, link_text):
-    b64 = base64.b64encode(html_content.encode('utf-8')).decode()
-    return f'<a href="data:text/html;base64,{b64}" download="{filename}" style="display: block; text-align: center; background-color: #27ae60; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">{link_text}</a>'
-
-@st.cache_data
-def create_excel_download(df):
+def create_excel_bytes(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Sheet1')
@@ -466,7 +508,7 @@ else:
 
     if tab_main is not None:
         with tab_main:
-            st.markdown("<h3 style='text-align: center; color: #2c3e50;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align: center;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
             if len(df_tested) > 0:
                 v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
                 a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
@@ -487,7 +529,6 @@ else:
             else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
-        # 💡 بطاقات اختيار نوع التقرير المزودة بالأيقونات (بدون عنوان تقليدي مزدحم)
         report_type = st.radio(
             "نوع التقرير:",
             ["📋 تقرير الفصول الشامل", "🎨 فرز الأنماط (بصري/سمعي/حركي)", "⏳ تقرير غير المختبرين", "👤 التقرير الفردي لطالب"],
@@ -496,16 +537,11 @@ else:
         )
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         
-        # 1️⃣ تقرير الفصول الشامل
+        # 1️⃣ تقرير الفصول الشامل (مع فلترة مقسمة: صف -> فصل)
         if report_type == "📋 تقرير الفصول الشامل":
-            col_f1, col_f2 = st.columns(2)
-            with col_f1:
-                classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
-                selected_class = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_comp")
-            with col_f2:
-                style_filter = st.selectbox("تصفية حسب نمط التعلم:", ["جميع الأنماط", "بصري", "سمعي", "حركي"], key="sty_comp")
+            df_class, scope_label = render_grade_class_Selector(df_all, "comp")
+            style_filter = st.selectbox("3️⃣ تصفية حسب نمط التعلم:", ["جميع الأنماط", "بصري", "سمعي", "حركي"], key="sty_comp")
                 
-            df_class = df_all.copy() if selected_class == "جميع الفصول" else df_all[df_all['class_name'] == selected_class].copy()
             df_class_tested = df_class[df_class['vak_result'] != 'غير مختبر'].copy()
             
             if style_filter != "جميع الأنماط":
@@ -528,25 +564,26 @@ else:
                 <div class="stats-container"><div class="stat-card visual"><div class="stat-title">👁️ بصري</div><div class="stat-value">{v_pct}%</div></div><div class="stat-card auditory"><div class="stat-title">👂 سمعي</div><div class="stat-value">{a_pct}%</div></div><div class="stat-card kinesthetic"><div class="stat-title">🏃‍♂️ حركي</div><div class="stat-value">{k_pct}%</div></div></div></div>
                 <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>{html_table}"""
                 
-                base_title = "التقرير الشامل لأنماط التعلم - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير أنماط التعلم - فصل {selected_class}"
+                base_title = f"تقرير أنماط التعلم - {scope_label}"
                 if style_filter != "جميع الأنماط":
                     base_title += f" (النمط ال{style_filter})"
                 full_html = generate_html_page(base_title, class_content, get_school_name(df_class_tested))
-                st.markdown(get_download_link(full_html, f"Group_Report_{selected_class}_{style_filter}.html", "📥 تحميل التقرير للطباعة (A4)"), unsafe_allow_html=True)
+                st.download_button(
+                    label="📥 تحميل التقرير للطباعة (A4)",
+                    data=full_html.encode('utf-8'),
+                    file_name=f"Group_Report_{scope_label}_{style_filter}.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
             else:
-                st.warning("لا يوجد طلاب مطابقين لهذا الفلتر في النطاق المحدد.")
+                st.warning("لا يوجد طلاب مختبرين مطابقين لهذا الفلتر في النطاق المحدد.")
 
         # 2️⃣ تقرير فرز الأنماط المخصص
         elif report_type == "🎨 فرز الأنماط (بصري/سمعي/حركي)":
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                chosen_style_label = st.selectbox("اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
-                chosen_style_key = chosen_style_label.split()[0]
-            with col_s2:
-                classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
-                selected_class_style = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_style_only")
+            df_style_sub, scope_label = render_grade_class_Selector(df_all, "style_only")
+            chosen_style_label = st.selectbox("3️⃣ اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
+            chosen_style_key = chosen_style_label.split()[0]
                 
-            df_style_sub = df_all.copy() if selected_class_style == "جميع الفصول" else df_all[df_all['class_name'] == selected_class_style].copy()
             df_style_matched = df_style_sub[df_style_sub['vak_result'].str.contains(chosen_style_key, na=False)].copy()
             
             if len(df_style_matched) > 0:
@@ -575,18 +612,23 @@ else:
                 </div>
                 <h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء طلاب النمط ال{chosen_style_key}:</h3>{html_table}"""
                 
-                scope_text = "جميع الفصول" if selected_class_style == "جميع الفصول" else f"فصل {selected_class_style}"
-                report_title = f"تقرير حصر طلاب النمط ال{chosen_style_key} ({chosen_style_label}) - {scope_text}"
+                report_title = f"تقرير حصر طلاب النمط ال{chosen_style_key} ({chosen_style_label}) - {scope_label}"
                 full_html = generate_html_page(report_title, style_content, get_school_name(df_style_matched))
-                st.markdown(get_download_link(full_html, f"Style_Report_{chosen_style_key}_{selected_class_style}.html", f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة (A4)"), unsafe_allow_html=True)
+                st.download_button(
+                    label=f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة (A4)",
+                    data=full_html.encode('utf-8'),
+                    file_name=f"Style_Report_{chosen_style_key}_{scope_label}.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
             else:
                 st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
 
-        # 3️⃣ تقرير غير المختبرين
+        # 3️⃣ تقرير غير المختبرين (مع فلترة مقسمة: صف -> فصل)
         elif report_type == "⏳ تقرير غير المختبرين":
-            classes = ["جميع الفصول"] + list(df_all['class_name'].dropna().unique())
-            selected_class = st.selectbox("اختر النطاق (الفصل):", classes, key="cls_untested")
-            df_untested = df_all[df_all['vak_result'] == 'غير مختبر'].copy() if selected_class == "جميع الفصول" else df_all[(df_all['class_name'] == selected_class) & (df_all['vak_result'] == 'غير مختبر')].copy()
+            df_scope, scope_label = render_grade_class_Selector(df_all, "untested")
+            df_untested = df_scope[df_scope['vak_result'] == 'غير مختبر'].copy()
+            
             if len(df_untested) > 0:
                 display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
                 display_cols = add_serial_column(display_cols)
@@ -594,9 +636,15 @@ else:
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
-                report_title = "تقرير حصر الطلاب غير المختبرين - جميع الفصول" if selected_class == "جميع الفصول" else f"تقرير حصر الطلاب غير المختبرين - فصل {selected_class}"
+                report_title = f"تقرير حصر الطلاب غير المختبرين - {scope_label}"
                 full_html = generate_html_page(report_title, untested_content, get_school_name(df_untested))
-                st.markdown(get_download_link(full_html, f"Untested_Report_{selected_class}.html", "📥 تحميل تقرير غير المختبرين للطباعة (A4)"), unsafe_allow_html=True)
+                st.download_button(
+                    label="📥 تحميل تقرير غير المختبرين للطباعة (A4)",
+                    data=full_html.encode('utf-8'),
+                    file_name=f"Untested_Report_{scope_label}.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
             else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
         # 4️⃣ التقرير الفردي لطالب
@@ -648,7 +696,13 @@ else:
                             <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                             """
                             full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
-                            st.markdown(get_download_link(full_html, f"Student_{s['id']}_Report.html", f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة"), unsafe_allow_html=True)
+                            st.download_button(
+                                label=f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة",
+                                data=full_html.encode('utf-8'),
+                                file_name=f"Student_{s['id']}_Report.html",
+                                mime="text/html",
+                                use_container_width=True
+                            )
 
     if tab_data is not None:
         with tab_data:
@@ -659,11 +713,9 @@ else:
                 col1_s, col2_s = st.columns(2)
                 with col1_s:
                     template_s_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
-                    excel_s_data = create_excel_download(template_s_df)
-                    st.download_button("📥 تحميل قالب إضافة الطلاب", data=excel_s_data, file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
+                    st.download_button("📥 تحميل قالب إضافة الطلاب", data=create_excel_bytes(template_s_df), file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
                 with col2_s:
-                    backup_s_excel = create_excel_download(df_all)
-                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=backup_s_excel, file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
+                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=create_excel_bytes(df_all), file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي لبيانات الطلاب:**")
                 uploaded_s_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للطلاب", type=['xlsx', 'csv'], key="up_s")
@@ -702,13 +754,11 @@ else:
                 col1_t, col2_t = st.columns(2)
                 with col1_t:
                     template_t_df = pd.DataFrame(columns=['id', 'name'])
-                    excel_t_data = create_excel_download(template_t_df)
-                    st.download_button("📥 تحميل قالب إضافة المعلمين", data=excel_t_data, file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
+                    st.download_button("📥 تحميل قالب إضافة المعلمين", data=create_excel_bytes(template_t_df), file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
                 with col2_t:
                     try: df_teachers = get_all_teachers()
                     except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-                    backup_t_excel = create_excel_download(df_teachers)
-                    st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=backup_t_excel, file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+                    st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=create_excel_bytes(df_teachers), file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
                 uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
