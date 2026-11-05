@@ -45,7 +45,6 @@ st.markdown("""
         text-align: center !important; width: 100% !important; position: relative; right: 25px;
     }
 
-    /* 💡 تصميم التبويبات الرئيسية المتوافق مع الدارك مود */
     .stTabs [data-baseweb="tab-list"] {
         background-color: transparent;
         border-bottom: 2px solid #cbd5e1;
@@ -80,57 +79,9 @@ st.markdown("""
         -webkit-text-fill-color: #ffffff !important;
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
-
-    /* 💡 إصلاح جذري لبطاقات التقارير في الوضع الليلي والنهاري بالجوال */
-    div[data-testid="stRadio"] div[role="radiogroup"] {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-        background-color: #e2e8f0 !important;
-        padding: 8px !important;
-        border-radius: 10px !important;
-        border: 1px solid #cbd5e1 !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] > label {
-        background-color: #ffffff !important;
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 10px 8px !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
-    }
-    /* إجبار النص داخل البطاقة غير النشطة على اللون الداكن الواضح دائماً */
-    div[data-testid="stRadio"] div[role="radiogroup"] > label * {
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-size: 13px !important;
-        font-weight: bold !important;
-        margin: 0 !important;
-    }
-    /* إخفاء دوائر الراديو الافتراضية في الجوال والكمبيوتر */
-    div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
-        display: none !important;
-    }
-    /* تلوين البطاقة المختارة بالأزرق والنص الأبيض الساطع */
-    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {
-        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%) !important;
-        border-color: #1f618d !important;
-        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.35) !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) * {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }
     
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
-    /* 💡 تثبيت ألوان بطاقات الإحصائيات وصندوق الترحيب ضد تغير الثيم */
     .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
     .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
     .dash-card.total { border-color: #9b59b6; } 
@@ -140,11 +91,64 @@ st.markdown("""
     .dash-value { font-size: 22px; font-weight: bold; color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; }
     .welcome-box { background-color: #ebf5fb !important; border: 1px solid #3498db; border-radius: 8px; padding: 10px; color: #1f618d !important; -webkit-text-fill-color: #1f618d !important; font-size: 14px; font-weight: bold; }
     
-    button[kind="secondary"] { background-color: #f8f9fa !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; font-weight: bold !important; }
-    button[kind="secondary"] * { color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; }
-    button[kind="primary"] { background-color: #ffeaeb !important; color: #d63031 !important; -webkit-text-fill-color: #d63031 !important; border: 1px solid #ffb8b8 !important; border-radius: 8px !important; font-weight: bold !important; }
-    button[kind="primary"] * { color: #d63031 !important; -webkit-text-fill-color: #d63031 !important; }
-    div[data-testid="stButton"] button p { font-size: 13.5px !important; white-space: nowrap !important; overflow: visible !important; }
+    /* 💡 تنسيق الأزرار القياسية (واضحة تماماً في الدارك مود واللايت مود) */
+    button[kind="secondary"] {
+        background-color: #f8f9fa !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-weight: bold !important;
+    }
+    button[kind="secondary"] * {
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-weight: bold !important;
+    }
+    button[kind="primary"] {
+        background-color: #ffeaeb !important;
+        color: #d63031 !important;
+        -webkit-text-fill-color: #d63031 !important;
+        border: 1px solid #ffb8b8 !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+    button[kind="primary"] * {
+        color: #d63031 !important;
+        -webkit-text-fill-color: #d63031 !important;
+        font-weight: bold !important;
+    }
+    div[data-testid="stButton"] button p {
+        font-size: 13px !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+    /* 💡 تلوين زر التقرير النشط باللون الأزرق الملكي والنص الأبيض */
+    div[class*="st-key-rep_active"] button {
+        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%) !important;
+        border: 1.5px solid #1f618d !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.35) !important;
+    }
+    div[class*="st-key-rep_active"] button * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    /* 💡 الحفاظ على شبكة أزرار التقارير (2×2) متجاوبة في شاشة الجوال */
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) > div {
+        width: calc(50% - 4px) !important;
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: 0 !important;
+    }
     
     .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #cbd5e1; margin-top: 20px; }
     .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
@@ -217,7 +221,6 @@ def get_all_students():
     return df_students
 
 def clear_all_caches():
-    # 💡 مسح ذاكرة البيانات المحددة فقط لمنع خطأ WebSocket Cached ForwardMsg MISS
     get_all_students.clear()
     get_all_teachers.clear()
 
@@ -225,7 +228,6 @@ def clear_all_caches():
 # 💡 دالة الفلترة الذكية المقسمة (الصف الدراسي -> الفصل)
 # ==========================================
 def infer_grade_name(row):
-    """التعرف الذكي على الصف الدراسي من عمود الصف أو استنتاجه من اسم الفصل"""
     g = str(row.get('grade', '')).strip()
     c = str(row.get('class_name', '')).strip()
     if g and g not in ['nan', 'None', '']:
@@ -235,7 +237,6 @@ def infer_grade_name(row):
     return c if c else "غير محدد"
 
 def render_grade_class_Selector(df_source, key_prefix):
-    """إنشاء قائمتين منسدلتين متتاليتين: الأولى للصف والثانية للفصل لتجنب طول القائمة"""
     df_temp = df_source.copy()
     df_temp['_grade_group'] = df_temp.apply(infer_grade_name, axis=1)
     
@@ -429,6 +430,7 @@ def create_excel_bytes(df):
 # 5. منطق تسجيل الدخول والواجهة الإدارية
 # ==========================================
 if 'current_user' not in st.session_state: st.session_state.current_user = None
+if 'active_report' not in st.session_state: st.session_state.active_report = "comp"
 
 if st.session_state.current_user is None:
     st.info("💡 يرجى إدخال رقم الهوية الخاص بك للوصول إلى لوحة التحكم.")
@@ -529,16 +531,41 @@ else:
             else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
-        report_type = st.radio(
-            "نوع التقرير:",
-            ["📋 تقرير الفصول الشامل", "🎨 فرز الأنماط (بصري/سمعي/حركي)", "⏳ تقرير غير المختبرين", "👤 التقرير الفردي لطالب"],
-            horizontal=True,
-            label_visibility="collapsed"
-        )
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        # 💡 شبكة أزرار تفاعلية حقيقية (2×2) واضحة 100% في الوضع الليلي والنهاري
+        curr_rep = st.session_state.active_report
         
-        # 1️⃣ تقرير الفصول الشامل (مع فلترة مقسمة: صف -> فصل)
-        if report_type == "📋 تقرير الفصول الشامل":
+        r_col1, r_col2 = st.columns(2)
+        with r_col1:
+            lbl_comp = "✅ 📋 الفصول الشامل" if curr_rep == "comp" else "📋 الفصول الشامل"
+            key_comp = "rep_active_comp" if curr_rep == "comp" else "rep_idle_comp"
+            if st.button(lbl_comp, key=key_comp, use_container_width=True):
+                st.session_state.active_report = "comp"
+                st.rerun()
+        with r_col2:
+            lbl_style = "✅ 🎨 فرز الأنماط" if curr_rep == "style" else "🎨 فرز الأنماط"
+            key_style = "rep_active_style" if curr_rep == "style" else "rep_idle_style"
+            if st.button(lbl_style, key=key_style, use_container_width=True):
+                st.session_state.active_report = "style"
+                st.rerun()
+
+        r_col3, r_col4 = st.columns(2)
+        with r_col3:
+            lbl_unt = "✅ ⏳ غير المختبرين" if curr_rep == "untested" else "⏳ غير المختبرين"
+            key_unt = "rep_active_unt" if curr_rep == "untested" else "rep_idle_unt"
+            if st.button(lbl_unt, key=key_unt, use_container_width=True):
+                st.session_state.active_report = "untested"
+                st.rerun()
+        with r_col4:
+            lbl_ind = "✅ 👤 التقرير الفردي" if curr_rep == "indiv" else "👤 التقرير الفردي"
+            key_ind = "rep_active_ind" if curr_rep == "indiv" else "rep_idle_ind"
+            if st.button(lbl_ind, key=key_ind, use_container_width=True):
+                st.session_state.active_report = "indiv"
+                st.rerun()
+
+        st.markdown("<hr style='margin: 12px 0; border: 0; border-top: 1px solid #cbd5e1;'>", unsafe_allow_html=True)
+        
+        # 1️⃣ تقرير الفصول الشامل
+        if curr_rep == "comp":
             df_class, scope_label = render_grade_class_Selector(df_all, "comp")
             style_filter = st.selectbox("3️⃣ تصفية حسب نمط التعلم:", ["جميع الأنماط", "بصري", "سمعي", "حركي"], key="sty_comp")
                 
@@ -579,7 +606,7 @@ else:
                 st.warning("لا يوجد طلاب مختبرين مطابقين لهذا الفلتر في النطاق المحدد.")
 
         # 2️⃣ تقرير فرز الأنماط المخصص
-        elif report_type == "🎨 فرز الأنماط (بصري/سمعي/حركي)":
+        elif curr_rep == "style":
             df_style_sub, scope_label = render_grade_class_Selector(df_all, "style_only")
             chosen_style_label = st.selectbox("3️⃣ اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
             chosen_style_key = chosen_style_label.split()[0]
@@ -624,8 +651,8 @@ else:
             else:
                 st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
 
-        # 3️⃣ تقرير غير المختبرين (مع فلترة مقسمة: صف -> فصل)
-        elif report_type == "⏳ تقرير غير المختبرين":
+        # 3️⃣ تقرير غير المختبرين
+        elif curr_rep == "untested":
             df_scope, scope_label = render_grade_class_Selector(df_all, "untested")
             df_untested = df_scope[df_scope['vak_result'] == 'غير مختبر'].copy()
             
@@ -648,7 +675,7 @@ else:
             else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
 
         # 4️⃣ التقرير الفردي لطالب
-        elif report_type == "👤 التقرير الفردي لطالب":
+        elif curr_rep == "indiv":
             st.info("💡 اكتب اسم الطالب أو رقم هويته ثم اضغط على زر (بحث).")
             
             col_search_in, col_search_btn = st.columns([4, 1.2])
