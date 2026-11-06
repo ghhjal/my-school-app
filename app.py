@@ -2530,7 +2530,7 @@ if st.session_state.role in ["teacher", "viewer"]:
               rows_html = ""
               for _, r_b in display_df.iterrows():
                 rows_html += f"<tr><td>{r_b['📅 التاريخ']}</td><td>{r_b['🎯 نوع السلوك']}</td><td>{r_b['📝 التفاصيل']}</td></tr>"
-                )
+                
               behavior_html_table = (
                   "<table><tr><th>التاريخ</th><th>نوع"
                   f" السلوك</th><th>التفاصيل</th></tr>{rows_html}</table>"
