@@ -4123,9 +4123,67 @@ if st.session_state.role in ["teacher", "viewer"]:
 
 
 # ==========================================
-# 👨‍🎓 12. واجهة الطالب الكاملة (مع شبكة 2×2 والوضع الليلي)
+# 👨‍🎓 12. واجهة الطالب الكاملة (محدثة ومضبوطة المحاذاة والـ PDF)
 # ==========================================
 if st.session_state.role == "student":
+  # إخفاء أيقونات الروابط بجانب العناوين وضبط محاذاة البطاقات للجوال
+  st.markdown(
+      """
+      <style>
+      [data-testid="stHeaderActionElements"] { display: none !important; }
+      .student-list-card {
+          background: var(--secondary-background-color);
+          border-radius: 14px;
+          padding: 16px;
+          margin-bottom: 12px;
+          border: 1.5px solid rgba(148, 163, 184, 0.28);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+          display: block !important;
+          width: 100% !important;
+          text-align: right !important;
+          direction: rtl !important;
+          color: var(--text-color);
+      }
+      .student-card-header {
+          display: flex !important;
+          flex-direction: row !important;
+          justify-content: space-between !important;
+          align-items: flex-start !important;
+          gap: 10px !important;
+          width: 100% !important;
+          direction: rtl !important;
+          margin-bottom: 6px !important;
+      }
+      .student-card-title {
+          text-align: right !important;
+          font-weight: 900 !important;
+          font-size: 1.05rem !important;
+          line-height: 1.45 !important;
+          flex: 1 !important;
+      }
+      .student-card-date {
+          background: var(--background-color);
+          padding: 3px 10px;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 800;
+          white-space: nowrap !important;
+          flex-shrink: 0 !important;
+          direction: ltr !important;
+      }
+      .student-card-body {
+          text-align: right !important;
+          direction: rtl !important;
+          width: 100% !important;
+          font-size: 0.95rem !important;
+          line-height: 1.5 !important;
+          margin: 0 !important;
+      }
+      </style>
+      """,
+      unsafe_allow_html=True,
+  )
+
   sid = str(st.session_state.get("username", "")).strip()
   df_st = st.session_state.df_students.copy()
   df_gr = st.session_state.df_grades.copy()
@@ -4146,7 +4204,7 @@ if st.session_state.role == "student":
     s_cls = str(s_dat.get("class", "")).strip()
     pts = int(pd.to_numeric(s_dat.get("النقاط", 0), errors="coerce") or 0)
 
-    # إشعار التعاميم العاجلة
+    # 1. إشعار التعاميم العاجلة
     if not df_ann.empty:
       df_ann["عاجل"] = df_ann["عاجل"].astype(str).str.strip()
       df_ann["الصف"] = df_ann["الصف"].astype(str).str.strip()
@@ -4171,7 +4229,7 @@ if st.session_state.role == "student":
             unsafe_allow_html=True,
         )
 
-    # إشعار المخالفات السلوكية لولي الأمر
+    # 2. إشعار المخالفات السلوكية لولي الأمر
     if not df_beh.empty:
       df_beh["clean_id"] = df_beh.iloc[:, 0].astype(str).str.split(".").str[0]
       my_beh_alerts = df_beh[df_beh["clean_id"] == sid]
@@ -4189,9 +4247,9 @@ if st.session_state.role == "student":
           st.markdown(
               f"""
               <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
-                  <h4 style="margin: 0 0 5px 0;">⚠️ إشعار سلوكي لولي الأمر</h4>
-                  <p style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.1rem;">{b_type}</p>
-                  <span style="color: #94A3B8; font-size: 0.9rem; display:block; margin-bottom: 10px;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                  <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 5px;">⚠️ إشعار سلوكي لولي الأمر</div>
+                  <div style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.05rem;">{b_type}</div>
+                  <span style="color: #94A3B8; font-size: 0.9rem; display:block; margin: 6px 0 10px 0;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
                   <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #EF4444;">
                       👇 <b>فضلاً:</b> نرجو الانتقال إلى تبويب <b>(📝 السلوك)</b> بالأسفل للاطلاع على السجل التفصيلي.
                   </div>
@@ -4200,18 +4258,26 @@ if st.session_state.role == "student":
               unsafe_allow_html=True,
           )
 
+    # 3. بطاقة الطالب المنسقة وبطاقة النقاط (بدون تداخل أو انقسام للـ ID)
     st.markdown(
         f"""
-        <div class="welcome-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div><h2 style="color:white; margin:0; font-size:1.5rem;">👋 أهلاً بك، {s_nm}</h2><p style="color:{t_colors['sub_color']}; margin:5px 0 0 0; font-weight:bold;">{s_cls}</p></div>
-                <div style="background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:12px;"><span style="font-weight:bold; font-size:0.9rem; color:#FFFFFF;">ID: {sid}</span></div>
+        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 22px 20px;">
+            <div style="color: #FFFFFF; font-size: 1.45rem; font-weight: 900; line-height: 1.4; margin-bottom: 14px; text-align: right;">
+                👋 أهلاً بك، {s_nm}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; direction: rtl;">
+                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
+                    🏫 الصف: {s_cls}
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
+                    🆔 ID: {sid}
+                </div>
             </div>
         </div>
         <div class="points-banner">
-            <p style="margin:0; opacity:0.95; font-size:0.95rem; font-weight:bold;">رصيد النقاط الحالي</p>
-            <h1 style="margin:0; font-size:3.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</h1>
-            <p style="margin:0; font-size:0.85rem; font-weight:bold;">استمر في التفوق!</p>
+            <div style="margin:0; opacity:0.95; font-size:1rem; font-weight:800;">رصيد النقاط الحالي</div>
+            <div style="margin:4px 0; font-size:3.6rem; font-weight:900; line-height:1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
+            <div style="margin:0; font-size:0.9rem; font-weight:800;">استمر في التفوق!</div>
         </div>
         <div class="medal-flex">
             <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي (100+)</b></div>
@@ -4231,36 +4297,43 @@ if st.session_state.role == "student":
         "⚙️ حسابي والخروج",
     ])
 
+    # --- تبويب 1: التنبيهات (محاذاة يمين ثابتة وتاريخ غير منقسم) ---
     with tabs[0]:
       st.caption("التعاميم والتنبيهات الموجهة لصفك")
       if not df_ann.empty:
         anns = df_ann[
             df_ann["الصف"].astype(str).str.strip().isin(["الكل", s_cls])
         ]
-        for _, r in anns.iloc[::-1].iterrows():
-          row_link = str(r.get("الرابط", ""))
-          row_link_display = (
-              f"<a href='{row_link}' target='_blank'"
-              f" style='color:{accent_color}; text-decoration:underline;'>اضغط"
-              " هنا للفتح</a>"
-              if row_link.startswith("http")
-              else row_link
-              if row_link.lower() != "none"
-              else ""
-          )
-          st.markdown(
-              f"""
-              <div class='mobile-list-item'>
-                  <div style="width:100%">
-                      <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>📢 {r.get('العنوان')}</b><small style="background:var(--background-color); color:{accent_color}; padding:2px 8px; border-radius:6px; font-weight:bold;">{r.get('التاريخ')}</small></div>
-                      <span style="color:#94A3B8; font-size:0.92rem;">{row_link_display}</span>
-                  </div>
-              </div>""",
-              unsafe_allow_html=True,
-          )
+        if not anns.empty:
+          for _, r in anns.iloc[::-1].iterrows():
+            row_link = str(r.get("الرابط", ""))
+            row_link_display = (
+                f"<a href='{row_link}' target='_blank'"
+                f" style='color:{accent_color}; text-decoration:underline; font-weight:bold;'>اضغط"
+                " هنا للفتح 🔗</a>"
+                if row_link.startswith("http")
+                else row_link
+                if row_link.lower() != "none"
+                else ""
+            )
+            st.markdown(
+                f"""
+                <div class="student-list-card">
+                    <div class="student-card-header">
+                        <div class="student-card-title" style="color: var(--text-color);">📢 {r.get('العنوان')}</div>
+                        <div class="student-card-date" style="color: {accent_color};">{r.get('التاريخ')}</div>
+                    </div>
+                    <div class="student-card-body" style="color: #94A3B8; font-weight: 600;">{row_link_display}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+          st.info("لا توجد تنبيهات حالياً.")
       else:
         st.info("لا توجد تنبيهات حالياً.")
 
+    # --- تبويب 2: السلوك (محاذاة يمين كاملة مهما طال النص) ---
     with tabs[1]:
       st.caption("سجل السلوك والملاحظات")
       if not df_beh.empty:
@@ -4282,13 +4355,22 @@ if st.session_state.role == "student":
                 if "سلبي" in str(n.get("type")) or "-" in str(n.get("type"))
                 else success_color
             )
+            note_txt = str(n.get("note", "")).strip()
+            note_html = (
+                f"<div class='student-card-body' style='color: var(--text-color); font-weight: 700;'>{note_txt}</div>"
+                if note_txt
+                else ""
+            )
             st.markdown(
-                f"<div class='mobile-list-item' style='border-right: 5px solid"
-                f" {color};'><div><b"
-                f" style='color:{color}'>{n.get('type')}</b><p"
-                " style='margin:4px 0; font-size:0.92rem;"
-                f" color:var(--text-color);'>{n.get('note')}</p><small"
-                f" style='color:#94A3B8;'>{n.get('date')}</small></div></div>",
+                f"""
+                <div class="student-list-card" style="border-right: 5px solid {color};">
+                    <div class="student-card-header">
+                        <div class="student-card-title" style="color: {color};">{n.get('type')}</div>
+                        <div class="student-card-date" style="color: #94A3B8;">{n.get('date')}</div>
+                    </div>
+                    {note_html}
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
         else:
@@ -4296,6 +4378,7 @@ if st.session_state.role == "student":
       else:
         st.success("🌟 سجلك نظيف تماماً!")
 
+    # --- تبويب 3: الدرجات والشهادة (تحميل PDF مباشر بصفحة واحدة A4 Landscape) ---
     with tabs[2]:
       cp = st.session_state.get("current_period", "الفترة الأولى").strip()
       st.caption(f"درجاتي الأكاديمية - {cp}")
@@ -4334,24 +4417,24 @@ if st.session_state.role == "student":
 
           st.markdown(
               f"""
-              <div class='mobile-list-item'>
-                  <span style="font-weight:bold;">📝 المشاركة والواجبات</span>
-                  <div>
+              <div class='mobile-list-item' style="direction: rtl;">
+                  <span style="font-weight:800;">📝 المشاركة والواجبات</span>
+                  <div style="direction: ltr;">
                       <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p1')}</span> 
                       <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
                   </div>
               </div>
-              <div class='mobile-list-item'>
-                  <span style="font-weight:bold;">✍️ الاختبارات القصيرة</span>
-                  <div>
+              <div class='mobile-list-item' style="direction: rtl;">
+                  <span style="font-weight:800;">✍️ الاختبارات القصيرة</span>
+                  <div style="direction: ltr;">
                       <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p2')}</span> 
                       <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
                   </div>
               </div>
-              <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start;'>
+              <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
                   <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                       <span style="color:{accent_color}; font-weight:900;">🏆 المجموع النهائي ({cp})</span>
-                      <div>
+                      <div style="direction: ltr;">
                           <span style='font-size:1.6rem; font-weight:900; color:{accent_color};'>{perf_score}</span> 
                           <span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
                       </div>
@@ -4367,90 +4450,240 @@ if st.session_state.role == "student":
           if percentage >= 90:
             st.divider()
             st.success(
-                "🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، تم تفعيل ميزة"
-                " استخراج 'شهادة التفوق الإلكترونية'."
+                "🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، يمكنك الآن تنزيل"
+                " شهادة التفوق بصيغة PDF جاهزة للطباعة."
             )
             school_st = get_school_name_dynamic(s_cls).replace("<br>", " - ")
-            certificate_html = f"""
-            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادة تفوق - {s_nm}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-            <style>
-                * {{ box-sizing: border-box; }}
-                body {{ margin: 0; padding: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-                .cert-page {{ width: 297mm; height: 210mm; padding: 10mm; background: #ffffff; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); overflow: hidden; }}
-                .border-outer {{ border: 14px solid #193b68; height: 100%; width: 100%; padding: 6px; position: relative; }}
-                .border-inner {{ border: 3px solid #b68a36; height: 100%; width: 100%; position: relative; padding: 25px 40px; text-align: center; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 25px 25px; display: flex; flex-direction: column; justify-content: space-between; }}
-                .corner {{ position: absolute; width: 30px; height: 30px; border: 4px solid #b68a36; }}
-                .tl {{ top: -8px; left: -8px; border-right: none; border-bottom: none; }}
-                .tr {{ top: -8px; right: -8px; border-left: none; border-bottom: none; }}
-                .bl {{ bottom: -8px; left: -8px; border-right: none; border-top: none; }}
-                .br {{ bottom: -8px; right: -8px; border-left: none; border-top: none; }}
-                h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 66px; color: #b68a36; margin: 0; font-weight: normal; }}
-                h2 {{ font-family: 'Cairo', sans-serif; font-size: 32px; color: #193b68; margin: 5px 0 15px 0; font-weight: 900; }}
-                p.intro {{ font-family: 'Cairo', sans-serif; font-size: 22px; color: #193b68; margin-bottom: 10px; }}
-                .student-name {{ font-family: 'Cairo', sans-serif; font-size: 50px; font-weight: 900; color: #d32f2f; margin: 10px auto; display: inline-block; border-bottom: 3px solid #b68a36; padding: 0 30px 5px 30px; }}
-                p.reason {{ font-family: 'Cairo', sans-serif; font-size: 23px; font-weight: 600; color: #444; line-height: 1.7; margin: 0; }}
-                .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding: 0 30px; font-family: 'Cairo', sans-serif; }}
-                .sig-box, .date-box {{ text-align: center; color: #193b68; width: 220px; }}
-                .sig-title {{ font-size: 20px; font-weight: bold; }}
-                .sig-line {{ border-bottom: 1px solid #b68a36; width: 150px; margin: 8px auto; }}
-                .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; color: #193b68; }}
-                .date-val {{ font-size: 20px; font-weight: bold; color: #333; margin-top: 8px; }}
-                @media print {{ @page {{ size: A4 landscape; margin: 0mm; }} body {{ background: white; }} .cert-page {{ padding: 0; box-shadow: none; width: 297mm; height: 210mm; }} }}
-            </style></head><body>
-                <div class="cert-page">
-                    <div class="border-outer">
-                        <div class="border-inner">
-                            <div class="corner tl"></div><div class="corner tr"></div>
-                            <div class="corner bl"></div><div class="corner br"></div>
-                            <div style="display:flex; justify-content:space-between; font-family:'Cairo',sans-serif; font-size:14px; font-weight:bold; color:#193b68;">
-                                <div>المملكة العربية السعودية - وزارة التعليم<br>{school_st}</div>
-                                <div>العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cp}</div>
-                            </div>
-                            <h1>شهادة شكر وتقدير</h1>
-                            <h2>⭐ وسام التميز الأكاديمي ⭐</h2>
-                            <p class="intro">يتقدم الأستاذ/ <strong>زياد المعمري</strong> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
-                            <div class="student-name">{s_nm}</div>
-                            <div>
-                                <p class="reason">وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في مادة اللغة الإنجليزية.</p>
-                                <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
-                            </div>
-                            <div class="footer-section">
-                                <div class="date-box">
-                                    <div class="sig-title">تاريخ الإصدار</div>
-                                    <div class="sig-line"></div>
-                                    <div class="date-val">{datetime.date.today().strftime('%Y-%m-%d')}</div>
-                                </div>
-                                <div style="width: 135px; height: 135px; border: 3px dashed #d32f2f; border-radius: 50%; transform: rotate(-15deg); color: #d32f2f; text-align: center; opacity: 0.85; padding-top: 22px; margin: 0 auto;">
-                                    <div style="font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 900;">وسام</div>
-                                    <div style="font-family: 'Aref Ruqaa', serif; font-size: 32px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
-                                    <div style="font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: bold;">الأكاديمي</div>
-                                </div>
-                                <div class="sig-box">
-                                    <div class="sig-title">توقيع المعلم</div>
-                                    <div class="sig-line"></div>
-                                    <div class="sig-name">زياد المعمري</div>
-                                </div>
-                            </div>
+
+            # تصميم الشهادة بمقاس A4 أفقي صارم (صفحة واحدة فقط بدون أي هوامش زائدة)
+            certificate_html = f"""<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>شهادة تفوق - {s_nm}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        @page {{
+            size: 297mm 210mm;
+            margin: 0mm !important;
+        }}
+        * {{
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        html, body {{
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 297mm;
+            height: 210mm;
+            background-color: #ffffff;
+            font-family: 'Cairo', sans-serif;
+            overflow: hidden;
+        }}
+        .cert-page {{
+            width: 297mm;
+            height: 210mm;
+            padding: 8mm;
+            background: #ffffff;
+            position: relative;
+            page-break-after: avoid;
+            page-break-before: avoid;
+            page-break-inside: avoid;
+        }}
+        .border-outer {{
+            border: 12px solid #193b68;
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            position: relative;
+        }}
+        .border-inner {{
+            border: 3px solid #b68a36;
+            width: 100%;
+            height: 100%;
+            padding: 18px 35px;
+            text-align: center;
+            position: relative;
+            background-color: #ffffff;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 22px 22px;
+        }}
+        .corner {{ position: absolute; width: 28px; height: 28px; border: 4px solid #b68a36; }}
+        .tl {{ top: -7px; left: -7px; border-right: none; border-bottom: none; }}
+        .tr {{ top: -7px; right: -7px; border-left: none; border-bottom: none; }}
+        .bl {{ bottom: -7px; left: -7px; border-right: none; border-top: none; }}
+        .br {{ bottom: -7px; right: -7px; border-left: none; border-top: none; }}
+
+        .top-meta {{
+            width: 100%;
+            display: table;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #193b68;
+        }}
+        .top-meta-right {{ display: table-cell; text-align: right; width: 50%; vertical-align: top; line-height: 1.5; }}
+        .top-meta-left {{ display: table-cell; text-align: left; width: 50%; vertical-align: top; line-height: 1.5; }}
+
+        h1 {{
+            font-family: 'Aref Ruqaa', serif;
+            font-size: 60px;
+            color: #b68a36;
+            margin: 0 0 4px 0;
+            font-weight: bold;
+            line-height: 1.15;
+        }}
+        h2 {{
+            font-family: 'Cairo', sans-serif;
+            font-size: 28px;
+            color: #193b68;
+            margin: 0 0 14px 0;
+            font-weight: 900;
+        }}
+        p.intro {{
+            font-size: 21px;
+            color: #193b68;
+            margin: 0 0 8px 0;
+            font-weight: 700;
+        }}
+        .student-name {{
+            font-size: 46px;
+            font-weight: 900;
+            color: #d32f2f;
+            margin: 6px auto 14px auto;
+            display: inline-block;
+            border-bottom: 3px solid #b68a36;
+            padding: 0 35px 6px 35px;
+            line-height: 1.2;
+        }}
+        .reason-container {{
+            margin: 8px 0 18px 0;
+        }}
+        p.reason {{
+            font-size: 22px;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.65;
+            margin: 0;
+        }}
+        .footer-table {{
+            width: 100%;
+            display: table;
+            margin-top: 15px;
+            padding: 0 20px;
+        }}
+        .footer-cell {{
+            display: table-cell;
+            width: 33.33%;
+            vertical-align: bottom;
+            text-align: center;
+            color: #193b68;
+        }}
+        .sig-title {{ font-size: 20px; font-weight: 800; }}
+        .sig-line {{ border-bottom: 1.5px solid #b68a36; width: 150px; margin: 8px auto; }}
+        .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; color: #193b68; font-weight: bold; }}
+        .date-val {{ font-size: 20px; font-weight: 800; color: #1e293b; margin-top: 8px; }}
+        .stamp-circle {{
+            width: 128px;
+            height: 128px;
+            border: 3px dashed #d32f2f;
+            border-radius: 50%;
+            transform: rotate(-14deg);
+            color: #d32f2f;
+            text-align: center;
+            opacity: 0.88;
+            padding-top: 18px;
+            margin: 0 auto;
+            position: relative;
+            background-color: rgba(255, 255, 255, 0.85);
+        }}
+        .stamp-inner {{
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px solid #d32f2f;
+            border-radius: 50%;
+        }}
+    </style>
+</head>
+<body>
+    <div class="cert-page">
+        <div class="border-outer">
+            <div class="border-inner">
+                <div class="corner tl"></div><div class="corner tr"></div>
+                <div class="corner bl"></div><div class="corner br"></div>
+
+                <div class="top-meta">
+                    <div class="top-meta-right">المملكة العربية السعودية - وزارة التعليم<br>{school_st}</div>
+                    <div class="top-meta-left">العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cp}</div>
+                </div>
+
+                <h1>شهادة شكر وتقدير</h1>
+                <h2>⭐ وسام التميز الأكاديمي ⭐</h2>
+
+                <p class="intro">يتقدم الأستاذ/ <strong>زياد المعمري</strong> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
+                <div class="student-name">{s_nm}</div>
+
+                <div class="reason-container">
+                    <p class="reason">وذلك نظير تفوقه العلمي وحصوله على تقدير <b style="color:#d32f2f;">ممتاز</b> في مادة اللغة الإنجليزية.</p>
+                    <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
+                </div>
+
+                <div class="footer-table">
+                    <div class="footer-cell">
+                        <div class="sig-title">تاريخ الإصدار</div>
+                        <div class="sig-line"></div>
+                        <div class="date-val">{datetime.date.today().strftime('%Y-%m-%d')}</div>
+                    </div>
+                    <div class="footer-cell">
+                        <div class="stamp-circle">
+                            <div class="stamp-inner"></div>
+                            <div style="font-size: 15px; font-weight: 900; line-height: 1.1;">وسام</div>
+                            <div style="font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
+                            <div style="font-size: 13px; font-weight: 800; line-height: 1.1;">الأكاديمي</div>
                         </div>
                     </div>
+                    <div class="footer-cell">
+                        <div class="sig-title">توقيع المعلم</div>
+                        <div class="sig-line"></div>
+                        <div class="sig-name">زياد المعمري</div>
+                    </div>
                 </div>
-                <script>window.onload = function() {{ window.print(); }}</script>
-            </body></html>
-            """
-            st.download_button(
-                label="📜 تحميل وطباعة شهادة التفوق الإلكترونية",
-                data=certificate_html,
-                file_name=f"Certificate_{sid}_{s_nm}.html",
-                mime="text/html",
-                type="primary",
-                use_container_width=True,
-            )
+            </div>
+        </div>
+    </div>
+</body>
+</html>"""
+
+            # توليد ملف PDF مباشر وجاهز للطباعة في جوال الطالب
+            try:
+              from weasyprint import HTML
+
+              with st.spinner("⏳ جاري تجهيز شهادة التفوق بصيغة PDF..."):
+                pdf_bytes = HTML(string=certificate_html).write_pdf()
+                st.download_button(
+                    label="📥 تنزيل شهادة التفوق (PDF جاهز للطباعة)",
+                    data=pdf_bytes,
+                    file_name=f"Certificate_{sid}_{s_nm}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+            except Exception:
+              st.download_button(
+                  label="📜 تنزيل شهادة التفوق (جاهزة للطباعة A4)",
+                  data=certificate_html,
+                  file_name=f"Certificate_{sid}_{s_nm}.html",
+                  mime="text/html",
+                  type="primary",
+                  use_container_width=True,
+              )
         else:
           st.info(f"لم يتم رصد درجات لك في ({cp}) حتى الآن.")
       else:
         st.info("لم يتم رصد درجات حتى الآن.")
 
+    # --- تبويب 4: لوحة الشرف ---
     with tabs[3]:
       st.caption("لوحة الشرف (أفضل 10 طلاب في المنصة)")
       df_st["p_num"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
@@ -4471,12 +4704,12 @@ if st.session_state.role == "student":
           )
           st.markdown(
               f"""
-              <div class='mobile-list-item' style='{sty}'>
+              <div class='mobile-list-item' style='{sty} direction: rtl;'>
                   <div style='display:flex; align-items:center; gap:10px;'>
                       <span style='font-weight:900; font-size:1.2rem; min-width:40px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
-                      <span style='font-weight:bold;'>{r['name']}</span>
+                      <span style='font-weight:bold; text-align:right;'>{r['name']}</span>
                   </div>
-                  <span style='color:{warning_color}; font-weight:900; font-size:1.1rem;'>{int(r['p_num'])} نقطة</span>
+                  <span style='color:{warning_color}; font-weight:900; font-size:1.1rem; white-space:nowrap;'>{int(r['p_num'])} نقطة</span>
               </div>
               """,
               unsafe_allow_html=True,
@@ -4484,6 +4717,7 @@ if st.session_state.role == "student":
       else:
         st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
 
+    # --- تبويب 5: نمط التعلم ---
     with tabs[4]:
       st.subheader("🧠 اكتشف نمط تعلمك")
       st.caption(
@@ -4514,7 +4748,7 @@ if st.session_state.role == "student":
             f"""
             <div style='background-color:{color}20; border:2px solid {color}; padding:25px; border-radius:16px; text-align:center; margin-top:15px;'>
                 <div style='font-size:45px; margin-bottom:10px;'>{current_style.split()[-1] if len(current_style.split())>1 else '🎯'}</div>
-                <h3 style='color:{color}; margin-bottom:8px; font-weight:900;'>أنت متعلم {current_style.replace('👀', '').replace('👂', '').replace('✋', '').replace('🌟', '').strip()}</h3>
+                <div style='color:{color}; font-size:1.4rem; margin-bottom:8px; font-weight:900;'>أنت متعلم {current_style.replace('👀', '').replace('👂', '').replace('✋', '').replace('🌟', '').strip()}</div>
                 <p style='color:#94A3B8; font-size:14px; margin:0; font-weight:bold;'>تم حفظ نمط تعلمك في ملفك الأكاديمي بنجاح.</p>
             </div>
             """,
@@ -4647,6 +4881,7 @@ if st.session_state.role == "student":
               except Exception as e:
                 st.error(f"❌ حدث خطأ أثناء حفظ النتيجة، حاول مرة أخرى. ({e})")
 
+    # --- تبويب 6: حسابي والخروج ---
     with tabs[5]:
       st.caption("إدارة الملف الشخصي وتسجيل الخروج")
       with st.form("my_profile"):
