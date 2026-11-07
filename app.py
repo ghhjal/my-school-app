@@ -3711,7 +3711,6 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             use_container_width=True,
         )
 
-    # --- 2. الهوية البصرية والإعدادات الأكاديمية ---
     # --- 2. الهوية البصرية والإعدادات الأكاديمية + الشريط الجانبي الذكي ---
     with set_tabs[1]:
       import json
@@ -3944,100 +3943,106 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         cp = st.selectbox("🗓️ الفترة الدراسية النشطة:", period_options, index=cp_index)
 
       # ==========================================
-      # 🏷️ إدارة الفصول والمراحل بنظام الوسوم (Tags) والجدول التفاعلي
+      # 🔗 إدارة الصفوف المربوطة بالمراحل (جدول علائقي موحد + وسوم ذكية)
       # ==========================================
       st.markdown("---")
-      st.markdown("#### 🏫 إدارة الصفوف والمراحل التفاعلية (بدون فواصل يدوية)")
-      st.info("💡 يمكنك حذف أي صف بالضغط على علامة (×) بجانب اسمه، أو إضافة صف جديد بضغطة زر، أو التبديل إلى وضع الجدول التفاعلي للتعديل السريع.")
+      st.markdown("#### 🏫 إدارة الصفوف وربطها بالمراحل الدراسية")
+      st.info("💡 كل صف يرتبط بمرحلته الدراسية مباشرة (ابتدائي / متوسط) ليقوم النظام بتحديد المرحلة وترويسة المدرسة تلقائياً في جميع التقارير والشهادات.")
+
+      # تحميل أو بناء خريطة ربط (الصف -> المرحلة) تلقائياً
+      if "class_stage_map" not in st.session_state:
+        raw_cs_json = s_map_academic.get("class_stage_map", "")
+        loaded_cs = {}
+        if raw_cs_json:
+          try:
+            loaded_cs = json.loads(raw_cs_json)
+          except Exception:
+            loaded_cs = {}
+
+        if not loaded_cs:
+          for c_item in st.session_state.get("class_options", ["الأول"]):
+             guessed_stage = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
+             loaded_cs[c_item] = guessed_stage
+        st.session_state.class_stage_map = loaded_cs
+
+      # مزامنة أي صفوف حالية غير موجودة في الخريطة
+      for c_curr in st.session_state.get("class_options", []):
+        if c_curr not in st.session_state.class_stage_map:
+          st.session_state.class_stage_map[c_curr] = "متوسط" if "متوسط" in str(c_curr) else "ابتدائي"
+
+      STAGE_CHOICES = ["ابتدائي", "متوسط", "ثانوي", "عام"]
 
       ui_mode = st.radio(
-          "طريقة عرض وتحرير الصفوف والمراحل:",
-          ["🏷️ نظام الوسوم التفاعلية (Tags)", "📊 الجدول التفاعلي (Interactive Table)"],
+          "طريقة عرض وتحرير الصفوف:",
+          ["📊 الجدول التفاعلي الموحد (الصف + المرحلة)", "🏷️ نظام البطاقات والوسوم السريعة (Tags)"],
           horizontal=True,
           key="cls_editor_mode",
       )
 
-      if "temp_classes_list" not in st.session_state:
-        st.session_state.temp_classes_list = list(st.session_state.get("class_options", ["الأول"]))
-      if "temp_stages_list" not in st.session_state:
-        st.session_state.temp_stages_list = list(st.session_state.get("stage_options", ["ابتدائي"]))
+      if ui_mode == "📊 الجدول التفاعلي الموحد (الصف + المرحلة)":
+        df_unified = pd.DataFrame([
+            {"اسم الصف": k, "المرحلة": v if v in STAGE_CHOICES else "ابتدائي"}
+            for k, v in st.session_state.class_stage_map.items()
+        ])
+        if df_unified.empty:
+          df_unified = pd.DataFrame([{"اسم الصف": "الخامس/1", "المرحلة": "ابتدائي"}])
 
-      if ui_mode == "🏷️ نظام الوسوم التفاعلية (Tags)":
-        col_cls_box, col_stg_box = st.columns([2, 1])
+        edited_unified_df = st.data_editor(
+            df_unified,
+            num_rows="dynamic",
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "اسم الصف": st.column_config.TextColumn(
+                    "🏫 اسم الصف",
+                    help="اكتب اسم الصف مثل: الخامس/1 أو أول متوسط/1",
+                    required=True,
+                ),
+                "المرحلة": st.column_config.SelectboxColumn(
+                    "🎓 المرحلة الدراسية (قائمة منسدلة)",
+                    help="اختر المرحلة التي يتبع لها هذا الصف",
+                    options=STAGE_CHOICES,
+                    required=True,
+                    default="ابتدائي",
+                ),
+            },
+            key="de_unified_cls_stage_table",
+        )
 
-        with col_cls_box:
-          with st.container(border=True):
-            st.markdown("##### 🏫 قائمة الصفوف والفصول")
-            # إضافة صف جديد بسرعة
-            add_c1, add_c2 = st.columns([3, 1])
-            new_cls_name = add_c1.text_input("اسم الصف الجديد:", placeholder="مثال: الخامس/1 أو أول متوسط/2", label_visibility="collapsed", key="inp_new_cls_tag")
-            if add_c2.button("➕ إضافة", key="btn_add_cls_tag", use_container_width=True):
-              clean_c = new_cls_name.strip().replace(",", "")
-              if clean_c and clean_c not in st.session_state.temp_classes_list:
-                st.session_state.temp_classes_list.append(clean_c)
-                st.rerun()
-
-            selected_classes_tags = st.multiselect(
-                "الصفوف المعتمدة حالياً (احذف أي صف بالضغط على ×):",
-                options=st.session_state.temp_classes_list,
-                default=st.session_state.temp_classes_list,
-                key="ms_classes_tags",
-            )
-            st.session_state.temp_classes_list = selected_classes_tags
-
-        with col_stg_box:
-          with st.container(border=True):
-            st.markdown("##### 🎓 قائمة المراحل")
-            add_s1, add_s2 = st.columns([2.5, 1])
-            new_stg_name = add_s1.text_input("مرحلة جديدة:", placeholder="مثال: ثانوي", label_visibility="collapsed", key="inp_new_stg_tag")
-            if add_s2.button("➕", key="btn_add_stg_tag", use_container_width=True):
-              clean_s = new_stg_name.strip().replace(",", "")
-              if clean_s and clean_s not in st.session_state.temp_stages_list:
-                st.session_state.temp_stages_list.append(clean_s)
-                st.rerun()
-
-            selected_stages_tags = st.multiselect(
-                "المراحل المعتمدة (احذف بـ ×):",
-                options=st.session_state.temp_stages_list,
-                default=st.session_state.temp_stages_list,
-                key="ms_stages_tags",
-            )
-            st.session_state.temp_stages_list = selected_stages_tags
+        # تحديث الخريطة من الجدول التفاعلي الموحد
+        new_cs_map = {}
+        for _, r_u in edited_unified_df.iterrows():
+          c_val = str(r_u.get("اسم الصف", "")).strip().replace(",", "")
+          s_val = str(r_u.get("المرحلة", "ابتدائي")).strip()
+          if c_val and c_val != "nan":
+            new_cs_map[c_val] = s_val if s_val and s_val != "nan" else "ابتدائي"
+        st.session_state.class_stage_map = new_cs_map
 
       else:
-        # وضع الجدول التفاعلي (إضافة، تعديل النص بالنقر المزدوج، أو حذف صفوف)
-        col_tbl1, col_tbl2 = st.columns([2, 1])
-        with col_tbl1:
-          st.markdown("##### 🏫 جدول الصفوف التفاعلي (انقر مرتين للتعديل أو + للإضافة)")
-          df_cls_edit = pd.DataFrame({"اسم الصف": st.session_state.temp_classes_list})
-          edited_cls_df = st.data_editor(
-              df_cls_edit,
-              num_rows="dynamic",
-              use_container_width=True,
-              hide_index=True,
-              key="de_classes_table",
-          )
-          st.session_state.temp_classes_list = [
-              str(x).strip().replace(",", "")
-              for x in edited_cls_df["اسم الصف"].dropna().tolist()
-              if str(x).strip()
-          ]
+        # نظام الوسوم المربوطة بالمرحلة (Tags)
+        with st.container(border=True):
+          st.markdown("##### ➕ إضافة صف جديد مربوط بمرحلته")
+          add_c1, add_c2, add_c3 = st.columns([2.2, 1.3, 1])
+          new_cls_name = add_c1.text_input("اسم الصف الجديد:", placeholder="مثال: الخامس/1 أو أول متوسط/1", label_visibility="collapsed", key="inp_new_cls_tag")
+          new_cls_stage = add_c2.selectbox("المرحلة:", STAGE_CHOICES, label_visibility="collapsed", key="sel_new_cls_stage")
+          if add_c3.button("➕ ربط وإضافة", key="btn_add_cls_tag", use_container_width=True):
+            clean_c = new_cls_name.strip().replace(",", "")
+            if clean_c:
+              st.session_state.class_stage_map[clean_c] = new_cls_stage
+              st.rerun()
 
-        with col_tbl2:
-          st.markdown("##### 🎓 جدول المراحل التفاعلي")
-          df_stg_edit = pd.DataFrame({"المرحلة": st.session_state.temp_stages_list})
-          edited_stg_df = st.data_editor(
-              df_stg_edit,
-              num_rows="dynamic",
-              use_container_width=True,
-              hide_index=True,
-              key="de_stages_table",
+          st.markdown("---")
+          curr_keys = list(st.session_state.class_stage_map.keys())
+          selected_keys = st.multiselect(
+              "الصفوف المعتمدة ومراحلها (احذف أي صف بالضغط على ×):",
+              options=curr_keys,
+              default=curr_keys,
+              format_func=lambda k: f"{k} ⬅️ ({st.session_state.class_stage_map.get(k, 'ابتدائي')})",
+              key="ms_unified_tags",
           )
-          st.session_state.temp_stages_list = [
-              str(x).strip().replace(",", "")
-              for x in edited_stg_df["المرحلة"].dropna().tolist()
-              if str(x).strip()
-          ]
+          st.session_state.class_stage_map = {
+              k: st.session_state.class_stage_map[k] for k in selected_keys
+          }
 
       st.markdown("---")
       st.markdown("#### 📊 توزيع الدرجات العظمى")
@@ -4046,25 +4051,40 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       mq = c2.number_input("الدرجة العظمى (اختبارات)", 0, 100, st.session_state.get("max_quiz", 40))
 
       if st.button("💾 حفظ الإعدادات وتطبيق التغييرات", type="primary", use_container_width=True):
-        if not st.session_state.temp_classes_list:
+        if not st.session_state.class_stage_map:
           st.warning("⚠️ يجب إبقاء صف دراسي واحد على الأقل.")
-        elif not st.session_state.temp_stages_list:
-          st.warning("⚠️ يجب إبقاء مرحلة دراسية واحدة على الأقل.")
         else:
+          final_classes = list(st.session_state.class_stage_map.keys())
+          final_stages = list(dict.fromkeys(st.session_state.class_stage_map.values()))
+
           sync_academic_settings_to_db(
               cy,
               cp,
               selected_theme,
-              st.session_state.temp_classes_list,
-              st.session_state.temp_stages_list,
+              final_classes,
+              final_stages,
               mt,
               mq,
           )
-          st.success(f"✅ تم الحفظ بنجاح! العام النشط: ({cy}) | عدد الفصول: ({len(st.session_state.temp_classes_list)})")
+
+          # حفظ خريطة ربط (الصف -> المرحلة) في قاعدة البيانات settings
+          try:
+            ws_s = sh.worksheet("settings")
+            all_s_recs = ws_s.get_all_records()
+            keys_row_map = {str(r.get("key", "")).strip(): idx + 2 for idx, r in enumerate(all_s_recs)}
+            cs_json_str = json.dumps(st.session_state.class_stage_map, ensure_ascii=False)
+            if "class_stage_map" in keys_row_map:
+              ws_s.update_cell(keys_row_map["class_stage_map"], 2, cs_json_str)
+            else:
+              ws_s.append_row(["class_stage_map", cs_json_str])
+            st.cache_data.clear()
+          except Exception:
+            pass
+
+          st.success(f"✅ تم الحفظ وربط ({len(final_classes)}) صفوف بمراحلها الدراسية بنجاح!")
           if "db_loaded" in st.session_state:
             del st.session_state["db_loaded"]
           st.rerun()
-
     # --- 3. استيراد البيانات + رفع بيانات أنماط التعلم ---
     with set_tabs[2]:
       import_sub = st.tabs([
