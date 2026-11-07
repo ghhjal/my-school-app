@@ -3736,7 +3736,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       )
 
       # --- تهيئة قاموس الأعوام الدراسية وصفوف كل عام في الذاكرة ---
-      s_map_ academic = get_cached_settings()
+      s_map_academic = get_cached_settings()
       current_yr_init = str(st.session_state.get("current_year", "1448هـ")).strip()
 
       if "years_list" not in st.session_state:
