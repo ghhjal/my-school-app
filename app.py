@@ -1057,9 +1057,7 @@ if st.session_state.role in ["teacher", "viewer"]:
   with tab_eval:
     # ✳️ تنسيق CSS خاص لتمييز الأزرار الثانوية وأزرار التواصل (واتساب / تليجرام / تعديل / حذف) والخطوط التحذيرية
     st.markdown(
-        """
-        st.markdown(
-        """
+        """        
         <style>
         /* ✳️ إصلاح الأزرار الثانوية في كامل المنصة لتظهر بخلفية هادئة بدلاً من الأزرق الداكن */
         div.stButton > button[kind="secondary"],
