@@ -3717,33 +3717,26 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             use_container_width=True,
         )
 
-    # --- 2. الهوية البصرية والإعدادات الأكاديمية + الشريط الجانبي الذكي ---
+    # --- 2. الهوية البصرية والإعدادات الأكاديمية (بدون شريط جانبي) ---
     with set_tabs[1]:
       import json
 
-      # ✳️ إظهار الشريط الجانبي وتنسيقه للوضع الليلي والاتجاه العربي
+      # ✳️ التأكد من إخفاء الشريط الجانبي تماماً للحفاظ على جمال وتناسق التصميم
       st.markdown(
           """
           <style>
-          section[data-testid="stSidebar"] {
-              display: flex !important;
-              direction: rtl !important;
-              text-align: right !important;
-              border-left: 1.5px solid rgba(148, 163, 184, 0.28) !important;
-          }
-          [data-testid="collapsedControl"] {
-              display: flex !important;
-              direction: rtl !important;
+          section[data-testid="stSidebar"], [data-testid="collapsedControl"] {
+              display: none !important;
           }
           </style>
           """,
           unsafe_allow_html=True,
       )
 
-      # --- تهيئة قاموس الأعوام الدراسية وصفوف كل عام في الذاكرة ---
       s_map_academic = get_cached_settings()
       current_yr_init = str(st.session_state.get("current_year", "1448هـ")).strip()
 
+      # 1. تهيئة قائمة الأعوام الدراسية
       if "years_list" not in st.session_state:
         raw_years = s_map_academic.get("years_list", "")
         if raw_years:
@@ -3754,6 +3747,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
           yrs.append(current_yr_init)
         st.session_state.years_list = sorted(list(set(yrs)))
 
+      # 2. تهيئة خريطة صفوف كل عام دراسي (لاستنساخ الصفوف بين الأعوام)
       if "year_classes_map" not in st.session_state:
         raw_yc_json = s_map_academic.get("year_classes_map", "")
         loaded_yc = {}
@@ -3766,13 +3760,35 @@ if st.session_state.role == "teacher" and tab_settings is not None:
           loaded_yc[current_yr_init] = list(st.session_state.get("class_options", ["الأول"]))
         st.session_state.year_classes_map = loaded_yc
 
-      # دالة حفظ الإعدادات الأكاديمية في Google Sheets
-      def sync_academic_settings_to_db(target_year, target_period, target_theme, classes_list, stages_list, max_t, max_q):
+      # 3. تهيئة خريطة ربط (الصف -> المرحلة)
+      if "class_stage_map" not in st.session_state:
+        raw_cs_json = s_map_academic.get("class_stage_map", "")
+        loaded_cs = {}
+        if raw_cs_json:
+          try:
+            loaded_cs = json.loads(raw_cs_json)
+          except Exception:
+            loaded_cs = {}
+        if not loaded_cs:
+          for c_item in st.session_state.get("class_options", ["الأول"]):
+            loaded_cs[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
+        st.session_state.class_stage_map = loaded_cs
+
+      for c_curr in st.session_state.get("class_options", []):
+        if c_curr not in st.session_state.class_stage_map:
+          st.session_state.class_stage_map[c_curr] = "متوسط" if "متوسط" in str(c_curr) else "ابتدائي"
+
+      # دالة حفظ شاملة في قاعدة البيانات
+      def sync_academic_settings_to_db(target_year, target_period, target_theme, cs_map_dict, max_t, max_q):
+        classes_list = list(cs_map_dict.keys())
+        stages_list = list(dict.fromkeys(cs_map_dict.values()))
         cls_str = ",".join([c.strip() for c in classes_list if c.strip()])
         stg_str = ",".join([s.strip() for s in stages_list if s.strip()])
         yrs_str = ",".join(st.session_state.years_list)
-        st.session_state.year_classes_map[target_year] = [c.strip() for c in classes_list if c.strip()]
+
+        st.session_state.year_classes_map[target_year] = classes_list
         yc_json_str = json.dumps(st.session_state.year_classes_map, ensure_ascii=False)
+        cs_json_str = json.dumps(cs_map_dict, ensure_ascii=False)
 
         ws_s = sh.worksheet("settings")
         ws_s.batch_update([
@@ -3785,136 +3801,27 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             {"range": "A8:B8", "values": [["app_theme", target_theme]]},
         ])
 
-        # حفظ قائمة الأعوام وخريطة صفوف الأعوام كمفاتيح إضافية في settings
         all_s_recs = ws_s.get_all_records()
         keys_row_map = {str(r.get("key", "")).strip(): idx + 2 for idx, r in enumerate(all_s_recs)}
 
-        if "years_list" in keys_row_map:
-          ws_s.update_cell(keys_row_map["years_list"], 2, yrs_str)
-        else:
-          ws_s.append_row(["years_list", yrs_str])
-
-        if "year_classes_map" in keys_row_map:
-          ws_s.update_cell(keys_row_map["year_classes_map"], 2, yc_json_str)
-        else:
-          ws_s.append_row(["year_classes_map", yc_json_str])
+        for k_name, k_val in [("years_list", yrs_str), ("year_classes_map", yc_json_str), ("class_stage_map", cs_json_str)]:
+          if k_name in keys_row_map:
+            ws_s.update_cell(keys_row_map[k_name], 2, k_val)
+          else:
+            ws_s.append_row([k_name, k_val])
 
         st.session_state.max_tasks = max_t
         st.session_state.max_quiz = max_q
         st.session_state.current_year = target_year
         st.session_state.current_period = target_period
-        st.session_state.class_options = [c.strip() for c in classes_list if c.strip()]
-        st.session_state.stage_options = [s.strip() for s in stages_list if s.strip()]
+        st.session_state.class_options = classes_list
+        st.session_state.stage_options = stages_list
+        st.session_state.class_stage_map = cs_map_dict
         st.session_state.app_theme = target_theme
         st.cache_data.clear()
 
       # ==========================================
-      # 📌 الشريط الجانبي (st.sidebar): الفلتر الرئيسي للعام الدراسي
-      # ==========================================
-      with st.sidebar:
-        st.markdown("### 🎓 الفلتر الرئيسي للمنصة")
-        st.caption("التحكم السريع بالعام الدراسي والفترة النشطة")
-
-        sb_col1, sb_col2 = st.columns([3.2, 1])
-        curr_yr_val = st.session_state.get("current_year", "1448هـ")
-        if curr_yr_val not in st.session_state.years_list:
-          st.session_state.years_list.append(curr_yr_val)
-
-        yr_idx = st.session_state.years_list.index(curr_yr_val)
-
-        def on_sidebar_year_change():
-          new_yr = st.session_state.sb_year_selector
-          st.session_state.current_year = new_yr
-          # تحميل صفوف العام المختار تلقائياً إن وجدت
-          if new_yr in st.session_state.year_classes_map and st.session_state.year_classes_map[new_yr]:
-            st.session_state.class_options = list(st.session_state.year_classes_map[new_yr])
-          try:
-            sync_academic_settings_to_db(
-                new_yr,
-                st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
-                st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
-                st.session_state.class_options,
-                st.session_state.stage_options,
-                st.session_state.get("max_tasks", 60),
-                st.session_state.get("max_quiz", 40),
-            )
-          except Exception:
-            pass
-
-        with sb_col1:
-          st.selectbox(
-              "📅 العام الدراسي:",
-              st.session_state.years_list,
-              index=yr_idx,
-              key="sb_year_selector",
-              on_change=on_sidebar_year_change,
-          )
-        with sb_col2:
-          st.markdown("<div style='padding-top:28px;'></div>", unsafe_allow_html=True)
-          if st.button("➕", key="btn_toggle_add_yr", help="إضافة عام دراسي جديد", use_container_width=True):
-            st.session_state.show_add_year_box = not st.session_state.get("show_add_year_box", False)
-
-        # نافذة إضافة عام دراسي جديد + استنساخ صفوف العام السابق
-        if st.session_state.get("show_add_year_box", False):
-          with st.container(border=True):
-            st.markdown("###### ➕ إضافة عام دراسي جديد")
-            # توليد العام التالي تلقائياً بصيغة قياسية موحدة
-            nums_in_years = [int(re.sub(r"\D", "", y)) for y in st.session_state.years_list if re.sub(r"\D", "", y)]
-            next_hijri = (max(nums_in_years) + 1) if nums_in_years else 1449
-            suggested_years = [f"{next_hijri}هـ", f"{next_hijri+1}هـ", f"{next_hijri-1}هـ"]
-
-            new_yr_input = st.selectbox("اختر العام الجديد (صيغة موحدة):", suggested_years, key="new_yr_std_sel")
-            clone_prev = st.checkbox("📋 نسخ صفوف العام السابق تلقائياً", value=True, key="chk_clone_prev_yr")
-
-            if st.button("✅ إنشاء وتفعيل العام", type="primary", use_container_width=True, key="confirm_new_yr_btn"):
-              prev_classes = list(st.session_state.get("class_options", ["الأول"]))
-              if new_yr_input not in st.session_state.years_list:
-                st.session_state.years_list.append(new_yr_input)
-                st.session_state.years_list = sorted(list(set(st.session_state.years_list)))
-
-              target_classes = prev_classes if clone_prev else ["الأول"]
-              st.session_state.year_classes_map[new_yr_input] = target_classes
-              st.session_state.show_add_year_box = False
-
-              sync_academic_settings_to_db(
-                  new_yr_input,
-                  st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
-                  st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
-                  target_classes,
-                  st.session_state.stage_options,
-                  st.session_state.get("max_tasks", 60),
-                  st.session_state.get("max_quiz", 40),
-              )
-              st.toast(f"✅ تم تفعيل العام {new_yr_input} ونسخ الفصول بنجاح!", icon="🎉")
-              st.rerun()
-
-        # زر سريع لاستنساخ صفوف العام السابق في أي وقت
-        if len(st.session_state.years_list) > 1:
-          prev_candidates = [y for y in st.session_state.years_list if y != st.session_state.current_year]
-          if prev_candidates:
-            last_yr = prev_candidates[-1]
-            if st.button(f"📋 نسخ صفوف العام السابق ({last_yr})", use_container_width=True, key="sb_clone_btn"):
-              copied_cls = st.session_state.year_classes_map.get(last_yr, st.session_state.class_options)
-              if copied_cls:
-                sync_academic_settings_to_db(
-                    st.session_state.current_year,
-                    st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
-                    st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
-                    copied_cls,
-                    st.session_state.stage_options,
-                    st.session_state.get("max_tasks", 60),
-                    st.session_state.get("max_quiz", 40),
-                )
-                st.toast(f"✅ تم استنساخ ({len(copied_cls)}) صفوف من عام {last_yr}!", icon="📋")
-                st.rerun()
-
-        st.divider()
-        st.markdown(f"**📌 العام النشط:** `{st.session_state.current_year}`")
-        st.markdown(f"**🗓️ الفترة النشطة:** `{st.session_state.current_period}`")
-        st.markdown(f"**🏫 عدد الفصول:** `{len(st.session_state.class_options)}` فصول")
-
-      # ==========================================
-      # 🎨 واجهة تبويب الهوية والإعدادات الأكاديمية التفاعلية
+      # 🎨 1. المظهر والهوية البصرية
       # ==========================================
       st.markdown("#### 🎨 المظهر والهوية البصرية")
       theme_options = list(themes.keys())
@@ -3922,20 +3829,44 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
       selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
 
+      # ==========================================
+      # ⚙️ 2. العام الدراسي والفترة النشطة (مدمجة بأناقة داخل التبويب)
+      # ==========================================
       st.markdown("---")
-      st.markdown("#### ⚙️ الإعدادات الأكاديمية والفترة النشطة")
-      c_y, c_p = st.columns(2)
+      st.markdown("#### ⚙️ العام الدراسي والفترة النشطة")
 
-      with c_y:
-        cy_idx = st.session_state.years_list.index(st.session_state.current_year) if st.session_state.current_year in st.session_state.years_list else 0
+      col_yr_sel, col_yr_btns, col_per_sel = st.columns([2, 1.3, 2.2])
+
+      with col_yr_sel:
+        if st.session_state.current_year not in st.session_state.years_list:
+          st.session_state.years_list.append(st.session_state.current_year)
+        cy_idx = st.session_state.years_list.index(st.session_state.current_year)
         cy = st.selectbox(
-            "📅 العام الدراسي النشط (يمكن تغييره أيضاً من الشريط الجانبي):",
+            "📅 العام الدراسي النشط:",
             st.session_state.years_list,
             index=cy_idx,
             key="main_tab_year_sel",
         )
 
-      with c_p:
+      with col_yr_btns:
+        st.markdown("<div style='padding-top:28px;'></div>", unsafe_allow_html=True)
+        b_y1, b_y2 = st.columns(2)
+        if b_y1.button("➕ عام", help="إضافة عام دراسي جديد", use_container_width=True, key="btn_open_new_yr"):
+          st.session_state.show_add_year_inline = not st.session_state.get("show_add_year_inline", False)
+
+        # زر نسخ صفوف العام السابق
+        prev_yrs = [y for y in st.session_state.years_list if y != cy]
+        if b_y2.button("📋 نسخ", help="نسخ صفوف العام السابق", disabled=(len(prev_yrs) == 0), use_container_width=True, key="btn_clone_inline"):
+          last_yr = prev_yrs[-1]
+          copied_cls = st.session_state.year_classes_map.get(last_yr, [])
+          if copied_cls:
+            for c_item in copied_cls:
+              if c_item not in st.session_state.class_stage_map:
+                st.session_state.class_stage_map[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
+            st.toast(f"✅ تم نسخ ({len(copied_cls)}) صفوف من عام {last_yr}!", icon="📋")
+            st.rerun()
+
+      with col_per_sel:
         current_period_val = st.session_state.get("current_period", "الفصل الأول - فترة أولى")
         period_options = [
             "الفصل الأول - فترة أولى",
@@ -3948,33 +3879,44 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         cp_index = period_options.index(current_period_val)
         cp = st.selectbox("🗓️ الفترة الدراسية النشطة:", period_options, index=cp_index)
 
+      # نافذة مصغرة لإضافة عام دراسي جديد عند الضغط على (➕ عام)
+      if st.session_state.get("show_add_year_inline", False):
+        with st.container(border=True):
+          st.markdown("###### ➕ إنشاء عام دراسي جديد بصيغة موحدة")
+          nums_in_years = [int(re.sub(r"\D", "", y)) for y in st.session_state.years_list if re.sub(r"\D", "", y)]
+          next_hijri = (max(nums_in_years) + 1) if nums_in_years else 1449
+          suggested_years = [f"{next_hijri}هـ", f"{next_hijri+1}هـ", f"{next_hijri-1}هـ"]
+
+          ny_c1, ny_c2, ny_c3 = st.columns([2, 2, 1.2])
+          new_yr_input = ny_c1.selectbox("اختر العام الجديد:", suggested_years, label_visibility="collapsed", key="new_yr_inline_sel")
+          clone_prev = ny_c2.checkbox("📋 نسخ صفوف العام السابق تلقائياً", value=True, key="chk_clone_inline")
+
+          if ny_c3.button("✅ تفعيل العام", type="primary", use_container_width=True, key="confirm_new_yr_inline"):
+            if new_yr_input not in st.session_state.years_list:
+              st.session_state.years_list.append(new_yr_input)
+              st.session_state.years_list = sorted(list(set(st.session_state.years_list)))
+
+            if not clone_prev:
+              st.session_state.class_stage_map = {"الخامس/1": "ابتدائي"}
+
+            st.session_state.show_add_year_inline = False
+            sync_academic_settings_to_db(
+                new_yr_input,
+                cp,
+                selected_theme,
+                st.session_state.class_stage_map,
+                st.session_state.get("max_tasks", 60),
+                st.session_state.get("max_quiz", 40),
+            )
+            st.toast(f"✅ تم إنشاء وتفعيل العام الدراسي {new_yr_input} بنجاح!", icon="🎉")
+            st.rerun()
+
       # ==========================================
-      # 🔗 إدارة الصفوف المربوطة بالمراحل (جدول علائقي موحد + وسوم ذكية)
+      # 🔗 3. إدارة الصفوف المربوطة بالمراحل (الجدول الموحد + الوسوم)
       # ==========================================
       st.markdown("---")
       st.markdown("#### 🏫 إدارة الصفوف وربطها بالمراحل الدراسية")
-      st.info("💡 كل صف يرتبط بمرحلته الدراسية مباشرة (ابتدائي / متوسط) ليقوم النظام بتحديد المرحلة وترويسة المدرسة تلقائياً في جميع التقارير والشهادات.")
-
-      # تحميل أو بناء خريطة ربط (الصف -> المرحلة) تلقائياً
-      if "class_stage_map" not in st.session_state:
-        raw_cs_json = s_map_academic.get("class_stage_map", "")
-        loaded_cs = {}
-        if raw_cs_json:
-          try:
-            loaded_cs = json.loads(raw_cs_json)
-          except Exception:
-            loaded_cs = {}
-
-        if not loaded_cs:
-          for c_item in st.session_state.get("class_options", ["الأول"]):
-             guessed_stage = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
-             loaded_cs[c_item] = guessed_stage
-        st.session_state.class_stage_map = loaded_cs
-
-      # مزامنة أي صفوف حالية غير موجودة في الخريطة
-      for c_curr in st.session_state.get("class_options", []):
-        if c_curr not in st.session_state.class_stage_map:
-          st.session_state.class_stage_map[c_curr] = "متوسط" if "متوسط" in str(c_curr) else "ابتدائي"
+      st.info("💡 كل صف يرتبط بمرحلته الدراسية مباشرة (ابتدائي / متوسط) ليقوم النظام بتحديد المرحلة وترويسة المدرسة تلقائياً.")
 
       STAGE_CHOICES = ["ابتدائي", "متوسط", "ثانوي", "عام"]
 
@@ -4015,7 +3957,6 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             key="de_unified_cls_stage_table",
         )
 
-        # تحديث الخريطة من الجدول التفاعلي الموحد
         new_cs_map = {}
         for _, r_u in edited_unified_df.iterrows():
           c_val = str(r_u.get("اسم الصف", "")).strip().replace(",", "")
@@ -4025,7 +3966,6 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         st.session_state.class_stage_map = new_cs_map
 
       else:
-        # نظام الوسوم المربوطة بالمرحلة (Tags)
         with st.container(border=True):
           st.markdown("##### ➕ إضافة صف جديد مربوط بمرحلته")
           add_c1, add_c2, add_c3 = st.columns([2.2, 1.3, 1])
@@ -4050,6 +3990,9 @@ if st.session_state.role == "teacher" and tab_settings is not None:
               k: st.session_state.class_stage_map[k] for k in selected_keys
           }
 
+      # ==========================================
+      # 📊 4. توزيع الدرجات العظمى والحفظ
+      # ==========================================
       st.markdown("---")
       st.markdown("#### 📊 توزيع الدرجات العظمى")
       c1, c2 = st.columns(2)
@@ -4060,34 +4003,15 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         if not st.session_state.class_stage_map:
           st.warning("⚠️ يجب إبقاء صف دراسي واحد على الأقل.")
         else:
-          final_classes = list(st.session_state.class_stage_map.keys())
-          final_stages = list(dict.fromkeys(st.session_state.class_stage_map.values()))
-
           sync_academic_settings_to_db(
               cy,
               cp,
               selected_theme,
-              final_classes,
-              final_stages,
+              st.session_state.class_stage_map,
               mt,
               mq,
           )
-
-          # حفظ خريطة ربط (الصف -> المرحلة) في قاعدة البيانات settings
-          try:
-            ws_s = sh.worksheet("settings")
-            all_s_recs = ws_s.get_all_records()
-            keys_row_map = {str(r.get("key", "")).strip(): idx + 2 for idx, r in enumerate(all_s_recs)}
-            cs_json_str = json.dumps(st.session_state.class_stage_map, ensure_ascii=False)
-            if "class_stage_map" in keys_row_map:
-              ws_s.update_cell(keys_row_map["class_stage_map"], 2, cs_json_str)
-            else:
-              ws_s.append_row(["class_stage_map", cs_json_str])
-            st.cache_data.clear()
-          except Exception:
-            pass
-
-          st.success(f"✅ تم الحفظ وربط ({len(final_classes)}) صفوف بمراحلها الدراسية بنجاح!")
+          st.success(f"✅ تم الحفظ بنجاح! العام النشط: ({cy}) | الفترة: ({cp}) | عدد الصفوف: ({len(st.session_state.class_stage_map)})")
           if "db_loaded" in st.session_state:
             del st.session_state["db_loaded"]
           st.rerun()
