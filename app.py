@@ -1051,10 +1051,70 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لحذف الطلاب.")
 # ==========================================
-# 📊 6. التبويب الثاني: الرصد والتقييم (الاقتراح الثاني: تبويبات فرعية مستقلة)
+# 📊 6. التبويب الثاني: الرصد والتقييم (مطور بأزرار هادئة ورصد درجات فردي وجماعي)
 # ==========================================
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_eval:
+    # ✳️ تنسيق CSS خاص لتمييز الأزرار الثانوية وأزرار التواصل (واتساب / تليجرام / تعديل / حذف) والخطوط التحذيرية
+    st.markdown(
+        """
+        <style>
+        /* فصل الأزرار الثانوية عن الأزرار الرئيسية الزرقاء لتظهر بخلفية هادئة */
+        button[kind="secondary"] {
+            background: var(--secondary-background-color) !important;
+            color: var(--text-color) !important;
+            border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+        }
+        button[kind="secondary"]:hover {
+            border-color: #3B82F6 !important;
+            background: rgba(59, 130, 246, 0.08) !important;
+        }
+        /* أزرار الإجراءات الأربعة الهادئة تحت كل سجل سلوكي */
+        .action-bar-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 14px;
+            direction: rtl;
+        }
+        .soft-link-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 12px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.92rem;
+            text-decoration: none !important;
+            transition: all 0.2s ease;
+            height: 44px;
+        }
+        .btn-whatsapp {
+            background-color: rgba(16, 185, 129, 0.12) !important;
+            color: #10B981 !important;
+            border: 1.5px solid rgba(16, 185, 129, 0.35) !important;
+        }
+        .btn-whatsapp:hover {
+            background-color: rgba(16, 185, 129, 0.22) !important;
+            transform: translateY(-1px);
+        }
+        .btn-telegram {
+            background-color: rgba(14, 165, 233, 0.12) !important;
+            color: #0EA5E9 !important;
+            border: 1.5px solid rgba(14, 165, 233, 0.35) !important;
+        }
+        .btn-telegram:hover {
+            background-color: rgba(14, 165, 233, 0.22) !important;
+            transform: translateY(-1px);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.subheader("📊 الرصد والتقييم الأكاديمي والسلوكي")
 
     BEHAVIOR_OPTIONS = [
@@ -1075,15 +1135,17 @@ if st.session_state.role in ["teacher", "viewer"]:
         "🚫 سلبي (-10)",
     ]
 
-    # ✳️ تقسيم العمل إلى 4 تبويبات فرعية دقيقة ومتخصصة
+    # ✳️ التبويبات الفرعية الأربعة بعد تعديل المسمى إلى (السلوك الجماعي)
     eval_tabs = st.tabs([
         "🎭 السلوك اليومي",
-        "👥 الرصد الجماعي",
+        "👥 السلوك الجماعي",
         "📝 رصد الدرجات",
         "🔍 مدقق النواقص",
     ])
 
-    # --- 1. التقييم الفردي للسلوك والملاحظات (العمل اليومي داخل الحصة) ---
+    # ---------------------------------------------------------
+    # 1. السلوك اليومي (فردي سريع + أزرار تعديل وحذف وواتساب وتليجرام هادئة)
+    # ---------------------------------------------------------
     with eval_tabs[0]:
       df_ev = st.session_state.df_students
       if not df_ev.empty:
@@ -1115,12 +1177,10 @@ if st.session_state.role in ["teacher", "viewer"]:
 
           s_nm = s_inf["name"]
           clp = clean_phone_number(s_inf.get("الجوال", ""))
-          s_eml = s_inf.get("الإيميل", "")
           current_points = int(
               pd.to_numeric(s_inf.get("النقاط", 0), errors="coerce") or 0
           )
 
-          # بطاقة السلوك بعرض كامل وواضح جداً داخل الحصة
           with st.container(border=True):
             st.markdown(
                 f"##### 🎭 السلوك والملاحظات اليومية لـ: <span style='color:{accent_color};'>{s_nm}</span> (الرصيد: <span style='color:{warning_color}; font-weight:900;'>{current_points}</span> نقطة)",
@@ -1308,6 +1368,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                     if c_cancel.button(
                         "❌ إلغاء",
                         key=f"cancel_opt2_{global_idx}",
+                        type="secondary",
                         use_container_width=True,
                     ):
                       st.session_state.edit_beh_idx_2 = None
@@ -1331,7 +1392,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                     st.markdown(
                         f"""
-                        <div class="student-list-card" style="border-right: 5px solid {color};">
+                        <div class="student-list-card" style="border-right: 5px solid {color}; margin-bottom: 6px;">
                             <div class="student-card-header">
                                 <div class="student-card-title" style="color: {color};">{b_str}</div>
                                 <div class="student-card-date" style="color: #94A3B8;">📅 {r.get('date')}</div>
@@ -1342,53 +1403,60 @@ if st.session_state.role in ["teacher", "viewer"]:
                         unsafe_allow_html=True,
                     )
 
-                    c_edit, c_del, c_wa, c_em = st.columns([0.6, 0.6, 1.2, 1.2])
+                    # ✳️ شريط الأزرار الهادئة المميزة (واتساب - تليجرام - تعديل - حذف)
                     lnk = get_professional_msg(
                         s_nm, r.get("type"), r.get("note"), r.get("date")
                     )
-                    c_wa.link_button(
-                        "💬 واتساب",
-                        f"https://api.whatsapp.com/send?phone={clp}&text={lnk}",
-                        use_container_width=True,
-                    )
-                    c_em.link_button(
-                        "📧 إيميل",
-                        f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}",
-                        use_container_width=True,
-                    )
+                    wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
+                    tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
 
-                    if st.session_state.role == "teacher":
-                      if c_edit.button(
-                          "✏️",
-                          key=f"ed_beh_opt2_{global_idx}",
-                          help="تعديل السجل",
-                          use_container_width=True,
-                      ):
-                        st.session_state.edit_beh_idx_2 = global_idx
-                        st.rerun()
-                      c_del.button(
-                          "❌",
-                          key=f"dl_beh_opt2_{global_idx}",
-                          on_click=delete_behavior_opt2,
-                          args=(global_idx, r.get("type")),
-                          help="حذف نهائي",
-                          use_container_width=True,
+                    col_comm, col_act = st.columns([1.3, 1])
+                    with col_comm:
+                      st.markdown(
+                          f"""
+                          <div class="action-bar-grid">
+                              <a href="{wa_url}" target="_blank" class="soft-link-btn btn-whatsapp">💬 واتساب</a>
+                              <a href="{tg_url}" target="_blank" class="soft-link-btn btn-telegram">✈️ تليجرام</a>
+                          </div>
+                          """,
+                          unsafe_allow_html=True,
                       )
+                    with col_act:
+                      if st.session_state.role == "teacher":
+                        c_ed, c_dl = st.columns(2)
+                        if c_ed.button(
+                            "✏️ تعديل",
+                            key=f"ed_beh_opt2_{global_idx}",
+                            type="secondary",
+                            use_container_width=True,
+                        ):
+                          st.session_state.edit_beh_idx_2 = global_idx
+                          st.rerun()
+                        c_dl.button(
+                            "🗑️ حذف",
+                            key=f"dl_beh_opt2_{global_idx}",
+                            type="secondary",
+                            on_click=delete_behavior_opt2,
+                            args=(global_idx, r.get("type")),
+                            use_container_width=True,
+                        )
             else:
               st.success("✨ سجل الطالب نظيف ولا توجد ملاحظات مسجلة.")
       else:
         st.info("لا توجد بيانات طلاب.")
 
-    # --- 2. الرصد الجماعي السريع ---
+    # ---------------------------------------------------------
+    # 2. السلوك الجماعي (الرصد السريع للفصل)
+    # ---------------------------------------------------------
     with eval_tabs[1]:
       if st.session_state.role == "teacher":
-        st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات والغياب")
+        st.markdown("#### 👥 رصد السلوك الجماعي السريع للفصل")
         st.info(
-            "💡 اختر الصف، وحدد الملاحظات للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة."
+            "💡 اختر الصف، وحدد السلوك أو الغياب للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة."
         )
 
         bulk_class = st.selectbox(
-            "🎯 اختر الصف للرصد الجماعي:",
+            "🎯 اختر الصف للسلوك الجماعي:",
             st.session_state.class_options,
             key="bulk_class_sel",
         )
@@ -1444,7 +1512,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                 )
 
               if st.form_submit_button(
-                  "🚀 حفظ الرصد الجماعي للجميع",
+                  "🚀 حفظ السلوك الجماعي للفصل",
                   type="primary",
                   use_container_width=True,
               ):
@@ -1467,7 +1535,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                 if behavior_rows_to_add:
                   try:
-                    with st.spinner("جاري حفظ الرصد الجماعي وتحديث النقاط..."):
+                    with st.spinner("جاري حفظ السلوك الجماعي وتحديث النقاط..."):
                       get_gspread_client().worksheet("behavior").append_rows(behavior_rows_to_add)
                       if point_updates:
                         ws_st = get_gspread_client().worksheet("students")
@@ -1497,6 +1565,8 @@ if st.session_state.role in ["teacher", "viewer"]:
                       st.success(
                           f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة."
                       )
+                      if "db_loaded" in st.session_state:
+                        del st.session_state["db_loaded"]
                       fetch_safe.clear()
                       st.rerun()
                   except Exception as e:
@@ -1510,48 +1580,82 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("💡 وضع القراءة فقط.")
 
-    # --- 3. رصد الدرجات الأكاديمية (تبويب مستقل للدرجات) ---
+    # ---------------------------------------------------------
+    # 3. رصد الدرجات (رصد فردي مع المجموع + قائمة سفلية ذكية للرصد الجماعي للفصل)
+    # ---------------------------------------------------------
     with eval_tabs[2]:
-      st.markdown("#### 📝 رصد وتعديل الدرجات الأكاديمية للفترة النشطة")
-      df_ev_g = st.session_state.df_students
+      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+      max_t_val = st.session_state.get("max_tasks", 60)
+      max_q_val = st.session_state.get("max_quiz", 40)
+      max_total_val = max_t_val + max_q_val
+
+      st.markdown(f"#### 📝 رصد وتعديل الدرجات الأكاديمية ({cp})")
+      df_ev_g = st.session_state.df_students.copy()
+
       if not df_ev_g.empty:
+        df_ev_g["clean_id"] = df_ev_g.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
+
+        # --- أ) الرصد الفردي مع شريط المجموع الواضح ---
         col_g_cls, col_g_st = st.columns([1, 2.5])
         cls_list_g = ["الكل"] + list(df_ev_g["class"].dropna().unique())
         sel_cls_g = col_g_cls.selectbox("🏫 تصفية بالصف:", cls_list_g, key="grades_cls_filter")
 
         df_ev_g_filtered = df_ev_g if sel_cls_g == "الكل" else df_ev_g[df_ev_g["class"] == sel_cls_g]
-        st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev_g_filtered.iterrows()}
-        sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد درجاته:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
+        st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r["clean_id"] for _, r in df_ev_g_filtered.iterrows()}
+        sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد أو تعديل درجاته فردياً:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
+
+        df_g = st.session_state.df_grades.copy()
+        if not df_g.empty:
+          df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
+          if "period" not in df_g.columns:
+            df_g["period"] = "الفصل الأول - فترة أولى"
+          df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
 
         if sel_g_st:
-          sid_g = str(st_dict_g[sel_g_st]).strip().split(".")[0]
-          s_inf_g = df_ev_g[df_ev_g.iloc[:, 0].astype(str).str.split(".").str[0] == sid_g].iloc[0]
+          sid_g = st_dict_g[sel_g_st]
+          s_inf_g = df_ev_g[df_ev_g["clean_id"] == sid_g].iloc[0]
           s_nm_g = s_inf_g["name"]
 
-          cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-          df_g = st.session_state.df_grades.copy()
           cur_p1, cur_p2 = 0, 0
-
           if not df_g.empty:
-            df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
-            if "period" not in df_g.columns:
-              df_g["period"] = "الفصل الأول - فترة أولى"
-            df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-
             gr_match = df_g[(df_g["clean_id"] == sid_g) & (df_g["period"] == cp)]
             if not gr_match.empty:
               cur_p1 = int(pd.to_numeric(gr_match.iloc[-1]["p1"], errors="coerce") or 0)
               cur_p2 = int(pd.to_numeric(gr_match.iloc[-1]["p2"], errors="coerce") or 0)
 
+          cur_total = cur_p1 + cur_p2
+          pct_val = round((cur_total / max_total_val) * 100, 1) if max_total_val > 0 else 0
+          tot_color = success_color if pct_val >= 90 else accent_color if pct_val >= 60 else danger_color
+
           with st.container(border=True):
-            st.markdown(f"##### 📊 درجات الطالب: <span style='color:{accent_color}; font-weight:900;'>{s_nm_g}</span> ({cp})", unsafe_allow_html=True)
+            # شريط علوي يعرض المجموع الحالي بوضوح تام
+            st.markdown(
+                f"""
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding-bottom:12px; border-bottom:1px dashed rgba(148,163,184,0.3);">
+                    <div>
+                        <span style="font-size:1.1rem; font-weight:900; color:var(--text-color);">👤 الطالب: <span style="color:{accent_color};">{s_nm_g}</span></span>
+                        <span style="color:#94A3B8; font-size:0.9rem; margin-right:10px;">({s_inf_g.get('class', '')})</span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); padding:6px 14px; border-radius:10px; font-weight:800; font-size:0.9rem;">
+                            مشاركة: <b>{cur_p1}</b>/{max_t_val} | اختبار: <b>{cur_p2}</b>/{max_q_val}
+                        </div>
+                        <div style="background:{tot_color}20; border:1.5px solid {tot_color}; padding:6px 16px; border-radius:10px; color:{tot_color}; font-weight:900; font-size:1.05rem;">
+                            🏆 المجموع: {cur_total} / {max_total_val} ({pct_val}%)
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
             if st.session_state.role == "teacher":
               with st.form("gr_upd_opt2", clear_on_submit=False):
                 g_col1, g_col2 = st.columns(2)
-                v1 = g_col1.number_input("درجة المشاركة والمهام", 0, st.session_state.get("max_tasks", 60), cur_p1)
-                v2 = g_col2.number_input("درجة الاختبارات", 0, st.session_state.get("max_quiz", 40), cur_p2)
+                v1 = g_col1.number_input(f"📝 درجة المشاركة والمهام (من {max_t_val})", 0, max_t_val, cur_p1)
+                v2 = g_col2.number_input(f"✍️ درجة الاختبارات القصيرة (من {max_q_val})", 0, max_q_val, cur_p2)
 
-                if st.form_submit_button("💾 حفظ الدرجات", type="primary", use_container_width=True):
+                if st.form_submit_button("💾 حفظ درجات الطالب وتحديث المجموع", type="primary", use_container_width=True):
                   tot = v1 + v2
                   today_s = str(datetime.date.today())
                   ws_g = get_gspread_client().worksheet("grades")
@@ -1590,12 +1694,141 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                   st.session_state.df_grades = fetch_safe.__wrapped__("grades") if hasattr(fetch_safe, "__wrapped__") else fetch_safe("grades")
                   fetch_safe.clear()
-                  st.toast(f"✅ تم حفظ درجات {s_nm_g} فوراً!", icon="📊")
+                  st.toast(f"✅ تم حفظ درجات {s_nm_g} (المجموع: {tot}) فوراً!", icon="📊")
                   st.rerun()
             else:
               st.info("💡 وضع القراءة فقط.")
 
-    # --- 4. مدقق رصد الدرجات (كشف النواقص) ---
+        # --- ب) ✳️ القائمة السفلية الذكية القابلة للطي: الرصد الجماعي لدرجات فصل كامل ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط لفتح جدول الرصد الجماعي", expanded=False):
+          st.info("💡 اختر الفصل لتظهر لك قائمة جميع طلابه مع درجاتهم الحالية ومجموعهم، وعدّل الدرجات مباشرة في الجدول ثم اضغط حفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
+
+          bulk_gr_cls = st.selectbox(
+              "🏫 اختر الفصل لرصد درجاته جماعياً:",
+              st.session_state.class_options,
+              key="bulk_grades_cls_sel",
+          )
+
+          cls_st_df = df_ev_g[df_ev_g["class"].astype(str).str.strip() == bulk_gr_cls.strip()].sort_values("name")
+
+          if not cls_st_df.empty:
+            # دمج درجات الفترة الحالية مع طلاب الفصل المختار
+            cur_period_grades = pd.DataFrame()
+            if not df_g.empty:
+              cur_period_grades = df_g[df_g["period"] == cp].drop_duplicates(subset=["clean_id"], keep="last")
+
+            rows_for_editor = []
+            for _, st_r in cls_st_df.iterrows():
+              c_sid = st_r["clean_id"]
+              p1_v, p2_v = 0, 0
+              if not cur_period_grades.empty and c_sid in cur_period_grades["clean_id"].values:
+                g_row = cur_period_grades[cur_period_grades["clean_id"] == c_sid].iloc[-1]
+                p1_v = int(pd.to_numeric(g_row.get("p1", 0), errors="coerce") or 0)
+                p2_v = int(pd.to_numeric(g_row.get("p2", 0), errors="coerce") or 0)
+
+              rows_for_editor.append({
+                  "الرقم الأكاديمي": c_sid,
+                  "اسم الطالب": st_r["name"],
+                  "المشاركة والمهام": p1_v,
+                  "الاختبارات": p2_v,
+                  "المجموع الكلي": p1_v + p2_v,
+              })
+
+            df_bulk_editor = pd.DataFrame(rows_for_editor)
+
+            edited_bulk_grades = st.data_editor(
+                df_bulk_editor,
+                use_container_width=True,
+                hide_index=True,
+                disabled=["الرقم الأكاديمي", "اسم الطالب", "المجموع الكلي"],
+                column_config={
+                    "الرقم الأكاديمي": st.column_config.TextColumn("🆔 الرقم الأكاديمي"),
+                    "اسم الطالب": st.column_config.TextColumn("👤 اسم الطالب"),
+                    "المشاركة والمهام": st.column_config.NumberColumn(
+                        f"📝 المشاركة (من {max_t_val})",
+                        min_value=0,
+                        max_value=max_t_val,
+                        step=1,
+                        required=True,
+                    ),
+                    "الاختبارات": st.column_config.NumberColumn(
+                        f"✍️ الاختبارات (من {max_q_val})",
+                        min_value=0,
+                        max_value=max_q_val,
+                        step=1,
+                        required=True,
+                    ),
+                    "المجموع الكلي": st.column_config.NumberColumn("🏆 المجموع السابق"),
+                },
+                key=f"de_bulk_grades_{bulk_gr_cls}_{cp}",
+            )
+
+            if st.session_state.role == "teacher":
+              if st.button(f"🚀 حفظ درجات فصل ({bulk_gr_cls}) بالكامل دفعة واحدة", type="primary", use_container_width=True, key="btn_save_bulk_grades"):
+                try:
+                  with st.spinner(f"⏳ جاري حفظ درجات طلاب ({bulk_gr_cls}) وتحديث المجاميع..."):
+                    ws_g = get_gspread_client().worksheet("grades")
+                    all_g_vals = ws_g.get_all_values()
+                    headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
+                    if "period" not in headers:
+                      ws_g.update_cell(1, len(headers) + 1, "period")
+                      headers.append("period")
+
+                    p_col_idx = headers.index("period")
+                    existing_row_map = {}
+                    for r_i, r_val in enumerate(all_g_vals[1:], start=2):
+                      r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
+                      r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
+                      if r_per in ["", "الفترة الأولى"]:
+                        r_per = "الفصل الأول - فترة أولى"
+                      elif r_per == "الفترة الثانية":
+                        r_per = "الفصل الأول - فترة ثانية"
+                      if r_id and r_per == cp:
+                        existing_row_map[r_id] = r_i
+
+                    from gspread.utils import rowcol_to_a1
+                    today_s = str(datetime.date.today())
+                    batch_updates = []
+                    new_rows_to_append = []
+
+                    for _, erow in edited_bulk_grades.iterrows():
+                      st_id_b = str(erow["الرقم الأكاديمي"]).strip().split(".")[0]
+                      v1_b = int(pd.to_numeric(erow["المشاركة والمهام"], errors="coerce") or 0)
+                      v2_b = int(pd.to_numeric(erow["الاختبارات"], errors="coerce") or 0)
+                      tot_b = v1_b + v2_b
+
+                      row_payload = [st_id_b, v1_b, v2_b, tot_b, today_s]
+                      while len(row_payload) < len(headers) - 1:
+                        row_payload.append("")
+                      row_payload.append(cp)
+
+                      if st_id_b in existing_row_map:
+                        target_r = existing_row_map[st_id_b]
+                        end_c = rowcol_to_a1(target_r, len(row_payload))
+                        batch_updates.append({"range": f"A{target_r}:{end_c}", "values": [row_payload]})
+                      else:
+                        new_rows_to_append.append(row_payload)
+
+                    if batch_updates:
+                      ws_g.batch_update(batch_updates)
+                    if new_rows_to_append:
+                      ws_g.append_rows(new_rows_to_append)
+
+                    st.session_state.df_grades = fetch_safe.__wrapped__("grades") if hasattr(fetch_safe, "__wrapped__") else fetch_safe("grades")
+                    fetch_safe.clear()
+                    st.success(f"✅ تم حفظ وتحديث درجات ({len(edited_bulk_grades)}) طالب في فصل ({bulk_gr_cls}) بنجاح!")
+                    st.rerun()
+                except Exception as e:
+                  st.error(f"❌ حدث خطأ أثناء الحفظ الجماعي للدرجات: {e}")
+          else:
+            st.warning("لا يوجد طلاب مسجلين في هذا الفصل.")
+      else:
+        st.info("لا توجد بيانات طلاب.")
+
+    # ---------------------------------------------------------
+    # 4. مدقق رصد الدرجات (كشف النواقص)
+    # ---------------------------------------------------------
     with eval_tabs[3]:
       cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
