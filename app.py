@@ -1058,25 +1058,31 @@ if st.session_state.role in ["teacher", "viewer"]:
     # ✳️ تنسيق CSS خاص لتمييز الأزرار الثانوية وأزرار التواصل (واتساب / تليجرام / تعديل / حذف) والخطوط التحذيرية
     st.markdown(
         """
+        st.markdown(
+        """
         <style>
-        /* فصل الأزرار الثانوية عن الأزرار الرئيسية الزرقاء لتظهر بخلفية هادئة */
-        button[kind="secondary"] {
+        /* ✳️ إصلاح الأزرار الثانوية في كامل المنصة لتظهر بخلفية هادئة بدلاً من الأزرق الداكن */
+        div.stButton > button[kind="secondary"],
+        div.stDownloadButton > button[kind="secondary"] {
             background: var(--secondary-background-color) !important;
+            background-color: var(--secondary-background-color) !important;
             color: var(--text-color) !important;
             border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
         }
-        button[kind="secondary"]:hover {
+        div.stButton > button[kind="secondary"]:hover,
+        div.stDownloadButton > button[kind="secondary"]:hover {
             border-color: #3B82F6 !important;
             background: rgba(59, 130, 246, 0.08) !important;
         }
-        /* أزرار الإجراءات الأربعة الهادئة تحت كل سجل سلوكي */
+
+        /* ✳️ شبكة أزرار التواصل (واتساب + تليجرام) */
         .action-bar-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
             margin-top: 6px;
-            margin-bottom: 14px;
+            margin-bottom: 8px;
             direction: rtl;
         }
         .soft-link-btn {
@@ -1084,7 +1090,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 9px 12px;
+            padding: 8px 12px;
             border-radius: 12px;
             font-weight: 800;
             font-size: 0.92rem;
@@ -1108,6 +1114,70 @@ if st.session_state.role in ["teacher", "viewer"]:
         }
         .btn-telegram:hover {
             background-color: rgba(14, 165, 233, 0.22) !important;
+            transform: translateY(-1px);
+        }
+
+        /* ✳️ إجبار زري (تعديل + حذف) على البقاء في صف واحد جنباً إلى جنب على الجوال والكمبيوتر */
+        div[data-testid="stElementContainer"]:has(.btn-edit-marker),
+        div[data-testid="stElementContainer"]:has(.btn-del-marker),
+        div.element-container:has(.btn-edit-marker),
+        div.element-container:has(.btn-del-marker) {
+            display: none !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+            direction: rtl !important;
+            margin-top: 0px !important;
+            margin-bottom: 16px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="stColumn"],
+        div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="column"] {
+            width: 100% !important;
+            min-width: 0 !important;
+            flex: unset !important;
+        }
+
+        /* ✳️ تصميم عصري هادئ لزر التعديل (بنفسجي/أزرق هادئ) */
+        div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button,
+        div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {
+            background: rgba(99, 102, 241, 0.12) !important;
+            background-color: rgba(99, 102, 241, 0.12) !important;
+            color: #6366F1 !important;
+            border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+            border-radius: 12px !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            padding: 8px 12px !important;
+            font-size: 0.92rem !important;
+            font-weight: 800 !important;
+            box-shadow: none !important;
+        }
+        div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button:hover,
+        div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {
+            background: rgba(99, 102, 241, 0.22) !important;
+            transform: translateY(-1px);
+        }
+
+        /* ✳️ تصميم عصري هادئ لزر الحذف (وردي/أحمر هادئ) */
+        div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button,
+        div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {
+            background: rgba(239, 68, 68, 0.12) !important;
+            background-color: rgba(239, 68, 68, 0.12) !important;
+            color: #EF4444 !important;
+            border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+            border-radius: 12px !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            padding: 8px 12px !important;
+            font-size: 0.92rem !important;
+            font-weight: 800 !important;
+            box-shadow: none !important;
+        }
+        div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button:hover,
+        div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {
+            background: rgba(239, 68, 68, 0.22) !important;
             transform: translateY(-1px);
         }
         </style>
@@ -1403,28 +1473,28 @@ if st.session_state.role in ["teacher", "viewer"]:
                         unsafe_allow_html=True,
                     )
 
-                    # ✳️ شريط الأزرار الهادئة المميزة (واتساب - تليجرام - تعديل - حذف)
+                    # ✳️ شريط الأزرار العصرية الهادئة (الصف الأول: واتساب وتليجرام | الصف الثاني: تعديل وحذف بنفس الصف)
                     lnk = get_professional_msg(
                         s_nm, r.get("type"), r.get("note"), r.get("date")
                     )
                     wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
                     tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
 
-                    col_comm, col_act = st.columns([1.3, 1])
-                    with col_comm:
-                      st.markdown(
-                          f"""
-                          <div class="action-bar-grid">
-                              <a href="{wa_url}" target="_blank" class="soft-link-btn btn-whatsapp">💬 واتساب</a>
-                              <a href="{tg_url}" target="_blank" class="soft-link-btn btn-telegram">✈️ تليجرام</a>
-                          </div>
-                          """,
-                          unsafe_allow_html=True,
-                      )
-                    with col_act:
-                      if st.session_state.role == "teacher":
-                        c_ed, c_dl = st.columns(2)
-                        if c_ed.button(
+                    st.markdown(
+                        f"""
+                        <div class="action-bar-grid">
+                            <a href="{wa_url}" target="_blank" class="soft-link-btn btn-whatsapp">💬 واتساب</a>
+                            <a href="{tg_url}" target="_blank" class="soft-link-btn btn-telegram">✈️ تليجرام</a>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if st.session_state.role == "teacher":
+                      c_ed, c_dl = st.columns(2)
+                      with c_ed:
+                        st.markdown('<span class="btn-edit-marker"></span>', unsafe_allow_html=True)
+                        if st.button(
                             "✏️ تعديل",
                             key=f"ed_beh_opt2_{global_idx}",
                             type="secondary",
@@ -1432,7 +1502,9 @@ if st.session_state.role in ["teacher", "viewer"]:
                         ):
                           st.session_state.edit_beh_idx_2 = global_idx
                           st.rerun()
-                        c_dl.button(
+                      with c_dl:
+                        st.markdown('<span class="btn-del-marker"></span>', unsafe_allow_html=True)
+                        st.button(
                             "🗑️ حذف",
                             key=f"dl_beh_opt2_{global_idx}",
                             type="secondary",
