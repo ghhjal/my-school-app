@@ -2238,7 +2238,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         elif cert_mode == "👤 طالب محدد (بالاسم)":
           col_f_c1, col_f_c2 = st.columns([1, 2])
           cls_list_c = ["الكل"] + list(df_st_h["class"].dropna().unique())
-          sel_cls_ filter_c = col_f_c1.selectbox("🏫 تصفية بالصف:", cls_list_c, key="cert_single_cls_f")
+          sel_cls_filter_c = col_f_c1.selectbox("🏫 تصفية بالصف:", cls_list_c, key="cert_single_cls_f")
           df_st_c_filtered = df_st_h if sel_cls_filter_c == "الكل" else df_st_h[df_st_h["class"] == sel_cls_filter_c]
 
           st_cert_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_st_c_filtered.iterrows()}
