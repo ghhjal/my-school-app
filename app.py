@@ -1051,12 +1051,13 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لحذف الطلاب.")
 # ==========================================
-# 📊 6. التبويب الثاني: الرصد والتقييم (الاقتراح الثاني: تبويبات فرعية مستقلة)
+# 📊 6. التبويب الثاني: الرصد والتقييم (فردي، جماعي، مدقق الرصد)
 # ==========================================
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_eval:
     st.subheader("📊 الرصد والتقييم الأكاديمي والسلوكي")
 
+    # ✳️ القائمة المركزية الموحدة للسلوك (تُقرأ منها جميع القوائم الفردية والجماعية والتعديل)
     BEHAVIOR_OPTIONS = [
         "🌟 متميز (+10)",
         "🎯 أداء المهمة (+15)",
@@ -1075,22 +1076,20 @@ if st.session_state.role in ["teacher", "viewer"]:
         "🚫 سلبي (-10)",
     ]
 
-    # ✳️ تقسيم العمل إلى 4 تبويبات فرعية دقيقة ومتخصصة
     eval_tabs = st.tabs([
-        "🎭 السلوك اليومي",
-        "👥 الرصد الجماعي",
-        "📝 رصد الدرجات",
-        "🔍 مدقق النواقص",
+        "👤 التقييم الفردي",
+        "👥 الرصد الجماعي السريع",
+        "🔍 مدقق رصد الدرجات (النواقص)",
     ])
 
-    # --- 1. التقييم الفردي للسلوك والملاحظات (العمل اليومي داخل الحصة) ---
+    # --- 1. التقييم الفردي (سريع الاستجابة ومنسق المحاذاة) ---
     with eval_tabs[0]:
       df_ev = st.session_state.df_students
       if not df_ev.empty:
         col_f_cls, col_f_st = st.columns([1, 2.5])
         cls_list_ev = ["الكل"] + list(df_ev["class"].dropna().unique())
         sel_cls_ev = col_f_cls.selectbox(
-            "🏫 تصفية بالصف:", cls_list_ev, key="eval_cls_filter_2"
+            "🏫 تصفية بالصف:", cls_list_ev, key="eval_cls_filter"
         )
 
         df_ev_filtered = (
@@ -1103,7 +1102,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         sel = col_f_st.selectbox(
             "🎯 اختر الطالب من القائمة:",
             [""] + list(st_dict.keys()),
-            key="single_eval_sel_2",
+            key="single_eval_sel",
         )
 
         if sel:
@@ -1120,67 +1119,167 @@ if st.session_state.role in ["teacher", "viewer"]:
               pd.to_numeric(s_inf.get("النقاط", 0), errors="coerce") or 0
           )
 
-          # بطاقة السلوك بعرض كامل وواضح جداً داخل الحصة
-          with st.container(border=True):
-            st.markdown(
-                f"##### 🎭 السلوك والملاحظات اليومية لـ: <span style='color:{accent_color};'>{s_nm}</span> (الرصيد: <span style='color:{warning_color}; font-weight:900;'>{current_points}</span> نقطة)",
-                unsafe_allow_html=True,
-            )
-            if st.session_state.role == "teacher":
-              with st.form("beh_add_opt2", clear_on_submit=True):
-                b_col1, b_col2 = st.columns([1.3, 2])
-                bt = b_col1.selectbox("نوع السلوك", BEHAVIOR_OPTIONS)
-                bn = b_col2.text_input(
-                    "تفاصيل الملاحظة (اختياري)",
-                    placeholder="اكتب ملاحظة سريعة...",
+          c1, c2 = st.columns(2)
+
+          # --- قسم السلوك الفردي (تحديث لحظي في الذاكرة) ---
+          with c2:
+            with st.container(border=True):
+              st.markdown(
+                  f"##### 🎭 السلوك والملاحظات (الرصيد: <span style='color:{warning_color};'>{current_points}</span> نقطة)",
+                  unsafe_allow_html=True,
+              )
+              if st.session_state.role == "teacher":
+                with st.form("beh_add", clear_on_submit=True):
+                  bt = st.selectbox("نوع السلوك", BEHAVIOR_OPTIONS)
+                  bn = st.text_area("تفاصيل الملاحظة (اختياري)")
+
+                  if st.form_submit_button(
+                      "💾 تسجيل السلوك",
+                      type="primary",
+                      use_container_width=True,
+                  ):
+                    today_str = str(datetime.date.today())
+                    new_b_row = {
+                        "student_id": sid,
+                        "date": today_str,
+                        "type": bt,
+                        "note": bn,
+                    }
+                    if safe_append_row("behavior", new_b_row):
+                      match = re.search(r"\(([\+\-]?\d+)\)", bt)
+                      chg = int(match.group(1)) if match else 0
+                      if chg != 0:
+                        try:
+                          ws = get_gspread_client().worksheet("students")
+                          c = ws.find(sid)
+                          if c:
+                            h = ws.row_values(1)
+                            if "النقاط" in h:
+                              idx = h.index("النقاط") + 1
+                              new_val = current_points + chg
+                              ws.update_cell(c.row, idx, str(new_val))
+                              st.session_state.df_students.loc[
+                                  student_idx, "النقاط"
+                              ] = str(new_val)
+                        except Exception as e:
+                          st.error(f"خطأ: {e}")
+
+                      # ✳️ تحديث جدول السلوك في الذاكرة مباشرة دون إعادة تحميل كل الجداول
+                      new_df_row = pd.DataFrame([new_b_row])
+                      st.session_state.df_behavior = pd.concat(
+                          [st.session_state.df_behavior, new_df_row],
+                          ignore_index=True,
+                      )
+                      fetch_safe.clear()
+                      st.toast(
+                          f"✅ تم تسجيل الملاحظة للطالب {s_nm} فوراً!",
+                          icon="🎉",
+                      )
+                      st.rerun()
+              else:
+                st.info("💡 وضع القراءة فقط.")
+
+          # --- قسم الدرجات الأكاديمية (تحديث مدمج بطلب واحد سريع) ---
+          with c1:
+            with st.container(border=True):
+              cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+              st.markdown(f"##### 📝 رصد الدرجات ({cp})")
+
+              df_g = st.session_state.df_grades.copy()
+              cur_p1, cur_p2 = 0, 0
+
+              if not df_g.empty:
+                df_g["clean_id"] = (
+                    df_g.iloc[:, 0].astype(str).str.split(".").str[0]
+                )
+                if "period" not in df_g.columns:
+                  df_g["period"] = "الفصل الأول - فترة أولى"
+                df_g["period"] = (
+                    df_g["period"]
+                    .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
+                    .astype(str)
+                    .str.strip()
                 )
 
-                if st.form_submit_button(
-                    "💾 تسجيل السلوك فوراً",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                  today_str = str(datetime.date.today())
-                  new_b_row = {
-                      "student_id": sid,
-                      "date": today_str,
-                      "type": bt,
-                      "note": bn,
-                  }
-                  if safe_append_row("behavior", new_b_row):
-                    match = re.search(r"\(([\+\-]?\d+)\)", bt)
-                    chg = int(match.group(1)) if match else 0
-                    if chg != 0:
-                      try:
-                        ws = get_gspread_client().worksheet("students")
-                        c = ws.find(sid)
-                        if c:
-                          h = ws.row_values(1)
-                          if "النقاط" in h:
-                            idx = h.index("النقاط") + 1
-                            new_val = current_points + chg
-                            ws.update_cell(c.row, idx, str(new_val))
-                            st.session_state.df_students.loc[
-                                student_idx, "النقاط"
-                            ] = str(new_val)
-                      except Exception as e:
-                        st.error(f"خطأ: {e}")
+                gr_match = df_g[
+                    (df_g["clean_id"] == sid) & (df_g["period"] == cp)
+                ]
+                if not gr_match.empty:
+                  cur_p1 = int(
+                      pd.to_numeric(gr_match.iloc[-1]["p1"], errors="coerce")
+                      or 0
+                  )
+                  cur_p2 = int(
+                      pd.to_numeric(gr_match.iloc[-1]["p2"], errors="coerce")
+                      or 0
+                  )
 
-                    new_df_row = pd.DataFrame([new_b_row])
-                    st.session_state.df_behavior = pd.concat(
-                        [st.session_state.df_behavior, new_df_row],
-                        ignore_index=True,
-                    )
+              if st.session_state.role == "teacher":
+                with st.form("gr_upd", clear_on_submit=False):
+                  v1 = st.number_input(
+                      "درجة المشاركة والمهام",
+                      0,
+                      st.session_state.get("max_tasks", 60),
+                      cur_p1,
+                  )
+                  v2 = st.number_input(
+                      "درجة الاختبارات",
+                      0,
+                      st.session_state.get("max_quiz", 40),
+                      cur_p2,
+                  )
+
+                  if st.form_submit_button(
+                      "💾 حفظ الدرجات",
+                      type="primary",
+                      use_container_width=True,
+                  ):
+                    tot = v1 + v2
+                    today_s = str(datetime.date.today())
+                    ws_g = get_gspread_client().worksheet("grades")
+
+                    all_g_vals = ws_g.get_all_values()
+                    headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
+                    if "period" not in headers:
+                      ws_g.update_cell(1, len(headers) + 1, "period")
+                      headers.append("period")
+
+                    p_col_idx = headers.index("period")
+                    row_to_update = None
+
+                    for r_i, r_val in enumerate(all_g_vals[1:], start=2):
+                      r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
+                      r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
+                      if r_per in ["", "الفترة الأولى"]:
+                        r_per = "الفصل الأول - فترة أولى"
+                      elif r_per == "الفترة الثانية":
+                        r_per = "الفصل الأول - فترة ثانية"
+                      if r_id == sid and r_per == cp:
+                        row_to_update = r_i
+                        break
+
+                    from gspread.utils import rowcol_to_a1
+                    row_payload = [sid, v1, v2, tot, today_s]
+                    while len(row_payload) < len(headers) - 1:
+                      row_payload.append("")
+                    row_payload.append(cp)
+
+                    # ✳️ إرسال جميع خلايا الصف في طلب شبكي واحد فقط بدلاً من 5 طلبات
+                    if row_to_update:
+                      end_cell = rowcol_to_a1(row_to_update, len(row_payload))
+                      ws_g.update(range_name=f"A{row_to_update}:{end_cell}", values=[row_payload])
+                    else:
+                      ws_g.append_row(row_payload)
+
+                    st.session_state.df_grades = fetch_safe.__wrapped__("grades") if hasattr(fetch_safe, "__wrapped__") else fetch_safe("grades")
                     fetch_safe.clear()
-                    st.toast(
-                        f"✅ تم تسجيل الملاحظة للطالب {s_nm} فوراً!",
-                        icon="🎉",
-                    )
+                    st.toast(f"✅ تم حفظ درجات {s_nm} فوراً!", icon="📊")
                     st.rerun()
-            else:
-              st.info("💡 وضع القراءة فقط.")
+              else:
+                st.info("💡 وضع القراءة فقط.")
+              st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
 
-          # --- سجل السلوك السفلي للطالب ---
+          # --- سجل السلوك السفلي (بمحاذاة يمين منتظمة 100%) ---
           st.markdown("#### 📜 سجل السلوك الأخير للطالب")
           df_b = st.session_state.df_behavior
           if not df_b.empty:
@@ -1203,7 +1302,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                   by="date_parsed", ascending=False, kind="mergesort"
               )
 
-              def delete_behavior_opt2(global_idx, b_type):
+              def delete_behavior(global_idx, b_type):
                 try:
                   get_gspread_client().worksheet("behavior").delete_rows(int(global_idx) + 2)
                   match = re.search(r"\(([\+\-]?\d+)\)", str(b_type))
@@ -1229,12 +1328,12 @@ if st.session_state.role in ["teacher", "viewer"]:
                 except Exception:
                   pass
 
-              if "edit_beh_idx_2" not in st.session_state:
-                st.session_state.edit_beh_idx_2 = None
+              if "edit_beh_idx" not in st.session_state:
+                st.session_state.edit_beh_idx = None
 
               for global_idx, r in my_b.iterrows():
                 with st.container():
-                  if st.session_state.edit_beh_idx_2 == global_idx:
+                  if st.session_state.edit_beh_idx == global_idx:
                     st.markdown(
                         f"<div style='background: var(--secondary-background-color); padding: 15px; border-radius: 12px; border: 2px dashed {accent_color}; margin-bottom: 10px;'>",
                         unsafe_allow_html=True,
@@ -1251,13 +1350,13 @@ if st.session_state.role in ["teacher", "viewer"]:
                         "نوع السلوك",
                         edit_opts,
                         index=type_idx,
-                        key=f"edit_type_opt2_{global_idx}",
+                        key=f"edit_type_{global_idx}",
                         label_visibility="collapsed",
                     )
                     new_note = st.text_input(
                         "التفاصيل",
                         value=str(r.get("note", "")),
-                        key=f"edit_note_opt2_{global_idx}",
+                        key=f"edit_note_{global_idx}",
                         label_visibility="collapsed",
                     )
 
@@ -1265,7 +1364,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                     if c_save.button(
                         "💾 حفظ التعديل",
                         type="primary",
-                        key=f"save_opt2_{global_idx}",
+                        key=f"save_{global_idx}",
                         use_container_width=True,
                     ):
                       try:
@@ -1298,7 +1397,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                           st.session_state.df_behavior.loc[global_idx, "type"] = new_type
                           st.session_state.df_behavior.loc[global_idx, "note"] = new_note
-                          st.session_state.edit_beh_idx_2 = None
+                          st.session_state.edit_beh_idx = None
                           fetch_safe.clear()
                           st.toast("✅ تم التعديل بنجاح!", icon="✏️")
                           st.rerun()
@@ -1307,10 +1406,10 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                     if c_cancel.button(
                         "❌ إلغاء",
-                        key=f"cancel_opt2_{global_idx}",
+                        key=f"cancel_{global_idx}",
                         use_container_width=True,
                     ):
-                      st.session_state.edit_beh_idx_2 = None
+                      st.session_state.edit_beh_idx = None
                       st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
                   else:
@@ -1329,6 +1428,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                         else ""
                     )
 
+                    # ✳️ استخدام البطاقة الموحدة ذات المحاذاة اليمنى الثابتة
                     st.markdown(
                         f"""
                         <div class="student-list-card" style="border-right: 5px solid {color};">
@@ -1351,20 +1451,25 @@ if st.session_state.role in ["teacher", "viewer"]:
                         f"https://api.whatsapp.com/send?phone={clp}&text={lnk}",
                         use_container_width=True,
                     )
-                    
+                    c_em.link_button(
+                        "📧 إيميل",
+                        f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}",
+                        use_container_width=True,
+                    )
+
                     if st.session_state.role == "teacher":
                       if c_edit.button(
                           "✏️",
-                          key=f"ed_beh_opt2_{global_idx}",
+                          key=f"ed_beh_{global_idx}",
                           help="تعديل السجل",
                           use_container_width=True,
                       ):
-                        st.session_state.edit_beh_idx_2 = global_idx
+                        st.session_state.edit_beh_idx = global_idx
                         st.rerun()
                       c_del.button(
                           "❌",
-                          key=f"dl_beh_opt2_{global_idx}",
-                          on_click=delete_behavior_opt2,
+                          key=f"dl_beh_{global_idx}",
+                          on_click=delete_behavior,
                           args=(global_idx, r.get("type")),
                           help="حذف نهائي",
                           use_container_width=True,
@@ -1463,9 +1568,9 @@ if st.session_state.role in ["teacher", "viewer"]:
                 if behavior_rows_to_add:
                   try:
                     with st.spinner("جاري حفظ الرصد الجماعي وتحديث النقاط..."):
-                      get_gspread_client().worksheet("behavior").append_rows(behavior_rows_to_add)
+                      sh.worksheet("behavior").append_rows(behavior_rows_to_add)
                       if point_updates:
-                        ws_st = get_gspread_client().worksheet("students")
+                        ws_st = sh.worksheet("students")
                         all_st = ws_st.get_all_records()
                         headers = ws_st.row_values(1)
 
@@ -1492,7 +1597,9 @@ if st.session_state.role in ["teacher", "viewer"]:
                       st.success(
                           f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة."
                       )
-                      fetch_safe.clear()
+                      st.cache_data.clear()
+                      if "db_loaded" in st.session_state:
+                        del st.session_state["db_loaded"]
                       st.rerun()
                   except Exception as e:
                     st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
@@ -1505,108 +1612,38 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("💡 وضع القراءة فقط.")
 
-    # --- 3. رصد الدرجات الأكاديمية (تبويب مستقل للدرجات) ---
+    # --- 3. مدقق رصد الدرجات (كشف النواقص) ---
     with eval_tabs[2]:
-      st.markdown("#### 📝 رصد وتعديل الدرجات الأكاديمية للفترة النشطة")
-      df_ev_g = st.session_state.df_students
-      if not df_ev_g.empty:
-        col_g_cls, col_g_st = st.columns([1, 2.5])
-        cls_list_g = ["الكل"] + list(df_ev_g["class"].dropna().unique())
-        sel_cls_g = col_g_cls.selectbox("🏫 تصفية بالصف:", cls_list_g, key="grades_cls_filter")
-
-        df_ev_g_filtered = df_ev_g if sel_cls_g == "الكل" else df_ev_g[df_ev_g["class"] == sel_cls_g]
-        st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev_g_filtered.iterrows()}
-        sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد درجاته:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
-
-        if sel_g_st:
-          sid_g = str(st_dict_g[sel_g_st]).strip().split(".")[0]
-          s_inf_g = df_ev_g[df_ev_g.iloc[:, 0].astype(str).str.split(".").str[0] == sid_g].iloc[0]
-          s_nm_g = s_inf_g["name"]
-
-          cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-          df_g = st.session_state.df_grades.copy()
-          cur_p1, cur_p2 = 0, 0
-
-          if not df_g.empty:
-            df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
-            if "period" not in df_g.columns:
-              df_g["period"] = "الفصل الأول - فترة أولى"
-            df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-
-            gr_match = df_g[(df_g["clean_id"] == sid_g) & (df_g["period"] == cp)]
-            if not gr_match.empty:
-              cur_p1 = int(pd.to_numeric(gr_match.iloc[-1]["p1"], errors="coerce") or 0)
-              cur_p2 = int(pd.to_numeric(gr_match.iloc[-1]["p2"], errors="coerce") or 0)
-
-          with st.container(border=True):
-            st.markdown(f"##### 📊 درجات الطالب: <span style='color:{accent_color}; font-weight:900;'>{s_nm_g}</span> ({cp})", unsafe_allow_html=True)
-            if st.session_state.role == "teacher":
-              with st.form("gr_upd_opt2", clear_on_submit=False):
-                g_col1, g_col2 = st.columns(2)
-                v1 = g_col1.number_input("درجة المشاركة والمهام", 0, st.session_state.get("max_tasks", 60), cur_p1)
-                v2 = g_col2.number_input("درجة الاختبارات", 0, st.session_state.get("max_quiz", 40), cur_p2)
-
-                if st.form_submit_button("💾 حفظ الدرجات", type="primary", use_container_width=True):
-                  tot = v1 + v2
-                  today_s = str(datetime.date.today())
-                  ws_g = get_gspread_client().worksheet("grades")
-
-                  all_g_vals = ws_g.get_all_values()
-                  headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
-                  if "period" not in headers:
-                    ws_g.update_cell(1, len(headers) + 1, "period")
-                    headers.append("period")
-
-                  p_col_idx = headers.index("period")
-                  row_to_update = None
-
-                  for r_i, r_val in enumerate(all_g_vals[1:], start=2):
-                    r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
-                    r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
-                    if r_per in ["", "الفترة الأولى"]:
-                      r_per = "الفصل الأول - فترة أولى"
-                    elif r_per == "الفترة الثانية":
-                      r_per = "الفصل الأول - فترة ثانية"
-                    if r_id == sid_g and r_per == cp:
-                      row_to_update = r_i
-                      break
-
-                  from gspread.utils import rowcol_to_a1
-                  row_payload = [sid_g, v1, v2, tot, today_s]
-                  while len(row_payload) < len(headers) - 1:
-                    row_payload.append("")
-                  row_payload.append(cp)
-
-                  if row_to_update:
-                    end_cell = rowcol_to_a1(row_to_update, len(row_payload))
-                    ws_g.update(range_name=f"A{row_to_update}:{end_cell}", values=[row_payload])
-                  else:
-                    ws_g.append_row(row_payload)
-
-                  st.session_state.df_grades = fetch_safe.__wrapped__("grades") if hasattr(fetch_safe, "__wrapped__") else fetch_safe("grades")
-                  fetch_safe.clear()
-                  st.toast(f"✅ تم حفظ درجات {s_nm_g} فوراً!", icon="📊")
-                  st.rerun()
-            else:
-              st.info("💡 وضع القراءة فقط.")
-
-    # --- 4. مدقق رصد الدرجات (كشف النواقص) ---
-    with eval_tabs[3]:
       cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
-      st.info("💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً.")
+      st.info(
+          "💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً."
+      )
 
       df_st_audit = st.session_state.df_students.copy()
       df_gr_audit = st.session_state.df_grades.copy()
 
       if not df_st_audit.empty:
-        df_st_audit["clean_id"] = df_st_audit.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
+        df_st_audit["clean_id"] = (
+            df_st_audit.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
+        )
 
         if not df_gr_audit.empty:
-          df_gr_audit["clean_id"] = df_gr_audit.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
+          df_gr_audit["clean_id"] = (
+              df_gr_audit.iloc[:, 0]
+              .astype(str)
+              .str.strip()
+              .str.split(".")
+              .str[0]
+          )
           if "period" not in df_gr_audit.columns:
             df_gr_audit["period"] = "الفصل الأول - فترة أولى"
-          df_gr_audit["period"] = df_gr_audit["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+          df_gr_audit["period"] = (
+              df_gr_audit["period"]
+              .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
+              .astype(str)
+              .str.strip()
+          )
           df_gr_curr = df_gr_audit[df_gr_audit["period"] == cp_aud]
 
           audit_merge = pd.merge(
@@ -1620,8 +1657,12 @@ if st.session_state.role in ["teacher", "viewer"]:
           missing_grades = df_st_audit[["clean_id", "name", "class", "sem"]]
 
         if not missing_grades.empty:
-          st.warning(f"⚠️ يوجد ({len(missing_grades)}) طالب لم ترصد لهم درجات في ({cp_aud}).")
-          display_missing = missing_grades[["clean_id", "name", "class", "sem"]].rename(
+          st.warning(
+              f"⚠️ يوجد ({len(missing_grades)}) طالب لم ترصد لهم درجات في ({cp_aud})."
+          )
+          display_missing = missing_grades[
+              ["clean_id", "name", "class", "sem"]
+          ].rename(
               columns={
                   "clean_id": "الرقم الأكاديمي",
                   "name": "اسم الطالب",
@@ -1629,11 +1670,15 @@ if st.session_state.role in ["teacher", "viewer"]:
                   "sem": "المرحلة",
               }
           )
-          st.dataframe(display_missing, use_container_width=True, hide_index=True)
+          st.dataframe(
+              display_missing, use_container_width=True, hide_index=True
+          )
 
           b_audit = io.BytesIO()
           with pd.ExcelWriter(b_audit, engine="xlsxwriter") as writer:
-            display_missing.to_excel(writer, index=False, sheet_name="Missing_Grades")
+            display_missing.to_excel(
+                writer, index=False, sheet_name="Missing_Grades"
+            )
 
           st.download_button(
               label="📥 تحميل قائمة نواقص الرصد (Excel)",
@@ -1644,10 +1689,11 @@ if st.session_state.role in ["teacher", "viewer"]:
               use_container_width=True,
           )
         else:
-          st.success(f"✅ ممتاز! جميع الطلاب المسجلين تم رصد درجاتهم في ({cp_aud}) بنجاح.")
+          st.success(
+              f"✅ ممتاز! جميع الطلاب المسجلين تم رصد درجاتهم في ({cp_aud}) بنجاح."
+          )
       else:
         st.info("لا توجد بيانات طلاب للتدقيق.")
-
 # ==========================================
 # 🏆 7. التبويب الثالث: الشرف والشهادات الإلكترونية
 # ==========================================
