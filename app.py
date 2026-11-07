@@ -3561,7 +3561,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         else:
           st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
 # ==========================================
-# 📢 9. التبويب الخامس: لوحة الإعلانات والتعاميم
+# 📢 9. التبويب الخامس: لوحة الإعلانات والتعاميم (يدعم اختيار عدة فصول معاً)
 # ==========================================
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_alerts:
@@ -3569,40 +3569,46 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     def perform_delete(row_index):
       try:
-        sh.worksheet("exams").delete_rows(int(row_index) + 2)
-        st.cache_data.clear()
+        get_gspread_client().worksheet("exams").delete_rows(int(row_index) + 2)
+        fetch_safe.clear()
         st.toast("✅ تم حذف التنبيه بنجاح")
       except Exception as e:
         st.toast(f"❌ حدث خطأ: {e}")
 
     if st.session_state.role == "teacher":
       with st.form("ann_add", clear_on_submit=True):
-        c1, c2 = st.columns([3, 1])
-        at = c1.text_input("عنوان الإعلان أو التعميم")
-        atg = c2.selectbox(
-            "الفئة المستهدفة", ["الكل"] + st.session_state.class_options
+        c1, c2 = st.columns([2, 2])
+        at = c1.text_input("📌 عنوان الإعلان أو التعميم")
+        atg_list = c2.multiselect(
+            "🎯 الفصول المستهدفة (يمكنك اختيار أكثر من فصل معاً):",
+            options=["الكل"] + st.session_state.class_options,
+            default=["الكل"],
         )
-        ad = st.text_area("تفاصيل الإعلان أو الرابط")
-        au = c1.checkbox("🔥 تعميم عاجل (يظهر بوميض أحمر أعلى حساب الطالب)")
+        ad = st.text_area("📄 تفاصيل الإعلان أو الرابط")
+        au = st.checkbox("🔥 تعميم عاجل (يظهر بوميض أحمر أعلى حساب الطالب)")
+
         if st.form_submit_button(
-            "📣 نشر التعميم الآن", type="primary", use_container_width=True
+            "📣 نشر التعميم للفصول المحددة", type="primary", use_container_width=True
         ):
-          if at:
+          if not at:
+            st.warning("⚠️ يرجى كتابة عنوان الإعلان.")
+          elif not atg_list:
+            st.warning("⚠️ يرجى اختيار فصل واحد على الأقل أو اختيار 'الكل'.")
+          else:
+            target_str = "الكل" if "الكل" in atg_list else " ، ".join(atg_list)
             safe_append_row(
                 "exams",
                 {
-                    "الصف": atg,
+                    "الصف": target_str,
                     "عاجل": "نعم" if au else "لا",
                     "العنوان": at,
                     "التاريخ": str(datetime.date.today()),
                     "الرابط": ad,
                 },
             )
-            st.success("✅ تم نشر التعميم بنجاح!")
-            st.cache_data.clear()
+            st.success(f"✅ تم نشر التعميم بنجاح إلى: ({target_str})!")
+            fetch_safe.clear()
             st.rerun()
-          else:
-            st.warning("⚠️ يرجى كتابة عنوان الإعلان.")
 
     st.divider()
     df_a = fetch_safe("exams")
@@ -3623,13 +3629,13 @@ if st.session_state.role in ["teacher", "viewer"]:
           )
           st.markdown(
               f"""
-              <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:14px; padding:16px; margin-bottom:10px;">
+              <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:14px; padding:16px; margin-bottom:10px; text-align:right; direction:rtl;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                       <h4 style="margin:0; color:var(--text-color); font-weight:900;">{r.get('العنوان')}</h4>
-                      <span style="background:var(--background-color); padding:3px 10px; border-radius:8px; font-size:0.82rem; color:#94A3B8; font-weight:bold;">{r.get('التاريخ')}</span>
+                      <span style="background:var(--background-color); padding:3px 10px; border-radius:8px; font-size:0.82rem; color:#94A3B8; font-weight:bold; direction:ltr;">{r.get('التاريخ')}</span>
                   </div>
                   <p style="margin:8px 0; color:#94A3B8; font-weight:600;">{r.get('الرابط')}</p>
-                  <small style="color:{accent_color}; font-weight:800;">🎯 الفئة المستهدفة: {r.get('الصف')}</small>
+                  <small style="color:{accent_color}; font-weight:800;">🎯 الفصول المستهدفة: {r.get('الصف')}</small>
               </div>
               """,
               unsafe_allow_html=True,
@@ -3637,7 +3643,7 @@ if st.session_state.role in ["teacher", "viewer"]:
           kc1, kc2 = st.columns([1, 4])
           msg_text = (
               "📢 *تعميم هام من منصة الأستاذ زياد*\n━━━━━━━━━━━━\n📌 *العنوان:*"
-              f" {r.get('العنوان')}\n📄 *التفاصيل:* {r.get('الرابط')}\n📅"
+              f" {r.get('العنوان')}\n🎯 *الفصل:* {r.get('الصف')}\n📄 *التفاصيل:* {r.get('الرابط')}\n📅"
               f" *التاريخ:* {r.get('التاريخ')}\n━━━━━━━━━━━━"
           )
           grp_msg = urllib.parse.quote(msg_text)
