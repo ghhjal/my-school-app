@@ -110,7 +110,7 @@ if "class_options" not in st.session_state:
     st.session_state.max_quiz = int(s_map.get("max_quiz", 40))
     st.session_state.current_year = str(s_map.get("current_year", "1447هـ"))
     st.session_state.current_period = str(
-        s_map.get("current_period", "الفترة الأولى")
+        s_map.get("current_period", "الفصل الأول - فترة أولى")
     ).strip()
     st.session_state.app_theme = str(
         s_map.get("app_theme", "الرئيسي (الافتراضي)")
@@ -128,7 +128,7 @@ if "class_options" not in st.session_state:
   else:
     st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
     st.session_state.current_year = "1447هـ"
-    st.session_state.current_period = "الفترة الأولى"
+    st.session_state.current_period = "الفصل الأول - فترة أولى"
     st.session_state.app_theme = "الرئيسي (الافتراضي)"
     st.session_state.class_options = ["الأول"]
     st.session_state.stage_options = ["ابتدائي"]
@@ -1251,7 +1251,7 @@ if st.session_state.role in ["teacher", "viewer"]:
           # --- قسم الدرجات الأكاديمية ---
           with c1:
             with st.container(border=True):
-              cp = st.session_state.get("current_period", "الفترة الأولى").strip()
+              cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
               st.markdown(f"##### 📝 رصد الدرجات ({cp})")
 
               df_g = st.session_state.df_grades.copy()
@@ -1262,10 +1262,10 @@ if st.session_state.role in ["teacher", "viewer"]:
                     df_g.iloc[:, 0].astype(str).str.split(".").str[0]
                 )
                 if "period" not in df_g.columns:
-                  df_g["period"] = "الفترة الأولى"
+                  df_g["period"] = "الفصل الأول - فترة أولى"
                 df_g["period"] = (
                     df_g["period"]
-                    .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+                    .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
                     .astype(str)
                     .str.strip()
                 )
@@ -1316,7 +1316,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                     for i, r in enumerate(records):
                       r_id = str(r.get(headers[0], "")).strip().split(".")[0]
-                      r_period = str(r.get("period", "الفترة الأولى")).strip()
+                      r_period = str(r.get("period", "الفصل الأول - فترة أولى")).strip()
                       if r_id == sid and r_period == cp:
                         row_to_update = i + 2
                         break
@@ -1713,7 +1713,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     # --- 3. مدقق رصد الدرجات (كشف النواقص) ---
     with eval_tabs[2]:
-      cp_aud = st.session_state.get("current_period", "الفترة الأولى").strip()
+      cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
       st.info(
           "💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً."
@@ -1736,10 +1736,10 @@ if st.session_state.role in ["teacher", "viewer"]:
               .str[0]
           )
           if "period" not in df_gr_audit.columns:
-            df_gr_audit["period"] = "الفترة الأولى"
+            df_gr_audit["period"] = "الفصل الأول - فترة أولى"
           df_gr_audit["period"] = (
               df_gr_audit["period"]
-              .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+              .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
               .astype(str)
               .str.strip()
           )
@@ -2018,7 +2018,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     # --- 2. المتفوقون أكاديمياً (90%+) ---
     with honor_tabs[1]:
-      cp = st.session_state.get("current_period", "الفترة الأولى").strip()
+      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
 
       if (
@@ -2029,10 +2029,10 @@ if st.session_state.role in ["teacher", "viewer"]:
         df_g = st.session_state.df_grades.copy()
         df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
         if "period" not in df_g.columns:
-          df_g["period"] = "الفترة الأولى"
+          df_g["period"] = "الفصل الأول - فترة أولى"
         df_g["period"] = (
             df_g["period"]
-            .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+            .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
             .astype(str)
             .str.strip()
         )
@@ -2221,8 +2221,8 @@ if st.session_state.role in ["teacher", "viewer"]:
           if not df_g_c.empty:
             df_g_c["clean_id"] = df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
             if "period" not in df_g_c.columns:
-              df_g_c["period"] = "الفترة الأولى"
-            df_g_c["period"] = df_g_c["period"].replace(["", None, "nan", "NaN"], "الفترة الأولى").astype(str).str.strip()
+              df_g_c["period"] = "الفصل الأول - فترة أولى"
+            df_g_c["period"] = df_g_c["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
             df_g_c = df_g_c[df_g_c["period"] == cert_period]
 
             m_cert = pd.merge(df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner")
@@ -2591,16 +2591,16 @@ if st.session_state.role in ["teacher", "viewer"]:
           st.markdown("##### 📊 الدرجات الأكاديمية")
           df_g = st.session_state.df_grades.copy()
           cp_report = st.session_state.get(
-              "current_period", "الفترة الأولى"
+              "current_period", "الفصل الأول - فترة أولى"
           ).strip()
 
           if not df_g.empty:
             df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
             if "period" not in df_g.columns:
-              df_g["period"] = "الفترة الأولى"
+              df_g["period"] = "الفصل الأول - فترة أولى"
             df_g["period"] = (
                 df_g["period"]
-                .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+                .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
                 .astype(str)
                 .str.strip()
             )
@@ -2773,10 +2773,10 @@ if st.session_state.role in ["teacher", "viewer"]:
                   df_g.iloc[:, 0].astype(str).str.split(".").str[0]
               )
               if "period" not in df_g.columns:
-                df_g["period"] = "الفترة الأولى"
+                df_g["period"] = "الفصل الأول - فترة أولى"
               df_g["period"] = (
                   df_g["period"]
-                  .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+                  .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
                   .astype(str)
                   .str.strip()
               )
@@ -3169,10 +3169,10 @@ if st.session_state.role in ["teacher", "viewer"]:
                 df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
             )
             if "period" not in df_g_all.columns:
-              df_g_all["period"] = "الفترة الأولى"
+              df_g_all["period"] = "الفصل الأول - فترة أولى"
             df_g_all["period"] = (
                 df_g_all["period"]
-                .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+                .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
                 .astype(str)
                 .str.strip()
             )
@@ -3712,98 +3712,358 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         )
 
     # --- 2. الهوية البصرية والإعدادات الأكاديمية ---
+    # --- 2. الهوية البصرية والإعدادات الأكاديمية + الشريط الجانبي الذكي ---
     with set_tabs[1]:
-      st.markdown("#### 🎨 المظهر والهوية البصرية")
-      theme_options = list(themes.keys())
-      current_theme_val = st.session_state.get(
-          "app_theme", "الرئيسي (الافتراضي)"
-      )
-      th_index = (
-          theme_options.index(current_theme_val)
-          if current_theme_val in theme_options
-          else 0
-      )
-      selected_theme = st.selectbox(
-          "اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index
+      import json
+
+      # ✳️ إظهار الشريط الجانبي وتنسيقه للوضع الليلي والاتجاه العربي
+      st.markdown(
+          """
+          <style>
+          section[data-testid="stSidebar"] {
+              display: flex !important;
+              direction: rtl !important;
+              text-align: right !important;
+              border-left: 1.5px solid rgba(148, 163, 184, 0.28) !important;
+          }
+          [data-testid="collapsedControl"] {
+              display: flex !important;
+              direction: rtl !important;
+          }
+          </style>
+          """,
+          unsafe_allow_html=True,
       )
 
-      st.markdown("#### ⚙️ الإعدادات الأكاديمية والفصول")
-      c_y, c_p = st.columns(2)
-      cy = c_y.text_input(
-          "العام الدراسي", st.session_state.get("current_year", "1447هـ")
-      )
+      # --- تهيئة قاموس الأعوام الدراسية وصفوف كل عام في الذاكرة ---
+      s_map_ academic = get_cached_settings()
+      current_yr_init = str(st.session_state.get("current_year", "1448هـ")).strip()
 
-      current_period_val = st.session_state.get(
-          "current_period", "الفترة الأولى"
-      )
-      period_options = [
-          "الفصل الأول - فترة أولى",
-          "الفصل الأول - فترة ثانية",
-          "الفصل الثاني - فترة أولى",
-          "الفصل الثاني - فترة ثانية",
-      ]
-      cp_index = (
-          period_options.index(current_period_val)
-          if current_period_val in period_options
-          else 0
-      )
-      cp = c_p.selectbox("الفترة الدراسية النشطة", period_options, index=cp_index)
+      if "years_list" not in st.session_state:
+        raw_years = s_map_academic.get("years_list", "")
+        if raw_years:
+          yrs = [y.strip() for y in str(raw_years).split(",") if y.strip()]
+        else:
+          yrs = ["1447هـ", "1448هـ"]
+        if current_yr_init not in yrs:
+          yrs.append(current_yr_init)
+        st.session_state.years_list = sorted(list(set(yrs)))
 
-      cls = st.text_area(
-          "قائمة الصفوف (افصل بينها بفاصلة ,)",
-          ",".join(st.session_state.get("class_options", ["الرابع"])),
-      )
-      stg = st.text_area(
-          "قائمة المراحل",
-          ",".join(st.session_state.get("stage_options", ["ابتدائي"])),
-      )
+      if "year_classes_map" not in st.session_state:
+        raw_yc_json = s_map_academic.get("year_classes_map", "")
+        loaded_yc = {}
+        if raw_yc_json:
+          try:
+            loaded_yc = json.loads(raw_yc_json)
+          except Exception:
+            loaded_yc = {}
+        if current_yr_init not in loaded_yc:
+          loaded_yc[current_yr_init] = list(st.session_state.get("class_options", ["الأول"]))
+        st.session_state.year_classes_map = loaded_yc
 
-      c1, c2 = st.columns(2)
-      mt = c1.number_input(
-          "الدرجة العظمى (مشاركة ومهام)",
-          0,
-          100,
-          st.session_state.get("max_tasks", 60),
-      )
-      mq = c2.number_input(
-          "الدرجة العظمى (اختبارات)",
-          0,
-          100,
-          st.session_state.get("max_quiz", 40),
-      )
+      # دالة حفظ الإعدادات الأكاديمية في Google Sheets
+      def sync_academic_settings_to_db(target_year, target_period, target_theme, classes_list, stages_list, max_t, max_q):
+        cls_str = ",".join([c.strip() for c in classes_list if c.strip()])
+        stg_str = ",".join([s.strip() for s in stages_list if s.strip()])
+        yrs_str = ",".join(st.session_state.years_list)
+        st.session_state.year_classes_map[target_year] = [c.strip() for c in classes_list if c.strip()]
+        yc_json_str = json.dumps(st.session_state.year_classes_map, ensure_ascii=False)
 
-      if st.button(
-          "💾 حفظ الإعدادات وتطبيق التغييرات",
-          type="primary",
-          use_container_width=True,
-      ):
-        sh.worksheet("settings").batch_update([
-            {"range": "A2:B2", "values": [["max_tasks", mt]]},
-            {"range": "A3:B3", "values": [["max_quiz", mq]]},
-            {"range": "A4:B4", "values": [["current_year", cy]]},
-            {"range": "A5:B5", "values": [["class_list", cls]]},
-            {"range": "A6:B6", "values": [["stage_list", stg]]},
-            {"range": "A7:B7", "values": [["current_period", cp]]},
-            {"range": "A8:B8", "values": [["app_theme", selected_theme]]},
+        ws_s = sh.worksheet("settings")
+        ws_s.batch_update([
+            {"range": "A2:B2", "values": [["max_tasks", max_t]]},
+            {"range": "A3:B3", "values": [["max_quiz", max_q]]},
+            {"range": "A4:B4", "values": [["current_year", target_year]]},
+            {"range": "A5:B5", "values": [["class_list", cls_str]]},
+            {"range": "A6:B6", "values": [["stage_list", stg_str]]},
+            {"range": "A7:B7", "values": [["current_period", target_period]]},
+            {"range": "A8:B8", "values": [["app_theme", target_theme]]},
         ])
 
-        st.session_state.max_tasks = mt
-        st.session_state.max_quiz = mq
-        st.session_state.current_year = cy
-        st.session_state.current_period = cp
-        st.session_state.class_options = [
-            x.strip() for x in cls.split(",") if x.strip()
-        ]
-        st.session_state.stage_options = [
-            x.strip() for x in stg.split(",") if x.strip()
-        ]
-        st.session_state.app_theme = selected_theme
+        # حفظ قائمة الأعوام وخريطة صفوف الأعوام كمفاتيح إضافية في settings
+        all_s_recs = ws_s.get_all_records()
+        keys_row_map = {str(r.get("key", "")).strip(): idx + 2 for idx, r in enumerate(all_s_recs)}
 
-        st.success(f"✅ تم الحفظ بنجاح! المنصة تعمل بهوية: {selected_theme}")
-        if "db_loaded" in st.session_state:
-          del st.session_state["db_loaded"]
+        if "years_list" in keys_row_map:
+          ws_s.update_cell(keys_row_map["years_list"], 2, yrs_str)
+        else:
+          ws_s.append_row(["years_list", yrs_str])
+
+        if "year_classes_map" in keys_row_map:
+          ws_s.update_cell(keys_row_map["year_classes_map"], 2, yc_json_str)
+        else:
+          ws_s.append_row(["year_classes_map", yc_json_str])
+
+        st.session_state.max_tasks = max_t
+        st.session_state.max_quiz = max_q
+        st.session_state.current_year = target_year
+        st.session_state.current_period = target_period
+        st.session_state.class_options = [c.strip() for c in classes_list if c.strip()]
+        st.session_state.stage_options = [s.strip() for s in stages_list if s.strip()]
+        st.session_state.app_theme = target_theme
         st.cache_data.clear()
-        st.rerun()
+
+      # ==========================================
+      # 📌 الشريط الجانبي (st.sidebar): الفلتر الرئيسي للعام الدراسي
+      # ==========================================
+      with st.sidebar:
+        st.markdown("### 🎓 الفلتر الرئيسي للمنصة")
+        st.caption("التحكم السريع بالعام الدراسي والفترة النشطة")
+
+        sb_col1, sb_col2 = st.columns([3.2, 1])
+        curr_yr_val = st.session_state.get("current_year", "1448هـ")
+        if curr_yr_val not in st.session_state.years_list:
+          st.session_state.years_list.append(curr_yr_val)
+
+        yr_idx = st.session_state.years_list.index(curr_yr_val)
+
+        def on_sidebar_year_change():
+          new_yr = st.session_state.sb_year_selector
+          st.session_state.current_year = new_yr
+          # تحميل صفوف العام المختار تلقائياً إن وجدت
+          if new_yr in st.session_state.year_classes_map and st.session_state.year_classes_map[new_yr]:
+            st.session_state.class_options = list(st.session_state.year_classes_map[new_yr])
+          try:
+            sync_academic_settings_to_db(
+                new_yr,
+                st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
+                st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
+                st.session_state.class_options,
+                st.session_state.stage_options,
+                st.session_state.get("max_tasks", 60),
+                st.session_state.get("max_quiz", 40),
+            )
+          except Exception:
+            pass
+
+        with sb_col1:
+          st.selectbox(
+              "📅 العام الدراسي:",
+              st.session_state.years_list,
+              index=yr_idx,
+              key="sb_year_selector",
+              on_change=on_sidebar_year_change,
+          )
+        with sb_col2:
+          st.markdown("<div style='padding-top:28px;'></div>", unsafe_allow_html=True)
+          if st.button("➕", key="btn_toggle_add_yr", help="إضافة عام دراسي جديد", use_container_width=True):
+            st.session_state.show_add_year_box = not st.session_state.get("show_add_year_box", False)
+
+        # نافذة إضافة عام دراسي جديد + استنساخ صفوف العام السابق
+        if st.session_state.get("show_add_year_box", False):
+          with st.container(border=True):
+            st.markdown("###### ➕ إضافة عام دراسي جديد")
+            # توليد العام التالي تلقائياً بصيغة قياسية موحدة
+            nums_in_years = [int(re.sub(r"\D", "", y)) for y in st.session_state.years_list if re.sub(r"\D", "", y)]
+            next_hijri = (max(nums_in_years) + 1) if nums_in_years else 1449
+            suggested_years = [f"{next_hijri}هـ", f"{next_hijri+1}هـ", f"{next_hijri-1}هـ"]
+
+            new_yr_input = st.selectbox("اختر العام الجديد (صيغة موحدة):", suggested_years, key="new_yr_std_sel")
+            clone_prev = st.checkbox("📋 نسخ صفوف العام السابق تلقائياً", value=True, key="chk_clone_prev_yr")
+
+            if st.button("✅ إنشاء وتفعيل العام", type="primary", use_container_width=True, key="confirm_new_yr_btn"):
+              prev_classes = list(st.session_state.get("class_options", ["الأول"]))
+              if new_yr_input not in st.session_state.years_list:
+                st.session_state.years_list.append(new_yr_input)
+                st.session_state.years_list = sorted(list(set(st.session_state.years_list)))
+
+              target_classes = prev_classes if clone_prev else ["الأول"]
+              st.session_state.year_classes_map[new_yr_input] = target_classes
+              st.session_state.show_add_year_box = False
+
+              sync_academic_settings_to_db(
+                  new_yr_input,
+                  st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
+                  st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
+                  target_classes,
+                  st.session_state.stage_options,
+                  st.session_state.get("max_tasks", 60),
+                  st.session_state.get("max_quiz", 40),
+              )
+              st.toast(f"✅ تم تفعيل العام {new_yr_input} ونسخ الفصول بنجاح!", icon="🎉")
+              st.rerun()
+
+        # زر سريع لاستنساخ صفوف العام السابق في أي وقت
+        if len(st.session_state.years_list) > 1:
+          prev_candidates = [y for y in st.session_state.years_list if y != st.session_state.current_year]
+          if prev_candidates:
+            last_yr = prev_candidates[-1]
+            if st.button(f"📋 نسخ صفوف العام السابق ({last_yr})", use_container_width=True, key="sb_clone_btn"):
+              copied_cls = st.session_state.year_classes_map.get(last_yr, st.session_state.class_options)
+              if copied_cls:
+                sync_academic_settings_to_db(
+                    st.session_state.current_year,
+                    st.session_state.get("current_period", "الفصل الأول - فترة أولى"),
+                    st.session_state.get("app_theme", "الرئيسي (الافتراضي)"),
+                    copied_cls,
+                    st.session_state.stage_options,
+                    st.session_state.get("max_tasks", 60),
+                    st.session_state.get("max_quiz", 40),
+                )
+                st.toast(f"✅ تم استنساخ ({len(copied_cls)}) صفوف من عام {last_yr}!", icon="📋")
+                st.rerun()
+
+        st.divider()
+        st.markdown(f"**📌 العام النشط:** `{st.session_state.current_year}`")
+        st.markdown(f"**🗓️ الفترة النشطة:** `{st.session_state.current_period}`")
+        st.markdown(f"**🏫 عدد الفصول:** `{len(st.session_state.class_options)}` فصول")
+
+      # ==========================================
+      # 🎨 واجهة تبويب الهوية والإعدادات الأكاديمية التفاعلية
+      # ==========================================
+      st.markdown("#### 🎨 المظهر والهوية البصرية")
+      theme_options = list(themes.keys())
+      current_theme_val = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
+      th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
+      selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
+
+      st.markdown("---")
+      st.markdown("#### ⚙️ الإعدادات الأكاديمية والفترة النشطة")
+      c_y, c_p = st.columns(2)
+
+      with c_y:
+        cy_idx = st.session_state.years_list.index(st.session_state.current_year) if st.session_state.current_year in st.session_state.years_list else 0
+        cy = st.selectbox(
+            "📅 العام الدراسي النشط (يمكن تغييره أيضاً من الشريط الجانبي):",
+            st.session_state.years_list,
+            index=cy_idx,
+            key="main_tab_year_sel",
+        )
+
+      with c_p:
+        current_period_val = st.session_state.get("current_period", "الفصل الأول - فترة أولى")
+        period_options = [
+            "الفصل الأول - فترة أولى",
+            "الفصل الأول - فترة ثانية",
+            "الفصل الثاني - فترة أولى",
+            "الفصل الثاني - فترة ثانية",
+        ]
+        if current_period_val not in period_options:
+          period_options.insert(0, current_period_val)
+        cp_index = period_options.index(current_period_val)
+        cp = st.selectbox("🗓️ الفترة الدراسية النشطة:", period_options, index=cp_index)
+
+      # ==========================================
+      # 🏷️ إدارة الفصول والمراحل بنظام الوسوم (Tags) والجدول التفاعلي
+      # ==========================================
+      st.markdown("---")
+      st.markdown("#### 🏫 إدارة الصفوف والمراحل التفاعلية (بدون فواصل يدوية)")
+      st.info("💡 يمكنك حذف أي صف بالضغط على علامة (×) بجانب اسمه، أو إضافة صف جديد بضغطة زر، أو التبديل إلى وضع الجدول التفاعلي للتعديل السريع.")
+
+      ui_mode = st.radio(
+          "طريقة عرض وتحرير الصفوف والمراحل:",
+          ["🏷️ نظام الوسوم التفاعلية (Tags)", "📊 الجدول التفاعلي (Interactive Table)"],
+          horizontal=True,
+          key="cls_editor_mode",
+      )
+
+      if "temp_classes_list" not in st.session_state:
+        st.session_state.temp_classes_list = list(st.session_state.get("class_options", ["الأول"]))
+      if "temp_stages_list" not in st.session_state:
+        st.session_state.temp_stages_list = list(st.session_state.get("stage_options", ["ابتدائي"]))
+
+      if ui_mode == "🏷️ نظام الوسوم التفاعلية (Tags)":
+        col_cls_box, col_stg_box = st.columns([2, 1])
+
+        with col_cls_box:
+          with st.container(border=True):
+            st.markdown("##### 🏫 قائمة الصفوف والفصول")
+            # إضافة صف جديد بسرعة
+            add_c1, add_c2 = st.columns([3, 1])
+            new_cls_name = add_c1.text_input("اسم الصف الجديد:", placeholder="مثال: الخامس/1 أو أول متوسط/2", label_visibility="collapsed", key="inp_new_cls_tag")
+            if add_c2.button("➕ إضافة", key="btn_add_cls_tag", use_container_width=True):
+              clean_c = new_cls_name.strip().replace(",", "")
+              if clean_c and clean_c not in st.session_state.temp_classes_list:
+                st.session_state.temp_classes_list.append(clean_c)
+                st.rerun()
+
+            selected_classes_tags = st.multiselect(
+                "الصفوف المعتمدة حالياً (احذف أي صف بالضغط على ×):",
+                options=st.session_state.temp_classes_list,
+                default=st.session_state.temp_classes_list,
+                key="ms_classes_tags",
+            )
+            st.session_state.temp_classes_list = selected_classes_tags
+
+        with col_stg_box:
+          with st.container(border=True):
+            st.markdown("##### 🎓 قائمة المراحل")
+            add_s1, add_s2 = st.columns([2.5, 1])
+            new_stg_name = add_s1.text_input("مرحلة جديدة:", placeholder="مثال: ثانوي", label_visibility="collapsed", key="inp_new_stg_tag")
+            if add_s2.button("➕", key="btn_add_stg_tag", use_container_width=True):
+              clean_s = new_stg_name.strip().replace(",", "")
+              if clean_s and clean_s not in st.session_state.temp_stages_list:
+                st.session_state.temp_stages_list.append(clean_s)
+                st.rerun()
+
+            selected_stages_tags = st.multiselect(
+                "المراحل المعتمدة (احذف بـ ×):",
+                options=st.session_state.temp_stages_list,
+                default=st.session_state.temp_stages_list,
+                key="ms_stages_tags",
+            )
+            st.session_state.temp_stages_list = selected_stages_tags
+
+      else:
+        # وضع الجدول التفاعلي (إضافة، تعديل النص بالنقر المزدوج، أو حذف صفوف)
+        col_tbl1, col_tbl2 = st.columns([2, 1])
+        with col_tbl1:
+          st.markdown("##### 🏫 جدول الصفوف التفاعلي (انقر مرتين للتعديل أو + للإضافة)")
+          df_cls_edit = pd.DataFrame({"اسم الصف": st.session_state.temp_classes_list})
+          edited_cls_df = st.data_editor(
+              df_cls_edit,
+              num_rows="dynamic",
+              use_container_width=True,
+              hide_index=True,
+              key="de_classes_table",
+          )
+          st.session_state.temp_classes_list = [
+              str(x).strip().replace(",", "")
+              for x in edited_cls_df["اسم الصف"].dropna().tolist()
+              if str(x).strip()
+          ]
+
+        with col_tbl2:
+          st.markdown("##### 🎓 جدول المراحل التفاعلي")
+          df_stg_edit = pd.DataFrame({"المرحلة": st.session_state.temp_stages_list})
+          edited_stg_df = st.data_editor(
+              df_stg_edit,
+              num_rows="dynamic",
+              use_container_width=True,
+              hide_index=True,
+              key="de_stages_table",
+          )
+          st.session_state.temp_stages_list = [
+              str(x).strip().replace(",", "")
+              for x in edited_stg_df["المرحلة"].dropna().tolist()
+              if str(x).strip()
+          ]
+
+      st.markdown("---")
+      st.markdown("#### 📊 توزيع الدرجات العظمى")
+      c1, c2 = st.columns(2)
+      mt = c1.number_input("الدرجة العظمى (مشاركة ومهام)", 0, 100, st.session_state.get("max_tasks", 60))
+      mq = c2.number_input("الدرجة العظمى (اختبارات)", 0, 100, st.session_state.get("max_quiz", 40))
+
+      if st.button("💾 حفظ الإعدادات وتطبيق التغييرات", type="primary", use_container_width=True):
+        if not st.session_state.temp_classes_list:
+          st.warning("⚠️ يجب إبقاء صف دراسي واحد على الأقل.")
+        elif not st.session_state.temp_stages_list:
+          st.warning("⚠️ يجب إبقاء مرحلة دراسية واحدة على الأقل.")
+        else:
+          sync_academic_settings_to_db(
+              cy,
+              cp,
+              selected_theme,
+              st.session_state.temp_classes_list,
+              st.session_state.temp_stages_list,
+              mt,
+              mq,
+          )
+          st.success(f"✅ تم الحفظ بنجاح! العام النشط: ({cy}) | عدد الفصول: ({len(st.session_state.temp_classes_list)})")
+          if "db_loaded" in st.session_state:
+            del st.session_state["db_loaded"]
+          st.rerun()
 
     # --- 3. استيراد البيانات + رفع بيانات أنماط التعلم ---
     with set_tabs[2]:
@@ -4020,7 +4280,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
               records = ws.get_all_records()
               if ts == "grades":
                 existing_keys = set(
-                    f"{str(r.get('student_id', '')).strip().split('.')[0]}_{str(r.get('period', 'الفترة الأولى')).strip()}"
+                    f"{str(r.get('student_id', '')).strip().split('.')[0]}_{str(r.get('period', 'الفصل الأول - فترة أولى')).strip()}"
                     for r in records
                 )
               else:
@@ -4030,7 +4290,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
 
               new_rows_to_append = []
               progress_bar = st.progress(0)
-              cp = st.session_state.get("current_period", "الفترة الأولى").strip()
+              cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
 
               for idx, row in df.iterrows():
                 d = row.to_dict()
@@ -4506,7 +4766,7 @@ if st.session_state.role == "student":
 
     # --- تبويب 3: الدرجات والشهادة (تحميل PDF مباشر بصفحة واحدة A4 Landscape) ---
     with tabs[2]:
-      cp = st.session_state.get("current_period", "الفترة الأولى").strip()
+      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.caption(f"درجاتي الأكاديمية - {cp}")
 
       if not df_gr.empty:
@@ -4514,10 +4774,10 @@ if st.session_state.role == "student":
             df_gr.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
         )
         if "period" not in df_gr.columns:
-          df_gr["period"] = "الفترة الأولى"
+          df_gr["period"] = "الفصل الأول - فترة أولى"
         df_gr["period"] = (
             df_gr["period"]
-            .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+            .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
             .astype(str)
             .str.strip()
         )
