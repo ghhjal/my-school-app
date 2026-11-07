@@ -69,6 +69,20 @@ def fetch_safe(worksheet_name):
     df = pd.DataFrame(data[1:], columns=data[0])
     if not df.empty:
       df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+      # ✳️ توحيد المسميات القديمة للفترات تلقائياً لمنع ضياع أو تكرار الدرجات
+      if worksheet_name == "grades" and "period" in df.columns:
+        df["period"] = (
+            df["period"]
+            .astype(str)
+            .str.strip()
+            .replace({
+                "": "الفصل الأول - فترة أولى",
+                "nan": "الفصل الأول - فترة أولى",
+                "None": "الفصل الأول - فترة أولى",
+                "الفترة الأولى": "الفصل الأول - فترة أولى",
+                "الفترة الثانية": "الفصل الأول - فترة ثانية",
+            })
+        )
     return df
   except Exception:
     st.cache_resource.clear()
@@ -102,36 +116,56 @@ def get_cached_settings():
     return {}
 
 
-# --- تحميل الإعدادات في الجلسة ---
+# ✳️ دالة سريعة ومحمية بالكاش لتوليد ملفات الإكسل دون إبطاء المنصة
+@st.cache_data(ttl=600)
+def build_excel_bytes(df_to_export, sheet_name="Sheet1", include_index=False):
+  b_io = io.BytesIO()
+  with pd.ExcelWriter(b_io, engine="xlsxwriter") as writer:
+    df_to_export.to_excel(writer, index=include_index, sheet_name=sheet_name)
+  return b_io.getvalue()
+
+
+# --- تحميل الإعدادات وخريطة المراحل في الجلسة منذ لحظة التشغيل ---
 if "class_options" not in st.session_state:
+  import json
   s_map = get_cached_settings()
   if s_map:
     st.session_state.max_tasks = int(s_map.get("max_tasks", 60))
     st.session_state.max_quiz = int(s_map.get("max_quiz", 40))
-    st.session_state.current_year = str(s_map.get("current_year", "1447هـ"))
-    st.session_state.current_period = str(
-        s_map.get("current_period", "الفصل الأول - فترة أولى")
-    ).strip()
-    st.session_state.app_theme = str(
-        s_map.get("app_theme", "الرئيسي (الافتراضي)")
-    ).strip()
+    st.session_state.current_year = str(s_map.get("current_year", "1448هـ")).strip()
+    raw_per = str(s_map.get("current_period", "الفصل الأول - فترة أولى")).strip()
+    if raw_per == "الفترة الأولى":
+      raw_per = "الفصل الأول - فترة أولى"
+    elif raw_per == "الفترة الثانية":
+      raw_per = "الفصل الأول - فترة ثانية"
+    st.session_state.current_period = raw_per
+    st.session_state.app_theme = str(s_map.get("app_theme", "الرئيسي (الافتراضي)")).strip()
     st.session_state.class_options = [
-        x.strip()
-        for x in str(s_map.get("class_list", "الأول")).split(",")
-        if x.strip()
+        x.strip() for x in str(s_map.get("class_list", "الأول")).split(",") if x.strip()
     ]
     st.session_state.stage_options = [
-        x.strip()
-        for x in str(s_map.get("stage_list", "ابتدائي")).split(",")
-        if x.strip()
+        x.strip() for x in str(s_map.get("stage_list", "ابتدائي")).split(",") if x.strip()
     ]
+    # تحميل خريطة ربط الصف بالمرحلة مبكراً
+    raw_cs = s_map.get("class_stage_map", "")
+    loaded_cs = {}
+    if raw_cs:
+      try:
+        loaded_cs = json.loads(raw_cs)
+      except Exception:
+        loaded_cs = {}
+    for c_it in st.session_state.class_options:
+      if c_it not in loaded_cs:
+        loaded_cs[c_it] = "متوسط" if "متوسط" in str(c_it) else "ابتدائي"
+    st.session_state.class_stage_map = loaded_cs
   else:
     st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
-    st.session_state.current_year = "1447هـ"
+    st.session_state.current_year = "1448هـ"
     st.session_state.current_period = "الفصل الأول - فترة أولى"
     st.session_state.app_theme = "الرئيسي (الافتراضي)"
     st.session_state.class_options = ["الأول"]
     st.session_state.stage_options = ["ابتدائي"]
+    st.session_state.class_stage_map = {"الأول": "ابتدائي"}
 
 if "role" not in st.session_state:
   st.session_state.role = None
@@ -163,19 +197,8 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
         "icon": "🇸🇦",
         "title": "منصة زياد الذكية",
-        "subtitle": (
-            "عزّنا بطبعنا<br><span style='font-size:1.1rem; color:#ffffff;"
-            " opacity:0.9;'>اليوم الوطني السعودي 96</span>"
-        ),
-        "bg_pattern": (
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0"
-            " 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'"
-            " fill-rule='evenodd'%3E%3Cg fill='%23ffffff'"
-            " fill-opacity='0.08'%3E%3Cpath d='M36"
-            " 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6"
-            " 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6"
-            ' 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-        ),
+        "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>اليوم الوطني السعودي 96</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
     "يوم التأسيس 🏛️": {
         "primary": "#8B4513",
@@ -186,16 +209,8 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
         "icon": "🐎",
         "title": "منصة زياد الذكية",
-        "subtitle": (
-            "يوم بدينا<br><span style='font-size:1.1rem; color:#F5DEB3;"
-            " opacity:0.9;'>ثلاثة قرون من العز والفخر</span>"
-        ),
-        "bg_pattern": (
-            "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0"
-            " 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20"
-            " 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05'"
-            ' fill-rule=\'evenodd\'/%3E%3C/svg%3E")'
-        ),
+        "subtitle": "يوم بدينا<br><span style='font-size:1.1rem; color:#F5DEB3; opacity:0.9;'>ثلاثة قرون من العز والفخر</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
     },
     "رمضان المبارك 🌙": {
         "primary": "#1E3A8A",
@@ -206,16 +221,8 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
         "icon": "🌙",
         "title": "منصة زياد الذكية",
-        "subtitle": (
-            "مبارك عليكم الشهر<br><span style='font-size:1.1rem;"
-            " color:#D4AF37; opacity:0.9;'>رمضان يجمعنا</span>"
-        ),
-        "bg_pattern": (
-            "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0"
-            " 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2'"
-            " cy='2' r='2' fill='%23ffffff'"
-            ' fill-opacity=\'0.05\'/%3E%3C/svg%3E")'
-        ),
+        "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.1rem; color:#D4AF37; opacity:0.9;'>رمضان يجمعنا</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
     },
     "التفوق والنجاح 🏆": {
         "primary": "#B45309",
@@ -226,19 +233,8 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
         "icon": "🏆",
         "title": "منصة زياد الذكية",
-        "subtitle": (
-            "حصاد التفوق والنجاح<br><span style='font-size:1.1rem;"
-            " color:#ffffff; opacity:0.9;'>نهاية العام الدراسي</span>"
-        ),
-        "bg_pattern": (
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0"
-            " 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'"
-            " fill-rule='evenodd'%3E%3Cg fill='%23ffffff'"
-            " fill-opacity='0.15'%3E%3Cpath d='M10.1"
-            " 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6"
-            " 3.2-3.2 4.6 4.6-3.2"
-            ' 3.2z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-        ),
+        "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>نهاية العام الدراسي</span>",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
 }
 
@@ -269,10 +265,10 @@ def get_professional_msg(name, b_type, b_desc, date):
 def get_school_name_dynamic(cls_name):
   if cls_name == "الكل":
     return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
-  elif "متوسط" in str(cls_name):
+  stage_mapped = st.session_state.get("class_stage_map", {}).get(str(cls_name).strip(), "")
+  if stage_mapped == "متوسط" or "متوسط" in str(cls_name):
     return "متوسطة عبدالرحمن الناصر"
-  else:
-    return "ابتدائية عبادة بن قيس الأنصاري"
+  return "ابتدائية عبادة بن قيس الأنصاري"
 
 
 def show_footer():
@@ -286,25 +282,13 @@ def show_footer():
       unsafe_allow_html=True,
   )
   c1, c2, c3 = st.columns(3)
-  c1.link_button(
-      "📢 تليجرام الإدارة",
-      "https://t.me/@ZiyadAlmoami",
-      use_container_width=True,
-  )
-  c2.link_button(
-      "💬 واتساب المعلم",
-      "https://wa.me/966534900049",
-      use_container_width=True,
-  )
-  c3.link_button(
-      "📧 البريد الإلكتروني",
-      "mailto:ziad.platform.alerts@gmail.com",
-      use_container_width=True,
-  )
+  c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
+  c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
+  c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
 
 # ==========================================
-# 🎨 2. التصميم الاحترافي وشبكة (2×2) للوضع الليلي والجوال
+# 🎨 2. التصميم الاحترافي وشبكة (2×2) وتنسيق البطاقات الموحد
 # ==========================================
 st.markdown(
     f"""
@@ -317,7 +301,7 @@ st.markdown(
         --subtle-text: #94A3B8;
     }}
 
-    section[data-testid="stSidebar"] {{ display: none; }}
+    section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"] {{ display: none !important; }}
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     
@@ -338,151 +322,68 @@ st.markdown(
         border-radius: 0 0 36px 36px;
         margin: -1rem -5rem 25px -5rem;
         box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
-        color: white; 
-        text-align: center;
-        position: relative;
-        overflow: hidden;
+        color: white; text-align: center; position: relative; overflow: hidden;
         border-bottom: 2px solid rgba(255,255,255,0.15);
     }}
     
-    .title-wrapper {{
-        display: flex; align-items: center; justify-content: center;
-        gap: 15px; margin-bottom: 8px; position: relative; z-index: 2;
-    }}
+    .title-wrapper {{ display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px; position: relative; z-index: 2; }}
+    .logo-icon {{ font-size: 3.6rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); animation: float 4s ease-in-out infinite; line-height: 1; margin-top: 10px; }}
+    .main-title {{ margin: 0; font-size: 2.8rem; font-weight: 900; color: {t_colors["title_color"]} !important; line-height: 1.1; }}
+    .sub-title {{ margin: 0; color: {t_colors["sub_color"]}; font-size: 1.25rem; font-weight: 600; position: relative; z-index: 2; line-height: 1.5; }}
     
-    .logo-icon {{ 
-        font-size: 3.6rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-        animation: float 4s ease-in-out infinite; line-height: 1; margin-top: 10px;
-    }}
-    
-    .main-title {{ 
-        margin: 0; font-size: 2.8rem; font-weight: 900; 
-        color: {t_colors["title_color"]} !important; line-height: 1.1;
-    }}
-    
-    .sub-title {{ 
-        margin: 0; color: {t_colors["sub_color"]}; font-size: 1.25rem; 
-        font-weight: 600; position: relative; z-index: 2; line-height: 1.5;
-    }}
-    
-    /* ✳️ حقول الإدخال والقوائم المنسدلة بتباين واضح جداً في الوضع الليلي */
     div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
         background-color: var(--secondary-background-color) !important; 
         border: 1.5px solid rgba(148, 163, 184, 0.35) !important; 
-        border-radius: 12px !important; 
-        min-height: 48px; 
+        border-radius: 12px !important; min-height: 48px; 
     }}
     div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {{
-        border-color: {accent_color} !important;
-        box-shadow: 0 0 0 2px {primary_color}40 !important;
+        border-color: {accent_color} !important; box-shadow: 0 0 0 2px {primary_color}40 !important;
     }}
     input, textarea, select {{ 
-        color: var(--text-color) !important; 
-        -webkit-text-fill-color: var(--text-color) !important; 
-        caret-color: {accent_color} !important;
-        background-color: transparent !important; 
-        font-weight: 700 !important; 
-        font-size: 1.02rem !important;
+        color: var(--text-color) !important; -webkit-text-fill-color: var(--text-color) !important; 
+        caret-color: {accent_color} !important; background-color: transparent !important; 
+        font-weight: 700 !important; font-size: 1.02rem !important;
     }}
     ::placeholder {{ color: #94A3B8 !important; opacity: 0.85 !important; -webkit-text-fill-color: #94A3B8 !important; }}
     div[data-baseweb="select"] div {{ color: var(--text-color) !important; font-weight: 700 !important; }}
     
-    /* ✳️ الأزرار الرئيسية بتباين مرتفع وحواف واضحة */
-    [data-testid="stFormSubmitButton"] button, 
-    [data-testid="baseButton-primary"], 
-    div.stButton > button,
-    div.stDownloadButton > button {{
-        background: {header_grad} !important;
-        background-color: {primary_color} !important;
-        color: #FFFFFF !important; 
-        border: 1px solid rgba(255, 255, 255, 0.2) !important; 
-        font-weight: 800 !important;
-        font-size: 1.05rem !important; 
-        border-radius: 14px !important; 
-        padding: 10px 18px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; 
-        transition: all 0.2s ease !important; 
-        width: 100%; 
-        min-height: 50px;
+    [data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
+        background: {header_grad} !important; background-color: {primary_color} !important;
+        color: #FFFFFF !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; 
+        font-weight: 800 !important; font-size: 1.05rem !important; border-radius: 14px !important; 
+        padding: 10px 18px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; 
+        transition: all 0.2s ease !important; width: 100%; min-height: 50px;
     }}
-    [data-testid="stFormSubmitButton"] button:hover, 
-    [data-testid="baseButton-primary"]:hover, 
-    div.stButton > button:hover,
-    div.stDownloadButton > button:hover {{ 
-        background: {t_colors["btn_hover"]} !important; 
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important; 
-        border-color: rgba(255, 255, 255, 0.45) !important;
+    [data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{ 
+        background: {t_colors["btn_hover"]} !important; transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important; border-color: rgba(255, 255, 255, 0.45) !important;
     }}
     
-    /* ✳️ شبكة التبويبات والأزرار (2×2) المتجاوبة مع الجوال والوضع الليلي */
     .stTabs [data-baseweb="tab-list"] {{ 
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important; 
-        background-color: transparent !important; 
-        border: none !important; 
-        margin-bottom: 12px !important;
-        padding: 4px 2px !important;
+        display: grid !important; grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important; background-color: transparent !important; 
+        border: none !important; margin-bottom: 12px !important; padding: 4px 2px !important;
     }}
-    /* إذا كان عدد التبويبات فردياً، يمتد التبويب الأخير بعرض الشبكة بتناسق تام */
-    .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
-        grid-column: span 2 !important;
-    }}
+    .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
     .stTabs [data-baseweb="tab"] {{ 
-        height: 54px !important; 
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 8px 12px !important;
-        background-color: var(--secondary-background-color) !important; 
-        border-radius: 14px !important; 
-        border: 1.5px solid rgba(148, 163, 184, 0.3) !important; 
-        color: var(--text-color) !important; 
-        font-weight: 800 !important; 
-        font-size: 0.98rem !important;
-        justify-content: center !important; 
-        align-items: center !important;
-        text-align: center !important;
-        white-space: normal !important;
-        line-height: 1.25 !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-        transition: all 0.25s ease !important; 
+        height: 54px !important; width: 100% !important; margin: 0 !important; padding: 8px 12px !important;
+        background-color: var(--secondary-background-color) !important; border-radius: 14px !important; 
+        border: 1.5px solid rgba(148, 163, 184, 0.3) !important; color: var(--text-color) !important; 
+        font-weight: 800 !important; font-size: 0.98rem !important; justify-content: center !important; 
+        align-items: center !important; text-align: center !important; white-space: normal !important;
+        line-height: 1.25 !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important; transition: all 0.25s ease !important; 
     }}
-    .stTabs [data-baseweb="tab"]:hover {{
-        border-color: {accent_color} !important;
-        transform: translateY(-1px);
-    }}
+    .stTabs [data-baseweb="tab"]:hover {{ border-color: {accent_color} !important; transform: translateY(-1px); }}
     .stTabs [aria-selected="true"] {{ 
-        background: {header_grad} !important; 
-        color: #FFFFFF !important; 
-        border: 2px solid #F59E0B !important; 
-        border-radius: 14px !important; 
+        background: {header_grad} !important; color: #FFFFFF !important; 
+        border: 2px solid #F59E0B !important; border-radius: 14px !important; 
         box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important; 
     }}
-    .stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-    }}
+    .stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{ color: #FFFFFF !important; font-weight: 900 !important; }}
     .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
 
-    /* ✳️ البطاقات الإحصائية والعناصر المتجاوبة */
-    .metric-container {{ 
-        display: grid; 
-        grid-template-columns: repeat(3, 1fr); 
-        gap: 12px; 
-        margin-bottom: 20px; 
-        direction: rtl; 
-    }}
-    .metric-card {{
-        background-color: var(--secondary-background-color); 
-        border: 1.5px solid rgba(148, 163, 184, 0.28); 
-        border-radius: 16px;
-        padding: 18px; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        box-shadow: {shadow_val};
-    }}
+    .metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; }}
+    .metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid rgba(148, 163, 184, 0.28); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
     .metric-info {{ text-align: right; }}
     .metric-title {{ color: #94A3B8; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
     .metric-val {{ color: var(--text-color); font-size: 26px; font-weight: 900; line-height: 1.1; }}
@@ -492,23 +393,39 @@ st.markdown(
     .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
     .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
 
-    .app-card {{ 
-        background: var(--secondary-background-color); 
-        padding: 20px; border-radius: 16px; 
-        box-shadow: {shadow_val}; 
-        border: 1.5px solid rgba(148, 163, 184, 0.28); 
-        margin-bottom: 15px; 
+    .app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid rgba(148, 163, 184, 0.28); margin-bottom: 15px; }}
+    .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
+
+    /* ✳️ كلاس موحد لبطاقات السلوك والتنبيهات للمعلم والطالب يضمن المحاذاة لليمين 100% */
+    .student-list-card {{
+        background: var(--secondary-background-color);
+        border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
+        border: 1.5px solid rgba(148, 163, 184, 0.28);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        display: block !important; width: 100% !important;
+        text-align: right !important; direction: rtl !important; color: var(--text-color);
     }}
-    
-    .mobile-list-item {{ 
-        background: var(--secondary-background-color); 
-        border-radius: 14px; padding: 16px; margin-bottom: 12px; 
-        border: 1.5px solid rgba(148, 163, 184, 0.28); 
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
-        display: flex; align-items: center; justify-content: space-between; 
-        color: var(--text-color); 
+    .student-card-header {{
+        display: flex !important; flex-direction: row !important;
+        justify-content: space-between !important; align-items: center !important;
+        gap: 10px !important; width: 100% !important; direction: rtl !important; margin-bottom: 6px !important;
     }}
-    
+    .student-card-title {{
+        text-align: right !important; direction: rtl !important;
+        font-weight: 900 !important; font-size: 1.05rem !important;
+        line-height: 1.4 !important; flex: 1 !important; unicode-bidi: plaintext !important;
+    }}
+    .student-card-date {{
+        background: var(--background-color); padding: 4px 10px; border-radius: 8px;
+        font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
+        flex-shrink: 0 !important; direction: ltr !important; border: 1px solid rgba(148, 163, 184, 0.2);
+    }}
+    .student-card-body {{
+        text-align: right !important; direction: rtl !important;
+        width: 100% !important; font-size: 0.95rem !important;
+        line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
+    }}
+
     .medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; }}
     .m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: {shadow_val}; color: var(--text-color); }}
     .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
@@ -1165,7 +1082,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         "🔍 مدقق رصد الدرجات (النواقص)",
     ])
 
-    # --- 1. التقييم الفردي ---
+    # --- 1. التقييم الفردي (سريع الاستجابة ومنسق المحاذاة) ---
     with eval_tabs[0]:
       df_ev = st.session_state.df_students
       if not df_ev.empty:
@@ -1204,7 +1121,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
           c1, c2 = st.columns(2)
 
-          # --- قسم السلوك الفردي ---
+          # --- قسم السلوك الفردي (تحديث لحظي في الذاكرة) ---
           with c2:
             with st.container(border=True):
               st.markdown(
@@ -1221,9 +1138,10 @@ if st.session_state.role in ["teacher", "viewer"]:
                       type="primary",
                       use_container_width=True,
                   ):
+                    today_str = str(datetime.date.today())
                     new_b_row = {
                         "student_id": sid,
-                        "date": str(datetime.date.today()),
+                        "date": today_str,
                         "type": bt,
                         "note": bn,
                     }
@@ -1232,7 +1150,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                       chg = int(match.group(1)) if match else 0
                       if chg != 0:
                         try:
-                          ws = sh.worksheet("students")
+                          ws = get_gspread_client().worksheet("students")
                           c = ws.find(sid)
                           if c:
                             h = ws.row_values(1)
@@ -1246,18 +1164,22 @@ if st.session_state.role in ["teacher", "viewer"]:
                         except Exception as e:
                           st.error(f"خطأ: {e}")
 
-                      st.cache_data.clear()
-                      if "db_loaded" in st.session_state:
-                        del st.session_state["db_loaded"]
+                      # ✳️ تحديث جدول السلوك في الذاكرة مباشرة دون إعادة تحميل كل الجداول
+                      new_df_row = pd.DataFrame([new_b_row])
+                      st.session_state.df_behavior = pd.concat(
+                          [st.session_state.df_behavior, new_df_row],
+                          ignore_index=True,
+                      )
+                      fetch_safe.clear()
                       st.toast(
-                          f"✅ تم إضافة الملاحظة للطالب {s_nm} وتحديث رصيده!",
+                          f"✅ تم تسجيل الملاحظة للطالب {s_nm} فوراً!",
                           icon="🎉",
                       )
                       st.rerun()
               else:
                 st.info("💡 وضع القراءة فقط.")
 
-          # --- قسم الدرجات الأكاديمية ---
+          # --- قسم الدرجات الأكاديمية (تحديث مدمج بطلب واحد سريع) ---
           with c1:
             with st.container(border=True):
               cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
@@ -1313,50 +1235,51 @@ if st.session_state.role in ["teacher", "viewer"]:
                       use_container_width=True,
                   ):
                     tot = v1 + v2
-                    ws_g = sh.worksheet("grades")
+                    today_s = str(datetime.date.today())
+                    ws_g = get_gspread_client().worksheet("grades")
 
-                    headers = ws_g.row_values(1)
+                    all_g_vals = ws_g.get_all_values()
+                    headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
                     if "period" not in headers:
                       ws_g.update_cell(1, len(headers) + 1, "period")
                       headers.append("period")
 
-                    records = ws_g.get_all_records()
+                    p_col_idx = headers.index("period")
                     row_to_update = None
 
-                    for i, r in enumerate(records):
-                      r_id = str(r.get(headers[0], "")).strip().split(".")[0]
-                      r_period = str(r.get("period", "الفصل الأول - فترة أولى")).strip()
-                      if r_id == sid and r_period == cp:
-                        row_to_update = i + 2
+                    for r_i, r_val in enumerate(all_g_vals[1:], start=2):
+                      r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
+                      r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
+                      if r_per in ["", "الفترة الأولى"]:
+                        r_per = "الفصل الأول - فترة أولى"
+                      elif r_per == "الفترة الثانية":
+                        r_per = "الفصل الأول - فترة ثانية"
+                      if r_id == sid and r_per == cp:
+                        row_to_update = r_i
                         break
 
-                    if row_to_update:
-                      ws_g.update_cell(row_to_update, 2, v1)
-                      ws_g.update_cell(row_to_update, 3, v2)
-                      ws_g.update_cell(row_to_update, 4, tot)
-                      ws_g.update_cell(
-                          row_to_update, 5, str(datetime.date.today())
-                      )
-                      ws_g.update_cell(
-                          row_to_update, headers.index("period") + 1, cp
-                      )
-                    else:
-                      new_row = [sid, v1, v2, tot, str(datetime.date.today())]
-                      while len(new_row) < len(headers) - 1:
-                        new_row.append("")
-                      new_row.append(cp)
-                      ws_g.append_row(new_row)
+                    from gspread.utils import rowcol_to_a1
+                    row_payload = [sid, v1, v2, tot, today_s]
+                    while len(row_payload) < len(headers) - 1:
+                      row_payload.append("")
+                    row_payload.append(cp)
 
-                    st.session_state["show_refresh_success"] = True
-                    if "db_loaded" in st.session_state:
-                      del st.session_state["db_loaded"]
-                    st.cache_data.clear()
+                    # ✳️ إرسال جميع خلايا الصف في طلب شبكي واحد فقط بدلاً من 5 طلبات
+                    if row_to_update:
+                      end_cell = rowcol_to_a1(row_to_update, len(row_payload))
+                      ws_g.update(range_name=f"A{row_to_update}:{end_cell}", values=[row_payload])
+                    else:
+                      ws_g.append_row(row_payload)
+
+                    st.session_state.df_grades = fetch_safe.__wrapped__("grades") if hasattr(fetch_safe, "__wrapped__") else fetch_safe("grades")
+                    fetch_safe.clear()
+                    st.toast(f"✅ تم حفظ درجات {s_nm} فوراً!", icon="📊")
                     st.rerun()
               else:
                 st.info("💡 وضع القراءة فقط.")
               st.caption(f"📊 المجموع الحالي لـ {cp}: {cur_p1 + cur_p2}")
 
-          # --- سجل السلوك السفلي ---
+          # --- سجل السلوك السفلي (بمحاذاة يمين منتظمة 100%) ---
           st.markdown("#### 📜 سجل السلوك الأخير للطالب")
           df_b = st.session_state.df_behavior
           if not df_b.empty:
@@ -1381,11 +1304,11 @@ if st.session_state.role in ["teacher", "viewer"]:
 
               def delete_behavior(global_idx, b_type):
                 try:
-                  sh.worksheet("behavior").delete_rows(int(global_idx) + 2)
+                  get_gspread_client().worksheet("behavior").delete_rows(int(global_idx) + 2)
                   match = re.search(r"\(([\+\-]?\d+)\)", str(b_type))
                   chg = int(match.group(1)) if match else 0
                   if chg != 0:
-                    ws_st = sh.worksheet("students")
+                    ws_st = get_gspread_client().worksheet("students")
                     c = ws_st.find(sid)
                     if c:
                       h = ws_st.row_values(1)
@@ -1397,10 +1320,11 @@ if st.session_state.role in ["teacher", "viewer"]:
                             )
                             or 0
                         )
-                        ws_st.update_cell(c.row, idx, str(curr - chg))
-                  st.cache_data.clear()
-                  if "db_loaded" in st.session_state:
-                    del st.session_state["db_loaded"]
+                        new_pts_v = curr - chg
+                        ws_st.update_cell(c.row, idx, str(new_pts_v))
+                        st.session_state.df_students.loc[student_idx, "النقاط"] = str(new_pts_v)
+                  st.session_state.df_behavior = st.session_state.df_behavior.drop(index=global_idx).reset_index(drop=True)
+                  fetch_safe.clear()
                 except Exception:
                   pass
 
@@ -1445,25 +1369,15 @@ if st.session_state.role in ["teacher", "viewer"]:
                     ):
                       try:
                         with st.spinner("جاري التحديث..."):
-                          ws_beh = sh.worksheet("behavior")
+                          ws_beh = get_gspread_client().worksheet("behavior")
                           headers_beh = ws_beh.row_values(1)
-                          idx_type = (
-                              headers_beh.index("type") + 1
-                              if "type" in headers_beh
-                              else 3
-                          )
-                          idx_note = (
-                              headers_beh.index("note") + 1
-                              if "note" in headers_beh
-                              else 4
-                          )
+                          idx_type = headers_beh.index("type") + 1 if "type" in headers_beh else 3
+                          idx_note = headers_beh.index("note") + 1 if "note" in headers_beh else 4
 
                           ws_beh.update_cell(global_idx + 2, idx_type, new_type)
                           ws_beh.update_cell(global_idx + 2, idx_note, new_note)
 
-                          old_match = re.search(
-                              r"\(([\+\-]?\d+)\)", current_type
-                          )
+                          old_match = re.search(r"\(([\+\-]?\d+)\)", current_type)
                           old_pts = int(old_match.group(1)) if old_match else 0
 
                           new_match = re.search(r"\(([\+\-]?\d+)\)", new_type)
@@ -1471,27 +1385,20 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                           diff = new_pts - old_pts
                           if diff != 0:
-                            ws_st = sh.worksheet("students")
+                            ws_st = get_gspread_client().worksheet("students")
                             c = ws_st.find(sid)
                             if c:
                               h = ws_st.row_values(1)
                               if "النقاط" in h:
                                 idx_pts = h.index("النقاط") + 1
-                                curr = int(
-                                    pd.to_numeric(
-                                        ws_st.cell(c.row, idx_pts).value,
-                                        errors="coerce",
-                                    )
-                                    or 0
-                                )
-                                ws_st.update_cell(
-                                    c.row, idx_pts, str(curr + diff)
-                                )
+                                curr = int(pd.to_numeric(ws_st.cell(c.row, idx_pts).value, errors="coerce") or 0)
+                                ws_st.update_cell(c.row, idx_pts, str(curr + diff))
+                                st.session_state.df_students.loc[student_idx, "النقاط"] = str(curr + diff)
 
+                          st.session_state.df_behavior.loc[global_idx, "type"] = new_type
+                          st.session_state.df_behavior.loc[global_idx, "note"] = new_note
                           st.session_state.edit_beh_idx = None
-                          st.cache_data.clear()
-                          if "db_loaded" in st.session_state:
-                            del st.session_state["db_loaded"]
+                          fetch_safe.clear()
                           st.toast("✅ تم التعديل بنجاح!", icon="✏️")
                           st.rerun()
                       except Exception as e:
@@ -1514,16 +1421,28 @@ if st.session_state.role in ["teacher", "viewer"]:
                     else:
                       color = success_color
 
+                    note_txt = str(r.get("note", "")).strip()
+                    note_html = (
+                        f"<div class='student-card-body' style='color:#94A3B8; font-weight:700;'>📝 {note_txt}</div>"
+                        if note_txt
+                        else ""
+                    )
+
+                    # ✳️ استخدام البطاقة الموحدة ذات المحاذاة اليمنى الثابتة
                     st.markdown(
                         f"""
-                        <div class="mobile-list-item" style="border-right: 5px solid {color};">
-                            <div><b style="color:{color};">{b_str}</b> | <small style="color:#94A3B8;">{r.get('date')}</small><br><span style="color:#94A3B8;">{r.get('note')}</span></div>
+                        <div class="student-list-card" style="border-right: 5px solid {color};">
+                            <div class="student-card-header">
+                                <div class="student-card-title" style="color: {color};">{b_str}</div>
+                                <div class="student-card-date" style="color: #94A3B8;">📅 {r.get('date')}</div>
+                            </div>
+                            {note_html}
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
 
-                    c_edit, c_del, c_wa, c_em = st.columns([0.5, 0.5, 1, 1])
+                    c_edit, c_del, c_wa, c_em = st.columns([0.6, 0.6, 1.2, 1.2])
                     lnk = get_professional_msg(
                         s_nm, r.get("type"), r.get("note"), r.get("date")
                     )
@@ -2097,7 +2016,6 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("لم يتم رصد درجات بعد.")
 
-    # --- 3. ✳️ إضافة جديدة: استخراج شهادات المتفوقين إلكترونياً ---
     # --- 3. ✳️ مركز إصدار شهادات المتفوقين والشكر الإلكترونية (ديناميكي متكامل) ---
     with honor_tabs[2]:
       import json
@@ -2357,34 +2275,32 @@ if st.session_state.role in ["teacher", "viewer"]:
 
           btn_c1, btn_c2 = st.columns(2)
           with btn_c1:
-            try:
-              from weasyprint import HTML
-              pdf_master_bytes = HTML(string=master_certs_html).write_pdf()
+            st.download_button(
+                label=f"🖨️ فتح وطباعة الشهادات فوراً ({len(target_students_cert)} شهادة - سريع جداً)",
+                data=master_certs_html,
+                file_name=f"Print_Certificates_{datetime.date.today()}.html",
+                mime="text/html",
+                type="primary",
+                use_container_width=True,
+            )
+          with btn_c2:
+            if st.button(f"⚙️ تجهيز ملف PDF مباشر ({len(target_students_cert)} شهادة)", use_container_width=True, key="btn_build_certs_pdf"):
+              try:
+                from weasyprint import HTML
+                with st.spinner("⏳ جاري رسم الشهادات وتحويلها إلى PDF..."):
+                  st.session_state.ready_certs_pdf = HTML(string=master_certs_html).write_pdf()
+              except Exception as e:
+                st.error(f"تعذر توليد الـ PDF المباشر، استخدم زر الطباعة الفوري: {e}")
+
+            if st.session_state.get("ready_certs_pdf"):
               st.download_button(
-                  label=f"📥 تحميل الشهادات بصيغة PDF ({len(target_students_cert)} شهادة)",
-                  data=pdf_master_bytes,
+                  label=f"📥 اضغط هنا لتنزيل ملف الـ PDF الجاهز ({len(target_students_cert)} شهادة)",
+                  data=st.session_state.ready_certs_pdf,
                   file_name=f"Certificates_{datetime.date.today()}.pdf",
                   mime="application/pdf",
                   type="primary",
                   use_container_width=True,
               )
-            except Exception:
-              st.download_button(
-                  label=f"📥 تحميل الشهادات ({len(target_students_cert)} شهادة)",
-                  data=master_certs_html,
-                  file_name=f"Certificates_{datetime.date.today()}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
-              )
-          with btn_c2:
-            st.download_button(
-                label=f"🖨️ فتح للطباعة السريعة عبر المتصفح ({len(target_students_cert)} شهادة)",
-                data=master_certs_html,
-                file_name=f"Print_Certificates_{datetime.date.today()}.html",
-                mime="text/html",
-                use_container_width=True,
-            )
 
           with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المكرمين عبر واتساب"):
             for _, s_row in target_students_cert.iterrows():
