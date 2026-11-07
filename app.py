@@ -4627,28 +4627,25 @@ if st.session_state.role == "student":
     s_cls = str(s_dat.get("class", "")).strip()
     pts = int(pd.to_numeric(s_dat.get("النقاط", 0), errors="coerce") or 0)
 
-    # 1. إشعار التعاميم العاجلة
+    # 1. إشعار التعاميم العاجلة (يدعم الفصول المتعددة)
     if not df_ann.empty:
       df_ann["عاجل"] = df_ann["عاجل"].astype(str).str.strip()
-      df_ann["الصف"] = df_ann["الصف"].astype(str).str.strip()
-      urg = df_ann[
-          (df_ann["عاجل"] == "نعم") & (df_ann["الصف"].isin(["الكل", s_cls]))
-      ]
+      def is_cls_targeted(cell_val):
+        targets = [x.strip() for x in str(cell_val).replace("،", ",").split(",") if x.strip()]
+        return "الكل" in targets or s_cls in targets
+      urg = df_ann[(df_ann["عاجل"] == "نعم") & (df_ann["الصف"].apply(is_cls_targeted))]
       if not urg.empty:
         u = urg.tail(1).iloc[0]
         link_text = str(u.get("الرابط", ""))
         link_display = (
-            f"<a href='{link_text}' target='_blank'"
-            f" style='color:{danger_color}; text-decoration:underline;'>اضغط"
-            " هنا</a>"
+            f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>"
             if link_text.startswith("http")
             else link_text
             if link_text.lower() != "none"
             else ""
         )
         st.markdown(
-            f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small"
-            f" style='color:{danger_color}'>{link_display}</small></div>",
+            f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>",
             unsafe_allow_html=True,
         )
 
