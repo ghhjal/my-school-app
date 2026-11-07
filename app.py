@@ -4662,11 +4662,13 @@ if st.session_state.role == "student":
           )
 
           for _, n in nts.iterrows():
-            color = (
-                danger_color
-                if "سلبي" in str(n.get("type")) or "-" in str(n.get("type"))
-                else success_color
-            )
+            b_t_str = str(n.get("type", ""))
+            if "-" in b_t_str or "سلبي" in b_t_str:
+              color = danger_color
+            elif "(0)" in b_t_str or "غائب" in b_t_str or "تنبيه" in b_t_str:
+              color = warning_color
+            else:
+              color = success_color
             note_txt = str(n.get("note", "")).strip()
             note_html = (
                 f"<div class='student-card-body' style='color: var(--text-color); font-weight: 700;'>{note_txt}</div>"
