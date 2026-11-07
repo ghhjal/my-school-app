@@ -1351,12 +1351,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                         f"https://api.whatsapp.com/send?phone={clp}&text={lnk}",
                         use_container_width=True,
                     )
-                    c_em.link_button(
-                        "📧 إيميل",
-                        f"mailto:{s_eml}?subject=ملاحظة: {s_nm}&body={lnk}",
-                        use_container_width=True,
-                    )
-
+                    
                     if st.session_state.role == "teacher":
                       if c_edit.button(
                           "✏️",
