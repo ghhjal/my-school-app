@@ -4454,8 +4454,8 @@ if st.session_state.role == "student":
                 " شهادة التفوق بصيغة PDF جاهزة للطباعة."
             )
             school_st = get_school_name_dynamic(s_cls).replace("<br>", " - ")
+            star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
 
-            # تصميم الشهادة بمقاس A4 أفقي صارم (صفحة واحدة فقط بدون أي هوامش زائدة)
             certificate_html = f"""<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -4515,17 +4515,14 @@ if st.session_state.role == "student":
         .bl {{ bottom: -7px; left: -7px; border-right: none; border-top: none; }}
         .br {{ bottom: -7px; right: -7px; border-left: none; border-top: none; }}
 
-        .top-meta {{
+        .top-table {{
             width: 100%;
-            display: table;
-            margin-bottom: 5px;
+            border-collapse: collapse;
+            margin-bottom: 4px;
             font-size: 14px;
             font-weight: 700;
             color: #193b68;
         }}
-        .top-meta-right {{ display: table-cell; text-align: right; width: 50%; vertical-align: top; line-height: 1.5; }}
-        .top-meta-left {{ display: table-cell; text-align: left; width: 50%; vertical-align: top; line-height: 1.5; }}
-
         h1 {{
             font-family: 'Aref Ruqaa', serif;
             font-size: 60px;
@@ -4540,6 +4537,12 @@ if st.session_state.role == "student":
             color: #193b68;
             margin: 0 0 14px 0;
             font-weight: 900;
+        }}
+        .star-icon {{
+            width: 26px;
+            height: 26px;
+            vertical-align: middle;
+            margin: 0 8px;
         }}
         p.intro {{
             font-size: 21px;
@@ -4567,24 +4570,53 @@ if st.session_state.role == "student":
             line-height: 1.65;
             margin: 0;
         }}
+        /* ✳️ جدول سفلي ثابت يضمن توسيط الختم والخطين الذهبيين بدقة 100% في الـ PDF */
         .footer-table {{
             width: 100%;
-            display: table;
-            margin-top: 15px;
-            padding: 0 20px;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-top: 12px;
+            direction: rtl;
         }}
-        .footer-cell {{
-            display: table-cell;
+        .footer-table td {{
             width: 33.33%;
-            vertical-align: bottom;
-            text-align: center;
+            vertical-align: middle;
+            text-align: center !important;
             color: #193b68;
+            padding: 0 10px;
         }}
-        .sig-title {{ font-size: 20px; font-weight: 800; }}
-        .sig-line {{ border-bottom: 1.5px solid #b68a36; width: 150px; margin: 8px auto; }}
-        .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; color: #193b68; font-weight: bold; }}
-        .date-val {{ font-size: 20px; font-weight: 800; color: #1e293b; margin-top: 8px; }}
+        .sig-title {{
+            font-size: 20px;
+            font-weight: 800;
+            display: block;
+            text-align: center;
+        }}
+        .sig-line {{
+            display: inline-block !important;
+            width: 160px;
+            height: 0px;
+            border-bottom: 2px solid #b68a36;
+            margin: 8px 0;
+        }}
+        .sig-name {{
+            font-family: 'Aref Ruqaa', serif;
+            font-size: 32px;
+            color: #193b68;
+            font-weight: bold;
+            display: block;
+            text-align: center;
+            line-height: 1.1;
+        }}
+        .date-val {{
+            font-size: 20px;
+            font-weight: 800;
+            color: #1e293b;
+            display: block;
+            text-align: center;
+            margin-top: 4px;
+        }}
         .stamp-circle {{
+            display: inline-block !important;
             width: 128px;
             height: 128px;
             border: 3px dashed #d32f2f;
@@ -4594,7 +4626,6 @@ if st.session_state.role == "student":
             text-align: center;
             opacity: 0.88;
             padding-top: 18px;
-            margin: 0 auto;
             position: relative;
             background-color: rgba(255, 255, 255, 0.85);
         }}
@@ -4613,13 +4644,19 @@ if st.session_state.role == "student":
                 <div class="corner tl"></div><div class="corner tr"></div>
                 <div class="corner bl"></div><div class="corner br"></div>
 
-                <div class="top-meta">
-                    <div class="top-meta-right">المملكة العربية السعودية - وزارة التعليم<br>{school_st}</div>
-                    <div class="top-meta-left">العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cp}</div>
-                </div>
+                <table class="top-table">
+                    <tr>
+                        <td style="text-align: right; width: 50%; line-height: 1.5;">المملكة العربية السعودية - وزارة التعليم<br>{school_st}</td>
+                        <td style="text-align: left; width: 50%; line-height: 1.5;">العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cp}</td>
+                    </tr>
+                </table>
 
                 <h1>شهادة شكر وتقدير</h1>
-                <h2>⭐ وسام التميز الأكاديمي ⭐</h2>
+                <h2>
+                    <img src="{star_svg}" class="star-icon">
+                    وسام التميز الأكاديمي
+                    <img src="{star_svg}" class="star-icon">
+                </h2>
 
                 <p class="intro">يتقدم الأستاذ/ <strong>زياد المعمري</strong> بوافر الشكر والتقدير للطالب المبدع والمتألق:</p>
                 <div class="student-name">{s_nm}</div>
@@ -4629,33 +4666,34 @@ if st.session_state.role == "student":
                     <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
                 </div>
 
-                <div class="footer-table">
-                    <div class="footer-cell">
-                        <div class="sig-title">تاريخ الإصدار</div>
-                        <div class="sig-line"></div>
-                        <div class="date-val">{datetime.date.today().strftime('%Y-%m-%d')}</div>
-                    </div>
-                    <div class="footer-cell">
-                        <div class="stamp-circle">
-                            <div class="stamp-inner"></div>
-                            <div style="font-size: 15px; font-weight: 900; line-height: 1.1;">وسام</div>
-                            <div style="font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
-                            <div style="font-size: 13px; font-weight: 800; line-height: 1.1;">الأكاديمي</div>
-                        </div>
-                    </div>
-                    <div class="footer-cell">
-                        <div class="sig-title">توقيع المعلم</div>
-                        <div class="sig-line"></div>
-                        <div class="sig-name">زياد المعمري</div>
-                    </div>
-                </div>
+                <table class="footer-table">
+                    <tr>
+                        <td>
+                            <span class="sig-title">تاريخ الإصدار</span>
+                            <span class="sig-line"></span>
+                            <span class="date-val">{datetime.date.today().strftime('%Y-%m-%d')}</span>
+                        </td>
+                        <td>
+                            <div class="stamp-circle">
+                                <div class="stamp-inner"></div>
+                                <div style="font-size: 15px; font-weight: 900; line-height: 1.1;">وسام</div>
+                                <div style="font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
+                                <div style="font-size: 13px; font-weight: 800; line-height: 1.1;">الأكاديمي</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="sig-title">توقيع المعلم</span>
+                            <span class="sig-line"></span>
+                            <span class="sig-name">زياد المعمري</span>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
 </body>
 </html>"""
 
-            # توليد ملف PDF مباشر وجاهز للطباعة في جوال الطالب
             try:
               from weasyprint import HTML
 
