@@ -4721,8 +4721,7 @@ if st.session_state.role == "student":
     with tabs[0]:
       st.caption("التعاميم والتنبيهات الموجهة لصفك")
       if not df_ann.empty:
-        anns = df_ann[
-            df_ann["الصف"].astype(str).str.strip().isin(["الكل", s_cls])
+        anns = df_ann[df_ann["الصف"].apply(lambda v: "الكل" in [x.strip() for x in str(v).replace("،", ",").split(",")] or s_cls in [x.strip() for x in str(v).replace("،", ",").split(",")])]
         ]
         if not anns.empty:
           for _, r in anns.iloc[::-1].iterrows():
