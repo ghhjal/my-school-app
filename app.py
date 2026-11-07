@@ -4718,11 +4718,15 @@ if st.session_state.role == "student":
     ])
 
     # --- تبويب 1: التنبيهات (محاذاة يمين ثابتة وتاريخ غير منقسم) ---
+    # --- تبويب 1: التنبيهات (يدعم الفصول المتعددة وبمحاذاة يمين ثابتة) ---
     with tabs[0]:
       st.caption("التعاميم والتنبيهات الموجهة لصفك")
       if not df_ann.empty:
-        anns = df_ann[df_ann["الصف"].apply(lambda v: "الكل" in [x.strip() for x in str(v).replace("،", ",").split(",")] or s_cls in [x.strip() for x in str(v).replace("،", ",").split(",")])]
-        ]
+        def match_student_class(val):
+          targets = [x.strip() for x in str(val).replace("،", ",").split(",") if x.strip()]
+          return "الكل" in targets or s_cls in targets
+
+        anns = df_ann[df_ann["الصف"].apply(match_student_class)]
         if not anns.empty:
           for _, r in anns.iloc[::-1].iterrows():
             row_link = str(r.get("الرابط", ""))
