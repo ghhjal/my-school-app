@@ -920,8 +920,14 @@ if st.session_state.role in ["teacher", "viewer"]:
           )
 
           c3, c4, c5 = st.columns(3)
-          f_stage = c3.selectbox("المرحلة", st.session_state.stage_options)
-          f_class = c4.selectbox("الصف", st.session_state.class_options)
+          f_class = c3.selectbox("الصف", st.session_state.class_options)
+          auto_stage = st.session_state.get("class_stage_map", {}).get(
+              f_class, "متوسط" if "متوسط" in str(f_class) else "ابتدائي"
+          )
+          stg_opts = list(st.session_state.stage_options)
+          if auto_stage not in stg_opts:
+            stg_opts.insert(0, auto_stage)
+          f_stage = c4.selectbox("المرحلة (تتحدد تلقائياً)", stg_opts, index=stg_opts.index(auto_stage))
           f_year = c5.text_input("العام الدراسي", st.session_state.current_year)
 
           st.markdown("#### 📞 معلومات التواصل ونمط التعلم")
