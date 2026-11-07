@@ -3680,100 +3680,80 @@ if st.session_state.role == "teacher" and tab_settings is not None:
     ])
 
     # --- 1. الصيانة والنسخ الاحتياطي ---
+    # --- 1. الصيانة والنسخ الاحتياطي (بأزرار مميزة وحماية تأكيد قبل التصفير) ---
     with set_tabs[0]:
-      st.markdown("#### 🛠️ أدوات الصيانة وتصحيح الأرصدة")
+      st.markdown("#### 🛠️ أدوات الصيانة ومزامنة الأرصدة")
+
       c1, c2 = st.columns(2)
+      with c1:
+        if st.button(
+            "🔄 تحديث البيانات ومزامنة السيرفر (Refresh)",
+            type="secondary",
+            use_container_width=True,
+        ):
+          st.cache_data.clear()
+          if "db_loaded" in st.session_state:
+            del st.session_state["db_loaded"]
+          st.session_state["show_refresh_success"] = True
+          st.rerun()
 
-      if c1.button(
-          "🔄 تحديث البيانات ومزامنة السيرفر (Refresh)",
-          use_container_width=True,
-      ):
-        st.cache_data.clear()
-        if "db_loaded" in st.session_state:
-          del st.session_state["db_loaded"]
-        st.session_state["show_refresh_success"] = True
-        st.rerun()
+      with c2:
+        if st.button(
+            "🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)",
+            type="primary",
+            use_container_width=True,
+        ):
+          try:
+            with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
+              df_beh = fetch_safe("behavior")
+              ws_st = get_gspread_client().worksheet("students")
+              students_data = ws_st.get_all_records()
+              true_scores = {}
 
-      if c2.button("🧹 تصفير جميع النقاط", use_container_width=True):
-        try:
-          ws = sh.worksheet("students")
-          d = ws.get_all_values()
-          if len(d) > 1:
-            headers = d[0]
-            if "النقاط" in headers:
-              from gspread.utils import rowcol_to_a1
-              col_idx = headers.index("النقاط") + 1
-              ws.update(
-                  range_name=(
-                      f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(d), col_idx)}"
-                  ),
-                  values=[[0]] * (len(d) - 1),
-              )
-              st.success("✅ تم تصفير جميع النقاط بنجاح")
-              if "db_loaded" in st.session_state:
-                del st.session_state["db_loaded"]
-              st.cache_data.clear()
-              st.rerun()
-        except Exception as e:
-          st.error(f"خطأ: {e}")
-
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.button(
-          "🧮 إعادة احتساب النقاط من السجل السلوكي (تصحيح شامل)",
-          type="primary",
-          use_container_width=True,
-      ):
-        try:
-          with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
-            df_beh = fetch_safe("behavior")
-            ws_st = sh.worksheet("students")
-            students_data = ws_st.get_all_records()
-            true_scores = {}
-
-            if not df_beh.empty:
-              beh_id_col = df_beh.columns[0]
-              beh_type_col = (
-                  "type" if "type" in df_beh.columns else df_beh.columns[2]
-              )
-
-              for _, row in df_beh.iterrows():
-                raw_id = str(row.get(beh_id_col, "")).strip().split(".")[0]
-                if not raw_id:
-                  continue
-                match = re.search(
-                    r"\(([\+\-]?\d+)\)", str(row.get(beh_type_col, ""))
+              if not df_beh.empty:
+                beh_id_col = df_beh.columns[0]
+                beh_type_col = (
+                    "type" if "type" in df_beh.columns else df_beh.columns[2]
                 )
-                if match:
-                  pts = int(match.group(1))
-                  true_scores[raw_id] = true_scores.get(raw_id, 0) + pts
 
-            headers = ws_st.row_values(1)
-            if "النقاط" in headers:
-              col_idx = headers.index("النقاط") + 1
-              new_values = []
-              id_key = headers[0]
+                for _, row in df_beh.iterrows():
+                  raw_id = str(row.get(beh_id_col, "")).strip().split(".")[0]
+                  if not raw_id:
+                    continue
+                  match = re.search(
+                      r"\(([\+\-]?\d+)\)", str(row.get(beh_type_col, ""))
+                  )
+                  if match:
+                    pts = int(match.group(1))
+                    true_scores[raw_id] = true_scores.get(raw_id, 0) + pts
 
-              for st_row in students_data:
-                sid_v = str(st_row.get(id_key, "")).strip().split(".")[0]
-                new_values.append([str(true_scores.get(sid_v, 0))])
+              headers = ws_st.row_values(1)
+              if "النقاط" in headers:
+                col_idx = headers.index("النقاط") + 1
+                new_values = []
+                id_key = headers[0]
 
-              from gspread.utils import rowcol_to_a1
-              ws_st.update(
-                  f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}",
-                  new_values,
-              )
+                for st_row in students_data:
+                  sid_v = str(st_row.get(id_key, "")).strip().split(".")[0]
+                  new_values.append([str(true_scores.get(sid_v, 0))])
 
-              st.cache_data.clear()
-              if "db_loaded" in st.session_state:
-                del st.session_state["db_loaded"]
-              st.success(
-                  "✅ تم تصحيح جميع الأرصدة بنجاح وفق السجلات الفعلية!"
-              )
-              st.rerun()
-            else:
-              st.error("لم يتم العثور على عمود 'النقاط'")
-        except Exception as e:
-          st.error(f"حدث خطأ: {e}")
+                from gspread.utils import rowcol_to_a1
+                ws_st.update(
+                    f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}",
+                    new_values,
+                )
+
+                st.cache_data.clear()
+                if "db_loaded" in st.session_state:
+                  del st.session_state["db_loaded"]
+                st.success(
+                    "✅ تم تصحيح جميع الأرصدة بنجاح وفق السجلات الفعلية!"
+                )
+                st.rerun()
+              else:
+                st.error("لم يتم العثور على عمود 'النقاط'")
+          except Exception as e:
+            st.error(f"حدث خطأ: {e}")
 
       st.divider()
       st.markdown("#### 📥 تنزيل نسخة احتياطية كاملة من البيانات (Backup)")
@@ -3788,6 +3768,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             data=b_st.getvalue(),
             file_name=f"students_backup_{datetime.date.today()}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="secondary",
             use_container_width=True,
         )
 
@@ -3801,8 +3782,72 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             data=b_gr.getvalue(),
             file_name=f"grades_backup_{datetime.date.today()}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="secondary",
             use_container_width=True,
         )
+
+      # ✳️ منطقة خطرة محمية برسالة تأكيد قبل تصفير النقاط
+      st.divider()
+      st.markdown(
+          """
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px dashed #EF4444; border-radius: 14px; padding: 15px; margin-bottom: 10px;">
+              <h5 style="color: #EF4444; margin: 0 0 5px 0; font-weight: 900;">🚨 منطقة إجراءات حساسة (تصفير النقاط)</h5>
+              <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">تصفير النقاط يقوم بإرجاع رصيد نقاط جميع الطلاب في الجدول إلى (0). هذا الإجراء يتطلب تأكيداً إضافياً لمنع الضغط بالخطأ.</p>
+          </div>
+          """,
+          unsafe_allow_html=True,
+      )
+
+      if "confirm_reset_points" not in st.session_state:
+        st.session_state.confirm_reset_points = False
+
+      if not st.session_state.confirm_reset_points:
+        if st.button(
+            "⚠️ طلب تصفير جميع النقاط (يتطلب تأكيداً)",
+            type="secondary",
+            use_container_width=True,
+            key="btn_ask_reset_pts",
+        ):
+          st.session_state.confirm_reset_points = True
+          st.rerun()
+      else:
+        st.error("🚨 **تأكيد نهائي:** هل أنت متأكد تماماً من رغبتك في تصفير نقاط جميع الطلاب إلى (0)؟ لا يمكن التراجع عن هذا الإجراء إلا بإعادة الاحتساب من السجل.")
+        conf_c1, conf_c2 = st.columns(2)
+        if conf_c1.button(
+            "🧹 نعم، أؤكد تصفير جميع النقاط الآن",
+            type="primary",
+            use_container_width=True,
+            key="btn_confirm_reset_yes",
+        ):
+          try:
+            ws = get_gspread_client().worksheet("students")
+            d = ws.get_all_values()
+            if len(d) > 1:
+              headers = d[0]
+              if "النقاط" in headers:
+                from gspread.utils import rowcol_to_a1
+                col_idx = headers.index("النقاط") + 1
+                ws.update(
+                    range_name=f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(d), col_idx)}",
+                    values=[[0]] * (len(d) - 1),
+                )
+                st.session_state.confirm_reset_points = False
+                st.success("✅ تم تصفير جميع النقاط بنجاح")
+                if "db_loaded" in st.session_state:
+                  del st.session_state["db_loaded"]
+                st.cache_data.clear()
+                st.rerun()
+          except Exception as e:
+            st.error(f"خطأ: {e}")
+
+        if conf_c2.button(
+            "❌ إلغاء التصفير",
+            type="secondary",
+            use_container_width=True,
+            key="btn_confirm_reset_no",
+        ):
+          st.session_state.confirm_reset_points = False
+          st.rerun()
 
     # --- 2. الهوية البصرية والإعدادات الأكاديمية (بدون شريط جانبي) ---
     with set_tabs[1]:
