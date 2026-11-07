@@ -2116,10 +2116,216 @@ if st.session_state.role in ["teacher", "viewer"]:
         st.info("لم يتم رصد درجات بعد.")
 
     # --- 3. ✳️ إضافة جديدة: استخراج شهادات المتفوقين إلكترونياً ---
+    with honor_tabs[2]:
+      st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
+      st.info(
+          "💡 يمكنك استخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة (لطالب محدد أو لجميع المتفوقين في فصل كامل دفعة واحدة) جاهزة للطباعة أو الحفظ كـ PDF وإرسال التهنئة لولي الأمر عبر واتساب."
+      )
+
+      if not df_st_h.empty:
+        c_cert1, c_cert2, c_cert3 = st.columns(3)
+        cert_mode = c_cert1.selectbox(
+            "1️⃣ نظام الإصدار:",
+            [
+                "🌟 جميع المتفوقين (90%+) في فصل",
+                "👤 طالب محدد (بالاسم)",
+                "🏆 أبطال لوحة الشرف (أعلى النقاط)",
+            ],
+            key="cert_gen_mode",
+        )
+        cert_period = c_cert2.selectbox(
+            "2️⃣ الفترة الدراسية:",
+            [
                 "الفصل الأول - فترة أولى",
                 "الفصل الأول - فترة ثانية",
                 "الفصل الثاني - فترة أولى",
                 "الفصل الثاني - فترة ثانية",
+            ],
+            index=0,
+            key="cert_gen_period",
+        )
+        cert_title_opt = c_cert3.selectbox(
+            "3️⃣ عنوان الوسام:",
+            [
+                "وسام التميز الأكاديمي",
+                "وسام التفوق والإبداع",
+                "شهادة شكر وانضباط سلوكي",
+            ],
+            key="cert_gen_title",
+        )
+
+        target_students_cert = pd.DataFrame()
+
+        if cert_mode == "🌟 جميع المتفوقين (90%+) في فصل":
+          cls_cert_opts = ["الكل"] + list(df_st_h["class"].dropna().unique())
+          sel_cls_cert = st.selectbox(
+              "🏫 اختر الصف:", cls_cert_opts, key="cert_cls_sel"
+          )
+
+          df_g_c = st.session_state.df_grades.copy()
+          if not df_g_c.empty:
+            df_g_c["clean_id"] = (
+                df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
+            )
+            if "period" not in df_g_c.columns:
+              df_g_c["period"] = "الفترة الأولى"
+            df_g_c["period"] = (
+                df_g_c["period"]
+                .replace(["", None, "nan", "NaN"], "الفترة الأولى")
+                .astype(str)
+                .str.strip()
+            )
+            df_g_c = df_g_c[df_g_c["period"] == cert_period]
+
+            m_cert = pd.merge(
+                df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner"
+            )
+            if sel_cls_cert != "الكل":
+              m_cert = m_cert[m_cert["class"] == sel_cls_cert]
+
+            max_t = st.session_state.get(
+                "max_tasks", 60
+            ) + st.session_state.get("max_quiz", 40)
+            if max_t > 0 and not m_cert.empty:
+              m_cert["perf_num"] = pd.to_numeric(
+                  m_cert["perf"], errors="coerce"
+              ).fillna(0)
+              m_cert["pct"] = (m_cert["perf_num"] / max_t) * 100
+              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values(
+                  "pct", ascending=False
+              )
+
+        elif cert_mode == "👤 طالب محدد (بالاسم)":
+          st_cert_dict = {
+              f"{r['name']} - ({r.get('class', '')})": r["clean_id"]
+              for _, r in df_st_h.iterrows()
+          }
+          sel_st_cert = st.selectbox(
+              "🎯 ابحث عن الطالب:", list(st_cert_dict.keys()), key="cert_st_sel"
+          )
+          if sel_st_cert:
+            chosen_id = st_cert_dict[sel_st_cert]
+            target_students_cert = df_st_h[df_st_h["clean_id"] == chosen_id]
+
+        elif cert_mode == "🏆 أبطال لوحة الشرف (أعلى النقاط)":
+          target_students_cert = (
+              df_st_h[df_st_h["النقاط"] > 0]
+              .sort_values("النقاط", ascending=False)
+              .head(10)
+          )
+
+        custom_reason = st.text_input(
+            "✍️ عبارة التكريم في الشهادة (قابلة للتعديل):",
+            value="وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
+            key="cert_custom_reason",
+        )
+
+        if not target_students_cert.empty:
+          st.success(
+              f"✅ تم تجهيز ({len(target_students_cert)}) شهادة إلكترونية جاهزة للإصدار والطباعة."
+          )
+
+          all_certs_pages_html = ""
+          for _, s_row in target_students_cert.iterrows():
+            st_name_c = s_row.get("name", "طالب متفوق")
+            st_cls_c = s_row.get("class", "")
+            school_c = get_school_name_dynamic(st_cls_c).replace("<br>", " - ")
+
+            all_certs_pages_html += f"""
+            <div class="cert-page">
+                <div class="border-outer">
+                    <div class="border-inner">
+                        <div class="corner tl"></div><div class="corner tr"></div>
+                        <div class="corner bl"></div><div class="corner br"></div>
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-family:'Cairo',sans-serif; font-size:14px; font-weight:bold; color:#193b68; margin-bottom:5px; padding:0 15px;">
+                            <div>المملكة العربية السعودية - وزارة التعليم<br>{school_c}</div>
+                            <div>العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cert_period}</div>
+                        </div>
+
+                        <h1>شهادة شكر وتقدير</h1>
+                        <h2>⭐ {cert_title_opt} ⭐</h2>
+
+                        <p class="intro">يتقدم معلم المادة الأستاذ/ <strong>زياد المعمري</strong> وإدارة المدرسة بوافر الشكر والتقدير للطالب المبدع:</p>
+                        <div class="student-name">{st_name_c} <span style="font-size:24px; color:#193b68;">({st_cls_c})</span></div>
+                        
+                        <div class="reason-container">
+                            <p class="reason">{custom_reason}</p>
+                            <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
+                        </div>
+
+                        <div class="footer-section">
+                            <div class="date-box">
+                                <div class="sig-title">مدير المدرسة</div>
+                                <div class="sig-line"></div>
+                                <div class="date-val">أ. عبدالمجيد الحربي</div>
+                            </div>
+                            
+                            <div class="stamp-wrapper">
+                                <div style="width: 130px; height: 130px; border: 3px dashed #d32f2f; border-radius: 50%; transform: rotate(-12deg); color: #d32f2f; text-align: center; opacity: 0.85; position: relative; padding-top: 20px; margin: 0 auto; background-color: rgba(255, 255, 255, 0.8);">
+                                    <div style="position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 1px solid #d32f2f; border-radius: 50%;"></div>
+                                    <div style="font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 900;">منصة زياد الذكية</div>
+                                    <div style="font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
+                                    <div style="font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: bold;">{datetime.date.today().strftime('%Y-%m-%d')}</div>
+                                </div>
+                            </div>
+
+                            <div class="sig-box">
+                                <div class="sig-title">معلم المادة</div>
+                                <div class="sig-line"></div>
+                                <div class="sig-name">زياد المعمري</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """
+
+          master_certs_html = f"""
+          <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادات التفوق الإلكترونية</title>
+          <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+          <style>
+              * {{ box-sizing: border-box; }}
+              body {{ margin: 0; padding: 20px; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; gap: 25px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+              .cert-page {{ width: 297mm; height: 209mm; padding: 10mm; background: #ffffff; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.12); overflow: hidden; page-break-after: always; }}
+              .border-outer {{ border: 12px solid #193b68; height: 100%; width: 100%; padding: 6px; position: relative; }}
+              .border-inner {{ border: 3px solid #b68a36; height: 100%; width: 100%; position: relative; padding: 20px 35px; text-align: center; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 25px 25px; display: flex; flex-direction: column; justify-content: space-between; }}
+              .corner {{ position: absolute; width: 28px; height: 28px; border: 4px solid #b68a36; }}
+              .tl {{ top: -8px; left: -8px; border-right: none; border-bottom: none; }}
+              .tr {{ top: -8px; right: -8px; border-left: none; border-bottom: none; }}
+              .bl {{ bottom: -8px; left: -8px; border-right: none; border-top: none; }}
+              .br {{ bottom: -8px; right: -8px; border-left: none; border-top: none; }}
+              h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 62px; color: #b68a36; margin: 0; font-weight: normal; line-height: 1.1; }}
+              h2 {{ font-family: 'Cairo', sans-serif; font-size: 28px; color: #193b68; margin: 5px 0 10px 0; font-weight: 900; }}
+              p.intro {{ font-family: 'Cairo', sans-serif; font-size: 20px; color: #193b68; margin: 5px 0; }}
+              .student-name {{ font-family: 'Cairo', sans-serif; font-size: 46px; font-weight: 900; color: #d32f2f; margin: 8px auto; display: inline-block; border-bottom: 3px solid #b68a36; padding: 0 30px 4px 30px; }}
+              .reason-container {{ margin: 10px 0; }}
+              p.reason {{ font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 700; color: #334155; line-height: 1.6; margin: 0; }}
+              .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 30px; font-family: 'Cairo', sans-serif; }}
+              .sig-box, .date-box {{ text-align: center; color: #193b68; width: 220px; }}
+              .sig-title {{ font-size: 20px; font-weight: bold; }}
+              .sig-line {{ border-bottom: 1px solid #b68a36; width: 150px; margin: 6px auto; }}
+              .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; color: #193b68; }}
+              .date-val {{ font-size: 20px; font-weight: 900; color: #193b68; margin-top: 6px; }}
+              @media print {{
+                  @page {{ size: A4 landscape; margin: 0mm; }}
+                  body {{ padding: 0; background: white; gap: 0; }}
+                  .cert-page {{ box-shadow: none; width: 297mm; height: 210mm; margin: 0; }}
+              }}
+          </style></head><body>
+          {all_certs_pages_html}
+          <script>window.onload = function() {{ window.print(); }}</script>
+          </body></html>
+          """
+
+          st.download_button(
+              label=f"🖨️ استخراج وتحميل الشهادات الإلكترونية ({len(target_students_cert)} شهادة - جاهزة للطباعة والـ PDF)",
+              data=master_certs_html,
+              file_name=f"Electronic_Certificates_{datetime.date.today()}.html",
+              mime="text/html",
+              type="primary",
+              use_container_width=True,
+          )
 
           with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المتفوقين عبر واتساب"):
             for _, s_row in target_students_cert.iterrows():
