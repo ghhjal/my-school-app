@@ -1139,6 +1139,26 @@ if st.session_state.role in ["teacher", "viewer"]:
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_eval:
     st.subheader("📊 الرصد والتقييم الأكاديمي والسلوكي")
+
+    # ✳️ القائمة المركزية الموحدة للسلوك (تُقرأ منها جميع القوائم الفردية والجماعية والتعديل)
+    BEHAVIOR_OPTIONS = [
+        "🌟 متميز (+10)",
+        "🎯 أداء المهمة (+15)",
+        "📂 ملف الإنجاز (+10)",
+        "✅ إيجابي (+5)",
+        "📝 حل الواجب (+5)",
+        "⚠️ تنبيه (0)",
+        "🪑 غائب (0)",
+        "🖊️ نقص أدوات الكتابة (-2)",
+        "📚 نقص كتاب (-3)",
+        "🏃 تأخر عن الحصة (-3)",
+        "💤 النوم داخل الفصل (-5)",
+        "✍️ نقص واجب (-5)",
+        "⏳ عدم أداء المهمة (-10)",
+        "❌ عدم إحضار ملف الإنجاز (-10)",
+        "🚫 سلبي (-10)",
+    ]
+
     eval_tabs = st.tabs([
         "👤 التقييم الفردي",
         "👥 الرصد الجماعي السريع",
@@ -1193,24 +1213,7 @@ if st.session_state.role in ["teacher", "viewer"]:
               )
               if st.session_state.role == "teacher":
                 with st.form("beh_add", clear_on_submit=True):
-                  bt = st.selectbox(
-                      "نوع السلوك",
-                      [
-                          "🌟 متميز (+10)",
-                          "✅ إيجابي (+5)",
-                          "📝 حل الواجب (+5)",
-                          "🎯 أداء المهمة (+10)",
-                          "📂 ملف الإنجاز (+10)",
-                          "⚠️ تنبيه (0)",
-                          "📚 نقص كتاب (-5)",
-                          "✍️ نقص واجب (-5)",
-                          "🖊️ نقص أدوات الكتابة (-5)",
-                          "💤 النوم داخل الفصل (-3)",
-                          "🏃 تأخر عن الحصة (-5)",
-                          "❌ عدم إحضار ملف الإنجاز (-10)",
-                          "🚫 سلبي (-10)",
-                      ],
-                  )
+                  bt = st.selectbox("نوع السلوك", BEHAVIOR_OPTIONS)
                   bn = st.text_area("تفاصيل الملاحظة (اختياري)")
 
                   if st.form_submit_button(
@@ -1404,22 +1407,6 @@ if st.session_state.role in ["teacher", "viewer"]:
               if "edit_beh_idx" not in st.session_state:
                 st.session_state.edit_beh_idx = None
 
-              beh_options_list = [
-                  "🌟 متميز (+10)",
-                  "✅ إيجابي (+5)",
-                  "📝 حل الواجب (+5)",
-                  "🎯 أداء المهمة (+10)",
-                  "📂 ملف الإنجاز (+10)",
-                  "⚠️ تنبيه (0)",
-                  "📚 نقص كتاب (-5)",
-                  "✍️ نقص واجب (-5)",
-                  "🖊️ نقص أدوات الكتابة (-5)",
-                  "💤 النوم داخل الفصل (-3)",
-                  "🏃 تأخر عن الحصة (-5)",
-                  "❌ عدم إحضار ملف الإنجاز (-10)",
-                  "🚫 سلبي (-10)",
-              ]
-
               for global_idx, r in my_b.iterrows():
                 with st.container():
                   if st.session_state.edit_beh_idx == global_idx:
@@ -1430,15 +1417,14 @@ if st.session_state.role in ["teacher", "viewer"]:
                     st.markdown("###### ✏️ تعديل الملاحظة السلوكية")
 
                     current_type = str(r.get("type"))
-                    type_idx = (
-                        beh_options_list.index(current_type)
-                        if current_type in beh_options_list
-                        else 0
-                    )
+                    edit_opts = list(BEHAVIOR_OPTIONS)
+                    if current_type not in edit_opts and current_type:
+                      edit_opts.insert(0, current_type)
+                    type_idx = edit_opts.index(current_type) if current_type in edit_opts else 0
 
                     new_type = st.selectbox(
                         "نوع السلوك",
-                        beh_options_list,
+                        edit_opts,
                         index=type_idx,
                         key=f"edit_type_{global_idx}",
                         label_visibility="collapsed",
@@ -1520,16 +1506,18 @@ if st.session_state.role in ["teacher", "viewer"]:
                       st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
                   else:
-                    color = (
-                        danger_color
-                        if "سلبي" in str(r.get("type"))
-                        or "-" in str(r.get("type"))
-                        else success_color
-                    )
+                    b_str = str(r.get("type", ""))
+                    if "-" in b_str or "سلبي" in b_str:
+                      color = danger_color
+                    elif "(0)" in b_str or "غائب" in b_str or "تنبيه" in b_str:
+                      color = warning_color
+                    else:
+                      color = success_color
+
                     st.markdown(
                         f"""
                         <div class="mobile-list-item" style="border-right: 5px solid {color};">
-                            <div><b>{r.get('type')}</b> | <small style="color:#94A3B8;">{r.get('date')}</small><br><span style="color:#94A3B8;">{r.get('note')}</span></div>
+                            <div><b style="color:{color};">{b_str}</b> | <small style="color:#94A3B8;">{r.get('date')}</small><br><span style="color:#94A3B8;">{r.get('note')}</span></div>
                         </div>
                         """,
                         unsafe_allow_html=True,
@@ -1575,7 +1563,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # --- 2. الرصد الجماعي السريع ---
     with eval_tabs[1]:
       if st.session_state.role == "teacher":
-        st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات")
+        st.markdown("#### 🚀 الرصد الجماعي للملاحظات والواجبات والغياب")
         st.info(
             "💡 اختر الصف، وحدد الملاحظات للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة."
         )
@@ -1599,22 +1587,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             class_students = class_students.sort_values("name")
 
             with st.form("bulk_behavior_form", clear_on_submit=True):
-              beh_options = [
-                  "--- بدون ملاحظة ---",
-                  "🌟 متميز (+10)",
-                  "✅ إيجابي (+5)",
-                  "📝 حل الواجب (+5)",
-                  "🎯 أداء المهمة (+10)",
-                  "📂 ملف الإنجاز (+10)",
-                  "⚠️ تنبيه (0)",
-                  "📚 نقص كتاب (-5)",
-                  "✍️ نقص واجب (-5)",
-                  "🖊️ نقص أدوات الكتابة (-5)",
-                  "💤 النوم داخل الفصل (-3)",
-                  "🏃 تأخر عن الحصة (-5)",
-                  "❌ عدم إحضار ملف الإنجاز (-10)",
-                  "🚫 سلبي (-10)",
-              ]
+              beh_options = ["--- بدون ملاحظة ---"] + BEHAVIOR_OPTIONS
 
               bulk_data = {}
               col_n, col_b, col_t = st.columns([1.5, 2, 2])
@@ -1669,35 +1642,38 @@ if st.session_state.role in ["teacher", "viewer"]:
                     ])
                     match = re.search(r"\(([\+\-]?\d+)\)", data["type"])
                     if match:
-                      point_updates[sid_key] = int(match.group(1))
+                      pts_val = int(match.group(1))
+                      if pts_val != 0:
+                        point_updates[sid_key] = pts_val
 
                 if behavior_rows_to_add:
                   try:
                     with st.spinner("جاري حفظ الرصد الجماعي وتحديث النقاط..."):
                       sh.worksheet("behavior").append_rows(behavior_rows_to_add)
-                      ws_st = sh.worksheet("students")
-                      all_st = ws_st.get_all_records()
-                      headers = ws_st.row_values(1)
+                      if point_updates:
+                        ws_st = sh.worksheet("students")
+                        all_st = ws_st.get_all_records()
+                        headers = ws_st.row_values(1)
 
-                      if "النقاط" in headers:
-                        p_idx = headers.index("النقاط") + 1
-                        from gspread import Cell
-                        cells_to_update = []
-                        for i, r in enumerate(all_st):
-                          st_id = str(r.get("id", "")).split(".")[0].strip()
-                          if st_id in point_updates:
-                            cur_p = int(
-                                pd.to_numeric(
-                                    r.get("النقاط", 0), errors="coerce"
-                                )
-                                or 0
-                            )
-                            new_p = cur_p + point_updates[st_id]
-                            cells_to_update.append(
-                                Cell(row=i + 2, col=p_idx, value=str(new_p))
-                            )
-                        if cells_to_update:
-                          ws_st.update_cells(cells_to_update)
+                        if "النقاط" in headers:
+                          p_idx = headers.index("النقاط") + 1
+                          from gspread import Cell
+                          cells_to_update = []
+                          for i, r in enumerate(all_st):
+                            st_id = str(r.get("id", "")).split(".")[0].strip()
+                            if st_id in point_updates:
+                              cur_p = int(
+                                  pd.to_numeric(
+                                      r.get("النقاط", 0), errors="coerce"
+                                  )
+                                  or 0
+                              )
+                              new_p = cur_p + point_updates[st_id]
+                              cells_to_update.append(
+                                  Cell(row=i + 2, col=p_idx, value=str(new_p))
+                              )
+                          if cells_to_update:
+                            ws_st.update_cells(cells_to_update)
 
                       st.success(
                           f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة."
