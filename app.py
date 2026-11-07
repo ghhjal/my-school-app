@@ -2116,11 +2116,71 @@ if st.session_state.role in ["teacher", "viewer"]:
         st.info("لم يتم رصد درجات بعد.")
 
     # --- 3. ✳️ إضافة جديدة: استخراج شهادات المتفوقين إلكترونياً ---
+    # --- 3. ✳️ مركز إصدار شهادات المتفوقين والشكر الإلكترونية (ديناميكي متكامل) ---
     with honor_tabs[2]:
+      import json
       st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
-      st.info(
-          "💡 يمكنك استخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة (لطالب محدد أو لجميع المتفوقين في فصل كامل دفعة واحدة) جاهزة للطباعة أو الحفظ كـ PDF وإرسال التهنئة لولي الأمر عبر واتساب."
-      )
+      st.info("💡 يمكنك استخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة (لطالب محدد أو لجميع المتفوقين في فصل كامل دفعة واحدة) جاهزة للطباعة أو الحفظ كـ PDF وإرسال التهنئة لولي الأمر عبر واتساب.")
+
+      # 1. الإعدادات الافتراضية للعبارات (تُحفظ وتُقرأ من جدول settings تلقائياً)
+      DEFAULT_CERT_PHRASES = {
+          "وسام التميز الأكاديمي": [
+              "وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
+              "تقديراً لتميزه الأكاديمي وتفوقه الدراسي وحرصه المستمر على تحقيق أعلى مستويات الإنجاز.",
+              "إشادةً باجتهاده ومثابرته وتميزه العلمي، وتحقيقه نتائج دراسية متميزة.",
+              "تقديراً لإنجازه العلمي المتميز وحرصه على التفوق والارتقاء بمستواه الدراسي."
+          ],
+          "وسام التفوق والإبداع": [
+              "تقديراً لتفوقه وإبداعه وتميزه في الأداء، وما أظهره من مبادرة وابتكار وروح إيجابية في التعلم.",
+              "تقديراً لإبداعه ومبادراته المتميزة وأفكاره الإبداعية التي تعكس شغفه بالتعلم.",
+              "نظير تميزه وإبداعه ومشاركته الفاعلة وجهوده المتميزة في الأنشطة التعليمية.",
+              "إشادةً بموهبته وإبداعه وقدرته على تقديم أعمال وأفكار متميزة."
+          ],
+          "وسام التميز السلوكي والانضباط الصفي": [
+              "تقديراً لتميزه في السلوك والانضباط داخل حصة اللغة الإنجليزية، والتزامه بتعليمات المعلم، واحترامه لزملائه، وحرصه على المشاركة الإيجابية.",
+              "نظير التزامه بآداب الحوار والانضباط داخل الحصة، وتفاعله الإيجابي واحترامه للمعلم والزملاء.",
+              "تقديراً لحسن سلوكه وتعاونه والتزامه بتعليمات حصة اللغة الإنجليزية، وحرصه على توفير بيئة تعليمية إيجابية.",
+              "إشادةً بتميزه في الانضباط الصفي، وحسن تعامله، ومشاركته الفاعلة التي تعكس روح المسؤولية والاحترام.",
+              "نظير التزامه وهدوئه واحترامه لقواعد الحصة الدراسية، وتميزه في التعامل الإيجابي مع المعلم وزملائه."
+          ]
+      }
+
+      if "cert_phrases_config" not in st.session_state:
+        s_map_cert = get_cached_settings()
+        saved_json = s_map_cert.get("cert_phrases", "")
+        if saved_json:
+          try:
+            loaded_cfg = json.loads(saved_json)
+            # دمج أي أوسمة افتراضية لضمان التوافق التام
+            for k, v in DEFAULT_CERT_PHRASES.items():
+              if k not in loaded_cfg or not loaded_cfg[k]:
+                loaded_cfg[k] = v
+            st.session_state.cert_phrases_config = loaded_cfg
+          except Exception:
+            st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+        else:
+          st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+
+      phrases_cfg = st.session_state.cert_phrases_config
+      badge_titles_list = list(phrases_cfg.keys())
+
+      # تهيئة القيم الابتدائية في الجلسة عند أول فتح للتبويب
+      if "cert_gen_title" not in st.session_state or st.session_state.cert_gen_title not in badge_titles_list:
+        st.session_state.cert_gen_title = badge_titles_list[0]
+      if "cert_phrase_preset" not in st.session_state:
+        st.session_state.cert_phrase_preset = phrases_cfg[st.session_state.cert_gen_title][0]
+      if "cert_custom_reason" not in st.session_state:
+        st.session_state.cert_custom_reason = phrases_cfg[st.session_state.cert_gen_title][0]
+
+      # دوال التحديث التلقائي عند تغيير الوسام أو اختيار عبارة بديلة
+      def on_badge_change():
+        chosen_badge = st.session_state.cert_gen_title
+        default_phrase = st.session_state.cert_phrases_config.get(chosen_badge, [""])[0]
+        st.session_state.cert_phrase_preset = default_phrase
+        st.session_state.cert_custom_reason = default_phrase
+
+      def on_preset_change():
+        st.session_state.cert_custom_reason = st.session_state.cert_phrase_preset
 
       if not df_st_h.empty:
         c_cert1, c_cert2, c_cert3 = st.columns(3)
@@ -2136,8 +2196,8 @@ if st.session_state.role in ["teacher", "viewer"]:
         cert_period = c_cert2.selectbox(
             "2️⃣ الفترة الدراسية:",
             [
-                "الفصل الأول - فترة أولى",
-                "الفصل الأول - فترة ثانية",
+                "الفترة الأولى",
+                "الفترة الثانية",
                 "الفصل الثاني - فترة أولى",
                 "الفصل الثاني - فترة ثانية",
             ],
@@ -2146,86 +2206,75 @@ if st.session_state.role in ["teacher", "viewer"]:
         )
         cert_title_opt = c_cert3.selectbox(
             "3️⃣ عنوان الوسام:",
-            [
-                "وسام التميز الأكاديمي",
-                "وسام التفوق والإبداع",
-                "شهادة شكر وانضباط سلوكي",
-            ],
+            badge_titles_list,
             key="cert_gen_title",
+            on_change=on_badge_change,
         )
 
         target_students_cert = pd.DataFrame()
 
         if cert_mode == "🌟 جميع المتفوقين (90%+) في فصل":
           cls_cert_opts = ["الكل"] + list(df_st_h["class"].dropna().unique())
-          sel_cls_cert = st.selectbox(
-              "🏫 اختر الصف:", cls_cert_opts, key="cert_cls_sel"
-          )
+          sel_cls_cert = st.selectbox("🏫 اختر الصف:", cls_cert_opts, key="cert_cls_sel")
 
           df_g_c = st.session_state.df_grades.copy()
           if not df_g_c.empty:
-            df_g_c["clean_id"] = (
-                df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
-            )
+            df_g_c["clean_id"] = df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
             if "period" not in df_g_c.columns:
               df_g_c["period"] = "الفترة الأولى"
-            df_g_c["period"] = (
-                df_g_c["period"]
-                .replace(["", None, "nan", "NaN"], "الفترة الأولى")
-                .astype(str)
-                .str.strip()
-            )
+            df_g_c["period"] = df_g_c["period"].replace(["", None, "nan", "NaN"], "الفترة الأولى").astype(str).str.strip()
             df_g_c = df_g_c[df_g_c["period"] == cert_period]
 
-            m_cert = pd.merge(
-                df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner"
-            )
+            m_cert = pd.merge(df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner")
             if sel_cls_cert != "الكل":
               m_cert = m_cert[m_cert["class"] == sel_cls_cert]
 
-            max_t = st.session_state.get(
-                "max_tasks", 60
-            ) + st.session_state.get("max_quiz", 40)
+            max_t = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
             if max_t > 0 and not m_cert.empty:
-              m_cert["perf_num"] = pd.to_numeric(
-                  m_cert["perf"], errors="coerce"
-              ).fillna(0)
+              m_cert["perf_num"] = pd.to_numeric(m_cert["perf"], errors="coerce").fillna(0)
               m_cert["pct"] = (m_cert["perf_num"] / max_t) * 100
-              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values(
-                  "pct", ascending=False
-              )
+              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values("pct", ascending=False)
 
         elif cert_mode == "👤 طالب محدد (بالاسم)":
-          st_cert_dict = {
-              f"{r['name']} - ({r.get('class', '')})": r["clean_id"]
-              for _, r in df_st_h.iterrows()
-          }
-          sel_st_cert = st.selectbox(
-              "🎯 ابحث عن الطالب:", list(st_cert_dict.keys()), key="cert_st_sel"
-          )
+          col_f_c1, col_f_c2 = st.columns([1, 2])
+          cls_list_c = ["الكل"] + list(df_st_h["class"].dropna().unique())
+          sel_cls_ filter_c = col_f_c1.selectbox("🏫 تصفية بالصف:", cls_list_c, key="cert_single_cls_f")
+          df_st_c_filtered = df_st_h if sel_cls_filter_c == "الكل" else df_st_h[df_st_h["class"] == sel_cls_filter_c]
+
+          st_cert_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_st_c_filtered.iterrows()}
+          sel_st_cert = col_f_c2.selectbox("🎯 ابحث عن الطالب:", list(st_cert_dict.keys()), key="cert_st_sel")
           if sel_st_cert:
             chosen_id = st_cert_dict[sel_st_cert]
             target_students_cert = df_st_h[df_st_h["clean_id"] == chosen_id]
 
         elif cert_mode == "🏆 أبطال لوحة الشرف (أعلى النقاط)":
-          target_students_cert = (
-              df_st_h[df_st_h["النقاط"] > 0]
-              .sort_values("النقاط", ascending=False)
-              .head(10)
-          )
+          target_students_cert = df_st_h[df_st_h["النقاط"] > 0].sort_values("النقاط", ascending=False).head(10)
 
-        custom_reason = st.text_input(
-            "✍️ عبارة التكريم في الشهادة (قابلة للتعديل):",
-            value="وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
+        # 2. قائمة اختيار الصيغة الجاهزة + حقل التعديل اليدوي الحر
+        available_phrases_for_badge = phrases_cfg.get(cert_title_opt, [""])
+        if st.session_state.cert_phrase_preset not in available_phrases_for_badge:
+          st.session_state.cert_phrase_preset = available_phrases_for_badge[0]
+
+        st.selectbox(
+            "📋 اختر صيغة جاهزة للعبارة (تتحدث تلقائياً حسب نوع الوسام):",
+            available_phrases_for_badge,
+            key="cert_phrase_preset",
+            on_change=on_preset_change,
+            format_func=lambda x: f"⭐ (الافتراضية) {x}" if x == available_phrases_for_badge[0] else f"🔹 {x}"
+        )
+
+        custom_reason = st.text_area(
+            "✍️ عبارة التكريم في الشهادة (يمكنك التعديل اليدوي بحرية):",
             key="cert_custom_reason",
+            height=85,
         )
 
         if not target_students_cert.empty:
-          st.success(
-              f"✅ تم تجهيز ({len(target_students_cert)}) شهادة إلكترونية جاهزة للإصدار والطباعة."
-          )
+          st.success(f"✅ تم تجهيز ({len(target_students_cert)}) شهادة إلكترونية جاهزة للإصدار والطباعة.")
 
+          star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
           all_certs_pages_html = ""
+
           for _, s_row in target_students_cert.iterrows():
             st_name_c = s_row.get("name", "طالب متفوق")
             st_cls_c = s_row.get("class", "")
@@ -2237,119 +2286,196 @@ if st.session_state.role in ["teacher", "viewer"]:
                     <div class="border-inner">
                         <div class="corner tl"></div><div class="corner tr"></div>
                         <div class="corner bl"></div><div class="corner br"></div>
-                        
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-family:'Cairo',sans-serif; font-size:14px; font-weight:bold; color:#193b68; margin-bottom:5px; padding:0 15px;">
-                            <div>المملكة العربية السعودية - وزارة التعليم<br>{school_c}</div>
-                            <div>العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cert_period}</div>
-                        </div>
+
+                        <table class="top-table">
+                            <tr>
+                                <td style="text-align: right; width: 50%; line-height: 1.5;">المملكة العربية السعودية - وزارة التعليم<br>{school_c}</td>
+                                <td style="text-align: left; width: 50%; line-height: 1.5;">العام الدراسي: {st.session_state.get('current_year', '1447هـ')}<br>{cert_period}</td>
+                            </tr>
+                        </table>
 
                         <h1>شهادة شكر وتقدير</h1>
-                        <h2>⭐ {cert_title_opt} ⭐</h2>
+                        <h2>
+                            <img src="{star_svg}" class="star-icon">
+                            {cert_title_opt}
+                            <img src="{star_svg}" class="star-icon">
+                        </h2>
 
                         <p class="intro">يتقدم معلم المادة الأستاذ/ <strong>زياد المعمري</strong> وإدارة المدرسة بوافر الشكر والتقدير للطالب المبدع:</p>
-                        <div class="student-name">{st_name_c} <span style="font-size:24px; color:#193b68;">({st_cls_c})</span></div>
-                        
+                        <div class="student-name">{st_name_c} <span style="font-size:22px; color:#193b68;">({st_cls_c})</span></div>
+
                         <div class="reason-container">
                             <p class="reason">{custom_reason}</p>
                             <p class="reason">متمنين له دوام التوفيق ومزيداً من التألق والنجاح.</p>
                         </div>
 
-                        <div class="footer-section">
-                            <div class="date-box">
-                                <div class="sig-title">مدير المدرسة</div>
-                                <div class="sig-line"></div>
-                                <div class="date-val">أ. عبدالمجيد الحربي</div>
-                            </div>
-                            
-                            <div class="stamp-wrapper">
-                                <div style="width: 130px; height: 130px; border: 3px dashed #d32f2f; border-radius: 50%; transform: rotate(-12deg); color: #d32f2f; text-align: center; opacity: 0.85; position: relative; padding-top: 20px; margin: 0 auto; background-color: rgba(255, 255, 255, 0.8);">
-                                    <div style="position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 1px solid #d32f2f; border-radius: 50%;"></div>
-                                    <div style="font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 900;">منصة زياد الذكية</div>
-                                    <div style="font-family: 'Aref Ruqaa', serif; font-size: 30px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
-                                    <div style="font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: bold;">{datetime.date.today().strftime('%Y-%m-%d')}</div>
-                                </div>
-                            </div>
-
-                            <div class="sig-box">
-                                <div class="sig-title">معلم المادة</div>
-                                <div class="sig-line"></div>
-                                <div class="sig-name">زياد المعمري</div>
-                            </div>
-                        </div>
+                        <table class="footer-table">
+                            <tr>
+                                <td>
+                                    <span class="sig-title">مدير المدرسة</span>
+                                    <span class="sig-line"></span>
+                                    <span class="date-val">أ. عبدالمجيد الحربي</span>
+                                </td>
+                                <td>
+                                    <div class="stamp-circle">
+                                        <div class="stamp-inner"></div>
+                                        <div style="font-size: 14px; font-weight: 900; line-height: 1.1;">منصة زياد الذكية</div>
+                                        <div style="font-family: 'Aref Ruqaa', serif; font-size: 28px; font-weight: bold; line-height: 1.2;">ختم التميز</div>
+                                        <div style="font-size: 12px; font-weight: 800; line-height: 1.1;">{datetime.date.today().strftime('%Y-%m-%d')}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="sig-title">معلم المادة</span>
+                                    <span class="sig-line"></span>
+                                    <span class="sig-name">زياد المعمري</span>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
             </div>
             """
 
-          master_certs_html = f"""
-          <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادات التفوق الإلكترونية</title>
-          <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+          master_certs_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادات التفوق الإلكترونية</title>
+          <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
           <style>
-              * {{ box-sizing: border-box; }}
-              body {{ margin: 0; padding: 20px; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; gap: 25px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-              .cert-page {{ width: 297mm; height: 209mm; padding: 10mm; background: #ffffff; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.12); overflow: hidden; page-break-after: always; }}
-              .border-outer {{ border: 12px solid #193b68; height: 100%; width: 100%; padding: 6px; position: relative; }}
-              .border-inner {{ border: 3px solid #b68a36; height: 100%; width: 100%; position: relative; padding: 20px 35px; text-align: center; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 25px 25px; display: flex; flex-direction: column; justify-content: space-between; }}
+              @page {{ size: 297mm 210mm; margin: 0mm !important; }}
+              * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+              html, body {{ margin: 0 !important; padding: 0 !important; background-color: #ffffff; font-family: 'Cairo', sans-serif; }}
+              .cert-page {{ width: 297mm; height: 210mm; padding: 8mm; background: #ffffff; position: relative; page-break-after: always; page-break-inside: avoid; overflow: hidden; }}
+              .cert-page:last-of-type {{ page-break-after: auto; }}
+              .border-outer {{ border: 12px solid #193b68; width: 100%; height: 100%; padding: 5px; position: relative; }}
+              .border-inner {{ border: 3px solid #b68a36; width: 100%; height: 100%; padding: 18px 35px; text-align: center; position: relative; background-color: #ffffff; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 22px 22px; }}
               .corner {{ position: absolute; width: 28px; height: 28px; border: 4px solid #b68a36; }}
-              .tl {{ top: -8px; left: -8px; border-right: none; border-bottom: none; }}
-              .tr {{ top: -8px; right: -8px; border-left: none; border-bottom: none; }}
-              .bl {{ bottom: -8px; left: -8px; border-right: none; border-top: none; }}
-              .br {{ bottom: -8px; right: -8px; border-left: none; border-top: none; }}
-              h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 62px; color: #b68a36; margin: 0; font-weight: normal; line-height: 1.1; }}
-              h2 {{ font-family: 'Cairo', sans-serif; font-size: 28px; color: #193b68; margin: 5px 0 10px 0; font-weight: 900; }}
-              p.intro {{ font-family: 'Cairo', sans-serif; font-size: 20px; color: #193b68; margin: 5px 0; }}
-              .student-name {{ font-family: 'Cairo', sans-serif; font-size: 46px; font-weight: 900; color: #d32f2f; margin: 8px auto; display: inline-block; border-bottom: 3px solid #b68a36; padding: 0 30px 4px 30px; }}
-              .reason-container {{ margin: 10px 0; }}
-              p.reason {{ font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 700; color: #334155; line-height: 1.6; margin: 0; }}
-              .footer-section {{ display: flex; justify-content: space-between; align-items: flex-end; padding: 0 30px; font-family: 'Cairo', sans-serif; }}
-              .sig-box, .date-box {{ text-align: center; color: #193b68; width: 220px; }}
-              .sig-title {{ font-size: 20px; font-weight: bold; }}
-              .sig-line {{ border-bottom: 1px solid #b68a36; width: 150px; margin: 6px auto; }}
-              .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 32px; color: #193b68; }}
-              .date-val {{ font-size: 20px; font-weight: 900; color: #193b68; margin-top: 6px; }}
-              @media print {{
-                  @page {{ size: A4 landscape; margin: 0mm; }}
-                  body {{ padding: 0; background: white; gap: 0; }}
-                  .cert-page {{ box-shadow: none; width: 297mm; height: 210mm; margin: 0; }}
-              }}
+              .tl {{ top: -7px; left: -7px; border-right: none; border-bottom: none; }}
+              .tr {{ top: -7px; right: -7px; border-left: none; border-bottom: none; }}
+              .bl {{ bottom: -7px; left: -7px; border-right: none; border-top: none; }}
+              .br {{ bottom: -7px; right: -7px; border-left: none; border-top: none; }}
+              .top-table {{ width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 14px; font-weight: 700; color: #193b68; }}
+              h1 {{ font-family: 'Aref Ruqaa', serif; font-size: 58px; color: #b68a36; margin: 0 0 4px 0; font-weight: bold; line-height: 1.15; }}
+              h2 {{ font-family: 'Cairo', sans-serif; font-size: 27px; color: #193b68; margin: 0 0 12px 0; font-weight: 900; }}
+              .star-icon {{ width: 25px; height: 25px; vertical-align: middle; margin: 0 8px; }}
+              p.intro {{ font-size: 20px; color: #193b68; margin: 0 0 6px 0; font-weight: 700; }}
+              .student-name {{ font-size: 44px; font-weight: 900; color: #d32f2f; margin: 4px auto 12px auto; display: inline-block; border-bottom: 3px solid #b68a36; padding: 0 35px 5px 35px; line-height: 1.2; }}
+              .reason-container {{ margin: 6px 0 14px 0; }}
+              p.reason {{ font-size: 20px; font-weight: 700; color: #334155; line-height: 1.6; margin: 0; }}
+              .footer-table {{ width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 10px; direction: rtl; }}
+              .footer-table td {{ width: 33.33%; vertical-align: middle; text-align: center !important; color: #193b68; padding: 0 10px; }}
+              .sig-title {{ font-size: 19px; font-weight: 800; display: block; text-align: center; }}
+              .sig-line {{ display: inline-block !important; width: 160px; height: 0px; border-bottom: 2px solid #b68a36; margin: 8px 0; }}
+              .sig-name {{ font-family: 'Aref Ruqaa', serif; font-size: 30px; color: #193b68; font-weight: bold; display: block; text-align: center; line-height: 1.1; }}
+              .date-val {{ font-size: 19px; font-weight: 800; color: #193b68; display: block; text-align: center; margin-top: 4px; }}
+              .stamp-circle {{ display: inline-block !important; width: 126px; height: 126px; border: 3px dashed #d32f2f; border-radius: 50%; transform: rotate(-14deg); color: #d32f2f; text-align: center; opacity: 0.88; padding-top: 18px; position: relative; background-color: rgba(255, 255, 255, 0.85); }}
+              .stamp-inner {{ position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 1px solid #d32f2f; border-radius: 50%; }}
           </style></head><body>
           {all_certs_pages_html}
           <script>window.onload = function() {{ window.print(); }}</script>
           </body></html>
           """
 
-          st.download_button(
-              label=f"🖨️ استخراج وتحميل الشهادات الإلكترونية ({len(target_students_cert)} شهادة - جاهزة للطباعة والـ PDF)",
-              data=master_certs_html,
-              file_name=f"Electronic_Certificates_{datetime.date.today()}.html",
-              mime="text/html",
-              type="primary",
-              use_container_width=True,
-          )
+          btn_c1, btn_c2 = st.columns(2)
+          with btn_c1:
+            try:
+              from weasyprint import HTML
+              pdf_master_bytes = HTML(string=master_certs_html).write_pdf()
+              st.download_button(
+                  label=f"📥 تحميل الشهادات بصيغة PDF ({len(target_students_cert)} شهادة)",
+                  data=pdf_master_bytes,
+                  file_name=f"Certificates_{datetime.date.today()}.pdf",
+                  mime="application/pdf",
+                  type="primary",
+                  use_container_width=True,
+              )
+            except Exception:
+              st.download_button(
+                  label=f"📥 تحميل الشهادات ({len(target_students_cert)} شهادة)",
+                  data=master_certs_html,
+                  file_name=f"Certificates_{datetime.date.today()}.html",
+                  mime="text/html",
+                  type="primary",
+                  use_container_width=True,
+              )
+          with btn_c2:
+            st.download_button(
+                label=f"🖨️ فتح للطباعة السريعة عبر المتصفح ({len(target_students_cert)} شهادة)",
+                data=master_certs_html,
+                file_name=f"Print_Certificates_{datetime.date.today()}.html",
+                mime="text/html",
+                use_container_width=True,
+            )
 
-          with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المتفوقين عبر واتساب"):
+          with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المكرمين عبر واتساب"):
             for _, s_row in target_students_cert.iterrows():
               s_n = s_row.get("name", "")
               s_p = clean_phone_number(s_row.get("الجوال", ""))
               congrats_msg = urllib.parse.quote(
                   f"🌟 *تهنئة تفوق وتميز من منصة الأستاذ زياد المعمري* 🌟\n\n"
-                  f"يسرنا تهنئتكم بتفوق الابن المبدع: *{s_n}*\n"
-                  f"وحصوله على *{cert_title_opt}* في مادة اللغة الإنجليزية ({cert_period}).\n"
-                  f"📜 يمكنكم تحميل شهادة التفوق الإلكترونية مباشرة عبر حساب الطالب في المنصة.\n"
+                  f"يسرنا تهنئتكم بحصول الابن المبدع: *{s_n}*\n"
+                  f"على *{cert_title_opt}* في مادة اللغة الإنجليزية ({cert_period}).\n"
+                  f"📝 *{custom_reason}*\n"
                   f"مع خالص تمنياتنا له بدوام التوفيق والنجاح! 🎉"
               )
               col_w1, col_w2 = st.columns([3, 1])
-              col_w1.markdown(
-                  f"<div style='padding-top:10px; font-weight:bold;'>🎓 {s_n} ({s_row.get('class', '')})</div>",
-                  unsafe_allow_html=True,
-              )
-              col_w2.link_button(
-                  "📲 إرسال تهنئة واتساب",
-                  f"https://api.whatsapp.com/send?phone={s_p}&text={congrats_msg}",
-                  use_container_width=True,
-              )
+              col_w1.markdown(f"<div style='padding-top:10px; font-weight:bold;'>🎓 {s_n} ({s_row.get('class', '')})</div>", unsafe_allow_html=True)
+              col_w2.link_button("📲 إرسال تهنئة واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={congrats_msg}", use_container_width=True)
         else:
           st.warning("⚠️ لا يوجد طلاب يطابقون معيار الشهادات المحدد حالياً.")
+
+        # 3. ✳️ إعدادات مستقلة لإدارة وإضافة عبارات التكريم مستقبلاً دون تعديل الكود
+        if st.session_state.role == "teacher":
+          st.markdown("---")
+          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
+            st.caption("يمكنك إضافة عبارات جديدة لأي وسام أو تعديل العبارات الحالية، وسيتم حفظها في قاعدة البيانات المركزية (`settings`).")
+            edit_badge_target = st.selectbox("اختر الوسام لتحرير عباراته:", badge_titles_list, key="cfg_badge_sel")
+            current_lines = "\n".join(phrases_cfg.get(edit_badge_target, []))
+            updated_lines_text = st.text_area(
+                "عبارات الوسام (كل سطر يمثل عبارة مستقلة، والسطر الأول هو العبارة الافتراضية):",
+                value=current_lines,
+                height=150,
+                key=f"cfg_lines_{edit_badge_target}"
+            )
+            col_sv1, col_sv2 = st.columns([2, 1])
+            if col_sv1.button("💾 حفظ عبارات هذا الوسام في قاعدة البيانات", type="primary", use_container_width=True):
+              new_list = [line.strip() for line in updated_lines_text.split("\n") if line.strip()]
+              if new_list:
+                phrases_cfg[edit_badge_target] = new_list
+                st.session_state.cert_phrases_config = phrases_cfg
+                try:
+                  ws_sett = sh.worksheet("settings")
+                  records_s = ws_sett.get_all_records()
+                  row_found = None
+                  for idx_s, r_s in enumerate(records_s):
+                    if str(r_s.get("key", "")).strip() == "cert_phrases":
+                      row_found = idx_s + 2
+                      break
+                  json_str = json.dumps(phrases_cfg, ensure_ascii=False)
+                  if row_found:
+                    ws_sett.update_cell(row_found, 2, json_str)
+                  else:
+                    ws_sett.append_row(["cert_phrases", json_str])
+                  st.cache_data.clear()
+                  on_badge_change()
+                  st.success(f"✅ تم حفظ عبارات ({edit_badge_target}) بنجاح!")
+                  st.rerun()
+                except Exception as e:
+                  st.error(f"❌ خطأ أثناء الحفظ في السيرفر: {e}")
+              else:
+                st.warning("⚠️ يجب إدخال عبارة واحدة على الأقل.")
+
+            if col_sv2.button("🔄 استعادة العبارات الافتراضية", use_container_width=True):
+              st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+              try:
+                ws_sett = sh.worksheet("settings")
+                records_s = ws_sett.get_all_records()
+                for idx_s, r_s in enumerate(records_s):
+                  if str(r_s.get("key", "")).strip() == "cert_phrases":
+                    ws_sett.update_cell(idx_s + 2, 2, json.dumps(DEFAULT_CERT_PHRASES, ensure_ascii=False))
+                    break
+                st.cache_data.clear()
+              except Exception:
+                pass
+              on_badge_change()
+              st.rerun()
 # ==========================================
 # 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (مستقل بالكامل)
 # ==========================================
