@@ -358,7 +358,7 @@ def standardize_uploaded_columns(df):
     return df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
 
 def intelligent_merge_students_and_vak(new_df):
-    """دمج الطلاب الجدد وتحديث أنماط التعلم والدرجات للطلاب الحاليين أو الجدد"""
+    """دمج الطلاب الجدد وتحديث أنماط التعلم والدرجات للطلاب الحاليين أو الجدد بدون أي تكرار"""
     new_df = standardize_uploaded_columns(new_df.copy())
     if 'id' not in new_df.columns:
         return 0, 0, False
@@ -366,7 +366,68 @@ def intelligent_merge_students_and_vak(new_df):
     current_df = get_all_students().copy()
     current_df['id'] = current_df['id'].apply(clean_id)
     new_df['id'] = new_df['id'].apply(clean_id)
-    new_df = new_df[new_df['id'] != ""].copy()
+    
+    # استبعاد الهويات الفارغة ومنع تكرار أي رقم هوية داخل ملف الإكسل المرفوع نفسه
+    new_df = new_df[new_df['id'] != ""].drop_duplicates(subset=['id'], keep='last').copy()
+    
+    has_vak_cols = any(c in new_df.columns for c in ['vak_result', 'v_score', 'a_score', 'k_score'])
+    added_count = 0
+    updated_vak_count = 0
+    
+    # 1. تحديث بيانات وأنماط الطلاب المسجلين مسبقاً دون تكرارهم
+    for _, row in new_df.iterrows():
+        s_id = row['id']
+        mask = (current_df['id'] == s_id)
+        if mask.any():
+            # تحديث الاسم أو الصف أو الفصل إن وجد تعديل في الملف
+            for info_col in ['name', 'grade', 'class_name']:
+                if info_col in new_df.columns and pd.notna(row.get(info_col)):
+                    val_str = str(row.get(info_col)).strip()
+                    if val_str and val_str not in ['nan', 'None']:
+                        current_df.loc[mask, info_col] = val_str
+
+            # تحديث أنماط التعلم والدرجات
+            if has_vak_cols:
+                v_sc = str(row.get('v_score', current_df.loc[mask, 'v_score'].iloc[0])).split('.')[0].strip() if 'v_score' in new_df.columns and pd.notna(row.get('v_score')) else current_df.loc[mask, 'v_score'].iloc[0]
+                a_sc = str(row.get('a_score', current_df.loc[mask, 'a_score'].iloc[0])).split('.')[0].strip() if 'a_score' in new_df.columns and pd.notna(row.get('a_score')) else current_df.loc[mask, 'a_score'].iloc[0]
+                k_sc = str(row.get('k_score', current_df.loc[mask, 'k_score'].iloc[0])).split('.')[0].strip() if 'k_score' in new_df.columns and pd.notna(row.get('k_score')) else current_df.loc[mask, 'k_score'].iloc[0]
+                raw_res = row.get('vak_result', '') if 'vak_result' in new_df.columns else ''
+                
+                norm_res = normalize_vak_label(raw_res, v_sc, a_sc, k_sc)
+                if norm_res != "غير مختبر":
+                    current_df.loc[mask, 'vak_result'] = norm_res
+                    current_df.loc[mask, 'v_score'] = v_sc if v_sc not in ['', 'nan', 'None'] else "0"
+                    current_df.loc[mask, 'a_score'] = a_sc if a_sc not in ['', 'nan', 'None'] else "0"
+                    current_df.loc[mask, 'k_score'] = k_sc if k_sc not in ['', 'nan', 'None'] else "0"
+                    updated_vak_count += 1
+
+    # 2. إضافة الطلاب الجدد غير المسجلين مسبقاً فقط
+    if all(col in new_df.columns for col in ['id', 'name', 'grade', 'class_name']):
+        new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
+        if not new_students.empty:
+            for col in ['v_score', 'a_score', 'k_score']:
+                if col not in new_students.columns:
+                    new_students[col] = "0"
+                else:
+                    new_students[col] = new_students[col].fillna("0").astype(str).apply(lambda x: x.split('.')[0].strip() or "0")
+            if 'vak_result' not in new_students.columns:
+                new_students['vak_result'] = "غير مختبر"
+            
+            new_students['vak_result'] = new_students.apply(
+                lambda r: normalize_vak_label(r.get('vak_result', ''), r.get('v_score', '0'), r.get('a_score', '0'), r.get('k_score', '0')),
+                axis=1
+            )
+            cols_order = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
+            current_df = pd.concat([current_df, new_students[cols_order]], ignore_index=True)
+            added_count = len(new_students)
+
+    if added_count > 0 or updated_vak_count > 0:
+        conn = get_gsheets_conn()
+        try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=current_df)
+        except: conn.update(spreadsheet=SHEET_URL, data=current_df)
+        clear_all_caches()
+        
+    return added_count, updated_vak_count, True
     
     has_vak_cols = any(c in new_df.columns for c in ['vak_result', 'v_score', 'a_score', 'k_score'])
     added_count = 0
