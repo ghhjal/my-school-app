@@ -2634,14 +2634,14 @@ if st.session_state.role in ["teacher", "viewer"]:
               on_badge_change()
               st.rerun()
 # ==========================================
-# 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (مستقل بالكامل)
+# 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (يدعم اختيار عدة فصول معاً)
 # ==========================================
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_reports:
     st.subheader("🖨️ مركز التقارير والطباعة والاستخراج")
     st.caption(
         "جميع تقارير الطباعة، شواهد الأداء، الكشوفات المرنة، وتصدير ملفات Excel"
-        " في مكان واحد"
+        " في مكان واحد مع دعم تحديد عدة فصول دفعة واحدة"
     )
 
     df_s_rep = st.session_state.df_students.copy()
@@ -2652,6 +2652,41 @@ if st.session_state.role in ["teacher", "viewer"]:
       df_s_rep["النقاط"] = pd.to_numeric(
           df_s_rep["النقاط"], errors="coerce"
       ).fillna(0)
+
+    # ✳️ دالة ذكية لتحديد الفصول المستهدفة واسم المدرسة بناءً على الاختيار المتعدد
+    def resolve_multi_classes(selected_list, all_available_classes):
+      if not selected_list:
+        return [], "ابتدائية عبادة بن قيس الأنصاري", ""
+      if "الكل" in selected_list:
+        target_cls = list(all_available_classes)
+        label_str = "الكل"
+      else:
+        target_cls = list(selected_list)
+        label_str = " ، ".join(target_cls)
+
+      cs_map = st.session_state.get("class_stage_map", {})
+      stages_found = set()
+      for c_name in target_cls:
+        st_g = cs_map.get(str(c_name).strip(), "")
+        if st_g == "متوسط" or "متوسط" in str(c_name):
+          stages_found.add("متوسط")
+        else:
+          stages_found.add("ابتدائي")
+
+      if stages_found == {"متوسط"}:
+        sch_name = "متوسطة عبدالرحمن الناصر"
+      elif stages_found == {"ابتدائي"}:
+        sch_name = "ابتدائية عبادة بن قيس الأنصاري"
+      else:
+        sch_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
+
+      return target_cls, sch_name, label_str
+
+    all_cls_in_db = (
+        list(df_s_rep["class"].dropna().unique())
+        if not df_s_rep.empty and "class" in df_s_rep.columns
+        else st.session_state.get("class_options", [])
+    )
 
     rep_tabs = st.tabs([
         "📑 تقرير طالب شامل",
@@ -2669,19 +2704,23 @@ if st.session_state.role in ["teacher", "viewer"]:
     with rep_tabs[0]:
       st.markdown("#### 📑 التقرير الشامل المفصل للطالب")
       if not df_s_rep.empty:
-        col_r_cls, col_r_st = st.columns([1, 2.5])
-        cls_r_opts = ["الكل"] + list(df_s_rep["class"].dropna().unique())
-        sel_r_cls = col_r_cls.selectbox(
-            "🏫 تصفية بالصف:", cls_r_opts, key="rep_single_cls_filter"
+        col_r_cls, col_r_st = st.columns([1.3, 2.2])
+        sel_r_cls = col_r_cls.multiselect(
+            "🏫 تصفية بالفصول:",
+            ["الكل"] + all_cls_in_db,
+            default=["الكل"],
+            key="rep_single_cls_filter",
         )
 
+        target_r_cls, _, _ = resolve_multi_classes(sel_r_cls, all_cls_in_db)
         df_s_rep_f = (
-            df_s_rep
-            if sel_r_cls == "الكل"
-            else df_s_rep[df_s_rep["class"] == sel_r_cls]
+            df_s_rep[df_s_rep["class"].isin(target_r_cls)]
+            if target_r_cls
+            else df_s_rep
         )
+
         st_dict = {
-            f"{r['name']} ({r['clean_id']})": r["clean_id"]
+            f"{r['name']} - ({r.get('class', '')})": r["clean_id"]
             for _, r in df_s_rep_f.iterrows()
         }
         sel_rep = col_r_st.selectbox(
@@ -2736,14 +2775,8 @@ if st.session_state.role in ["teacher", "viewer"]:
           )
           st.markdown("<br>", unsafe_allow_html=True)
 
-          grades_html_table = (
-              "<div style='text-align:center; padding:20px; color:#64748B;'>لا"
-              " توجد درجات مرصودة لهذا الطالب في هذه الفترة.</div>"
-          )
-          behavior_html_table = (
-              "<div style='text-align:center; padding:20px; color:#64748B;'>✨"
-              " سجل السلوك نظيف.</div>"
-          )
+          grades_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>لا توجد درجات مرصودة لهذا الطالب في هذه الفترة.</div>"
+          behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>✨ سجل السلوك نظيف.</div>"
 
           st.markdown("##### 📊 الدرجات الأكاديمية")
           df_g = st.session_state.df_grades.copy()
@@ -2813,11 +2846,8 @@ if st.session_state.role in ["teacher", "viewer"]:
               rows_html = ""
               for _, r_b in display_df.iterrows():
                 rows_html += f"<tr><td>{r_b['📅 التاريخ']}</td><td>{r_b['🎯 نوع السلوك']}</td><td>{r_b['📝 التفاصيل']}</td></tr>"
-                
-              behavior_html_table = (
-                  "<table><tr><th>التاريخ</th><th>نوع"
-                  f" السلوك</th><th>التفاصيل</th></tr>{rows_html}</table>"
-              )
+
+              behavior_html_table = f"<table><tr><th>التاريخ</th><th>نوع السلوك</th><th>التفاصيل</th></tr>{rows_html}</table>"
             else:
               st.success("✨ سجله نظيف، لا توجد ملاحظات مسجلة في السجل.")
           else:
@@ -2882,21 +2912,23 @@ if st.session_state.role in ["teacher", "viewer"]:
         st.info("لا توجد بيانات طلاب.")
 
     # ---------------------------------------------------------
-    # 2. كشف الدرجات المرصودة (مطبوع)
+    # 2. كشف الدرجات المرصودة (يدعم عدة فصول في ملف طباعة واحد أو Excel)
     # ---------------------------------------------------------
     with rep_tabs[1]:
       st.markdown("#### 📊 استخراج كشف الدرجات المرصودة للطباعة")
       st.info(
-          "💡 قم بطباعة كشف درجات الطلاب معبأً بالدرجات من قاعدة البيانات للفصل"
-          " والفترة المحددة."
+          "💡 يمكنك اختيار عدة فصول معاً (مثل جميع فصول الخامس) ليتم توليد كشف"
+          " مستقل لكل فصل في ملف طباعة واحد جاهز للطباعة دفعة واحدة."
       )
 
       if not df_s_rep.empty:
-        col_g1, col_g2 = st.columns(2)
-        grades_print_cls = col_g1.selectbox(
-            "1️⃣ اختر الصف:",
-            st.session_state.get("class_options", []),
-            key="grades_print_cls",
+        col_g1, col_g2 = st.columns([2, 1.2])
+        avail_g_cls = st.session_state.get("class_options", all_cls_in_db)
+        grades_print_cls_list = col_g1.multiselect(
+            "1️⃣ اختر الفصول (يمكنك تحديد أكثر من فصل أو الكل):",
+            options=["الكل"] + avail_g_cls,
+            default=[avail_g_cls[0]] if avail_g_cls else ["الكل"],
+            key="grades_print_cls_multi",
         )
         grades_print_period = col_g2.selectbox(
             "2️⃣ اختر الفترة:",
@@ -2905,27 +2937,23 @@ if st.session_state.role in ["teacher", "viewer"]:
                 "الفصل الأول - فترة ثانية",
                 "الفصل الثاني - فترة أولى",
                 "الفصل الثاني - فترة ثانية",
-                "الفترة الثالثة",
             ],
             key="grades_print_period",
         )
 
         if st.button(
-            "🖨️ توليد كشف الدرجات المرصودة للطباعة",
+            "🖨️ توليد كشف الدرجات للفصول المحددة",
             type="primary",
             use_container_width=True,
         ):
-          df_cls_students = df_s_rep[
-              df_s_rep["class"] == grades_print_cls
-          ].sort_values("name")
-
-          if df_cls_students.empty:
-            st.warning("⚠️ لا يوجد طلاب مسجلين في هذا الصف.")
+          target_g_cls, _, label_g_cls = resolve_multi_classes(
+              grades_print_cls_list, avail_g_cls
+          )
+          if not target_g_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
           else:
             df_g = st.session_state.get("df_grades", pd.DataFrame()).copy()
-            if df_g.empty:
-              st.warning("⚠️ لا توجد أي درجات مرصودة في قاعدة البيانات بعد.")
-            else:
+            if not df_g.empty:
               df_g["clean_id"] = (
                   df_g.iloc[:, 0].astype(str).str.split(".").str[0]
               )
@@ -2937,58 +2965,53 @@ if st.session_state.role in ["teacher", "viewer"]:
                   .astype(str)
                   .str.strip()
               )
-              df_g_period = df_g[df_g["period"] == grades_print_period]
-              df_merged = pd.merge(
-                  df_cls_students, df_g_period, on="clean_id", how="left"
-              )
+              df_g_period = df_g[
+                  df_g["period"] == grades_print_period
+              ].drop_duplicates(subset=["clean_id"], keep="last")
+            else:
+              df_g_period = pd.DataFrame(columns=["clean_id", "p1", "p2", "perf"])
 
+            all_pages_html = ""
+            excel_rows_list = []
+
+            for c_name in target_g_cls:
+              df_cls_st = df_s_rep[df_s_rep["class"] == c_name].sort_values(
+                  "name"
+              )
+              if df_cls_st.empty:
+                continue
+
+              df_merged = pd.merge(
+                  df_cls_st, df_g_period, on="clean_id", how="left"
+              )
               rows_html = ""
               for i, (_, row) in enumerate(df_merged.iterrows(), 1):
-                p1 = (
-                    str(row.get("p1", ""))
-                    if pd.notna(row.get("p1"))
-                    else ""
-                )
-                p2 = (
-                    str(row.get("p2", ""))
-                    if pd.notna(row.get("p2"))
-                    else ""
-                )
+                p1 = str(row.get("p1", "")) if pd.notna(row.get("p1")) else ""
+                p2 = str(row.get("p2", "")) if pd.notna(row.get("p2")) else ""
                 perf = (
                     str(row.get("perf", ""))
                     if pd.notna(row.get("perf"))
                     else ""
                 )
-                rows_html += (
-                    f"<tr><td>{i}</td><td"
-                    f" class='name-col'>{row['name']}</td><td>{p1}</td><td>{p2}</td><td"
-                    " style='font-weight:bold; color:#174A5B; font-size:14px;"
-                    f" background-color:#f5f5f5;'>{perf}</td></tr>"
-                )
+                rows_html += f"<tr><td>{i}</td><td class='name-col'>{row['name']}</td><td>{p1}</td><td>{p2}</td><td style='font-weight:bold; color:#174A5B; font-size:14px; background-color:#f5f5f5;'>{perf}</td></tr>"
+                excel_rows_list.append({
+                    "الرقم الأكاديمي": row["clean_id"],
+                    "اسم الطالب": row["name"],
+                    "الصف": c_name,
+                    "المشاركة والمهام": p1,
+                    "الاختبارات القصيرة": p2,
+                    "المجموع الكلي": perf,
+                })
 
-              school_name = get_school_name_dynamic(grades_print_cls)
-
-              grades_sheet_html = f"""
-              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف الدرجات - {grades_print_cls}</title>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-              <style>
-                  body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                  .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
-                  .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 11px; }}
-                  .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 60%; margin: -20px auto 5px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
-                  table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; margin-top: 10px; }}
-                  th, td {{ border: 1px solid #b0bec5; padding: 3px 5px; height: 22px; }}
-                  th {{ background-color: #e0e0e0; font-weight: bold; color: #333; font-size: 12px; }}
-                  .name-col {{ width: 40%; background-color: #f8fafc; text-align: right; padding-right: 10px !important; font-weight: bold; }}
-                  .footer {{ display: flex; justify-content: space-between; margin-top: 20px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
-                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} thead {{ display: table-header-group; }} tr {{ page-break-inside: avoid; }} }}
-              </style></head><body>
+              school_name = get_school_name_dynamic(c_name)
+              all_pages_html += f"""
+              <div class="page-sheet">
                   <div class="header-box">
                       <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
                       <div class="header-text" style="font-size: 18px;">وزارة التعليم<br><span style="font-size: 9px; font-weight:normal;">Ministry of Education</span></div>
                       <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{grades_print_period}</div>
                   </div>
-                  <div class="title-box">كشف الدرجات الأكاديمية المرصودة - مادة اللغة الانجليزية - {grades_print_cls}</div>
+                  <div class="title-box">كشف الدرجات الأكاديمية المرصودة - مادة اللغة الإنجليزية - ({c_name})</div>
                   <table>
                       <thead>
                           <tr>
@@ -3005,33 +3028,74 @@ if st.session_state.role in ["teacher", "viewer"]:
                       <div>مدير المدرسة / أ. عبدالمجيد الحربي</div>
                       <div>المعلم / زياد المعمري</div>
                   </div>
+              </div>
+              """
+
+            if not all_pages_html:
+              st.warning("⚠️ لا يوجد طلاب مسجلين في الفصول المحددة.")
+            else:
+              grades_sheet_html = f"""
+              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف الدرجات - {label_g_cls}</title>
+              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+              <style>
+                  body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                  .page-sheet {{ page-break-after: always; padding-bottom: 15px; }}
+                  .page-sheet:last-of-type {{ page-break-after: auto; }}
+                  .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
+                  .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 11px; }}
+                  .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 65%; margin: -20px auto 5px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
+                  table {{ width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; margin-top: 10px; }}
+                  th, td {{ border: 1px solid #b0bec5; padding: 3px 5px; height: 22px; }}
+                  th {{ background-color: #e0e0e0; font-weight: bold; color: #333; font-size: 12px; }}
+                  .name-col {{ width: 40%; background-color: #f8fafc; text-align: right; padding-right: 10px !important; font-weight: bold; }}
+                  .footer {{ display: flex; justify-content: space-between; margin-top: 20px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
+                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} thead {{ display: table-header-group; }} tr {{ page-break-inside: avoid; }} }}
+              </style></head><body>
+                  {all_pages_html}
                   <script>window.onload = function() {{ window.print(); }}</script>
               </body></html>
               """
-              st.download_button(
-                  label="📥 تحميل كشف الدرجات (يُفتح للطباعة مباشرة)",
+              dl_g1, dl_g2 = st.columns(2)
+              dl_g1.download_button(
+                  label=f"🖨️ تحميل للطباعة المباشرة ({len(target_g_cls)} فصول)",
                   data=grades_sheet_html,
-                  file_name=f"Filled_Grades_{grades_print_cls}.html",
+                  file_name=f"Filled_Grades_{datetime.date.today()}.html",
                   mime="text/html",
                   type="primary",
                   use_container_width=True,
               )
+              if excel_rows_list:
+                df_ex_g = pd.DataFrame(excel_rows_list)
+                b_ex_g = io.BytesIO()
+                with pd.ExcelWriter(b_ex_g, engine="xlsxwriter") as writer:
+                  df_ex_g.to_excel(writer, index=False, sheet_name="الدرجات")
+                dl_g2.download_button(
+                    label=f"📥 تصدير الدرجات (Excel - {len(target_g_cls)} فصول)",
+                    data=b_ex_g.getvalue(),
+                    file_name=f"Grades_Export_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
+                )
 
     # ---------------------------------------------------------
-    # 3. كشف متابعة فارغ مرن (للرصد اليدوي)
+    # 3. كشف متابعة فارغ مرن (يدعم طباعة عدة فصول في ملف واحد)
     # ---------------------------------------------------------
     with rep_tabs[2]:
       st.markdown("#### 📝 استخراج كشف متابعة مرن (فارغ للرصد اليدوي)")
       st.info(
-          "💡 صمم كشفك بنفسك! اختر الصف، وحدد اتجاه الورقة، ثم اختر الحقول التي"
-          " تريدها ليتم رسم الكشف تلقائياً."
+          "💡 اختر عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف طباعة"
+          " واحد دون الحاجة لتكرار الطباعة لكل فصل."
       )
 
       if not df_s_rep.empty:
-        col_opt1, col_opt2, col_opt3 = st.columns([1, 1, 2])
-        all_classes = st.session_state.get("class_options", ["الرابع", "الخامس"])
-        print_cls_choice = col_opt1.selectbox(
-            "1️⃣ اختر الصف:", all_classes, key="print_cls_flex"
+        col_opt1, col_opt2 = st.columns([2, 1])
+        all_classes = st.session_state.get("class_options", all_cls_in_db)
+        print_cls_choices = col_opt1.multiselect(
+            "1️⃣ اختر الفصول المطلوبة:",
+            options=["الكل"] + all_classes,
+            default=[all_classes[0]] if all_classes else ["الكل"],
+            key="print_cls_flex_multi",
         )
         page_orientation = col_opt2.radio(
             "2️⃣ اتجاه الطباعة:", ["أفقي (Landscape)", "عمودي (Portrait)"]
@@ -3049,73 +3113,59 @@ if st.session_state.role in ["teacher", "viewer"]:
             "السلوك والانضباط": 5,
         }
 
-        selected_fields = col_opt3.multiselect(
+        selected_fields = st.multiselect(
             "3️⃣ اختر الحقول المطلوبة في الكشف:",
             list(available_fields.keys()),
             default=["المشاركة والتفاعل", "الواجبات والمهام", "الاختبارات القصيرة"],
         )
 
         if st.button(
-            "🖨️ توليد الكشف المرن للطباعة",
+            "🖨️ توليد الكشف المرن للفصول المحددة",
             type="primary",
             use_container_width=True,
         ):
-          if not selected_fields:
+          target_flx_cls, _, label_flx = resolve_multi_classes(
+              print_cls_choices, all_classes
+          )
+          if not target_flx_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
+          elif not selected_fields:
             st.warning("⚠️ الرجاء اختيار حقل واحد على الأقل ليتم رسم الكشف.")
           else:
-            df_print = df_s_rep[
-                df_s_rep["class"] == print_cls_choice
-            ].sort_values("name")
-            if not df_print.empty:
-              main_th_html, sub_th_html = "", ""
-              total_empty_cells = 0
+            main_th_html, sub_th_html = "", ""
+            total_empty_cells = 0
+            for field in selected_fields:
+              colspan = available_fields[field]
+              main_th_html += (
+                  f'<th colspan="{colspan}" class="main-th">{field}</th>'
+              )
+              for i in range(1, colspan + 1):
+                sub_th_html += f"<th>{i}</th>"
+              total_empty_cells += colspan
 
-              for field in selected_fields:
-                colspan = available_fields[field]
-                main_th_html += (
-                    f'<th colspan="{colspan}" class="main-th">{field}</th>'
-                )
-                for i in range(1, colspan + 1):
-                  sub_th_html += f"<th>{i}</th>"
-                total_empty_cells += colspan
+            empty_cells_str = "<td></td>" * total_empty_cells
+            all_flex_pages = ""
+
+            for c_name in target_flx_cls:
+              df_print = df_s_rep[df_s_rep["class"] == c_name].sort_values(
+                  "name"
+              )
+              if df_print.empty:
+                continue
 
               rows_html = ""
-              empty_cells_str = "<td></td>" * total_empty_cells
               for i, (_, row) in enumerate(df_print.iterrows(), 1):
-                rows_html += (
-                    f"<tr><td>{i}</td><td style='text-align: right;"
-                    " padding-right: 5px; font-weight: bold; white-space:"
-                    f" nowrap;'>{row['name']}</td>{empty_cells_str}<td"
-                    " class='total-col'></td></tr>"
-                )
+                rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells_str}<td class='total-col'></td></tr>"
 
-              school_name = get_school_name_dynamic(print_cls_choice)
-
-              sheet_html = f"""
-              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف متابعة مخصص - {print_cls_choice}</title>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-              <style>
-                  body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                  .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
-                  .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 12px; }}
-                  .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 50%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
-                  table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }}
-                  th, td {{ border: 1px solid #b0bec5; padding: 2px; }}
-                  th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
-                  .main-th {{ font-size: 12px; padding: 4px; background-color: #cfd8dc; }}
-                  .sub-th th {{ width: 2.5%; font-size: 9px; color: #555; }}
-                  .name-col {{ width: 22%; background-color: #e0e0e0; font-size: 11px; }}
-                  .total-col {{ width: 5%; background-color: #f5f5f5; }}
-                  td {{ height: 20px; }}
-                  .footer {{ display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
-                  @media print {{ @page {{ size: A4 {css_orientation}; margin: 5mm; }} body {{ padding: 0; }} thead {{ display: table-header-group; }} tr {{ page-break-inside: avoid; }} }}
-              </style></head><body>
+              school_name = get_school_name_dynamic(c_name)
+              all_flex_pages += f"""
+              <div class="page-sheet">
                   <div class="header-box">
                       <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
                       <div class="header-text" style="font-size: 20px;">وزارة التعليم<br><span style="font-size: 10px; font-weight:normal;">Ministry of Education</span></div>
                       <div class="header-text">العام الدراسي {st.session_state.current_year}<br>{st.session_state.current_period}</div>
                   </div>
-                  <div class="title-box">كشف متابعة - مادة اللغة الانجليزية - {print_cls_choice}</div>
+                  <div class="title-box">كشف متابعة - مادة اللغة الإنجليزية - ({c_name})</div>
                   <table>
                       <thead>
                           <tr>
@@ -3132,28 +3182,54 @@ if st.session_state.role in ["teacher", "viewer"]:
                       <div>مدير المدرسة / أ. عبدالمجيد الحربي</div>
                       <div>المعلم / زياد المعمري</div>
                   </div>
+              </div>
+              """
+
+            if not all_flex_pages:
+              st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
+            else:
+              sheet_html = f"""
+              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف متابعة مخصص - {label_flx}</title>
+              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+              <style>
+                  body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                  .page-sheet {{ page-break-after: always; padding-bottom: 10px; }}
+                  .page-sheet:last-of-type {{ page-break-after: auto; }}
+                  .header-box {{ background-color: #174A5B; color: white; border-radius: 10px; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }}
+                  .header-text {{ text-align: center; font-weight: bold; line-height: 1.3; font-size: 12px; }}
+                  .title-box {{ background-color: #174A5B; color: white; text-align: center; padding: 4px; font-weight: bold; width: 55%; margin: -25px auto 10px auto; border-radius: 6px; border: 2px solid white; position: relative; z-index: 2; font-size: 13px; }}
+                  table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }}
+                  th, td {{ border: 1px solid #b0bec5; padding: 2px; }}
+                  th {{ background-color: #e0e0e0; font-weight: bold; color: #333; }}
+                  .main-th {{ font-size: 12px; padding: 4px; background-color: #cfd8dc; }}
+                  .sub-th th {{ width: 2.5%; font-size: 9px; color: #555; }}
+                  .name-col {{ width: 22%; background-color: #e0e0e0; font-size: 11px; }}
+                  .total-col {{ width: 5%; background-color: #f5f5f5; }}
+                  td {{ height: 20px; }}
+                  .footer {{ display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; padding: 0 50px; font-size: 12px; }}
+                  @media print {{ @page {{ size: A4 {css_orientation}; margin: 5mm; }} body {{ padding: 0; }} thead {{ display: table-header-group; }} tr {{ page-break-inside: avoid; }} }}
+              </style></head><body>
+                  {all_flex_pages}
                   <script>window.onload = function() {{ window.print(); }}</script>
               </body></html>
               """
               st.download_button(
-                  label="📥 تحميل الكشف المخصص (يُفتح للطباعة مباشرة)",
+                  label=f"📥 تحميل الكشوفات المخصصة للطباعة ({len(target_flx_cls)} فصول في ملف واحد)",
                   data=sheet_html,
-                  file_name=f"Custom_Grading_Sheet_{print_cls_choice}.html",
+                  file_name=f"Custom_Sheets_{datetime.date.today()}.html",
                   mime="text/html",
                   type="primary",
                   use_container_width=True,
               )
-            else:
-              st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
 
     # ---------------------------------------------------------
-    # 4. مساعد التفريغ للسجلات الورقية
+    # 4. مساعد التفريغ للسجلات الورقية (يدعم عدة فصول معاً)
     # ---------------------------------------------------------
     with rep_tabs[3]:
       st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
       st.info(
-          "💡 هذه الأداة تجمع وتحصي المخالفات والمشاركات لتسهيل نقلها إلى كشف"
-          " المتابعة الورقي بسرعة."
+          "💡 اختر فصلاً واحداً أو عدة فصول معاً لحصر وتجميع جميع المشاركات"
+          " والملاحظات وتصديرها إلى Excel."
       )
 
       df_b = st.session_state.df_behavior.copy()
@@ -3169,16 +3245,18 @@ if st.session_state.role in ["teacher", "viewer"]:
         )
         beh_col = "type" if "type" in merged_df.columns else merged_df.columns[1]
 
-        col1, col2 = st.columns(2)
-        available_classes = st.session_state.get(
-            "class_options", ["الرابع", "الخامس"]
+        col1, col2 = st.columns([2, 1.5])
+        available_classes = st.session_state.get("class_options", all_cls_in_db)
+        cls_choices_p = col1.multiselect(
+            "1️⃣ اختر الفصول لفرز بياناتها:",
+            options=["الكل"] + available_classes,
+            default=[available_classes[0]] if available_classes else ["الكل"],
+            key="paper_helper_cls_multi",
         )
-        cls_choice = col1.selectbox(
-            "1️⃣ اختر الصف لفرز بياناته:",
-            available_classes,
-            key="paper_helper_cls",
+        target_p_cls, _, label_p_cls = resolve_multi_classes(
+            cls_choices_p, available_classes
         )
-        class_data = merged_df[merged_df["class"] == cls_choice]
+        class_data = merged_df[merged_df["class"].isin(target_p_cls)]
 
         if not class_data.empty:
           unique_notes = list(class_data[beh_col].unique())
@@ -3190,27 +3268,34 @@ if st.session_state.role in ["teacher", "viewer"]:
           st.divider()
 
           if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
-            st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات (الصف {cls_choice})")
-            pivot_table = pd.crosstab(class_data["name"], class_data[beh_col])
-            pivot_table.index.name = "اسم الطالب"
+            st.markdown(
+                f"##### 📊 حصر شامل لجميع ملاحظات ({label_p_cls})"
+            )
+            pivot_table = pd.crosstab(
+                [class_data["class"], class_data["name"]], class_data[beh_col]
+            )
+            pivot_table.index.names = ["الصف", "اسم الطالب"]
 
             if "note" in class_data.columns:
-
               def combine_notes(group):
                 valid = group[group["note"].astype(str).str.strip() != ""]
                 if valid.empty:
                   return ""
                 return " ، ".join(valid["note"].astype(str).str.strip())
 
-              notes_series = class_data.groupby("name").apply(combine_notes)
+              notes_series = class_data.groupby(["class", "name"]).apply(
+                  combine_notes
+              )
               pivot_table["الملاحظات النصية التفصيلية"] = notes_series
 
-            all_students = (
-                df_s_rep[df_s_rep["class"] == cls_choice]
-                .sort_values("name")["name"]
-                .tolist()
+            all_st_multi = (
+                df_s_rep[df_s_rep["class"].isin(target_p_cls)]
+                .sort_values(["class", "name"])[["class", "name"]]
             )
-            pivot_table = pivot_table.reindex(all_students)
+            multi_idx = pd.MultiIndex.from_frame(
+                all_st_multi, names=["الصف", "اسم الطالب"]
+            )
+            pivot_table = pivot_table.reindex(multi_idx)
 
             for col in pivot_table.columns:
               if col == "الملاحظات النصية التفصيلية":
@@ -3223,66 +3308,71 @@ if st.session_state.role in ["teacher", "viewer"]:
                     .astype(str)
                 )
 
-            pivot_table = pivot_table.sort_index()
-            st.dataframe(pivot_table, use_container_width=True)
+            pivot_display = pivot_table.reset_index()
+            st.dataframe(pivot_display, use_container_width=True, hide_index=True)
 
             b_csv = io.BytesIO()
             with pd.ExcelWriter(b_csv, engine="xlsxwriter") as writer:
-              pivot_table.to_excel(writer, sheet_name="التفريغ الورقي")
+              pivot_display.to_excel(
+                  writer, index=False, sheet_name="التفريغ الورقي"
+              )
             st.download_button(
-                f"📥 تحميل كشف (الصف {cls_choice}) للطباعة (Excel)",
+                f"📥 تحميل كشف التفريغ الورقي (Excel - {len(target_p_cls)} فصول)",
                 b_csv.getvalue(),
-                f"Behavior_Summary_{cls_choice}.xlsx",
+                f"Behavior_Summary_{datetime.date.today()}.xlsx",
                 type="primary",
                 use_container_width=True,
             )
           else:
             st.markdown(
-                f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في (الصف"
-                f" {cls_choice})"
+                f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في ({label_p_cls})"
             )
             specific_data = class_data[class_data[beh_col] == type_choice]
             if not specific_data.empty:
               summary = (
-                  specific_data.groupby(["name", "note"])
+                  specific_data.groupby(["class", "name", "note"])
                   .size()
                   .reset_index(name="عدد المرات")
               )
               summary.rename(
                   columns={
+                      "class": "الصف",
                       "name": "اسم الطالب",
                       "note": "التفاصيل المكتوبة",
                   },
                   inplace=True,
               )
-              summary = summary.sort_values("عدد المرات", ascending=False)
+              summary = summary.sort_values(
+                  ["الصف", "عدد المرات"], ascending=[True, False]
+              )
               st.dataframe(summary, use_container_width=True, hide_index=True)
             else:
               st.info("لا يوجد أي طالب مسجل عليه هذه الملاحظة.")
         else:
-          st.info(
-              f"لا توجد أي ملاحظات مسجلة لطلاب (الصف {cls_choice}) حتى الآن."
-          )
+          st.info(f"لا توجد أي ملاحظات مسجلة لطلاب ({label_p_cls}) حتى الآن.")
       else:
         st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
 
     # ---------------------------------------------------------
-    # 5. تقرير حصر المتفوقين ومتدني المستوى (شاهد إثبات)
+    # 5. تقرير حصر المتفوقين ومتدني المستوى (يدعم اختيار عدة فصول معاً)
     # ---------------------------------------------------------
     with rep_tabs[4]:
       st.markdown(
           "#### 📈 تقرير حصر المتفوقين ومتدني المستوى (للخطط العلاجية والتعزيز)"
       )
       st.info(
-          "💡 تقرير رسمي لمتابعة مستويات الطلاب وتوثيق تطبيق الخطط العلاجية"
-          " وبرامج الرعاية."
+          "💡 يمكنك تحديد عدة فصول معاً (مثل فصول الخامس الأربعة) لاستخراج"
+          " كشف موحد للخطط العلاجية أو المتفوقين بترويسة المدرسة المناسبة."
       )
 
       if not df_s_rep.empty:
-        c1, c2, c3, c4 = st.columns(4)
-        all_cls_rep = ["الكل"] + st.session_state.get("class_options", [])
-        rep_cls = c1.selectbox(
-            "🏫 اختر الصف:", all_cls_rep, key="rep_lvl_cls"
+        c1, c2 = st.columns([2.2, 1.3])
+        avail_lvl_cls = st.session_state.get("class_options", all_cls_in_db)
+        rep_cls_list = c1.multiselect(
+            "🏫 اختر الفصول المستهدفة (يمكنك اختيار أكثر من فصل أو الكل):",
+            options=["الكل"] + avail_lvl_cls,
+            default=["الكل"],
+            key="rep_lvl_cls_multi",
         )
         rep_per = c2.selectbox(
             "📅 الفترة:",
@@ -3291,16 +3381,16 @@ if st.session_state.role in ["teacher", "viewer"]:
                 "الفصل الأول - فترة ثانية",
                 "الفصل الثاني - فترة أولى",
                 "الفصل الثاني - فترة ثانية",
-                "الفترة الثالثة",
             ],
             key="rep_lvl_per",
         )
+
+        c3, c4 = st.columns(2)
         rep_type = c3.selectbox(
             "🎯 الفئة:",
             ["المتفوقين 🌟", "متدني المستوى 📉"],
             key="rep_lvl_type",
         )
-
         default_thresh = 54 if "المتفوقين" in rep_type else 36
         threshold = c4.number_input(
             "الدرجة الفاصلة:",
@@ -3310,142 +3400,164 @@ if st.session_state.role in ["teacher", "viewer"]:
         )
 
         if st.button(
-            "🖨️ توليد تقرير الحصر للطباعة",
+            "🖨️ توليد تقرير الحصر للفصول المحددة",
             type="primary",
             use_container_width=True,
         ):
-          df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
-          if df_g_all.empty:
-            st.warning("⚠️ لا توجد درجات مرصودة في قاعدة البيانات بعد.")
+          target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(
+              rep_cls_list, avail_lvl_cls
+          )
+          if not target_lvl_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
           else:
-            df_st_copy = df_s_rep.copy()
-            if rep_cls != "الكل":
-              df_st_copy = df_st_copy[df_st_copy["class"] == rep_cls]
-
-            df_g_all["clean_id"] = (
-                df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
-            )
-            if "period" not in df_g_all.columns:
-              df_g_all["period"] = "الفصل الأول - فترة أولى"
-            df_g_all["period"] = (
-                df_g_all["period"]
-                .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
-                .astype(str)
-                .str.strip()
-            )
-
-            df_g_filtered = df_g_all[df_g_all["period"] == rep_per]
-            df_merged_lvl = pd.merge(
-                df_st_copy, df_g_filtered, on="clean_id", how="inner"
-            )
-            df_merged_lvl["perf_num"] = pd.to_numeric(
-                df_merged_lvl["perf"], errors="coerce"
-            ).fillna(0)
-
-            if "المتفوقين" in rep_type:
-              final_df = df_merged_lvl[
-                  df_merged_lvl["perf_num"] >= threshold
-              ].sort_values(by="perf_num", ascending=False)
-              report_title = "حصر الطلاب المتفوقين"
-              action_text = "تكريم في لوحة الشرف / تعزيز إيجابي"
-              color_theme = "#10B981"
+            df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
+            if df_g_all.empty:
+              st.warning("⚠️ لا توجد درجات مرصودة في قاعدة البيانات بعد.")
             else:
-              final_df = df_merged_lvl[
-                  df_merged_lvl["perf_num"] < threshold
-              ].sort_values(by="perf_num", ascending=True)
-              report_title = "حصر الطلاب متدني المستوى"
-              action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
-              color_theme = "#EF4444"
-
-            if final_df.empty:
-              st.success(
-                  f"✅ لا يوجد طلاب يطابقون معيار ({report_title}) في هذا"
-                  " الصف/الفترة."
+              df_st_copy = df_s_rep[df_s_rep["class"].isin(target_lvl_cls)].copy()
+              df_g_all["clean_id"] = (
+                  df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
               )
-            else:
-              school_name = get_school_name_dynamic(rep_cls)
-              rows_lvl = ""
-              for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                rows_lvl += (
-                    f"<tr><td>{i}</td><td style='text-align:right;"
-                    f" font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td"
-                    f" style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td"
-                    f" style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+              if "period" not in df_g_all.columns:
+                df_g_all["period"] = "الفصل الأول - فترة أولى"
+              df_g_all["period"] = (
+                  df_g_all["period"]
+                  .replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى")
+                  .astype(str)
+                  .str.strip()
+              )
+
+              df_g_filtered = df_g_all[df_g_all["period"] == rep_per]
+              df_merged_lvl = pd.merge(
+                  df_st_copy, df_g_filtered, on="clean_id", how="inner"
+              )
+              df_merged_lvl["perf_num"] = pd.to_numeric(
+                  df_merged_lvl["perf"], errors="coerce"
+              ).fillna(0)
+
+              if "المتفوقين" in rep_type:
+                final_df = df_merged_lvl[
+                    df_merged_lvl["perf_num"] >= threshold
+                ].sort_values(by=["class", "perf_num"], ascending=[True, False])
+                report_title = "حصر الطلاب المتفوقين"
+                action_text = "تكريم في لوحة الشرف / تعزيز إيجابي"
+                color_theme = "#10B981"
+              else:
+                final_df = df_merged_lvl[
+                    df_merged_lvl["perf_num"] < threshold
+                ].sort_values(by=["class", "perf_num"], ascending=[True, True])
+                report_title = "حصر الطلاب متدني المستوى"
+                action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
+                color_theme = "#EF4444"
+
+              if final_df.empty:
+                st.success(
+                    f"✅ لا يوجد طلاب يطابقون معيار ({report_title}) في الفصول المحددة."
+                )
+              else:
+                rows_lvl = ""
+                excel_lvl_rows = []
+                for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                  rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+                  excel_lvl_rows.append({
+                      "م": i,
+                      "اسم الطالب": row["name"],
+                      "الصف": row.get("class", ""),
+                      f"المجموع ({rep_per})": row["perf_num"],
+                      "الإجراء المقترح": action_text,
+                  })
+
+                lvl_report_html = f"""
+                <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                <style>
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
+                    .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
+                    .title-container {{ text-align: center; margin-bottom: 15px; }}
+                    .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
+                    .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
+                    table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
+                    th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
+                    th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
+                    .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
+                    @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                </style></head><body>
+                    <div class="header-box">
+                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                        <div class="header-text" style="align-self: center;">
+                            <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
+                            <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                        </div>
+                        <div class="header-text">العام الدراسي: {st.session_state.get('current_year', '')}<br>{rep_per}<br>المعلم: زياد المعمري</div>
+                    </div>
+                    <div class="title-container">
+                        <div class="main-title">{report_title}</div>
+                        <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
+                        <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
+                            (الفصول: {label_lvl_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
+                        </div>
+                    </div>
+                    <table>
+                        <tr>
+                            <th style="width: 5%;">م</th>
+                            <th style="width: 35%; text-align: right;">اسم الطالب</th>
+                            <th style="width: 15%;">الصف</th>
+                            <th style="width: 15%;">المجموع ({rep_per})</th>
+                            <th style="width: 30%;">الإجراء المتخذ (مقترح)</th>
+                        </tr>
+                        {rows_lvl}
+                    </table>
+                    <div class="footer-sigs">
+                        <div>الموجه الطلابي <br><br>........................</div>
+                        <div>معلم المادة <br><br>زياد المعمري</div>
+                        <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                    </div>
+                    <script>window.onload = function() {{ window.print(); }}</script>
+                </body></html>
+                """
+                dl_l1, dl_l2 = st.columns(2)
+                dl_l1.download_button(
+                    label="🖨️ تحميل التقرير للطباعة المباشرة",
+                    data=lvl_report_html,
+                    file_name=f"Performance_Report_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="primary",
+                    use_container_width=True,
+                )
+                df_ex_lvl = pd.DataFrame(excel_lvl_rows)
+                b_ex_lvl = io.BytesIO()
+                with pd.ExcelWriter(b_ex_lvl, engine="xlsxwriter") as writer:
+                  df_ex_lvl.to_excel(writer, index=False, sheet_name=report_title)
+                dl_l2.download_button(
+                    label="📥 تصدير التقرير (Excel)",
+                    data=b_ex_lvl.getvalue(),
+                    file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
                 )
 
-              lvl_report_html = f"""
-              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-              <style>
-                  body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                  .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
-                  .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
-                  .title-container {{ text-align: center; margin-bottom: 15px; }}
-                  .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
-                  .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
-                  table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
-                  th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
-                  th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
-                  .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-              </style></head><body>
-                  <div class="header-box">
-                      <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                      <div class="header-text" style="align-self: center;">
-                          <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
-                          <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
-                      </div>
-                      <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>{rep_per}<br>المعلم: زياد المعمري</div>
-                  </div>
-                  <div class="title-container">
-                      <div class="main-title">{report_title}</div>
-                      <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
-                      <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
-                          (الصف: {rep_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
-                      </div>
-                  </div>
-                  <table>
-                      <tr>
-                          <th style="width: 5%;">م</th>
-                          <th style="width: 35%; text-align: right;">اسم الطالب</th>
-                          <th style="width: 15%;">الصف</th>
-                          <th style="width: 15%;">المجموع ({rep_per})</th>
-                          <th style="width: 30%;">الإجراء المتخذ (مقترح)</th>
-                      </tr>
-                      {rows_lvl}
-                  </table>
-                  <div class="footer-sigs">
-                      <div>الموجه الطلابي <br><br>........................</div>
-                      <div>معلم المادة <br><br>زياد المعمري</div>
-                      <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                  </div>
-                  <script>window.onload = function() {{ window.print(); }}</script>
-              </body></html>
-              """
-              st.download_button(
-                  label="📥 تحميل التقرير (يفتح للطباعة مباشرة)",
-                  data=lvl_report_html,
-                  file_name=f"Performance_Report_{rep_cls}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
-              )
-
     # ---------------------------------------------------------
-    # 6. تقرير حصر أنماط التعلم (VARK) للإدارة والتوثيق
+    # 6. ✳️ تقرير حصر أنماط التعلم (VARK) - يدعم تحديد عدة فصول معاً + طباعة وExcel
     # ---------------------------------------------------------
     with rep_tabs[5]:
       st.markdown("#### 🧠 استخراج تقرير أنماط التعلم (للإدارة والتوثيق)")
       st.info(
-          "💡 يمكنك طباعة هذا التقرير كـ 'شاهد إثبات' رسمي لمدير المدرسة"
-          " والمشرف التربوي على تطبيقك لاستراتيجية (التعليم المتمايز) ومراعاة"
-          " الفروق الفردية."
+          "💡 يمكنك تحديد عدة فصول معاً (مثلاً: الخامس/1، الخامس/2، الخامس/3،"
+          " الخامس/4) أو اختيار 'الكل' لاستخراج تقرير واحد مجمع جاهز للطباعة"
+          " أو التصدير لملف Excel."
       )
 
       if not df_s_rep.empty:
-        c1, c2 = st.columns(2)
-        c_opts = ["الكل"] + list(df_s_rep["class"].dropna().unique())
-        sel_class = c1.selectbox("🏫 اختر الصف:", c_opts, key="ls_class")
+        c1, c2 = st.columns([2.2, 1.3])
+        avail_ls_cls = list(df_s_rep["class"].dropna().unique())
+        sel_classes_ls = c1.multiselect(
+            "🏫 اختر الفصول (يمكنك تحديد عدة فصول معاً أو الكل):",
+            options=["الكل"] + avail_ls_cls,
+            default=["الكل"],
+            key="ls_class_multi",
+        )
 
         style_opts = [
             "الكل",
@@ -3461,175 +3573,209 @@ if st.session_state.role in ["teacher", "viewer"]:
         )
 
         if st.button(
-            "🖨️ توليد تقرير الأنماط للطباعة",
+            "🖨️ توليد تقرير الأنماط للفصول المحددة",
             type="primary",
             use_container_width=True,
         ):
-          df_filtered = df_s_rep.copy()
-          if sel_class != "الكل":
-            df_filtered = df_filtered[df_filtered["class"] == sel_class]
-
-          if "نمط التعلم" not in df_filtered.columns:
-            df_filtered["نمط التعلم"] = ""
-
-          if sel_style == "لم يختبر ⏳":
-            df_filtered = df_filtered[
-                df_filtered["نمط التعلم"].isna()
-                | (
-                    df_filtered["نمط التعلم"]
-                    .astype(str)
-                    .str.strip()
-                    .isin(["", "nan", "None"])
-                )
-            ]
-          elif sel_style == "تم الاختبار ✅":
-            df_filtered = df_filtered[
-                df_filtered["نمط التعلم"].notna()
-                & (
-                    ~df_filtered["نمط التعلم"]
-                    .astype(str)
-                    .str.strip()
-                    .isin(["", "nan", "None", "لم يختبر ⏳"])
-                )
-            ]
-          elif sel_style != "الكل":
-            keyword = sel_style.split()[0]
-            df_filtered = df_filtered[
-                df_filtered["نمط التعلم"]
-                .astype(str)
-                .str.contains(keyword, na=False)
-            ]
-
-          if df_filtered.empty:
-            st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
+          target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(
+              sel_classes_ls, avail_ls_cls
+          )
+          if not target_ls_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
           else:
-            df_sorted = df_filtered.sort_values(by=["class", "name"])
-            rows_html = ""
-            for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
-              s_val = r.get("نمط التعلم", "")
-              if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
-                s_val = "لم يختبر ⏳"
+            df_filtered = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
 
-              clr = (
-                  "#3B82F6"
-                  if "بصري" in s_val
-                  else "#10B981"
-                  if "سمعي" in s_val
-                  else "#F59E0B"
-                  if "حركي" in s_val
-                  else "#8B5CF6"
-                  if "متعدد" in s_val
-                  else "#94A3B8"
+            if "نمط التعلم" not in df_filtered.columns:
+              df_filtered["نمط التعلم"] = ""
+
+            if sel_style == "لم يختبر ⏳":
+              df_filtered = df_filtered[
+                  df_filtered["نمط التعلم"].isna()
+                  | (
+                      df_filtered["نمط التعلم"]
+                      .astype(str)
+                      .str.strip()
+                      .isin(["", "nan", "None"])
+                  )
+              ]
+            elif sel_style == "تم الاختبار ✅":
+              df_filtered = df_filtered[
+                  df_filtered["نمط التعلم"].notna()
+                  & (
+                      ~df_filtered["نمط التعلم"]
+                      .astype(str)
+                      .str.strip()
+                      .isin(["", "nan", "None", "لم يختبر ⏳"])
+                  )
+              ]
+            elif sel_style != "الكل":
+              keyword = sel_style.split()[0]
+              df_filtered = df_filtered[
+                  df_filtered["نمط التعلم"]
+                  .astype(str)
+                  .str.contains(keyword, na=False)
+              ]
+
+            if df_filtered.empty:
+              st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
+            else:
+              df_sorted = df_filtered.sort_values(by=["class", "name"])
+              rows_html = ""
+              excel_ls_rows = []
+
+              for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
+                s_val = r.get("نمط التعلم", "")
+                if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
+                  s_val = "لم يختبر ⏳"
+
+                clr = (
+                    "#3B82F6"
+                    if "بصري" in s_val
+                    else "#10B981"
+                    if "سمعي" in s_val
+                    else "#F59E0B"
+                    if "حركي" in s_val
+                    else "#8B5CF6"
+                    if "متعدد" in s_val
+                    else "#94A3B8"
+                )
+                rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                excel_ls_rows.append({
+                    "م": i,
+                    "الرقم الأكاديمي": r.get("clean_id", ""),
+                    "اسم الطالب": r["name"],
+                    "الصف": r.get("class", ""),
+                    "نمط التعلم": s_val,
+                })
+
+              ls_report_html = f"""
+              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
+              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+              <style>
+                  body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 10px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px; }}
+                  .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 10px; }}
+                  .header-text {{ text-align: center; font-weight: bold; font-size: 13px; line-height: 1.4; }}
+                  .title-container {{ text-align: center; margin-bottom: 15px; }}
+                  .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
+                  .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
+                  table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
+                  th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }}
+                  th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
+                  .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
+                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+              </style></head><body>
+                  <div class="header-box">
+                      <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                      <div class="header-text" style="align-self: center;">
+                          <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
+                          <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                      </div>
+                      <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
+                  </div>
+                  <div class="title-container">
+                      <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
+                      <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (حركي - سمعي - بصري)</div>
+                      <div style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed #3b82f6;">
+                          الفئة المستهدفة: (الفصول: {label_ls_cls}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
+                      </div>
+                  </div>
+                  <table>
+                      <tr>
+                          <th style="width: 5%;">م</th>
+                          <th style="width: 45%; text-align: right;">اسم الطالب</th>
+                          <th style="width: 25%;">الصف</th>
+                          <th style="width: 25%;">نمط التعلم</th>
+                      </tr>
+                      {rows_html}
+                  </table>
+                  <div class="footer-sigs">
+                      <div>الموجه الطلابي <br><br>........................</div>
+                      <div>معلم المادة <br><br>زياد المعمري</div>
+                      <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                  </div>
+                  <script>window.onload = function() {{ window.print(); }}</script>
+              </body></html>
+              """
+              st.success(f"✅ تم تجهيز التقرير لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
+              dl_ls1, dl_ls2 = st.columns(2)
+              dl_ls1.download_button(
+                  label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
+                  data=ls_report_html,
+                  file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                  mime="text/html",
+                  type="primary",
+                  use_container_width=True,
               )
-              rows_html += (
-                  f"<tr><td>{i}</td><td style='text-align:right;"
-                  f" font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td"
-                  f" style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+              df_ex_ls = pd.DataFrame(excel_ls_rows)
+              b_ex_ls = io.BytesIO()
+              with pd.ExcelWriter(b_ex_ls, engine="xlsxwriter") as writer:
+                df_ex_ls.to_excel(writer, index=False, sheet_name="أنماط التعلم")
+              dl_ls2.download_button(
+                  label="📥 تصدير تقرير الأنماط (Excel)",
+                  data=b_ex_ls.getvalue(),
+                  file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                  mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  type="secondary",
+                  use_container_width=True,
               )
-
-            school_name = get_school_name_dynamic(sel_class)
-
-            ls_report_html = f"""
-            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-            <style>
-                body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 10px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px; }}
-                .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 10px; }}
-                .header-text {{ text-align: center; font-weight: bold; font-size: 13px; line-height: 1.4; }}
-                .title-container {{ text-align: center; margin-bottom: 15px; }}
-                .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
-                .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
-                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
-                th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }}
-                th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
-                .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-            </style></head><body>
-                <div class="header-box">
-                    <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                    <div class="header-text" style="align-self: center;">
-                        <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
-                        <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
-                    </div>
-                    <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
-                </div>
-                <div class="title-container">
-                    <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
-                    <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (حركي - سمعي - بصري)</div>
-                    <div style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed #3b82f6;">
-                        الفئة المستهدفة: (الصف: {sel_class}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
-                    </div>
-                </div>
-                <table>
-                    <tr>
-                        <th style="width: 5%;">م</th>
-                        <th style="width: 45%; text-align: right;">اسم الطالب</th>
-                        <th style="width: 25%;">الصف</th>
-                        <th style="width: 25%;">نمط التعلم</th>
-                    </tr>
-                    {rows_html}
-                </table>
-                <div class="footer-sigs">
-                    <div>الموجه الطلابي <br><br>........................</div>
-                    <div>معلم المادة <br><br>زياد المعمري</div>
-                    <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                </div>
-                <script>window.onload = function() {{ window.print(); }}</script>
-            </body></html>
-            """
-            st.download_button(
-                label="📥 تحميل تقرير الأنماط (يفتح للطباعة مباشرة)",
-                data=ls_report_html,
-                file_name=f"Learning_Styles_Report_{sel_class}.html",
-                mime="text/html",
-                type="primary",
-                use_container_width=True,
-            )
 
     # ---------------------------------------------------------
-    # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (Excel)
+    # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
     # ---------------------------------------------------------
     with rep_tabs[6]:
       st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب (واتساب)")
       st.info(
-          "💡 سحب قائمة بأسماء طلاب فصل محدد مع أرقام الجوال المسجلة لتسهيل"
-          " إضافتهم أو التواصل معهم."
+          "💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) لتحميل أرقام"
+          " تواصلهم في ملف Excel واحد مرتب."
       )
 
       if not df_s_rep.empty:
-        col_t1, col_t2 = st.columns([1, 2])
-        all_classes = st.session_state.get("class_options", ["الرابع", "الخامس"])
-        contact_cls_choice = col_t1.selectbox(
-            "اختر الصف المطلوب:", all_classes, key="contact_cls"
+        all_classes = st.session_state.get("class_options", all_cls_in_db)
+        contact_cls_choices = st.multiselect(
+            "🏫 اختر الفصول المطلوبة:",
+            options=["الكل"] + all_classes,
+            default=[all_classes[0]] if all_classes else ["الكل"],
+            key="contact_cls_multi",
         )
 
-        df_contact = df_s_rep[
-            df_s_rep["class"] == contact_cls_choice
-        ].sort_values("name")
-        if not df_contact.empty:
-          df_export = df_contact[["name", "الجوال"]].copy()
-          df_export = df_export.rename(
-              columns={"name": "اسم الطالب", "الجوال": "رقم الجوال (واتساب)"}
-          )
-
-          b_contact = io.BytesIO()
-          with pd.ExcelWriter(b_contact, engine="xlsxwriter") as writer:
-            df_export.to_excel(writer, index=False, sheet_name="أرقام التواصل")
-
-          col_t2.markdown("<br>", unsafe_allow_html=True)
-          col_t2.download_button(
-              label=f"📥 تحميل كشف أرقام الجوال (Excel) - {contact_cls_choice}",
-              data=b_contact.getvalue(),
-              file_name=f"Contacts_{contact_cls_choice}.xlsx",
-              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              type="primary",
-              use_container_width=True,
-          )
-
-          with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
-            st.dataframe(df_export, use_container_width=True, hide_index=True)
+        target_cnt_cls, _, label_cnt_cls = resolve_multi_classes(
+            contact_cls_choices, all_classes
+        )
+        if not target_cnt_cls:
+          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
         else:
-          st.warning("لا يوجد طلاب مسجلين في هذا الصف.")
+          df_contact = df_s_rep[
+              df_s_rep["class"].isin(target_cnt_cls)
+          ].sort_values(["class", "name"])
+          if not df_contact.empty:
+            df_export = df_contact[["name", "class", "الجوال"]].copy()
+            df_export = df_export.rename(
+                columns={
+                    "name": "اسم الطالب",
+                    "class": "الصف",
+                    "الجوال": "رقم الجوال (واتساب)",
+                }
+            )
+
+            b_contact = io.BytesIO()
+            with pd.ExcelWriter(b_contact, engine="xlsxwriter") as writer:
+              df_export.to_excel(
+                  writer, index=False, sheet_name="أرقام التواصل"
+              )
+
+            st.download_button(
+                label=f"📥 تحميل كشف أرقام الجوال (Excel) - ({label_cnt_cls}) - ({len(df_export)} طالب)",
+                data=b_contact.getvalue(),
+                file_name=f"Contacts_{datetime.date.today()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True,
+            )
+
+            with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
+              st.dataframe(df_export, use_container_width=True, hide_index=True)
+          else:
+            st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
 # ==========================================
 # 📢 9. التبويب الخامس: لوحة الإعلانات والتعاميم (يدعم اختيار عدة فصول معاً)
 # ==========================================
