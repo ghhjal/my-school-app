@@ -721,13 +721,13 @@ if st.session_state.role in ["teacher", "viewer"]:
         "🗑️ حذف طالب",
     ])
 
-    # 1. عرض وبحث الطلاب
+    # 1. عرض وبحث الطلاب (يدعم اختيار عدة فصول معاً)
     with action_tabs[0]:
       if not df_st.empty:
         if "current_page" not in st.session_state:
           st.session_state.current_page = 1
 
-        col_search, col_cls_f, col_rows = st.columns([2.5, 1.5, 1])
+        col_search, col_cls_f, col_rows = st.columns([2, 2, 0.8])
         with col_search:
           sq = st.text_input(
               "🔍 بحث:",
@@ -735,14 +735,14 @@ if st.session_state.role in ["teacher", "viewer"]:
               label_visibility="collapsed",
           )
         with col_cls_f:
-          cls_filter_opts = ["كل الفصول"] + list(
-              df_st["class"].dropna().unique()
-          )
-          cls_filter = st.selectbox(
-              "الفصل:",
-              cls_filter_opts,
-               index=0,
+          avail_st_classes = list(df_st["class"].dropna().unique())
+          cls_filter_list = st.multiselect(
+              "🏫 الفصول:",
+              options=["كل الفصول"] + avail_st_classes,
+              default=["كل الفصول"],
+              placeholder="اختر فصلاً أو أكثر...",
               label_visibility="collapsed",
+              key="st_view_multi_cls",
           )
         with col_rows:
           rows_per_page = st.selectbox(
@@ -753,8 +753,10 @@ if st.session_state.role in ["teacher", "viewer"]:
           )
 
         display_df = df_st.copy()
-        if cls_filter != "كل الفصول":
-          display_df = display_df[display_df["class"] == cls_filter]
+        if cls_filter_list and "كل الفصول" not in cls_filter_list:
+          display_df = display_df[display_df["class"].isin(cls_filter_list)]
+        elif not cls_filter_list:
+          display_df = display_df.iloc[0:0]
 
         if "clean_id" in display_df.columns:
           display_df = display_df.drop(columns=["clean_id"])
@@ -770,7 +772,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         display_df = display_df.rename(columns=rename_dict)
         display_df = display_df[display_df.columns[::-1]]
 
-        if sq:
+        if sq and not display_df.empty:
           norm_sq = normalize_arabic(sq)
           mask = display_df["الرقم الأكاديمي"].astype(str).str.contains(
               norm_sq
@@ -2275,13 +2277,12 @@ if st.session_state.role in ["teacher", "viewer"]:
       else:
         st.info("لم يتم رصد درجات بعد.")
 
-    # --- 3. ✳️ مركز إصدار شهادات المتفوقين والشكر الإلكترونية (ديناميكي متكامل) ---
+    # --- 3. ✳️ مركز إصدار شهادات المتفوقين والشكر الإلكترونية (يدعم اختيار عدة فصول وعدة طلاب) ---
     with honor_tabs[2]:
       import json
       st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
-      st.info("💡 يمكنك استخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة (لطالب محدد أو لجميع المتفوقين في فصل كامل دفعة واحدة) جاهزة للطباعة أو الحفظ كـ PDF وإرسال التهنئة لولي الأمر عبر واتساب.")
+      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) أو اختيار طالب/عدة طلاب بالاسم لاستخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة دفعة واحدة.")
 
-      # 1. الإعدادات الافتراضية للعبارات (تُحفظ وتُقرأ من جدول settings تلقائياً)
       DEFAULT_CERT_PHRASES = {
           "وسام التميز الأكاديمي": [
               "وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
@@ -2310,7 +2311,6 @@ if st.session_state.role in ["teacher", "viewer"]:
         if saved_json:
           try:
             loaded_cfg = json.loads(saved_json)
-            # دمج أي أوسمة افتراضية لضمان التوافق التام
             for k, v in DEFAULT_CERT_PHRASES.items():
               if k not in loaded_cfg or not loaded_cfg[k]:
                 loaded_cfg[k] = v
@@ -2323,7 +2323,6 @@ if st.session_state.role in ["teacher", "viewer"]:
       phrases_cfg = st.session_state.cert_phrases_config
       badge_titles_list = list(phrases_cfg.keys())
 
-      # تهيئة القيم الابتدائية في الجلسة عند أول فتح للتبويب
       if "cert_gen_title" not in st.session_state or st.session_state.cert_gen_title not in badge_titles_list:
         st.session_state.cert_gen_title = badge_titles_list[0]
       if "cert_phrase_preset" not in st.session_state:
@@ -2331,23 +2330,24 @@ if st.session_state.role in ["teacher", "viewer"]:
       if "cert_custom_reason" not in st.session_state:
         st.session_state.cert_custom_reason = phrases_cfg[st.session_state.cert_gen_title][0]
 
-      # دوال التحديث التلقائي عند تغيير الوسام أو اختيار عبارة بديلة
       def on_badge_change():
         chosen_badge = st.session_state.cert_gen_title
         default_phrase = st.session_state.cert_phrases_config.get(chosen_badge, [""])[0]
         st.session_state.cert_phrase_preset = default_phrase
         st.session_state.cert_custom_reason = default_phrase
+        st.session_state.ready_certs_pdf = None
 
       def on_preset_change():
         st.session_state.cert_custom_reason = st.session_state.cert_phrase_preset
+        st.session_state.ready_certs_pdf = None
 
       if not df_st_h.empty:
         c_cert1, c_cert2, c_cert3 = st.columns(3)
         cert_mode = c_cert1.selectbox(
             "1️⃣ نظام الإصدار:",
             [
-                "🌟 جميع المتفوقين (90%+) في فصل",
-                "👤 طالب محدد (بالاسم)",
+                "🌟 جميع المتفوقين (90%+) في الفصول",
+                "👤 طالب محدد (أو عدة طلاب بالاسم)",
                 "🏆 أبطال لوحة الشرف (أعلى النقاط)",
             ],
             key="cert_gen_mode",
@@ -2370,14 +2370,20 @@ if st.session_state.role in ["teacher", "viewer"]:
             on_change=on_badge_change,
         )
 
+        avail_cert_classes = list(df_st_h["class"].dropna().unique())
         target_students_cert = pd.DataFrame()
 
-        if cert_mode == "🌟 جميع المتفوقين (90%+) في فصل":
-          cls_cert_opts = ["الكل"] + list(df_st_h["class"].dropna().unique())
-          sel_cls_cert = st.selectbox("🏫 اختر الصف:", cls_cert_opts, key="cert_cls_sel")
+        # --- الوضع الأول: جميع المتفوقين (90%+) في فصل أو عدة فصول ---
+        if cert_mode == "🌟 جميع المتفوقين (90%+) في الفصول":
+          sel_cls_cert_list = st.multiselect(
+              "🏫 اختر الفصول المستهدفة (يمكنك تحديد أكثر من فصل معاً أو الكل):",
+              options=["الكل"] + avail_cert_classes,
+              default=["الكل"],
+              key="cert_cls_sel_multi",
+          )
 
           df_g_c = st.session_state.df_grades.copy()
-          if not df_g_c.empty:
+          if not df_g_c.empty and sel_cls_cert_list:
             df_g_c["clean_id"] = df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
             if "period" not in df_g_c.columns:
               df_g_c["period"] = "الفصل الأول - فترة أولى"
@@ -2385,31 +2391,58 @@ if st.session_state.role in ["teacher", "viewer"]:
             df_g_c = df_g_c[df_g_c["period"] == cert_period]
 
             m_cert = pd.merge(df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner")
-            if sel_cls_cert != "الكل":
-              m_cert = m_cert[m_cert["class"] == sel_cls_cert]
+            if "الكل" not in sel_cls_cert_list:
+              m_cert = m_cert[m_cert["class"].isin(sel_cls_cert_list)]
 
             max_t = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
             if max_t > 0 and not m_cert.empty:
               m_cert["perf_num"] = pd.to_numeric(m_cert["perf"], errors="coerce").fillna(0)
               m_cert["pct"] = (m_cert["perf_num"] / max_t) * 100
-              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values("pct", ascending=False)
+              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values(["class", "pct"], ascending=[True, False])
 
-        elif cert_mode == "👤 طالب محدد (بالاسم)":
-          col_f_c1, col_f_c2 = st.columns([1, 2])
-          cls_list_c = ["الكل"] + list(df_st_h["class"].dropna().unique())
-          sel_cls_filter_c = col_f_c1.selectbox("🏫 تصفية بالصف:", cls_list_c, key="cert_single_cls_f")
-          df_st_c_filtered = df_st_h if sel_cls_filter_c == "الكل" else df_st_h[df_st_h["class"] == sel_cls_filter_c]
+        # --- الوضع الثاني: طالب محدد أو عدة طلاب بالاسم (مع تصفية متعددة للفصول) ---
+        elif cert_mode == "👤 طالب محدد (أو عدة طلاب بالاسم)":
+          col_f_c1, col_f_c2 = st.columns([1.3, 2])
+          sel_cls_filter_c = col_f_c1.multiselect(
+              "🏫 تصفية بالفصول:",
+              options=["الكل"] + avail_cert_classes,
+              default=["الكل"],
+              key="cert_single_cls_f_multi",
+          )
+          if not sel_cls_filter_c:
+            df_st_c_filtered = df_st_h.iloc[0:0]
+          elif "الكل" in sel_cls_filter_c:
+            df_st_c_filtered = df_st_h
+          else:
+            df_st_c_filtered = df_st_h[df_st_h["class"].isin(sel_cls_filter_c)]
 
           st_cert_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_st_c_filtered.iterrows()}
-          sel_st_cert = col_f_c2.selectbox("🎯 ابحث عن الطالب:", list(st_cert_dict.keys()), key="cert_st_sel")
-          if sel_st_cert:
-            chosen_id = st_cert_dict[sel_st_cert]
-            target_students_cert = df_st_h[df_st_h["clean_id"] == chosen_id]
+          sel_st_cert_list = col_f_c2.multiselect(
+              "🎯 ابحث واختر طالباً أو أكثر:",
+              options=list(st_cert_dict.keys()),
+              default=[list(st_cert_dict.keys())[0]] if st_cert_dict else [],
+              key="cert_st_sel_multi",
+          )
+          if sel_st_cert_list:
+            chosen_ids = [st_cert_dict[k] for k in sel_st_cert_list if k in st_cert_dict]
+            target_students_cert = df_st_h[df_st_h["clean_id"].isin(chosen_ids)]
 
+        # --- الوضع الثالث: أبطال لوحة الشرف (مع دعم تصفية الفصول المتعددة) ---
         elif cert_mode == "🏆 أبطال لوحة الشرف (أعلى النقاط)":
-          target_students_cert = df_st_h[df_st_h["النقاط"] > 0].sort_values("النقاط", ascending=False).head(10)
+          sel_cls_honor_list = st.multiselect(
+              "🏫 اختر الفصول (اتركه 'الكل' لأفضل 10 على مستوى المدرسة أو حدد فصولاً معينة):",
+              options=["الكل"] + avail_cert_classes,
+              default=["الكل"],
+              key="cert_honor_cls_multi",
+          )
+          df_h_pool = df_st_h[df_st_h["النقاط"] > 0].copy()
+          if sel_cls_honor_list and "الكل" not in sel_cls_honor_list:
+            df_h_pool = df_h_pool[df_h_pool["class"].isin(sel_cls_honor_list)]
+          elif not sel_cls_honor_list:
+            df_h_pool = df_h_pool.iloc[0:0]
+          target_students_cert = df_h_pool.sort_values("النقاط", ascending=False).head(10)
 
-        # 2. قائمة اختيار الصيغة الجاهزة + حقل التعديل اليدوي الحر
+        # قائمة اختيار الصيغة الجاهزة + حقل التعديل اليدوي الحر
         available_phrases_for_badge = phrases_cfg.get(cert_title_opt, [""])
         if st.session_state.cert_phrase_preset not in available_phrases_for_badge:
           st.session_state.cert_phrase_preset = available_phrases_for_badge[0]
@@ -2535,7 +2568,7 @@ if st.session_state.role in ["teacher", "viewer"]:
           btn_c1, btn_c2 = st.columns(2)
           with btn_c1:
             st.download_button(
-                label=f"🖨️ فتح وطباعة الشهادات فوراً ({len(target_students_cert)} شهادة - سريع جداً)",
+                label=f"🖨️ فتح وطباعة الشهادات فوراً ({len(target_students_cert)} شهادة - سريع)",
                 data=master_certs_html,
                 file_name=f"Print_Certificates_{datetime.date.today()}.html",
                 mime="text/html",
@@ -2543,7 +2576,12 @@ if st.session_state.role in ["teacher", "viewer"]:
                 use_container_width=True,
             )
           with btn_c2:
-            if st.button(f"⚙️ تجهيز ملف PDF مباشر ({len(target_students_cert)} شهادة)", use_container_width=True, key="btn_build_certs_pdf"):
+            if st.button(
+                f"⚙️ تجهيز ملف PDF مباشر ({len(target_students_cert)} شهادة)",
+                type="secondary",
+                use_container_width=True,
+                key="btn_build_certs_pdf",
+            ):
               try:
                 from weasyprint import HTML
                 with st.spinner("⏳ جاري رسم الشهادات وتحويلها إلى PDF..."):
@@ -2553,7 +2591,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
             if st.session_state.get("ready_certs_pdf"):
               st.download_button(
-                  label=f"📥 اضغط هنا لتنزيل ملف الـ PDF الجاهز ({len(target_students_cert)} شهادة)",
+                  label=f"📥 اضغط لتنزيل ملف الـ PDF الجاهز ({len(target_students_cert)} شهادة)",
                   data=st.session_state.ready_certs_pdf,
                   file_name=f"Certificates_{datetime.date.today()}.pdf",
                   mime="application/pdf",
@@ -2578,7 +2616,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         else:
           st.warning("⚠️ لا يوجد طلاب يطابقون معيار الشهادات المحدد حالياً.")
 
-        # 3. ✳️ إعدادات مستقلة لإدارة وإضافة عبارات التكريم مستقبلاً دون تعديل الكود
+        # إعدادات مستقلة لإدارة وإضافة عبارات التكريم مستقبلاً دون تعديل الكود
         if st.session_state.role == "teacher":
           st.markdown("---")
           with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
@@ -2598,7 +2636,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                 phrases_cfg[edit_badge_target] = new_list
                 st.session_state.cert_phrases_config = phrases_cfg
                 try:
-                  ws_sett = sh.worksheet("settings")
+                  ws_sett = get_gspread_client().worksheet("settings")
                   records_s = ws_sett.get_all_records()
                   row_found = None
                   for idx_s, r_s in enumerate(records_s):
@@ -2619,10 +2657,10 @@ if st.session_state.role in ["teacher", "viewer"]:
               else:
                 st.warning("⚠️ يجب إدخال عبارة واحدة على الأقل.")
 
-            if col_sv2.button("🔄 استعادة العبارات الافتراضية", use_container_width=True):
+            if col_sv2.button("🔄 استعادة العبارات الافتراضية", type="secondary", use_container_width=True):
               st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
               try:
-                ws_sett = sh.worksheet("settings")
+                ws_sett = get_gspread_client().worksheet("settings")
                 records_s = ws_sett.get_all_records()
                 for idx_s, r_s in enumerate(records_s):
                   if str(r_s.get("key", "")).strip() == "cert_phrases":
