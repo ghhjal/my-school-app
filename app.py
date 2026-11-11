@@ -330,14 +330,24 @@ background: transparent !important;
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
-/* ✳️ 1. قفل التمرير الأفقي نهائياً لمنع اهتزاز الشاشة يميناً ويساراً على الجوال */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+/* ✳️ 1. قفل التمرير الأفقي بدون إظهار شريط تمرير رمادي داخلي على اليسار */
+html, body {{
+font-family: 'Tajawal', sans-serif !important;
+background-color: var(--background-color) !important;
+color: var(--text-color) !important;
+overflow-x: clip !important;
+margin: 0 !important;
+padding: 0 !important;
+}}
+
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 font-family: 'Tajawal', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 background-color: var(--background-color) !important;
 color: var(--text-color) !important;
-overflow-x: hidden !important;
+overflow-x: clip !important;
+overflow-y: visible !important;
 max-width: 100vw !important;
 width: 100% !important;
 }}
@@ -350,7 +360,7 @@ padding-right: 1rem !important;
 max-width: 1050px !important;
 width: 100% !important;
 box-sizing: border-box !important;
-overflow-x: hidden !important;
+overflow: visible !important;
 direction: rtl !important;
 text-align: right !important;
 }}
