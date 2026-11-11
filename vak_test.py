@@ -6,51 +6,132 @@ import io
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS المتوافق مع الوضع الليلي والنهاري
+# 1. إعدادات الصفحة والـ CSS المتوافق مع الوضع الليلي والنهاري (RTL كامل)
 # ==========================================
 st.set_page_config(page_title="منصة زياد الذكية | أنماط التعلم (VAK)", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
+    /* 💡 إجبار الصفحة بالكامل مع النوافذ المنبثقة (Popovers) على الاتجاه من اليمين إلى اليسار */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Tajawal', 'Arial', sans-serif !important;
+    }
     header[data-testid="stHeader"] { display: none !important; }
-    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stMultiSelect, .stTextInput {
-        direction: rtl !important; text-align: right !important; font-family: 'Tajawal', 'Arial', sans-serif;
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; direction: rtl !important; }
+    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {
+        direction: rtl !important; text-align: right !important; font-family: 'Tajawal', 'Arial', sans-serif !important;
     }
 
-    /* 💡 إجبار جميع القوائم المنسدلة والخيارات المنبثقة (Popovers) على الاتجاه لليمين والمنتصف */
+    /* 💡 حل جذري لاتجاه القوائم المنسدلة والخيارات المنبثقة (تظهر من اليمين لليسار 100%) */
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
     div[data-baseweb="popover"],
-    div[data-baseweb="popover"] *,
+    div[data-baseweb="popover"] > div,
     div[data-baseweb="menu"],
     ul[role="listbox"],
-    li[role="option"] {
+    div[role="listbox"] {
         direction: rtl !important;
         text-align: right !important;
-        justify-content: flex-start !important;
         font-family: 'Tajawal', 'Arial', sans-serif !important;
     }
     
-    /* محاذاة نص الخيار داخل القائمة المنبثقة لليمين بالكامل */
-    li[role="option"] {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        text-align: right !important;
-        padding-right: 14px !important;
-    }
-
-    /* تنسيق صندوق الاختيار الرئيسي للقائمة المنسدلة ليكون النص باليمين أو المنتصف */
-    div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {
+    /* إجبار كل خيار داخل القائمة المنسدلة على الامتداد بعرض كامل ومحاذاة النص لليمين */
+    li[role="option"],
+    div[role="option"],
+    ul[role="listbox"] li {
         direction: rtl !important;
         text-align: right !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding-right: 16px !important;
+        padding-left: 16px !important;
     }
-    div[data-testid="stSelectbox"] label, div[data-testid="stMultiSelect"] label {
+    li[role="option"] > div,
+    li[role="option"] span,
+    div[role="option"] > div,
+    div[role="option"] span {
+        direction: rtl !important;
+        text-align: right !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    /* محاذاة القيمة المختارة داخل صندوق الـ Selectbox لليمين */
+    div[data-baseweb="select"] div[ value ],
+    div[data-baseweb="select"] > div > div:first-child {
+        direction: rtl !important;
+        text-align: right !important;
+        justify-content: flex-start !important;
+    }
+
+    div[data-testid="stSelectbox"] label, div[data-testid="stMultiSelect"] label, div[data-testid="stTextInput"] label {
         width: 100% !important;
         text-align: right !important;
         justify-content: flex-start !important;
         display: block !important;
+    }
+
+    /* 💡 تصميم جدول بيانات الطلاب المخصص من اليمين إلى اليسار (RTL) */
+    .rtl-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        max-height: 440px;
+        overflow-y: auto;
+        direction: rtl !important;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        margin: 12px 0 16px 0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        background-color: #ffffff !important;
+    }
+    table.custom-rtl-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Tajawal', 'Arial', sans-serif !important;
+        font-size: 14px !important;
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        margin: 0 !important;
+    }
+    table.custom-rtl-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: #f1f5f9 !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-weight: bold !important;
+        padding: 10px 12px !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        border-left: 1px solid #e2e8f0 !important;
+        text-align: center !important;
+        white-space: nowrap;
+    }
+    table.custom-rtl-table tbody td {
+        padding: 9px 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        border-left: 1px solid #f1f5f9 !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        text-align: center !important;
+    }
+    /* محاذاة عمود الاسم لليمين لسهولة القراءة */
+    table.custom-rtl-table tbody td.name-cell {
+        text-align: right !important;
+        font-weight: 600 !important;
+    }
+    table.custom-rtl-table tbody tr:nth-child(even) {
+        background-color: #f8fafc !important;
+    }
+    table.custom-rtl-table tbody tr:hover {
+        background-color: #ebf5fb !important;
     }
     
     /* 💡 الهيدر المطور بهوية المنصة وشارة قسم أنماط التعلم */
@@ -169,7 +250,7 @@ st.markdown("""
     
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
-    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; direction: rtl !important; }
     .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
     .dash-card.total { border-color: #9b59b6; } 
     .dash-card.completed { border-color: #2ecc71; } 
@@ -278,7 +359,6 @@ def get_gsheets_conn():
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
-        # تمرير ttl=0 لـ conn.read يضمن عدم قراءة نسخة قديمة مخزنة داخل GSheetsConnection عند مسح الكاش
         df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
         for col in ['id', 'name', 'role', 'class_name']:
             if col not in df_teachers.columns:
@@ -321,6 +401,25 @@ def clear_all_caches():
     st.cache_data.clear()
 
 # ==========================================
+# 💡 دالة عرض الجداول من اليمين إلى اليسار (RTL) بدلاً من st.dataframe اليساري
+# ==========================================
+def render_rtl_table(df):
+    """عرض أي جدول بيانات على الشاشة باتجاه عربي أصيل من اليمين إلى اليسار (م -> الرقم -> الاسم -> الفصل -> النمط)"""
+    if df.empty:
+        return
+    headers_html = "".join([f"<th>{col}</th>" for col in df.columns])
+    rows_html = ""
+    for _, row in df.iterrows():
+        cells = ""
+        for col in df.columns:
+            val = row[col]
+            cls_attr = ' class="name-cell"' if col in ['الاسم', 'اسم الطالب', 'اسم المعلم'] else ''
+            cells += f"<td{cls_attr}>{val}</td>"
+        rows_html += f"<tr>{cells}</tr>"
+    table_html = f'<div class="rtl-table-wrapper"><table class="custom-rtl-table"><thead><tr>{headers_html}</tr></thead><tbody>{rows_html}</tbody></table></div>'
+    st.markdown(table_html, unsafe_allow_html=True)
+
+# ==========================================
 # 💡 دوال صلاحيات المعلمين والفلترة الذكية للفصول
 # ==========================================
 def parse_teacher_classes(class_name_str):
@@ -352,7 +451,7 @@ def infer_grade_name(row):
     return c if c else "غير محدد"
 
 def render_grade_class_Selector(df_source, key_prefix):
-    """عرض قوائم اختيار الصف والفصل في المنتصف/اليمين بشكل مرتب دون وضع أي قائمة بالجهة اليسرى"""
+    """عرض قوائم اختيار الصف والفصل في المنتصف/اليمين بشكل مرتب من اليمين إلى اليسار"""
     df_temp = df_source.copy()
     if df_temp.empty:
         st.warning("⚠️ لا توجد فصول أو بيانات طلاب متاحة في نطاق صلاحياتك.")
@@ -518,10 +617,9 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 def update_teacher_permissions(teacher_id, new_role, new_classes_str):
-    """تحديث صلاحية المعلم والفصول المسندة إليه مباشرة وبشكل فوري في Google Sheets بدون الحاجة لزر جلب النتائج"""
+    """تحديث صلاحية المعلم والفصول المسندة إليه مباشرة وبشكل فوري في Google Sheets"""
     conn = get_gsheets_conn()
     try:
-        # قراءة مباشرة من الشيت بـ ttl=0 لضمان أحدث نسخة قبل الحفظ
         df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
     except:
         df_teachers = get_all_teachers().copy()
@@ -539,7 +637,6 @@ def update_teacher_permissions(teacher_id, new_role, new_classes_str):
         df_teachers.loc[mask, 'role'] = new_role
         df_teachers.loc[mask, 'class_name'] = new_classes_str
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=df_teachers)
-        # تفريغ الكاش فوراً لكي تظهر التعديلات في نفس اللحظة
         clear_all_caches()
         return True
     return False
@@ -656,7 +753,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #2980b9; background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }} .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }} .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #2c3e50; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #2980b9; background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }} .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }} .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #2c3e50; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -689,7 +786,6 @@ if st.session_state.current_user is None:
         if teacher_id_input:
             with st.spinner("جاري التحقق من الهوية..."):
                 try:
-                    # تفريغ الكاش لقراءة أحدث صلاحيات وفصول للمعلم عند تسجيل الدخول
                     get_all_teachers.clear()
                     df_teachers = get_all_teachers()
                     norm_id = clean_id(teacher_id_input)
@@ -707,7 +803,6 @@ if st.session_state.current_user is None:
                 except Exception as e: st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
         else: st.warning("الرجاء إدخال رقم الهوية أولاً.")
 else:
-    # جلب أحدث صلاحيات وفصول المستخدم الحالي من جدول المعلمين لضمان التزامن الفوري
     df_teachers_latest = get_all_teachers()
     curr_u_id = clean_id(st.session_state.current_user.get('id', ''))
     if curr_u_id and not df_teachers_latest.empty:
@@ -750,7 +845,6 @@ else:
                 st.session_state.current_user = None
                 st.rerun()
             
-    # جلب كل الطلاب للإدارة، وتصفية الطلاب حسب فصول المعلم المحددة عند العرض والطباعة
     df_all_raw = get_all_students()
     df_all = filter_df_for_user(df_all_raw, user)
 
@@ -764,9 +858,9 @@ else:
     st.markdown("<hr style='margin: 10px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
     st.markdown(f"""
     <div class="dashboard-stats-container">
-        <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{pending_tests}</div></div>
-        <div class="dash-card completed"><div class="dash-title">✅ الاختبارات المكتملة</div><div class="dash-value">{completed_tests}</div></div>
         <div class="dash-card total"><div class="dash-title">👥 إجمالي الطلاب</div><div class="dash-value">{total_students}</div></div>
+        <div class="dash-card completed"><div class="dash-title">✅ الاختبارات المكتملة</div><div class="dash-value">{completed_tests}</div></div>
+        <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{pending_tests}</div></div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<hr style='margin: 10px 0 20px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
@@ -849,7 +943,7 @@ else:
                     columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
                 )
                 display_cols = add_serial_column(display_cols)
-                st.dataframe(display_cols, use_container_width=True, hide_index=True)
+                render_rtl_table(display_cols)
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
@@ -888,7 +982,7 @@ else:
                     columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
                 )
                 display_cols = add_serial_column(display_cols)
-                st.dataframe(display_cols, use_container_width=True, hide_index=True)
+                render_rtl_table(display_cols)
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 
@@ -929,7 +1023,7 @@ else:
             if len(df_untested) > 0:
                 display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
                 display_cols = add_serial_column(display_cols)
-                st.dataframe(display_cols, use_container_width=True, hide_index=True)
+                render_rtl_table(display_cols)
                 
                 html_table = display_cols.to_html(index=False, classes="table", justify="center")
                 untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
@@ -1055,7 +1149,7 @@ else:
                 
                 display_s_df = df_s_view.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
                 display_s_df = add_serial_column(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']])
-                st.dataframe(display_s_df, use_container_width=True, hide_index=True)
+                render_rtl_table(display_s_df)
 
             # 2️⃣ تبويب مخصص لاستيراد وتصدير قالب أنماط التعلم (VAK)
             with sub_tab_vak:
@@ -1091,14 +1185,13 @@ else:
                     columns={'id': 'رقم الهوية', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب', 'v_score': 'بصري (V)', 'a_score': 'سمعي (A)', 'k_score': 'حركي (K)'}
                 )
                 display_vak_df = add_serial_column(display_vak_df)
-                st.dataframe(display_vak_df, use_container_width=True, hide_index=True)
+                render_rtl_table(display_vak_df)
 
             # 3️⃣ تبويب بيانات المعلمين والتحكم في صلاحيات الفصول
             with sub_tab_teachers:
                 try: df_teachers = get_all_teachers()
                 except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
 
-                # --- قسم التحكم في صلاحية المعلم وتخصيص الفصول ---
                 st.markdown("#### 🔐 التحكم في صلاحيات المعلمين وتخصيص الفصول")
                 st.info("💡 اختر المعلم لتحديد الفصول المسموح له باستعراضها وطباعة تقاريرها (يمكنك اختيار فصل واحد، عدة فصول، أو منح صلاحية جميع الفصول).")
                 
@@ -1188,7 +1281,7 @@ else:
                 display_t_df['role'] = display_t_df['role'].apply(lambda x: "مدير النظام (admin)" if str(x).strip() == 'admin' else "معلم (teacher)")
                 display_t_df = display_t_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول المسموحة'})
                 display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
-                st.dataframe(display_t_df, use_container_width=True, hide_index=True)
+                render_rtl_table(display_t_df)
 
 # ==========================================
 # 6. تذييل الصفحة (الحقوق)
