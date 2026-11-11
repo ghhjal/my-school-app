@@ -290,17 +290,36 @@ def show_footer():
 
 
 # ==========================================
-# 🎨 2. التصميم الاحترافي والمحاذاة العربية الكاملة (RTL) وشبكة الجوال (2×2)
+# 🎨 2. التصميم الاحترافي والوضع الليلي عالي التباين والمحاذاة العربية (RTL)
 # ==========================================
 st.markdown(
     f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
 
+/* ✳️ 1. تعريف متغيرات الألوان صراحة للوضع النهاري والوضع الليلي (Dark Mode) لضمان التباين التام */
 :root {{
-    --border-color: rgba(148, 163, 184, 0.28);
-    --card-surface: var(--secondary-background-color);
-    --subtle-text: #94A3B8;
+    --background-color: #F8FAFC;
+    --secondary-background-color: #FFFFFF;
+    --input-bg-color: #FFFFFF;
+    --text-color: #0F172A;
+    --sub-text-color: #475569;
+    --border-color: #CBD5E1;
+    --card-surface: #FFFFFF;
+    --subtle-text: #64748B;
+}}
+
+@media (prefers-color-scheme: dark) {{
+    :root {{
+        --background-color: #0B1120;
+        --secondary-background-color: #1E293B;
+        --input-bg-color: #0F172A;
+        --text-color: #F8FAFC;
+        --sub-text-color: #CBD5E1;
+        --border-color: #334155;
+        --card-surface: #1E293B;
+        --subtle-text: #94A3B8;
+    }}
 }}
 
 section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"] {{
@@ -309,8 +328,8 @@ section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
-/* ✳️ 1. فرض الاتجاه العربي (من اليمين إلى اليسار) على كامل المنصة والعناوين */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {{
+/* ✳️ 2. تطبيق الخلفية والاتجاه العربي (RTL) على كامل المنصة */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stHeader"] {{
     font-family: 'Tajawal', sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
@@ -322,15 +341,14 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], 
     padding-top: 1rem !important;
     padding-bottom: 5rem !important;
     max-width: 1080px !important;
+    direction: rtl !important;
+    text-align: right !important;
 }}
 
-/* ✳️ 2. محاذاة جميع العناوين الفرعية والتسميات والتنبيهات والقوائم المطوية لليمين */
+/* ✳️ 3. وضوح تام ومحاذاة يمين لجميع العناوين والتسميات في الوضعين الليلي والنهاري */
 h1, h2, h3, h4, h5, h6, p, label,
 [data-testid="stHeadingWithActionElements"],
-[data-testid="stHeadingWithActionElements"] h1,
-[data-testid="stHeadingWithActionElements"] h2,
-[data-testid="stHeadingWithActionElements"] h3,
-[data-testid="stHeadingWithActionElements"] h4,
+[data-testid="stHeadingWithActionElements"] *,
 [data-testid="stMarkdownContainer"],
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] h1,
@@ -339,69 +357,67 @@ h1, h2, h3, h4, h5, h6, p, label,
 [data-testid="stMarkdownContainer"] h4,
 [data-testid="stMarkdownContainer"] h5,
 [data-testid="stMarkdownContainer"] h6,
-[data-testid="stCaptionContainer"],
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p,
-[data-testid="stAlert"],
-[data-testid="stAlert"] div,
-[data-testid="stAlert"] p,
-[data-testid="stExpander"] summary,
-[data-testid="stExpander"] summary p,
-[data-testid="stRadio"] > div,
+[data-testid="stWidgetLabel"] span,
+[data-testid="stRadio"] label,
 [data-testid="stCheckbox"] label {{
     font-family: 'Tajawal', sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
-}}
-
-/* ✳️ 3. إصلاح القوائم المنسدلة (Selectbox & Multiselect) لتبدأ من اليمين والسهم في اليسار */
-div[data-baseweb="select"],
-div[data-baseweb="select"] > div,
-div[data-baseweb="select"] [class*="control"],
-div[data-baseweb="select"] [class*="ValueContainer"] {{
-    direction: rtl !important;
-    text-align: right !important;
-    font-family: 'Tajawal', sans-serif !important;
-}}
-
-div[data-baseweb="select"] div {{
     color: var(--text-color) !important;
-    font-weight: 700 !important;
 }}
 
-/* شارات الاختيار المتعدد (Tags) تبدأ من اليمين */
-span[data-baseweb="tag"] {{
-    direction: rtl !important;
-    margin-left: 5px !important;
-    margin-right: 0px !important;
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {{
     font-family: 'Tajawal', sans-serif !important;
-    font-weight: 700 !important;
-}}
-
-/* القائمة المنبثقة عند فتح القائمة المنسدلة (Popover Menu) */
-div[data-baseweb="popover"],
-div[data-baseweb="popover"] div,
-div[data-baseweb="popover"] ul,
-ul[data-baseweb="menu"],
-li[role="option"] {{
     direction: rtl !important;
     text-align: right !important;
-    justify-content: flex-start !important;
-    font-family: 'Tajawal', sans-serif !important;
+    color: var(--sub-text-color) !important;
     font-weight: 700 !important;
 }}
 
-/* ✳️ 4. حقول الإدخال النصية والرقمية من اليمين لليسار */
-div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {{
+/* ✳️ 4. تنسيق النماذج (Forms) والقوائم المطوية (Expanders) بتباين واضح في الوضع الليلي */
+[data-testid="stForm"],
+div[data-testid="stVerticalBlockBorderWrapper"] {{
     background-color: var(--secondary-background-color) !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
-    border-radius: 12px !important;
-    min-height: 48px;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 16px !important;
+}}
+
+[data-testid="stExpander"] {{
+    background-color: var(--secondary-background-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 14px !important;
     direction: rtl !important;
     text-align: right !important;
 }}
 
-div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within, div[data-baseweb="textarea"]:focus-within {{
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span {{
+    direction: rtl !important;
+    text-align: right !important;
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
+}}
+
+/* ✳️ 5. حقول الإدخال والكتابة بتباين عالٍ (نص أبيض واضح في الوضع الليلي، وأسود في النهاري) */
+div[data-baseweb="input"],
+div[data-baseweb="base-input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="select"] > div {{
+    background-color: var(--input-bg-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    min-height: 48px !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"]:focus-within {{
     border-color: {accent_color} !important;
     box-shadow: 0 0 0 2px {primary_color}40 !important;
 }}
@@ -413,19 +429,130 @@ input, textarea, select {{
     -webkit-text-fill-color: var(--text-color) !important;
     caret-color: {accent_color} !important;
     background-color: transparent !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     font-size: 1.02rem !important;
     font-family: 'Tajawal', sans-serif !important;
 }}
 
 ::placeholder {{
-    color: #94A3B8 !important;
-    opacity: 0.85 !important;
-    -webkit-text-fill-color: #94A3B8 !important;
+    color: var(--sub-text-color) !important;
+    opacity: 0.75 !important;
+    -webkit-text-fill-color: var(--sub-text-color) !important;
     text-align: right !important;
+    direction: rtl !important;
 }}
 
-/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف) */
+/* إخفاء عبارة Press Enter to submit form التي تشوه الحقول في الجوال */
+[data-testid="InputInstructions"] {{
+    display: none !important;
+}}
+
+/* ✳️ 6. إصلاح جذري وشامل للقوائم المنسدلة (المغلقة والمنبثقة المفتوحة) لتكون من اليمين إلى اليسار 100% */
+div[data-baseweb="select"],
+div[data-baseweb="select"] * {{
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+    color: var(--text-color) !important;
+    font-weight: 700 !important;
+}}
+
+div[data-baseweb="select"] > div {{
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding-right: 12px !important;
+    padding-left: 8px !important;
+}}
+
+div[data-baseweb="select"] > div > div:first-child {{
+    direction: rtl !important;
+    text-align: right !important;
+    justify-content: flex-start !important;
+    flex: 1 !important;
+}}
+
+span[data-baseweb="tag"] {{
+    direction: rtl !important;
+    margin-left: 5px !important;
+    margin-right: 0px !important;
+    background-color: {primary_color}25 !important;
+    border: 1px solid {accent_color} !important;
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
+}}
+
+/* النافذة المنبثقة عند فتح القائمة المنسدلة (Popover & VirtualDropdown) */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] *,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] *,
+ul[data-baseweb="menu"],
+ul[data-baseweb="menu"] *,
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] *,
+[role="listbox"],
+[role="listbox"] *,
+[role="option"],
+[role="option"] * {{
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+}}
+
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
+ul[data-baseweb="menu"],
+[data-testid="stSelectboxVirtualDropdown"],
+[role="listbox"] {{
+    background-color: var(--secondary-background-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+}}
+
+div[data-baseweb="popover"] li,
+ul[data-baseweb="menu"] li,
+[data-testid="stSelectboxVirtualDropdown"] li,
+[role="listbox"] li,
+li[role="option"],
+div[role="option"] {{
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    direction: rtl !important;
+    text-align: right !important;
+    width: 100% !important;
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+    color: var(--text-color) !important;
+    background-color: transparent !important;
+    font-weight: 700 !important;
+}}
+
+div[data-baseweb="popover"] li:hover,
+[data-testid="stSelectboxVirtualDropdown"] li:hover,
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {{
+    background-color: {primary_color}25 !important;
+}}
+
+div[data-baseweb="popover"] li > div,
+ul[data-baseweb="menu"] li > div,
+[data-testid="stSelectboxVirtualDropdown"] li > div,
+[role="listbox"] li > div,
+li[role="option"] > div,
+li[role="option"] div {{
+    width: 100% !important;
+    direction: rtl !important;
+    text-align: right !important;
+    margin: 0 !important;
+    color: var(--text-color) !important;
+}}
+
+/* ✳️ 7. البنر العلوي الرئيسي */
 .header-container {{
     background: {header_grad};
     background-image: {t_colors["bg_pattern"]}, {header_grad};
@@ -479,8 +606,11 @@ input, textarea, select {{
     text-align: center !important;
 }}
 
-/* ✳️ 6. الأزرار الرئيسية والثانوية */
-[data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
+/* ✳️ 8. الأزرار الرئيسية والثانوية وأزرار الروابط */
+[data-testid="stFormSubmitButton"] button,
+[data-testid="baseButton-primary"],
+div.stButton > button,
+div.stDownloadButton > button {{
     background: {header_grad} !important;
     background-color: {primary_color} !important;
     color: #FFFFFF !important;
@@ -495,7 +625,16 @@ input, textarea, select {{
     min-height: 48px;
 }}
 
-[data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{
+[data-testid="stFormSubmitButton"] button *,
+div.stButton > button *,
+div.stDownloadButton > button * {{
+    color: #FFFFFF !important;
+}}
+
+[data-testid="stFormSubmitButton"] button:hover,
+[data-testid="baseButton-primary"]:hover,
+div.stButton > button:hover,
+div.stDownloadButton > button:hover {{
     background: {t_colors["btn_hover"]} !important;
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
@@ -503,21 +642,32 @@ input, textarea, select {{
 }}
 
 div.stButton > button[kind="secondary"],
-div.stDownloadButton > button[kind="secondary"] {{
+div.stDownloadButton > button[kind="secondary"],
+[data-testid="stLinkButton"] a {{
     background: var(--secondary-background-color) !important;
     background-color: var(--secondary-background-color) !important;
     color: var(--text-color) !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+    font-weight: 800 !important;
+    min-height: 48px !important;
+}}
+
+div.stButton > button[kind="secondary"] *,
+div.stDownloadButton > button[kind="secondary"] *,
+[data-testid="stLinkButton"] a * {{
+    color: var(--text-color) !important;
 }}
 
 div.stButton > button[kind="secondary"]:hover,
-div.stDownloadButton > button[kind="secondary"]:hover {{
+div.stDownloadButton > button[kind="secondary"]:hover,
+[data-testid="stLinkButton"] a:hover {{
     border-color: {accent_color} !important;
-    background: rgba(59, 130, 246, 0.08) !important;
+    background: rgba(59, 130, 246, 0.12) !important;
 }}
 
-/* ✳️ 7. تصميم التبويبات: شريط أفقي أنيق على الكمبيوتر + شبكة (2×2) على الجوال */
+/* ✳️ 9. التبويبات: واضحة جداً في الوضع الليلي والنهاري + شبكة (2×2) على الجوال */
 .stTabs [data-baseweb="tab-list"] {{
     display: flex !important;
     flex-wrap: wrap !important;
@@ -535,7 +685,7 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
     padding: 8px 14px !important;
     background-color: var(--secondary-background-color) !important;
     border-radius: 12px !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.3) !important;
+    border: 1.5px solid var(--border-color) !important;
     color: var(--text-color) !important;
     font-weight: 800 !important;
     font-size: 0.95rem !important;
@@ -543,8 +693,14 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
     align-items: center !important;
     text-align: center !important;
     flex: 1 1 auto !important;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
     transition: all 0.2s ease !important;
+}}
+
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span {{
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
 }}
 
 .stTabs [data-baseweb="tab"]:hover {{
@@ -557,37 +713,39 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
     color: #FFFFFF !important;
     border: 2px solid #F59E0B !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 }}
 
-.stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {{
     color: #FFFFFF !important;
     font-weight: 900 !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
     display: none !important;
 }}
 
-/* ✳️ 8. البطاقات الإحصائية وبطاقات السلوك */
+/* ✳️ 10. البطاقات الإحصائية وبطاقات السلوك */
 .metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; }}
-.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid rgba(148, 163, 184, 0.28); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
+.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
 .metric-info {{ text-align: right; }}
-.metric-title {{ color: #94A3B8; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
+.metric-title {{ color: var(--sub-text-color); font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
 .metric-val {{ color: var(--text-color); font-size: 26px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }}
+.metric-sub {{ color: var(--subtle-text); font-size: 12px; font-weight: 700; margin-top: 2px; }}
 .metric-icon {{ width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; }}
 .ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
 .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
 .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
 
-.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid rgba(148, 163, 184, 0.28); margin-bottom: 15px; }}
-.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
+.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid var(--border-color); margin-bottom: 15px; }}
+.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
 
 .student-list-card {{
     background: var(--secondary-background-color);
     border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
-    border: 1.5px solid rgba(148, 163, 184, 0.28);
+    border: 1.5px solid var(--border-color);
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     display: block !important; width: 100% !important;
     text-align: right !important; direction: rtl !important; color: var(--text-color);
@@ -605,7 +763,7 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
 .student-card-date {{
     background: var(--background-color); padding: 4px 10px; border-radius: 8px;
     font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
-    flex-shrink: 0 !important; direction: ltr !important; border: 1px solid rgba(148, 163, 184, 0.2);
+    flex-shrink: 0 !important; direction: ltr !important; border: 1px solid var(--border-color);
 }}
 .student-card-body {{
     text-align: right !important; direction: rtl !important;
@@ -615,10 +773,10 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; }}
 .soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 44px; }}
-.btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.12) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.35) !important; }}
-.btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.22) !important; transform: translateY(-1px); }}
-.btn-telegram {{ background-color: rgba(14, 165, 233, 0.12) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.35) !important; }}
-.btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.22) !important; transform: translateY(-1px); }}
+.btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.14) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.4) !important; }}
+.btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.24) !important; transform: translateY(-1px); }}
+.btn-telegram {{ background-color: rgba(14, 165, 233, 0.14) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.4) !important; }}
+.btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.24) !important; transform: translateY(-1px); }}
 
 div[data-testid="stElementContainer"]:has(.btn-edit-marker),
 div[data-testid="stElementContainer"]:has(.btn-del-marker),
@@ -635,26 +793,26 @@ div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="co
 }}
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button,
 div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
-    background: rgba(99, 102, 241, 0.12) !important; background-color: rgba(99, 102, 241, 0.12) !important;
-    color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    background: rgba(99, 102, 241, 0.14) !important; background-color: rgba(99, 102, 241, 0.14) !important;
+    color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
     border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
     padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
-div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button:hover,
-div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {{ background: rgba(99, 102, 241, 0.22) !important; transform: translateY(-1px); }}
+div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *,
+div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button * {{ color: #6366F1 !important; }}
 
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button,
 div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
-    background: rgba(239, 68, 68, 0.12) !important; background-color: rgba(239, 68, 68, 0.12) !important;
-    color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+    background: rgba(239, 68, 68, 0.14) !important; background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
     border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
     padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
-div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button:hover,
-div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ background: rgba(239, 68, 68, 0.22) !important; transform: translateY(-1px); }}
+div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *,
+div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{ color: #EF4444 !important; }}
 
 .medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; }}
-.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: {shadow_val}; color: var(--text-color); }}
+.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid var(--border-color); box-shadow: {shadow_val}; color: var(--text-color); }}
 .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
 
 .points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center !important; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); }}
@@ -666,7 +824,7 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
 @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
 .urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 14px; text-align: center !important; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 20px; }}
 
-/* ✳️ 9. تحويل التبويبات تلقائياً إلى شبكة (2×2) على الجوال فقط */
+/* ✳️ 11. شبكة التبويبات (2×2) المتجاوبة مع الجوال */
 @media (max-width: 768px) {{
     .header-container {{ padding: 55px 15px 25px 15px; margin: -1rem -1rem 20px -1rem; border-radius: 0 0 28px 28px; }}
     .main-title {{ font-size: 1.85rem !important; }}
@@ -684,8 +842,8 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
     }}
     .stTabs [data-baseweb="tab"] {{
         width: 100% !important;
-        font-size: 0.9rem !important;
-        height: 50px !important;
+        font-size: 0.92rem !important;
+        height: 52px !important;
         padding: 6px 8px !important;
         white-space: normal !important;
     }}
