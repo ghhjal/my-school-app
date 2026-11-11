@@ -356,13 +356,16 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], 
     max-width: 1080px !important;
 }}
 
-/* ✳️ 2. وضوح تام ومحاذاة يمين لجميع العناوين والتسميات والتنبيهات في الوضعين الفاتح والداكن */
-h1, h2, h3, h4, h5, h6, p, label, span,
-[data-testid="stHeadingWithActionElements"],
-[data-testid="stHeadingWithActionElements"] *,
-[data-testid="stMarkdownContainer"],
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] h1,
+/* ✳️ 2. وضوح تام ومحاذاة يمين للعناوين والتسميات (مع استثناء الهيدر الرئيسي ليحافظ على لونه الأبيض وتوسيطه) */
+h1:not(.main-title), h2, h3, h4, h5, h6,
+p:not(.sub-title), label,
+[data-testid="stHeadingWithActionElements"]:not(:has(.main-title)),
+[data-testid="stHeadingWithActionElements"] h1:not(.main-title),
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3,
+[data-testid="stHeadingWithActionElements"] h4,
+[data-testid="stMarkdownContainer"] p:not(.sub-title),
+[data-testid="stMarkdownContainer"] h1:not(.main-title),
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3,
 [data-testid="stMarkdownContainer"] h4,
@@ -666,30 +669,33 @@ div[data-testid="stNumberInput"] button svg {{
     color: var(--text-color) !important;
 }}
 
-/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف) */
+/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف وبخط أبيض ثابت في الوضعين الطبيعي والداكن) */
+[data-testid="stMarkdownContainer"] .header-container,
 .header-container {{
-    background: {header_grad};
-    background-image: {t_colors["bg_pattern"]}, {header_grad};
+    background: {header_grad} !important;
+    background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
     background-blend-mode: overlay;
     padding: 60px 20px 32px 20px;
     border-radius: 0 0 36px 36px;
     margin: -1rem -5rem 25px -5rem;
     box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
-    color: white;
+    color: {t_colors["title_color"]} !important;
     text-align: center !important;
     position: relative;
     overflow: hidden;
     border-bottom: 2px solid rgba(255,255,255,0.15);
 }}
 
-.title-wrapper {{
-    display: flex;
-    align-items: center;
+[data-testid="stMarkdownContainer"] .header-container .title-wrapper,
+.header-container .title-wrapper {{
+    display: flex !important;
+    align-items: center !important;
     justify-content: center !important;
     gap: 15px;
     margin-bottom: 8px;
     position: relative;
     z-index: 2;
+    text-align: center !important;
 }}
 
 .logo-icon {{
@@ -700,23 +706,45 @@ div[data-testid="stNumberInput"] button svg {{
     margin-top: 10px;
 }}
 
-.main-title {{
+[data-testid="stMarkdownContainer"] .header-container [data-testid="stHeadingWithActionElements"],
+.header-container [data-testid="stHeadingWithActionElements"] {{
+    text-align: center !important;
+    justify-content: center !important;
+}}
+
+[data-testid="stMarkdownContainer"] .header-container h1.main-title,
+[data-testid="stMarkdownContainer"] .header-container .main-title,
+[data-testid="stHeadingWithActionElements"] h1.main-title,
+.header-container h1,
+.header-container .main-title {{
     margin: 0 !important;
     font-size: 2.7rem !important;
     font-weight: 900 !important;
     color: {t_colors["title_color"]} !important;
+    -webkit-text-fill-color: {t_colors["title_color"]} !important;
     line-height: 1.1 !important;
     text-align: center !important;
 }}
 
-.sub-title {{
+[data-testid="stMarkdownContainer"] .header-container p.sub-title,
+[data-testid="stMarkdownContainer"] .header-container .sub-title,
+.header-container p,
+.header-container .sub-title {{
     margin: 0 !important;
     color: {t_colors["sub_color"]} !important;
+    -webkit-text-fill-color: {t_colors["sub_color"]} !important;
     font-size: 1.2rem !important;
     font-weight: 600 !important;
     position: relative;
     z-index: 2;
     line-height: 1.5 !important;
+    text-align: center !important;
+}}
+
+[data-testid="stMarkdownContainer"] .header-container .sub-title span,
+.header-container .sub-title span {{
+    color: {t_colors["sub_color"]} !important;
+    -webkit-text-fill-color: {t_colors["sub_color"]} !important;
     text-align: center !important;
 }}
 
@@ -972,9 +1000,11 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
 /* ✳️ 9. تحويل التبويبات تلقائياً إلى شبكة (2×2) واضحة على الجوال دون شريط تمرير مخفي */
 @media (max-width: 768px) {{
     .header-container {{ padding: 48px 15px 24px 15px; margin: -1rem -1rem 18px -1rem; border-radius: 0 0 28px 28px; }}
-    .main-title {{ font-size: 1.85rem !important; }}
+    [data-testid="stMarkdownContainer"] .header-container h1.main-title,
+    .header-container .main-title {{ font-size: 1.85rem !important; }}
     .logo-icon {{ font-size: 2.3rem; }}
-    .sub-title {{ font-size: 1.05rem !important; }}
+    [data-testid="stMarkdownContainer"] .header-container p.sub-title,
+    .header-container .sub-title {{ font-size: 1.05rem !important; }}
     .metric-container {{ grid-template-columns: repeat(2, 1fr); }}
     .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2; }}
     .stTabs [data-baseweb="tab-list"] {{
@@ -1005,9 +1035,9 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
 <div class="header-container">
     <div class="title-wrapper">
         <div class="logo-icon">{t_colors["icon"]}</div>
-        <h1 class="main-title">{t_colors["title"]}</h1>
+        <h1 class="main-title" style="color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important; text-align: center !important; margin: 0 !important;">{t_colors["title"]}</h1>
     </div>
-    <p class="sub-title">{t_colors["subtitle"]}</p>
+    <p class="sub-title" style="color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important; text-align: center !important; margin: 0 !important;">{t_colors["subtitle"]}</p>
 </div>
 """,
     unsafe_allow_html=True,
