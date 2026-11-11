@@ -1768,9 +1768,9 @@ if st.session_state.role in ["teacher", "viewer"]:
       df_st_h["النقاط"] = pd.to_numeric(df_st_h["النقاط"], errors="coerce").fillna(0)
 
     honor_tabs = st.tabs([
-        "🌟 لوحة الشرف (النقاط)",
-        "🎓 المتفوقون أكاديمياً (90%+)",
-        "📜 استخراج شهادات المتفوقين إلكترونياً",
+        "🌟 لوحة الشرف",
+        "🎓 المتفوقون (90%+)",
+        "📜 إصدار الشهادات",
     ])
 
     lux_css = """
