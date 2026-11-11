@@ -290,238 +290,415 @@ def show_footer():
 
 
 # ==========================================
-# 🎨 2. التصميم الاحترافي وشبكة (2×2) وتنسيق البطاقات والأزرار الموحد
+# 🎨 2. التصميم الاحترافي والمحاذاة العربية الكاملة (RTL) وشبكة الجوال (2×2)
 # ==========================================
 st.markdown(
     f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
-    
-    :root {{
-        --border-color: rgba(148, 163, 184, 0.28);
-        --card-surface: var(--secondary-background-color);
-        --subtle-text: #94A3B8;
-    }}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
 
-    section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"] {{ display: none !important; }}
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    
-    html, body, [data-testid="stAppViewContainer"] {{ 
-        font-family: 'Tajawal', sans-serif !important; 
-        direction: RTL; text-align: right; 
-        background-color: var(--background-color) !important; 
-        color: var(--text-color) !important; 
-    }}
-    
-    .block-container {{ padding-top: 1rem !important; padding-bottom: 5rem; max-width: 1050px; }}
-    
-    .header-container {{
-        background: {header_grad};
-        background-image: {t_colors["bg_pattern"]}, {header_grad};
-        background-blend-mode: overlay;
-        padding: 65px 20px 35px 20px;
-        border-radius: 0 0 36px 36px;
-        margin: -1rem -5rem 25px -5rem;
-        box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
-        color: white; text-align: center; position: relative; overflow: hidden;
-        border-bottom: 2px solid rgba(255,255,255,0.15);
-    }}
-    
-    .title-wrapper {{ display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px; position: relative; z-index: 2; }}
-    .logo-icon {{ font-size: 3.6rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); animation: float 4s ease-in-out infinite; line-height: 1; margin-top: 10px; }}
-    .main-title {{ margin: 0; font-size: 2.8rem; font-weight: 900; color: {t_colors["title_color"]} !important; line-height: 1.1; }}
-    .sub-title {{ margin: 0; color: {t_colors["sub_color"]}; font-size: 1.25rem; font-weight: 600; position: relative; z-index: 2; line-height: 1.5; }}
-    
-    div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] {{ 
-        background-color: var(--secondary-background-color) !important; 
-        border: 1.5px solid rgba(148, 163, 184, 0.35) !important; 
-        border-radius: 12px !important; min-height: 48px; 
-    }}
-    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {{
-        border-color: {accent_color} !important; box-shadow: 0 0 0 2px {primary_color}40 !important;
-    }}
-    input, textarea, select {{ 
-        color: var(--text-color) !important; -webkit-text-fill-color: var(--text-color) !important; 
-        caret-color: {accent_color} !important; background-color: transparent !important; 
-        font-weight: 700 !important; font-size: 1.02rem !important;
-    }}
-    ::placeholder {{ color: #94A3B8 !important; opacity: 0.85 !important; -webkit-text-fill-color: #94A3B8 !important; }}
-    div[data-baseweb="select"] div {{ color: var(--text-color) !important; font-weight: 700 !important; }}
-    
-    [data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
-        background: {header_grad} !important; background-color: {primary_color} !important;
-        color: #FFFFFF !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; 
-        font-weight: 800 !important; font-size: 1.05rem !important; border-radius: 14px !important; 
-        padding: 10px 18px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; 
-        transition: all 0.2s ease !important; width: 100%; min-height: 50px;
-    }}
-    [data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{ 
-        background: {t_colors["btn_hover"]} !important; transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important; border-color: rgba(255, 255, 255, 0.45) !important;
-    }}
+:root {{
+    --border-color: rgba(148, 163, 184, 0.28);
+    --card-surface: var(--secondary-background-color);
+    --subtle-text: #94A3B8;
+}}
 
-    /* ✳️ تمييز الأزرار الثانوية في كامل المنصة بخلفية هادئة */
-    div.stButton > button[kind="secondary"],
-    div.stDownloadButton > button[kind="secondary"] {{
-        background: var(--secondary-background-color) !important;
-        background-color: var(--secondary-background-color) !important;
-        color: var(--text-color) !important;
-        border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
-    }}
-    div.stButton > button[kind="secondary"]:hover,
-    div.stDownloadButton > button[kind="secondary"]:hover {{
-        border-color: {accent_color} !important;
-        background: rgba(59, 130, 246, 0.08) !important;
-    }}
-    
-    .stTabs [data-baseweb="tab-list"] {{ 
-        display: grid !important; grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important; background-color: transparent !important; 
-        border: none !important; margin-bottom: 12px !important; padding: 4px 2px !important;
-    }}
-    .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
-    .stTabs [data-baseweb="tab"] {{ 
-        height: 54px !important; width: 100% !important; margin: 0 !important; padding: 8px 12px !important;
-        background-color: var(--secondary-background-color) !important; border-radius: 14px !important; 
-        border: 1.5px solid rgba(148, 163, 184, 0.3) !important; color: var(--text-color) !important; 
-        font-weight: 800 !important; font-size: 0.98rem !important; justify-content: center !important; 
-        align-items: center !important; text-align: center !important; white-space: normal !important;
-        line-height: 1.25 !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important; transition: all 0.25s ease !important; 
-    }}
-    .stTabs [data-baseweb="tab"]:hover {{ border-color: {accent_color} !important; transform: translateY(-1px); }}
-    .stTabs [aria-selected="true"] {{ 
-        background: {header_grad} !important; color: #FFFFFF !important; 
-        border: 2px solid #F59E0B !important; border-radius: 14px !important; 
-        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important; 
-    }}
-    .stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{ color: #FFFFFF !important; font-weight: 900 !important; }}
-    .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
+section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"] {{
+    display: none !important;
+}}
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
 
-    .metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; }}
-    .metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid rgba(148, 163, 184, 0.28); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
-    .metric-info {{ text-align: right; }}
-    .metric-title {{ color: #94A3B8; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
-    .metric-val {{ color: var(--text-color); font-size: 26px; font-weight: 900; line-height: 1.1; }}
-    .metric-sub {{ color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }}
-    .metric-icon {{ width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; }}
-    .ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
-    .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
-    .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+/* ✳️ 1. فرض الاتجاه العربي (من اليمين إلى اليسار) على كامل المنصة والعناوين */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {{
+    font-family: 'Tajawal', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
+}}
 
-    .app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid rgba(148, 163, 184, 0.28); margin-bottom: 15px; }}
-    .mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
+.block-container {{
+    padding-top: 1rem !important;
+    padding-bottom: 5rem !important;
+    max-width: 1080px !important;
+}}
 
-    .student-list-card {{
-        background: var(--secondary-background-color);
-        border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
-        border: 1.5px solid rgba(148, 163, 184, 0.28);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        display: block !important; width: 100% !important;
-        text-align: right !important; direction: rtl !important; color: var(--text-color);
-    }}
-    .student-card-header {{
-        display: flex !important; flex-direction: row !important;
-        justify-content: space-between !important; align-items: center !important;
-        gap: 10px !important; width: 100% !important; direction: rtl !important; margin-bottom: 6px !important;
-    }}
-    .student-card-title {{
-        text-align: right !important; direction: rtl !important;
-        font-weight: 900 !important; font-size: 1.05rem !important;
-        line-height: 1.4 !important; flex: 1 !important; unicode-bidi: plaintext !important;
-    }}
-    .student-card-date {{
-        background: var(--background-color); padding: 4px 10px; border-radius: 8px;
-        font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
-        flex-shrink: 0 !important; direction: ltr !important; border: 1px solid rgba(148, 163, 184, 0.2);
-    }}
-    .student-card-body {{
-        text-align: right !important; direction: rtl !important;
-        width: 100% !important; font-size: 0.95rem !important;
-        line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
-    }}
+/* ✳️ 2. محاذاة جميع العناوين الفرعية والتسميات والتنبيهات والقوائم المطوية لليمين */
+h1, h2, h3, h4, h5, h6, p, label,
+[data-testid="stHeadingWithActionElements"],
+[data-testid="stHeadingWithActionElements"] h1,
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3,
+[data-testid="stHeadingWithActionElements"] h4,
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] h4,
+[data-testid="stMarkdownContainer"] h5,
+[data-testid="stMarkdownContainer"] h6,
+[data-testid="stCaptionContainer"],
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stAlert"],
+[data-testid="stAlert"] div,
+[data-testid="stAlert"] p,
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary p,
+[data-testid="stRadio"] > div,
+[data-testid="stCheckbox"] label {{
+    font-family: 'Tajawal', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
 
-    /* ✳️ أزرار السلوك العصرية الهادئة (واتساب + تليجرام + تعديل + حذف) */
-    .action-bar-grid {{
-        display: grid; grid-template-columns: repeat(2, 1fr);
-        gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl;
+/* ✳️ 3. إصلاح القوائم المنسدلة (Selectbox & Multiselect) لتبدأ من اليمين والسهم في اليسار */
+div[data-baseweb="select"],
+div[data-baseweb="select"] > div,
+div[data-baseweb="select"] [class*="control"],
+div[data-baseweb="select"] [class*="ValueContainer"] {{
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+}}
+
+div[data-baseweb="select"] div {{
+    color: var(--text-color) !important;
+    font-weight: 700 !important;
+}}
+
+/* شارات الاختيار المتعدد (Tags) تبدأ من اليمين */
+span[data-baseweb="tag"] {{
+    direction: rtl !important;
+    margin-left: 5px !important;
+    margin-right: 0px !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-weight: 700 !important;
+}}
+
+/* القائمة المنبثقة عند فتح القائمة المنسدلة (Popover Menu) */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] div,
+div[data-baseweb="popover"] ul,
+ul[data-baseweb="menu"],
+li[role="option"] {{
+    direction: rtl !important;
+    text-align: right !important;
+    justify-content: flex-start !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-weight: 700 !important;
+}}
+
+/* ✳️ 4. حقول الإدخال النصية والرقمية من اليمين لليسار */
+div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {{
+    background-color: var(--secondary-background-color) !important;
+    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
+    border-radius: 12px !important;
+    min-height: 48px;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+
+div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within, div[data-baseweb="textarea"]:focus-within {{
+    border-color: {accent_color} !important;
+    box-shadow: 0 0 0 2px {primary_color}40 !important;
+}}
+
+input, textarea, select {{
+    direction: rtl !important;
+    text-align: right !important;
+    color: var(--text-color) !important;
+    -webkit-text-fill-color: var(--text-color) !important;
+    caret-color: {accent_color} !important;
+    background-color: transparent !important;
+    font-weight: 700 !important;
+    font-size: 1.02rem !important;
+    font-family: 'Tajawal', sans-serif !important;
+}}
+
+::placeholder {{
+    color: #94A3B8 !important;
+    opacity: 0.85 !important;
+    -webkit-text-fill-color: #94A3B8 !important;
+    text-align: right !important;
+}}
+
+/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف) */
+.header-container {{
+    background: {header_grad};
+    background-image: {t_colors["bg_pattern"]}, {header_grad};
+    background-blend-mode: overlay;
+    padding: 60px 20px 32px 20px;
+    border-radius: 0 0 36px 36px;
+    margin: -1rem -5rem 25px -5rem;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
+    color: white;
+    text-align: center !important;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 2px solid rgba(255,255,255,0.15);
+}}
+
+.title-wrapper {{
+    display: flex;
+    align-items: center;
+    justify-content: center !important;
+    gap: 15px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 2;
+}}
+
+.logo-icon {{
+    font-size: 3.5rem;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    animation: float 4s ease-in-out infinite;
+    line-height: 1;
+    margin-top: 10px;
+}}
+
+.main-title {{
+    margin: 0 !important;
+    font-size: 2.7rem !important;
+    font-weight: 900 !important;
+    color: {t_colors["title_color"]} !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+}}
+
+.sub-title {{
+    margin: 0 !important;
+    color: {t_colors["sub_color"]} !important;
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    position: relative;
+    z-index: 2;
+    line-height: 1.5 !important;
+    text-align: center !important;
+}}
+
+/* ✳️ 6. الأزرار الرئيسية والثانوية */
+[data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
+    background: {header_grad} !important;
+    background-color: {primary_color} !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    font-weight: 800 !important;
+    font-size: 1.03rem !important;
+    border-radius: 14px !important;
+    padding: 10px 18px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+    transition: all 0.2s ease !important;
+    width: 100%;
+    min-height: 48px;
+}}
+
+[data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{
+    background: {t_colors["btn_hover"]} !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
+}}
+
+div.stButton > button[kind="secondary"],
+div.stDownloadButton > button[kind="secondary"] {{
+    background: var(--secondary-background-color) !important;
+    background-color: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
+    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
+}}
+
+div.stButton > button[kind="secondary"]:hover,
+div.stDownloadButton > button[kind="secondary"]:hover {{
+    border-color: {accent_color} !important;
+    background: rgba(59, 130, 246, 0.08) !important;
+}}
+
+/* ✳️ 7. تصميم التبويبات: شريط أفقي أنيق على الكمبيوتر + شبكة (2×2) على الجوال */
+.stTabs [data-baseweb="tab-list"] {{
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    background-color: transparent !important;
+    border: none !important;
+    margin-bottom: 14px !important;
+    padding: 4px 2px !important;
+    direction: rtl !important;
+}}
+
+.stTabs [data-baseweb="tab"] {{
+    height: 48px !important;
+    margin: 0 !important;
+    padding: 8px 14px !important;
+    background-color: var(--secondary-background-color) !important;
+    border-radius: 12px !important;
+    border: 1.5px solid rgba(148, 163, 184, 0.3) !important;
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    flex: 1 1 auto !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}}
+
+.stTabs [data-baseweb="tab"]:hover {{
+    border-color: {accent_color} !important;
+    transform: translateY(-1px);
+}}
+
+.stTabs [aria-selected="true"] {{
+    background: {header_grad} !important;
+    color: #FFFFFF !important;
+    border: 2px solid #F59E0B !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+}}
+
+.stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+}}
+
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+    display: none !important;
+}}
+
+/* ✳️ 8. البطاقات الإحصائية وبطاقات السلوك */
+.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; }}
+.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid rgba(148, 163, 184, 0.28); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
+.metric-info {{ text-align: right; }}
+.metric-title {{ color: #94A3B8; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
+.metric-val {{ color: var(--text-color); font-size: 26px; font-weight: 900; line-height: 1.1; }}
+.metric-sub {{ color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }}
+.metric-icon {{ width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; }}
+.ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
+.ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
+.ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+
+.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid rgba(148, 163, 184, 0.28); margin-bottom: 15px; }}
+.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
+
+.student-list-card {{
+    background: var(--secondary-background-color);
+    border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
+    border: 1.5px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    display: block !important; width: 100% !important;
+    text-align: right !important; direction: rtl !important; color: var(--text-color);
+}}
+.student-card-header {{
+    display: flex !important; flex-direction: row !important;
+    justify-content: space-between !important; align-items: center !important;
+    gap: 10px !important; width: 100% !important; direction: rtl !important; margin-bottom: 6px !important;
+}}
+.student-card-title {{
+    text-align: right !important; direction: rtl !important;
+    font-weight: 900 !important; font-size: 1.05rem !important;
+    line-height: 1.4 !important; flex: 1 !important; unicode-bidi: plaintext !important;
+}}
+.student-card-date {{
+    background: var(--background-color); padding: 4px 10px; border-radius: 8px;
+    font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
+    flex-shrink: 0 !important; direction: ltr !important; border: 1px solid rgba(148, 163, 184, 0.2);
+}}
+.student-card-body {{
+    text-align: right !important; direction: rtl !important;
+    width: 100% !important; font-size: 0.95rem !important;
+    line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
+}}
+
+.action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; }}
+.soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 44px; }}
+.btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.12) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.35) !important; }}
+.btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.22) !important; transform: translateY(-1px); }}
+.btn-telegram {{ background-color: rgba(14, 165, 233, 0.12) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.35) !important; }}
+.btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.22) !important; transform: translateY(-1px); }}
+
+div[data-testid="stElementContainer"]:has(.btn-edit-marker),
+div[data-testid="stElementContainer"]:has(.btn-del-marker),
+div.element-container:has(.btn-edit-marker),
+div.element-container:has(.btn-del-marker) {{ display: none !important; }}
+
+div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) {{
+    display: grid !important; grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important; direction: rtl !important; margin-top: 0px !important; margin-bottom: 16px !important;
+}}
+div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="stColumn"],
+div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="column"] {{
+    width: 100% !important; min-width: 0 !important; flex: unset !important;
+}}
+div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button,
+div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
+    background: rgba(99, 102, 241, 0.12) !important; background-color: rgba(99, 102, 241, 0.12) !important;
+    color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+    padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
+}}
+div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button:hover,
+div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {{ background: rgba(99, 102, 241, 0.22) !important; transform: translateY(-1px); }}
+
+div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button,
+div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
+    background: rgba(239, 68, 68, 0.12) !important; background-color: rgba(239, 68, 68, 0.12) !important;
+    color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+    border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+    padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
+}}
+div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button:hover,
+div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ background: rgba(239, 68, 68, 0.22) !important; transform: translateY(-1px); }}
+
+.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; }}
+.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: {shadow_val}; color: var(--text-color); }}
+.m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
+
+.points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center !important; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); }}
+.welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 6px 15px rgba(0,0,0, 0.3); border: 1px solid rgba(255,255,255,0.15); }}
+
+[data-testid="stDataFrame"] {{ direction: rtl !important; }}
+
+@keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-8px); }} }}
+@keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
+.urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 14px; text-align: center !important; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 20px; }}
+
+/* ✳️ 9. تحويل التبويبات تلقائياً إلى شبكة (2×2) على الجوال فقط */
+@media (max-width: 768px) {{
+    .header-container {{ padding: 55px 15px 25px 15px; margin: -1rem -1rem 20px -1rem; border-radius: 0 0 28px 28px; }}
+    .main-title {{ font-size: 1.85rem !important; }}
+    .logo-icon {{ font-size: 2.3rem; }}
+    .sub-title {{ font-size: 1.05rem !important; }}
+    .metric-container {{ grid-template-columns: repeat(2, 1fr); }}
+    .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2; }}
+    .stTabs [data-baseweb="tab-list"] {{
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
     }}
-    .soft-link-btn {{
-        display: flex; align-items: center; justify-content: center;
-        gap: 6px; padding: 8px 12px; border-radius: 12px;
-        font-weight: 800; font-size: 0.92rem; text-decoration: none !important;
-        transition: all 0.2s ease; height: 44px;
+    .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+        grid-column: span 2 !important;
     }}
-    .btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.12) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.35) !important; }}
-    .btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.22) !important; transform: translateY(-1px); }}
-    .btn-telegram {{ background-color: rgba(14, 165, 233, 0.12) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.35) !important; }}
-    .btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.22) !important; transform: translateY(-1px); }}
-
-    div[data-testid="stElementContainer"]:has(.btn-edit-marker),
-    div[data-testid="stElementContainer"]:has(.btn-del-marker),
-    div.element-container:has(.btn-edit-marker),
-    div.element-container:has(.btn-del-marker) {{ display: none !important; }}
-
-    div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) {{
-        display: grid !important; grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important; direction: rtl !important; margin-top: 0px !important; margin-bottom: 16px !important;
+    .stTabs [data-baseweb="tab"] {{
+        width: 100% !important;
+        font-size: 0.9rem !important;
+        height: 50px !important;
+        padding: 6px 8px !important;
+        white-space: normal !important;
     }}
-    div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="stColumn"],
-    div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="column"] {{
-        width: 100% !important; min-width: 0 !important; flex: unset !important;
-    }}
-    div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button,
-    div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
-        background: rgba(99, 102, 241, 0.12) !important; background-color: rgba(99, 102, 241, 0.12) !important;
-        color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
-        border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
-        padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
-    }}
-    div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button:hover,
-    div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {{ background: rgba(99, 102, 241, 0.22) !important; transform: translateY(-1px); }}
+}}
+</style>
 
-    div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button,
-    div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
-        background: rgba(239, 68, 68, 0.12) !important; background-color: rgba(239, 68, 68, 0.12) !important;
-        color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
-        border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
-        padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
-    }}
-    div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button:hover,
-    div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ background: rgba(239, 68, 68, 0.22) !important; transform: translateY(-1px); }}
-
-    .medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; }}
-    .m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: {shadow_val}; color: var(--text-color); }}
-    .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
-    
-    .points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); }}
-    .welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 6px 15px rgba(0,0,0, 0.3); border: 1px solid rgba(255,255,255,0.15); }}
-
-    [data-testid="stDataFrame"] {{ direction: rtl; }}
-
-    @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-8px); }} }}
-    @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
-    .urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 14px; text-align: center; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 20px; }}
-
-    @media (max-width: 768px) {{
-        .header-container {{ padding: 55px 15px 25px 15px; margin: -1rem -1rem 20px -1rem; border-radius: 0 0 28px 28px; }}
-        .main-title {{ font-size: 1.85rem; }}
-        .logo-icon {{ font-size: 2.3rem; }}
-        .sub-title {{ font-size: 1.05rem; }}
-        .metric-container {{ grid-template-columns: repeat(2, 1fr); }}
-        .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2; }}
-        .stTabs [data-baseweb="tab"] {{ font-size: 0.92rem !important; height: 52px !important; padding: 6px 8px !important; }}
-    }}
-    </style>
-
-    <div class="header-container">
-        <div class="title-wrapper">
-            <div class="logo-icon">{t_colors["icon"]}</div>
-            <h1 class="main-title">{t_colors["title"]}</h1>
-        </div>
-        <p class="sub-title">{t_colors["subtitle"]}</p>
+<div class="header-container">
+    <div class="title-wrapper">
+        <div class="logo-icon">{t_colors["icon"]}</div>
+        <h1 class="main-title">{t_colors["title"]}</h1>
     </div>
+    <p class="sub-title">{t_colors["subtitle"]}</p>
+</div>
 """,
     unsafe_allow_html=True,
 )
