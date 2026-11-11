@@ -400,65 +400,113 @@ direction: rtl !important;
 text-align: right !important;
 }}
 
-/* ✳️ 2. البنر العلوي (نازل بمسافة مريحة من الأعلى وغير مقصوص) */
+/* ✳️ 2. البنر العلوي الاحترافي المطور (Glassmorphism 3D + هالات ضوئية) */
+.header-container, .header-container * {{
+font-family: 'Tajawal', sans-serif !important;
+}}
+
 .header-container {{
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 38px 20px 28px 20px !important;
-border-radius: 26px !important;
-margin: 10px auto 22px auto !important;
+padding: 36px 24px 30px 24px !important;
+border-radius: 28px !important;
+margin: 10px auto 24px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.35) !important;
+box-shadow: 0 18px 38px -12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
-border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+}}
+
+/* هالات ضوئية زجاجية خلفية تضفي عمقاً ثلاثي الأبعاد للبنر */
+.header-container::before {{
+content: "";
+position: absolute;
+top: -60px;
+right: -60px;
+width: 200px;
+height: 200px;
+background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+border-radius: 50%;
+pointer-events: none;
+}}
+
+.header-container::after {{
+content: "";
+position: absolute;
+bottom: -70px;
+left: -50px;
+width: 220px;
+height: 220px;
+background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+border-radius: 50%;
+pointer-events: none;
 }}
 
 .title-wrapper {{
+display: inline-flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 14px !important;
+margin-bottom: 12px !important;
+direction: rtl !important;
+position: relative;
+z-index: 2;
+}}
+
+/* كبسولة زجاجية أنيقة حول شعار المنصة */
+.logo-icon {{
+font-size: 2.6rem !important;
+width: 64px !important;
+height: 64px !important;
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-gap: 12px !important;
-margin-bottom: 8px !important;
-direction: rtl !important;
-}}
-
-.logo-icon {{
-font-size: 3.2rem !important;
-filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+background: rgba(255, 255, 255, 0.14) !important;
+backdrop-filter: blur(8px) !important;
+-webkit-backdrop-filter: blur(8px) !important;
+border: 1.5px solid rgba(255, 255, 255, 0.28) !important;
+border-radius: 18px !important;
+box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
 animation: float 4s ease-in-out infinite;
 line-height: 1 !important;
-}}
-
-.header-container, .header-container * {{
-font-family: 'Tajawal', sans-serif !important;
 }}
 
 .banner-main-title {{
 font-family: 'Tajawal', sans-serif !important;
 margin: 0 !important;
-font-size: 2.5rem !important;
-font-weight: 800 !important;
+font-size: 2.55rem !important;
+font-weight: 900 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
 line-height: 1.2 !important;
 text-align: center !important;
-letter-spacing: 0px !important;
+text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
 }}
 
+/* شارة زجاجية سفلية للعنوان الفرعي */
 .banner-sub-title {{
 font-family: 'Tajawal', sans-serif !important;
-margin: 0 !important;
+display: inline-block !important;
+margin: 0 auto !important;
+padding: 6px 22px !important;
+background: rgba(15, 23, 42, 0.25) !important;
+backdrop-filter: blur(6px) !important;
+-webkit-backdrop-filter: blur(6px) !important;
+border: 1px solid rgba(255, 255, 255, 0.2) !important;
+border-radius: 999px !important;
 color: {t_colors["sub_color"]} !important;
 -webkit-text-fill-color: {t_colors["sub_color"]} !important;
-font-size: 1.15rem !important;
+font-size: 1.08rem !important;
 font-weight: 700 !important;
 line-height: 1.5 !important;
 text-align: center !important;
+position: relative;
+z-index: 2;
 }}
 
 /* ✳️ 3. محاذاة العناوين والتسميات خارج البنر إلى اليمين */
@@ -805,10 +853,10 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 /* ✳️ 8. ضبط شاشة الجوال: شبكة تبويبات (2×2) وثبات تام دون حركة يمين ويسار */
 @media (max-width: 768px) {{
 .block-container {{ padding-top: 2.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 28px 12px 22px 12px !important; margin: 8px auto 16px auto !important; border-radius: 20px !important; }}
-.banner-main-title {{ font-size: 1.8rem !important; }}
-.logo-icon {{ font-size: 2.2rem !important; }}
-.banner-sub-title {{ font-size: 1.02rem !important; }}
+.header-container {{ padding: 26px 14px 22px 14px !important; margin: 8px auto 16px auto !important; border-radius: 22px !important; }}
+.banner-main-title {{ font-size: 1.75rem !important; }}
+.logo-icon {{ font-size: 1.9rem !important; width: 50px !important; height: 50px !important; border-radius: 14px !important; }}
+.banner-sub-title {{ font-size: 0.95rem !important; padding: 5px 16px !important; }}
 .metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
 .stTabs [data-baseweb="tab-list"] {{
