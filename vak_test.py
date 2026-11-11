@@ -14,7 +14,7 @@ st.markdown("""
 <style>
     header[data-testid="stHeader"] { display: none !important; }
     .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
-    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stTextInput {
+    .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stMultiSelect, .stTextInput {
         direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif;
     }
     
@@ -244,7 +244,13 @@ def get_all_teachers():
     conn = get_gsheets_conn()
     try:
         df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", dtype=str)
+        for col in ['id', 'name', 'role', 'class_name']:
+            if col not in df_teachers.columns:
+                df_teachers[col] = ""
+            df_teachers[col] = df_teachers[col].fillna("").astype(str).str.strip()
         df_teachers['id'] = df_teachers['id'].apply(clean_id)
+        df_teachers['role'] = df_teachers['role'].replace("", "teacher")
+        df_teachers['class_name'] = df_teachers['class_name'].replace("", "all")
         return df_teachers
     except:
         return pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
@@ -278,8 +284,28 @@ def clear_all_caches():
     get_all_teachers.clear()
 
 # ==========================================
-# 💡 دالة الفلترة الذكية المقسمة (الصف الدراسي -> الفصل)
+# 💡 دوال صلاحيات المعلمين والفلترة الذكية للفصول
 # ==========================================
+def parse_teacher_classes(class_name_str):
+    """تحويل نص الفصول المخصص للمعلم إلى قائمة فصول أو 'all'"""
+    if pd.isna(class_name_str):
+        return 'all'
+    raw = str(class_name_str).strip()
+    if not raw or raw.lower() in ['all', 'الكل', 'جميع الفصول', 'nan', 'none']:
+        return 'all'
+    # دعم الفصل بالفاصلة الإنجليزية أو العربية
+    classes = [c.strip() for c in raw.replace('،', ',').split(',') if c.strip()]
+    return classes if classes else 'all'
+
+def filter_df_for_user(df_source, user):
+    """تصفية بيانات الطلاب حسب الفصول المسندة للمعلم"""
+    if not user or user.get('role') == 'admin':
+        return df_source.copy()
+    allowed = parse_teacher_classes(user.get('class_name', 'all'))
+    if allowed == 'all':
+        return df_source.copy()
+    return df_source[df_source['class_name'].isin(allowed)].copy()
+
 def infer_grade_name(row):
     g = str(row.get('grade', '')).strip()
     c = str(row.get('class_name', '')).strip()
@@ -291,15 +317,19 @@ def infer_grade_name(row):
 
 def render_grade_class_Selector(df_source, key_prefix):
     df_temp = df_source.copy()
+    if df_temp.empty:
+        st.warning("⚠️ لا توجد فصول أو بيانات طلاب متاحة في نطاق صلاحياتك.")
+        return df_temp, "غير محدد"
+
     df_temp['_grade_group'] = df_temp.apply(infer_grade_name, axis=1)
-    
     unique_grades = sorted([g for g in df_temp['_grade_group'].unique() if g])
     
     col_g, col_c = st.columns(2)
     with col_g:
-        selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", ["جميع الصفوف"] + unique_grades, key=f"{key_prefix}_grade")
+        grade_options = ["جميع الصفوف المتاحة"] + unique_grades if len(unique_grades) > 1 else unique_grades
+        selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", grade_options, key=f"{key_prefix}_grade")
     
-    if selected_grade != "جميع الصفوف":
+    if selected_grade != "جميع الصفوف المتاحة":
         df_filtered_grade = df_temp[df_temp['_grade_group'] == selected_grade].copy()
     else:
         df_filtered_grade = df_temp.copy()
@@ -307,22 +337,23 @@ def render_grade_class_Selector(df_source, key_prefix):
     unique_classes = sorted([c for c in df_filtered_grade['class_name'].unique() if c])
     
     with col_c:
-        selected_class = st.selectbox("2️⃣ اختر الفصل:", ["جميع الفصول"] + unique_classes, key=f"{key_prefix}_class")
+        class_options = ["جميع الفصول المتاحة"] + unique_classes if len(unique_classes) > 1 else unique_classes
+        selected_class = st.selectbox("2️⃣ اختر الفصل:", class_options, key=f"{key_prefix}_class")
         
-    if selected_class != "جميع الفصول":
+    if selected_class != "جميع الفصول المتاحة":
         df_final = df_filtered_grade[df_filtered_grade['class_name'] == selected_class].copy()
         scope_label = f"فصل {selected_class}"
-    elif selected_grade != "جميع الصفوف":
+    elif selected_grade != "جميع الصفوف المتاحة":
         df_final = df_filtered_grade.copy()
         scope_label = f"صف {selected_grade}"
     else:
         df_final = df_filtered_grade.copy()
-        scope_label = "جميع الفصول"
+        scope_label = "جميع الفصول المخصصة"
         
     return df_final.drop(columns=['_grade_group'], errors='ignore'), scope_label
 
 # ==========================================
-# 💡 دوال الاستيراد الذكي للطلاب وقالب أنماط التعلم
+# 💡 دوال الاستيراد الذكي للطلاب والمعلمين وقالب أنماط التعلم
 # ==========================================
 def normalize_vak_label(val, v_val="0", a_val="0", k_val="0"):
     """توحيد صيغة النمط الغالب أو حسابه تلقائياً من الدرجات"""
@@ -347,9 +378,10 @@ def standardize_uploaded_columns(df):
     """دعم أسماء الأعمدة بالإنجليزية أو العربية في ملفات الاستيراد"""
     col_map = {
         'رقم الهوية': 'id', 'الهوية': 'id', 'الرقم': 'id',
-        'الاسم': 'name', 'اسم الطالب': 'name',
+        'الاسم': 'name', 'اسم الطالب': 'name', 'اسم المعلم': 'name',
         'الصف': 'grade', 'المرحلة': 'grade',
-        'الفصل': 'class_name',
+        'الفصل': 'class_name', 'نطاق الفصول': 'class_name', 'الفصول': 'class_name',
+        'الصلاحية': 'role',
         'النمط الغالب': 'vak_result', 'النتيجة الغالبة': 'vak_result', 'نمط التعلم': 'vak_result', 'النمط': 'vak_result',
         'بصري': 'v_score', 'درجة البصري': 'v_score',
         'سمعي': 'a_score', 'درجة السمعي': 'a_score',
@@ -379,14 +411,12 @@ def intelligent_merge_students_and_vak(new_df):
         s_id = row['id']
         mask = (current_df['id'] == s_id)
         if mask.any():
-            # تحديث الاسم أو الصف أو الفصل إن وجد تعديل في الملف
             for info_col in ['name', 'grade', 'class_name']:
                 if info_col in new_df.columns and pd.notna(row.get(info_col)):
                     val_str = str(row.get(info_col)).strip()
                     if val_str and val_str not in ['nan', 'None']:
                         current_df.loc[mask, info_col] = val_str
 
-            # تحديث أنماط التعلم والدرجات
             if has_vak_cols:
                 v_sc = str(row.get('v_score', current_df.loc[mask, 'v_score'].iloc[0])).split('.')[0].strip() if 'v_score' in new_df.columns and pd.notna(row.get('v_score')) else current_df.loc[mask, 'v_score'].iloc[0]
                 a_sc = str(row.get('a_score', current_df.loc[mask, 'a_score'].iloc[0])).split('.')[0].strip() if 'a_score' in new_df.columns and pd.notna(row.get('a_score')) else current_df.loc[mask, 'a_score'].iloc[0]
@@ -428,67 +458,26 @@ def intelligent_merge_students_and_vak(new_df):
         clear_all_caches()
         
     return added_count, updated_vak_count, True
-    
-    has_vak_cols = any(c in new_df.columns for c in ['vak_result', 'v_score', 'a_score', 'k_score'])
-    added_count = 0
-    updated_vak_count = 0
-    
-    # 1. تحديث أنماط التعلم للطلاب الموجودين مسبقاً في حال احتوى الملف على أعمدة أنماط
-    if has_vak_cols:
-        for _, row in new_df.iterrows():
-            s_id = row['id']
-            mask = (current_df['id'] == s_id)
-            if mask.any():
-                v_sc = str(row.get('v_score', current_df.loc[mask, 'v_score'].iloc[0])).split('.')[0].strip() if 'v_score' in new_df.columns and pd.notna(row.get('v_score')) else current_df.loc[mask, 'v_score'].iloc[0]
-                a_sc = str(row.get('a_score', current_df.loc[mask, 'a_score'].iloc[0])).split('.')[0].strip() if 'a_score' in new_df.columns and pd.notna(row.get('a_score')) else current_df.loc[mask, 'a_score'].iloc[0]
-                k_sc = str(row.get('k_score', current_df.loc[mask, 'k_score'].iloc[0])).split('.')[0].strip() if 'k_score' in new_df.columns and pd.notna(row.get('k_score')) else current_df.loc[mask, 'k_score'].iloc[0]
-                raw_res = row.get('vak_result', '') if 'vak_result' in new_df.columns else ''
-                
-                norm_res = normalize_vak_label(raw_res, v_sc, a_sc, k_sc)
-                if norm_res != "غير مختبر":
-                    current_df.loc[mask, 'vak_result'] = norm_res
-                    current_df.loc[mask, 'v_score'] = v_sc if v_sc not in ['', 'nan', 'None'] else "0"
-                    current_df.loc[mask, 'a_score'] = a_sc if a_sc not in ['', 'nan', 'None'] else "0"
-                    current_df.loc[mask, 'k_score'] = k_sc if k_sc not in ['', 'nan', 'None'] else "0"
-                    updated_vak_count += 1
-
-    # 2. إضافة الطلاب الجدد غير المسجلين مسبقاً
-    if all(col in new_df.columns for col in ['id', 'name', 'grade', 'class_name']):
-        new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
-        if not new_students.empty:
-            for col in ['v_score', 'a_score', 'k_score']:
-                if col not in new_students.columns:
-                    new_students[col] = "0"
-                else:
-                    new_students[col] = new_students[col].fillna("0").astype(str).apply(lambda x: x.split('.')[0].strip() or "0")
-            if 'vak_result' not in new_students.columns:
-                new_students['vak_result'] = "غير مختبر"
-            
-            new_students['vak_result'] = new_students.apply(
-                lambda r: normalize_vak_label(r.get('vak_result', ''), r.get('v_score', '0'), r.get('a_score', '0'), r.get('k_score', '0')),
-                axis=1
-            )
-            cols_order = ['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']
-            current_df = pd.concat([current_df, new_students[cols_order]], ignore_index=True)
-            added_count = len(new_students)
-
-    if added_count > 0 or updated_vak_count > 0:
-        conn = get_gsheets_conn()
-        try: conn.update(spreadsheet=SHEET_URL, worksheet="df_students", data=current_df)
-        except: conn.update(spreadsheet=SHEET_URL, data=current_df)
-        clear_all_caches()
-        
-    return added_count, updated_vak_count, True
 
 def intelligent_merge_teachers(new_df):
     new_df = standardize_uploaded_columns(new_df.copy())
-    current_df = get_all_teachers()
+    current_df = get_all_teachers().copy()
     current_df['id'] = current_df['id'].apply(clean_id)
     new_df['id'] = new_df['id'].apply(clean_id)
+    new_df = new_df[new_df['id'] != ""].drop_duplicates(subset=['id'], keep='last').copy()
+    
     new_teachers = new_df[~new_df['id'].isin(current_df['id'])].copy()
     if not new_teachers.empty:
-        new_teachers['role'] = 'teacher'
-        new_teachers['class_name'] = 'all'
+        if 'role' not in new_teachers.columns:
+            new_teachers['role'] = 'teacher'
+        else:
+            new_teachers['role'] = new_teachers['role'].fillna('teacher').replace('', 'teacher')
+            
+        if 'class_name' not in new_teachers.columns:
+            new_teachers['class_name'] = 'all'
+        else:
+            new_teachers['class_name'] = new_teachers['class_name'].fillna('all').replace('', 'all')
+            
         if 'role' not in current_df.columns: current_df['role'] = 'teacher'
         if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
         updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name']]], ignore_index=True)
@@ -497,6 +486,19 @@ def intelligent_merge_teachers(new_df):
         clear_all_caches()
         return len(new_teachers)
     return 0
+
+def update_teacher_permissions(teacher_id, new_role, new_classes_str):
+    """تحديث صلاحية المعلم والفصول المسندة إليه في Google Sheets"""
+    df_teachers = get_all_teachers().copy()
+    mask = (df_teachers['id'] == clean_id(teacher_id))
+    if mask.any():
+        df_teachers.loc[mask, 'role'] = new_role
+        df_teachers.loc[mask, 'class_name'] = new_classes_str
+        conn = get_gsheets_conn()
+        conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=df_teachers)
+        clear_all_caches()
+        return True
+    return False
 
 # ==========================================
 # 3. محرك التصحيح الآلي
@@ -648,12 +650,27 @@ if st.session_state.current_user is None:
                     t_row = df_teachers[df_teachers['id'] == str(norm_id)]
                     if not t_row.empty:
                         t_data = t_row.iloc[0]
-                        st.session_state.current_user = {"name": t_data['name'], "role": t_data['role']}
+                        st.session_state.current_user = {
+                            "id": t_data['id'],
+                            "name": t_data['name'],
+                            "role": t_data['role'],
+                            "class_name": t_data.get('class_name', 'all')
+                        }
                         st.rerun()
                     else: st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
                 except Exception as e: st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
         else: st.warning("الرجاء إدخال رقم الهوية أولاً.")
 else:
+    # جلب أحدث صلاحيات وفصول المستخدم الحالي من جدول المعلمين لضمان التزامن الفوري
+    df_teachers_latest = get_all_teachers()
+    curr_u_id = clean_id(st.session_state.current_user.get('id', ''))
+    if curr_u_id and not df_teachers_latest.empty:
+        u_match = df_teachers_latest[df_teachers_latest['id'] == curr_u_id]
+        if not u_match.empty:
+            st.session_state.current_user['role'] = u_match.iloc[0]['role']
+            st.session_state.current_user['class_name'] = u_match.iloc[0]['class_name']
+            st.session_state.current_user['name'] = u_match.iloc[0]['name']
+
     user = st.session_state.current_user
     
     if user['role'] == 'admin':
@@ -677,15 +694,20 @@ else:
                 st.rerun()
                 
     else:
+        parsed_cls = parse_teacher_classes(user.get('class_name', 'all'))
+        cls_badge = "جميع الفصول" if parsed_cls == 'all' else " ، ".join(parsed_cls)
         col_user, col_logout = st.columns([8, 2])
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">مرحباً بك: أ. {user["name"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;"><div>مرحباً بك: أ. {user["name"]}</div><div style="font-size: 12px; color: #2980b9; margin-top: 3px;">🏫 الفصول المسندة: {cls_badge}</div></div>', unsafe_allow_html=True)
         with col_logout:
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
                 st.rerun()
             
-    df_all = get_all_students()
+    # جلب كل الطلاب للإدارة، وتصفية الطلاب حسب فصول المعلم المحددة عند العرض والطباعة
+    df_all_raw = get_all_students()
+    df_all = filter_df_for_user(df_all_raw, user)
+
     df_tested = df_all[df_all['vak_result'] != 'غير مختبر'].copy()
     for col in ['v_score', 'a_score', 'k_score']: df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
@@ -704,7 +726,7 @@ else:
     st.markdown("<hr style='margin: 10px 0 20px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
     if user['role'] == 'admin':
-        tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات (استيراد/تصدير)"])
+        tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات والصلاحيات"])
         tab_main, tab_reports, tab_data = tabs
     else:
         tabs = st.tabs(["📊 التقارير (طباعة)"])
@@ -897,7 +919,7 @@ else:
                         df_all['id'].apply(lambda x: norm_query in str(x))
                     ]
                     if matches.empty:
-                        st.warning("لم يتم العثور على طالب يطابق هذا البحث.")
+                        st.warning("لم يتم العثور على طالب يطابق هذا البحث ضمن الفصول المسندة إليك.")
                     else:
                         options = matches['name'] + " | الهوية: " + matches['id'] + " | الفصل: " + matches['class_name']
                         selected_choice = st.selectbox("الطلاب المطابقين للبحث:", options)
@@ -935,10 +957,10 @@ else:
 
     if tab_data is not None:
         with tab_data:
-            st.subheader("إدارة قواعد البيانات (الاستيراد والتصدير)")
-            sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 بيانات المعلمين"])
+            st.subheader("إدارة قواعد البيانات والصلاحيات")
+            sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول"])
             
-            # 1️⃣ تبويب بيانات الطلاب (مع إضافة زر تحميل قالب أنماط التعلم بجوار قالب الطلاب)
+            # 1️⃣ تبويب بيانات الطلاب
             with sub_tab_students:
                 col1_s, col2_s, col3_s = st.columns(3)
                 with col1_s:
@@ -948,7 +970,7 @@ else:
                     template_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
                     st.download_button("🧠 تحميل قالب أنماط التعلم", data=create_excel_bytes(template_vak_df), file_name='vak_learning_styles_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_main")
                 with col3_s:
-                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=create_excel_bytes(df_all), file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
+                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=create_excel_bytes(df_all_raw), file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
                 
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي لبيانات الطلاب أو قالب أنماط التعلم:**")
@@ -976,7 +998,7 @@ else:
                     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
                     st.button("🔍 بحث", use_container_width=True, key="btn_db_s")
                 
-                df_s_view = df_all.copy()
+                df_s_view = df_all_raw.copy()
                 if db_search_q.strip():
                     q_str = db_search_q.strip()
                     df_s_view = df_s_view[
@@ -997,7 +1019,7 @@ else:
                     empty_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
                     st.download_button("📥 تحميل قالب أنماط التعلم (فارغ)", data=create_excel_bytes(empty_vak_df), file_name='vak_empty_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_empty")
                 with col2_v:
-                    prefilled_vak_df = df_all[['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].copy()
+                    prefilled_vak_df = df_all_raw[['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].copy()
                     st.download_button("📋 تحميل كشف رصد الأنماط للطلاب المسجلين", data=create_excel_bytes(prefilled_vak_df), file_name='vak_students_sheet.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_prefilled")
                 
                 st.markdown("---")
@@ -1019,37 +1041,111 @@ else:
                         st.error("حدث خطأ أثناء قراءة ملف أنماط التعلم.")
                 
                 st.markdown("---")
-                display_vak_df = df_all[['id', 'name', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].rename(
+                display_vak_df = df_all_raw[['id', 'name', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].rename(
                     columns={'id': 'رقم الهوية', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب', 'v_score': 'بصري (V)', 'a_score': 'سمعي (A)', 'k_score': 'حركي (K)'}
                 )
                 display_vak_df = add_serial_column(display_vak_df)
                 st.dataframe(display_vak_df, use_container_width=True, hide_index=True)
 
-            # 3️⃣ تبويب بيانات المعلمين
+            # 3️⃣ تبويب بيانات المعلمين والتحكم في صلاحيات الفصول
             with sub_tab_teachers:
+                try: df_teachers = get_all_teachers()
+                except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+
+                # --- قسم التحكم في صلاحية المعلم وتخصيص الفصول ---
+                st.markdown("#### 🔐 التحكم في صلاحيات المعلمين وتخصيص الفصول")
+                st.info("💡 اختر المعلم لتحديد الفصول المسموح له باستعراضها وطباعة تقاريرها (يمكنك اختيار فصل واحد، عدة فصول، أو منح صلاحية جميع الفصول).")
+                
+                all_available_classes = sorted([c for c in df_all_raw['class_name'].unique() if str(c).strip()])
+                
+                if not df_teachers.empty:
+                    teacher_options = df_teachers['name'] + " | الهوية: " + df_teachers['id']
+                    selected_teacher_opt = st.selectbox("👤 اختر المعلم لتعديل صلاحيته وفصوله:", teacher_options, key="sel_teacher_perm")
+                    
+                    sel_t_id = selected_teacher_opt.split("الهوية: ")[1].strip()
+                    sel_t_row = df_teachers[df_teachers['id'] == sel_t_id].iloc[0]
+                    
+                    curr_t_role = str(sel_t_row.get('role', 'teacher')).strip()
+                    curr_t_classes_parsed = parse_teacher_classes(sel_t_row.get('class_name', 'all'))
+                    
+                    col_role, col_all_chk = st.columns([1.2, 1.8])
+                    with col_role:
+                        role_label_map = {"teacher": "معلم (صلاحية حسب الفصول)", "admin": "مدير النظام (صلاحية كاملة)"}
+                        rev_role_map = {v: k for k, v in role_label_map.items()}
+                        default_role_idx = 1 if curr_t_role == 'admin' else 0
+                        chosen_role_label = st.selectbox("🛡️ نوع الحساب:", list(role_label_map.values()), index=default_role_idx, key=f"role_{sel_t_id}")
+                        chosen_role = rev_role_map[chosen_role_label]
+                        
+                    with col_all_chk:
+                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                        is_all_default = (curr_t_classes_parsed == 'all') or (chosen_role == 'admin')
+                        grant_all_classes = st.checkbox(
+                            "✅ منح صلاحية الوصول وطباعة **جميع الفصول (الكل)**",
+                            value=is_all_default,
+                            disabled=(chosen_role == 'admin'),
+                            key=f"chk_all_{sel_t_id}"
+                        )
+                    
+                    if chosen_role == 'admin' or grant_all_classes:
+                        st.caption("📌 هذا الحساب لديه صلاحية استعراض وطباعة **جميع الفصول** في المدرسة.")
+                        final_classes_str = "all"
+                        can_save = True
+                    else:
+                        default_selected_classes = [c for c in curr_t_classes_parsed if c in all_available_classes] if isinstance(curr_t_classes_parsed, list) else []
+                        selected_multi_classes = st.multiselect(
+                            "🏫 اختر الفصول المحددة لهذا المعلم (قائمة اختيار متعدد):",
+                            options=all_available_classes,
+                            default=default_selected_classes,
+                            placeholder="اختر فصلاً واحداً أو أكثر...",
+                            key=f"multi_cls_{sel_t_id}"
+                        )
+                        final_classes_str = ", ".join(selected_multi_classes)
+                        can_save = len(selected_multi_classes) > 0
+                        if not can_save:
+                            st.warning("⚠️ يرجى اختيار فصل واحد على الأقل من القائمة، أو تفعيل خيار (جميع الفصول).")
+                            
+                    if st.button("💾 حفظ صلاحيات وفصول المعلم", use_container_width=True, key="btn_save_perm"):
+                        if not can_save:
+                            st.error("⚠️ لا يمكن الحفظ بدون اختيار فصول للمعلم.")
+                        else:
+                            with st.spinner("جاري حفظ الصلاحيات وتحديث قاعدة البيانات..."):
+                                if update_teacher_permissions(sel_t_id, chosen_role, final_classes_str):
+                                    st.success(f"✅ تم تحديث صلاحيات وفصول الأستاذ ({sel_t_row['name']}) بنجاح!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("حدث خطأ أثناء تحديث بيانات المعلم.")
+                else:
+                    st.warning("لا يوجد معلمون مسجلون حالياً.")
+
+                st.markdown("---")
                 col1_t, col2_t = st.columns(2)
                 with col1_t:
-                    template_t_df = pd.DataFrame(columns=['id', 'name'])
+                    template_t_df = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
                     st.download_button("📥 تحميل قالب إضافة المعلمين", data=create_excel_bytes(template_t_df), file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
                 with col2_t:
-                    try: df_teachers = get_all_teachers()
-                    except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
                     st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=create_excel_bytes(df_teachers), file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+                
                 st.markdown("---")
                 st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
                 uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
                 if uploaded_t_file is not None:
                     try:
                         new_t_data = pd.read_csv(uploaded_t_file) if uploaded_t_file.name.endswith('.csv') else pd.read_excel(uploaded_t_file)
-                        if all(col in new_t_data.columns for col in ['id', 'name']):
-                            added_t_count = intelligent_merge_teachers(new_t_data)
+                        std_t_data = standardize_uploaded_columns(new_t_data.copy())
+                        if all(col in std_t_data.columns for col in ['id', 'name']):
+                            added_t_count = intelligent_merge_teachers(std_t_data)
                             if added_t_count > 0: st.success(f"✅ تم إضافة {added_t_count} حساب معلم جديد بنجاح!"); st.rerun()
                             else: st.warning("⚠️ جميع المعلمين الموجودين في الملف مسجلون بالفعل في النظام.")
-                        else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة.")
+                        else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name).")
                     except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
+                
                 st.markdown("---")
-                display_t_df = df_teachers.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول'})
-                display_t_df = add_serial_column(display_t_df)
+                display_t_df = df_teachers.copy()
+                display_t_df['class_name'] = display_t_df['class_name'].apply(lambda x: "جميع الفصول (الكل)" if parse_teacher_classes(x) == 'all' else str(x))
+                display_t_df['role'] = display_t_df['role'].apply(lambda x: "مدير النظام (admin)" if str(x).strip() == 'admin' else "معلم (teacher)")
+                display_t_df = display_t_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول المسموحة'})
+                display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
                 st.dataframe(display_t_df, use_container_width=True, hide_index=True)
 
 # ==========================================
