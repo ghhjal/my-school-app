@@ -389,17 +389,24 @@ animation: float 4s ease-in-out infinite;
 line-height: 1 !important;
 }}
 
+.header-container, .header-container * {{
+font-family: 'Tajawal', sans-serif !important;
+}}
+
 .banner-main-title {{
+font-family: 'Tajawal', sans-serif !important;
 margin: 0 !important;
 font-size: 2.5rem !important;
-font-weight: 900 !important;
+font-weight: 800 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
 line-height: 1.2 !important;
 text-align: center !important;
+letter-spacing: 0px !important;
 }}
 
 .banner-sub-title {{
+font-family: 'Tajawal', sans-serif !important;
 margin: 0 !important;
 color: {t_colors["sub_color"]} !important;
 -webkit-text-fill-color: {t_colors["sub_color"]} !important;
@@ -777,12 +784,12 @@ white-space: normal !important;
 }}
 </style>
 
-<div class="header-container">
+<div class="header-container" style="font-family: 'Tajawal', sans-serif !important;">
 <div class="title-wrapper">
 <div class="logo-icon">{t_colors["icon"]}</div>
-<div class="banner-main-title" style="color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</div>
+<div class="banner-main-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</div>
 </div>
-<div class="banner-sub-title" style="color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
+<div class="banner-sub-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
 </div>
 """,
     unsafe_allow_html=True,
