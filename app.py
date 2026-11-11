@@ -552,8 +552,9 @@ li[role="option"] div {{
     color: var(--text-color) !important;
 }}
 
-/* ✳️ 7. البنر العلوي الرئيسي */
-.header-container {{
+/* ✳️ 7. البنر العلوي الرئيسي (أولوية قصوى للون الأبيض والتوسيط في جميع الأوضاع) */
+.header-container,
+[data-testid="stMarkdownContainer"] .header-container {{
     background: {header_grad};
     background-image: {t_colors["bg_pattern"]}, {header_grad};
     background-blend-mode: overlay;
@@ -561,19 +562,20 @@ li[role="option"] div {{
     border-radius: 0 0 36px 36px;
     margin: -1rem -5rem 25px -5rem;
     box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
-    color: white;
+    color: #FFFFFF !important;
     text-align: center !important;
     position: relative;
     overflow: hidden;
     border-bottom: 2px solid rgba(255,255,255,0.15);
 }}
 
-.title-wrapper {{
-    display: flex;
-    align-items: center;
+.title-wrapper,
+[data-testid="stMarkdownContainer"] .header-container .title-wrapper {{
+    display: flex !important;
+    align-items: center !important;
     justify-content: center !important;
-    gap: 15px;
-    margin-bottom: 8px;
+    gap: 15px !important;
+    margin-bottom: 8px !important;
     position: relative;
     z-index: 2;
 }}
@@ -586,7 +588,8 @@ li[role="option"] div {{
     margin-top: 10px;
 }}
 
-.main-title {{
+.header-container h1.main-title,
+[data-testid="stMarkdownContainer"] .header-container h1.main-title {{
     margin: 0 !important;
     font-size: 2.7rem !important;
     font-weight: 900 !important;
@@ -595,7 +598,8 @@ li[role="option"] div {{
     text-align: center !important;
 }}
 
-.sub-title {{
+.header-container p.sub-title,
+[data-testid="stMarkdownContainer"] .header-container p.sub-title {{
     margin: 0 !important;
     color: {t_colors["sub_color"]} !important;
     font-size: 1.2rem !important;
