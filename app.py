@@ -290,7 +290,7 @@ def show_footer():
 
 
 # ==========================================
-# 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر أبيض ناصع + محاذاة RTL)
+# 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
 # ==========================================
 st.markdown(
     f"""
@@ -324,11 +324,14 @@ st.markdown(
 section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"] {{
 display: none !important;
 }}
+[data-testid="stHeader"] {{
+background: transparent !important;
+}}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
 /* ✳️ 1. قفل التمرير الأفقي نهائياً لمنع اهتزاز الشاشة يميناً ويساراً على الجوال */
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stHeader"] {{
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 font-family: 'Tajawal', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
@@ -340,7 +343,7 @@ width: 100% !important;
 }}
 
 .block-container {{
-padding-top: 0.8rem !important;
+padding-top: 2.8rem !important;
 padding-bottom: 4rem !important;
 padding-left: 1rem !important;
 padding-right: 1rem !important;
@@ -352,18 +355,18 @@ direction: rtl !important;
 text-align: right !important;
 }}
 
-/* ✳️ 2. البنر العلوي (بدون هوامش سالبة تخرج عن الشاشة، وبألوان ثابتة لا تتأثر بالوضع النهاري) */
+/* ✳️ 2. البنر العلوي (نازل بمسافة مريحة من الأعلى وغير مقصوص) */
 .header-container {{
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 65px 20px 35px 20px !important;
-border-radius: 36px !important;
-margin: -1rem -5rem 25px -5rem;
+padding: 38px 20px 28px 20px !important;
+border-radius: 26px !important;
+margin: 10px auto 22px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
+box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.35) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
@@ -749,8 +752,8 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال: شبكة تبويبات (2×2) وثبات تام دون حركة يمين ويسار */
 @media (max-width: 768px) {{
-.block-container {{ padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 28px 12px 22px 12px !important; margin: 0 auto 16px auto !important; border-radius: 20px !important; }}
+.block-container {{ padding-top: 2.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
+.header-container {{ padding: 28px 12px 22px 12px !important; margin: 8px auto 16px auto !important; border-radius: 20px !important; }}
 .banner-main-title {{ font-size: 1.8rem !important; }}
 .logo-icon {{ font-size: 2.2rem !important; }}
 .banner-sub-title {{ font-size: 1.02rem !important; }}
