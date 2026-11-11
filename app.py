@@ -243,8 +243,8 @@ themes = {
 t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
 
 text_color = "#0F172A"
-sub_text = "#94A3B8"
-border_color = "rgba(148, 163, 184, 0.28)"
+sub_text = "var(--subtle-text)"
+border_color = "var(--border-color)"
 success_color = "#10B981"
 warning_color = "#F59E0B"
 danger_color = "#EF4444"
@@ -277,8 +277,8 @@ def show_footer():
   st.markdown("<br><br>", unsafe_allow_html=True)
   st.markdown(
       f"""
-    <div style='text-align: center; color: var(--text-color); opacity: 0.8; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
+    <div style='text-align: center; color: var(--text-color); opacity: 0.9; padding: 20px; border-top: 1px solid {border_color};'>
+        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700; text-align: center !important; color: var(--text-color) !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
     </div>
     """,
       unsafe_allow_html=True,
@@ -290,26 +290,58 @@ def show_footer():
 
 
 # ==========================================
-# 🎨 2. التصميم الاحترافي والمحاذاة العربية الكاملة (RTL) وشبكة الجوال (2×2)
+# 🎨 2. التصميم الاحترافي، دعم الوضع الداكن/الفاتح، والمحاذاة العربية الكاملة (RTL)
 # ==========================================
 st.markdown(
     f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
 
+/* ✳️ متغيرات الوضع الفاتح (الافتراضي) */
 :root {{
-    --border-color: rgba(148, 163, 184, 0.28);
-    --card-surface: var(--secondary-background-color);
-    --subtle-text: #94A3B8;
+    --background-color: #F8FAFC;
+    --secondary-background-color: #FFFFFF;
+    --text-color: #0F172A;
+    --subtle-text: #475569;
+    --border-color: rgba(148, 163, 184, 0.42);
+    --card-surface: #FFFFFF;
+    --input-bg: #FFFFFF;
+    --input-border: rgba(100, 116, 139, 0.48);
+    --tab-bg: #FFFFFF;
+    --tab-text: #0F172A;
+    --popover-bg: #FFFFFF;
+    --option-hover: rgba(37, 99, 235, 0.12);
 }}
 
-section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"] {{
+/* ✳️ متغيرات الوضع الداكن (تعمل تلقائياً على الجوال والكمبيوتر عند تفعيل الوضع الداكن) */
+@media (prefers-color-scheme: dark) {{
+    :root {{
+        --background-color: #0F172A;
+        --secondary-background-color: #1E293B;
+        --text-color: #F8FAFC;
+        --subtle-text: #CBD5E1;
+        --border-color: rgba(148, 163, 184, 0.35);
+        --card-surface: #1E293B;
+        --input-bg: #1E293B;
+        --input-border: rgba(148, 163, 184, 0.55);
+        --tab-bg: #1E293B;
+        --tab-text: #F8FAFC;
+        --popover-bg: #1E293B;
+        --option-hover: rgba(59, 130, 246, 0.25);
+    }}
+}}
+
+section[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stHeaderActionElements"],
+[data-testid="stToolbar"],
+header[data-testid="stHeader"] {{
     display: none !important;
 }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
-/* ✳️ 1. فرض الاتجاه العربي (من اليمين إلى اليسار) على كامل المنصة والعناوين */
+/* ✳️ 1. فرض الاتجاه العربي وألوان الخلفية والنصوص على كامل المنصة */
 html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {{
     font-family: 'Tajawal', sans-serif !important;
     direction: rtl !important;
@@ -324,84 +356,267 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], 
     max-width: 1080px !important;
 }}
 
-/* ✳️ 2. محاذاة جميع العناوين الفرعية والتسميات والتنبيهات والقوائم المطوية لليمين */
-h1, h2, h3, h4, h5, h6, p, label,
-[data-testid="stHeadingWithActionElements"],
-[data-testid="stHeadingWithActionElements"] h1,
+/* ✳️ 2. وضوح تام ومحاذاة يمين للعناوين والتسميات (مع استثناء الهيدر الرئيسي ليحافظ على لونه الأبيض وتوسيطه) */
+h1:not(.main-title), h2, h3, h4, h5, h6,
+p:not(.sub-title), label,
+[data-testid="stHeadingWithActionElements"]:not(:has(.main-title)),
+[data-testid="stHeadingWithActionElements"] h1:not(.main-title),
 [data-testid="stHeadingWithActionElements"] h2,
 [data-testid="stHeadingWithActionElements"] h3,
 [data-testid="stHeadingWithActionElements"] h4,
-[data-testid="stMarkdownContainer"],
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] p:not(.sub-title),
+[data-testid="stMarkdownContainer"] h1:not(.main-title),
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3,
 [data-testid="stMarkdownContainer"] h4,
 [data-testid="stMarkdownContainer"] h5,
 [data-testid="stMarkdownContainer"] h6,
-[data-testid="stCaptionContainer"],
+[data-testid="stMarkdownContainer"] li,
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+[data-testid="stWidgetLabel"] span,
 [data-testid="stAlert"],
 [data-testid="stAlert"] div,
 [data-testid="stAlert"] p,
 [data-testid="stExpander"] summary,
 [data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
 [data-testid="stRadio"] > div,
-[data-testid="stCheckbox"] label {{
+[data-testid="stRadio"] label,
+[data-testid="stRadio"] p,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p {{
     font-family: 'Tajawal', sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
-}}
-
-/* ✳️ 3. إصلاح القوائم المنسدلة (Selectbox & Multiselect) لتبدأ من اليمين والسهم في اليسار */
-div[data-baseweb="select"],
-div[data-baseweb="select"] > div,
-div[data-baseweb="select"] [class*="control"],
-div[data-baseweb="select"] [class*="ValueContainer"] {{
-    direction: rtl !important;
-    text-align: right !important;
-    font-family: 'Tajawal', sans-serif !important;
-}}
-
-div[data-baseweb="select"] div {{
     color: var(--text-color) !important;
-    font-weight: 700 !important;
 }}
 
-/* شارات الاختيار المتعدد (Tags) تبدأ من اليمين */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label {{
+    font-weight: 800 !important;
+    font-size: 0.98rem !important;
+    color: var(--text-color) !important;
+    opacity: 1 !important;
+}}
+
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+[data-testid="stCaptionContainer"] span {{
+    font-family: 'Tajawal', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+    color: var(--subtle-text) !important;
+    font-weight: 700 !important;
+    font-size: 0.92rem !important;
+    opacity: 1 !important;
+}}
+
+/* ✳️ تأطير النماذج والحاويات والقوائم المطوية بسطح واضح في الجوال والوضع الداكن */
+[data-testid="stForm"],
+[data-testid="stVerticalBlockBorderWrapper"] {{
+    background-color: var(--secondary-background-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+}}
+
+[data-testid="stExpander"] {{
+    background-color: var(--secondary-background-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+}}
+
+[data-testid="stExpander"] details,
+[data-testid="stExpander"] summary {{
+    background-color: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+
+/* ✳️ 3. إصلاح جذري وشامل للقوائم المنسدلة (Selectbox & Multiselect) لتكون من اليمين إلى اليسار 100% */
+div[data-testid="stSelectbox"],
+div[data-testid="stMultiSelect"],
+div[data-baseweb="select"] {{
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+}}
+
+/* صندوق الاختيار المغلق: النص في اليمين والسهم في أقصى اليسار */
+div[data-baseweb="select"] > div {{
+    background-color: var(--input-bg) !important;
+    border: 1.5px solid var(--input-border) !important;
+    border-radius: 12px !important;
+    min-height: 48px !important;
+    direction: rtl !important;
+    text-align: right !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding-right: 12px !important;
+    padding-left: 8px !important;
+}}
+
+/* حاوية القيمة المختارة أو النص التوضيحي داخل الصندوق */
+div[data-baseweb="select"] > div > div:first-child {{
+    direction: rtl !important;
+    text-align: right !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}}
+
+/* النص المختار داخل Selectbox */
+div[data-baseweb="select"] > div > div:first-child > div {{
+    direction: rtl !important;
+    text-align: right !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
+    font-family: 'Tajawal', sans-serif !important;
+}}
+
+div[data-baseweb="select"] div,
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] input {{
+    color: var(--text-color) !important;
+    -webkit-text-fill-color: var(--text-color) !important;
+    font-weight: 700 !important;
+    font-family: 'Tajawal', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+}}
+
+div[data-baseweb="select"] svg {{
+    fill: var(--text-color) !important;
+    color: var(--text-color) !important;
+}}
+
+/* شارات الاختيار المتعدد (Tags) تبدأ من اليمين إلى اليسار */
 span[data-baseweb="tag"] {{
     direction: rtl !important;
-    margin-left: 5px !important;
+    margin-left: 6px !important;
     margin-right: 0px !important;
     font-family: 'Tajawal', sans-serif !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
+    background-color: {primary_color} !important;
+    color: #FFFFFF !important;
+    border-radius: 8px !important;
+}}
+span[data-baseweb="tag"] span,
+span[data-baseweb="tag"] svg {{
+    color: #FFFFFF !important;
+    fill: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 }}
 
-/* القائمة المنبثقة عند فتح القائمة المنسدلة (Popover Menu) */
+/* ✳️ القائمة المنبثقة عند فتح القائمة المنسدلة (Popover & Virtual Dropdown Menu) من اليمين إلى اليسار */
 div[data-baseweb="popover"],
-div[data-baseweb="popover"] div,
-div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
 ul[data-baseweb="menu"],
-li[role="option"] {{
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] > div,
+[data-testid="stSelectboxVirtualDropdown"] > div > div,
+div[role="listbox"],
+ul[role="listbox"] {{
     direction: rtl !important;
     text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+    background-color: var(--popover-bg) !important;
+    color: var(--text-color) !important;
+}}
+
+div[data-baseweb="popover"] {{
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+}}
+
+/* عناصر الخيارات داخل القائمة المنسدلة (تتجاوز محاذاة react-window الافتراضية لليسار) */
+li[role="option"],
+div[role="option"],
+ul[data-baseweb="menu"] li,
+[data-testid="stSelectboxVirtualDropdown"] li {{
+    direction: rtl !important;
+    text-align: right !important;
+    display: flex !important;
+    flex-direction: row !important;
     justify-content: flex-start !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    background-color: var(--popover-bg) !important;
+    color: var(--text-color) !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-weight: 700 !important;
+    box-sizing: border-box !important;
+}}
+
+/* إجبار جميع الحاويات الداخلية للنص داخل الخيار على الامتداد الكامل والمحاذاة لليمين */
+li[role="option"] > div,
+li[role="option"] div,
+li[role="option"] span,
+div[role="option"] > div,
+div[role="option"] div,
+div[role="option"] span,
+[data-testid="stSelectboxVirtualDropdown"] li div,
+[data-testid="stSelectboxVirtualDropdown"] li span {{
+    display: block !important;
+    width: 100% !important;
+    direction: rtl !important;
+    text-align: right !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    color: var(--text-color) !important;
     font-family: 'Tajawal', sans-serif !important;
     font-weight: 700 !important;
 }}
 
-/* ✳️ 4. حقول الإدخال النصية والرقمية من اليمين لليسار */
-div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {{
-    background-color: var(--secondary-background-color) !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
+li[role="option"]:hover,
+div[role="option"]:hover,
+li[role="option"][aria-selected="true"],
+div[role="option"][aria-selected="true"] {{
+    background-color: var(--option-hover) !important;
+    color: var(--text-color) !important;
+}}
+
+/* ✳️ 4. حقول الإدخال النصية والرقمية (واضحة تماماً في الوضع الداكن والفاتح على الجوال) */
+div[data-baseweb="input"],
+div[data-baseweb="base-input"],
+div[data-baseweb="textarea"] {{
+    background-color: var(--input-bg) !important;
+    border: 1.5px solid var(--input-border) !important;
     border-radius: 12px !important;
-    min-height: 48px;
+    min-height: 48px !important;
+    direction: rtl !important;
+    text-align: right !important;
+    color: var(--text-color) !important;
+}}
+
+div[data-baseweb="input"] > div,
+div[data-baseweb="base-input"] > div {{
+    background-color: transparent !important;
     direction: rtl !important;
     text-align: right !important;
 }}
 
-div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within, div[data-baseweb="textarea"]:focus-within {{
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"]:focus-within {{
     border-color: {accent_color} !important;
     box-shadow: 0 0 0 2px {primary_color}40 !important;
 }}
@@ -413,42 +628,74 @@ input, textarea, select {{
     -webkit-text-fill-color: var(--text-color) !important;
     caret-color: {accent_color} !important;
     background-color: transparent !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     font-size: 1.02rem !important;
     font-family: 'Tajawal', sans-serif !important;
 }}
 
-::placeholder {{
-    color: #94A3B8 !important;
-    opacity: 0.85 !important;
-    -webkit-text-fill-color: #94A3B8 !important;
-    text-align: right !important;
+/* معالجة التعبئة التلقائية في جوالات آيفون وأندرويد بالوضع الداكن */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {{
+    -webkit-text-fill-color: var(--text-color) !important;
+    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }}
 
-/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف) */
+input::placeholder,
+textarea::placeholder {{
+    color: var(--subtle-text) !important;
+    opacity: 0.8 !important;
+    -webkit-text-fill-color: var(--subtle-text) !important;
+    text-align: right !important;
+    direction: rtl !important;
+}}
+
+/* إخفاء عبارة Press Enter to submit form التي تتداخل مع النص العربي في الجوال */
+[data-testid="InputInstructions"] {{
+    display: none !important;
+}}
+
+/* أزرار إظهار كلمة المرور والزيادة والنقصان في الحقول الرقمية */
+div[data-baseweb="input"] button,
+div[data-testid="stNumberInput"] button {{
+    color: var(--text-color) !important;
+    background-color: transparent !important;
+}}
+div[data-baseweb="input"] button svg,
+div[data-testid="stNumberInput"] button svg {{
+    fill: var(--text-color) !important;
+    color: var(--text-color) !important;
+}}
+
+/* ✳️ 5. البنر العلوي الرئيسي (يبقى في المنتصف وبخط أبيض ثابت في الوضعين الطبيعي والداكن) */
+[data-testid="stMarkdownContainer"] .header-container,
 .header-container {{
-    background: {header_grad};
-    background-image: {t_colors["bg_pattern"]}, {header_grad};
+    background: {header_grad} !important;
+    background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
     background-blend-mode: overlay;
     padding: 60px 20px 32px 20px;
     border-radius: 0 0 36px 36px;
     margin: -1rem -5rem 25px -5rem;
     box-shadow: 0 10px 30px -10px rgba(0,0,0, 0.45);
-    color: white;
+    color: {t_colors["title_color"]} !important;
     text-align: center !important;
     position: relative;
     overflow: hidden;
     border-bottom: 2px solid rgba(255,255,255,0.15);
 }}
 
-.title-wrapper {{
-    display: flex;
-    align-items: center;
+[data-testid="stMarkdownContainer"] .header-container .title-wrapper,
+.header-container .title-wrapper {{
+    display: flex !important;
+    align-items: center !important;
     justify-content: center !important;
     gap: 15px;
     margin-bottom: 8px;
     position: relative;
     z-index: 2;
+    text-align: center !important;
 }}
 
 .logo-icon {{
@@ -459,18 +706,33 @@ input, textarea, select {{
     margin-top: 10px;
 }}
 
-.main-title {{
+[data-testid="stMarkdownContainer"] .header-container [data-testid="stHeadingWithActionElements"],
+.header-container [data-testid="stHeadingWithActionElements"] {{
+    text-align: center !important;
+    justify-content: center !important;
+}}
+
+[data-testid="stMarkdownContainer"] .header-container h1.main-title,
+[data-testid="stMarkdownContainer"] .header-container .main-title,
+[data-testid="stHeadingWithActionElements"] h1.main-title,
+.header-container h1,
+.header-container .main-title {{
     margin: 0 !important;
     font-size: 2.7rem !important;
     font-weight: 900 !important;
     color: {t_colors["title_color"]} !important;
+    -webkit-text-fill-color: {t_colors["title_color"]} !important;
     line-height: 1.1 !important;
     text-align: center !important;
 }}
 
-.sub-title {{
+[data-testid="stMarkdownContainer"] .header-container p.sub-title,
+[data-testid="stMarkdownContainer"] .header-container .sub-title,
+.header-container p,
+.header-container .sub-title {{
     margin: 0 !important;
     color: {t_colors["sub_color"]} !important;
+    -webkit-text-fill-color: {t_colors["sub_color"]} !important;
     font-size: 1.2rem !important;
     font-weight: 600 !important;
     position: relative;
@@ -479,8 +741,18 @@ input, textarea, select {{
     text-align: center !important;
 }}
 
-/* ✳️ 6. الأزرار الرئيسية والثانوية */
-[data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
+[data-testid="stMarkdownContainer"] .header-container .sub-title span,
+.header-container .sub-title span {{
+    color: {t_colors["sub_color"]} !important;
+    -webkit-text-fill-color: {t_colors["sub_color"]} !important;
+    text-align: center !important;
+}}
+
+/* ✳️ 6. الأزرار الرئيسية والثانوية وأزرار الروابط */
+[data-testid="stFormSubmitButton"] button,
+[data-testid="baseButton-primary"],
+div.stButton > button,
+div.stDownloadButton > button {{
     background: {header_grad} !important;
     background-color: {primary_color} !important;
     color: #FFFFFF !important;
@@ -495,7 +767,19 @@ input, textarea, select {{
     min-height: 48px;
 }}
 
-[data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{
+[data-testid="stFormSubmitButton"] button *,
+[data-testid="baseButton-primary"] *,
+div.stButton > button *,
+div.stDownloadButton > button * {{
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+}}
+
+[data-testid="stFormSubmitButton"] button:hover,
+[data-testid="baseButton-primary"]:hover,
+div.stButton > button:hover,
+div.stDownloadButton > button:hover {{
     background: {t_colors["btn_hover"]} !important;
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
@@ -503,21 +787,38 @@ input, textarea, select {{
 }}
 
 div.stButton > button[kind="secondary"],
-div.stDownloadButton > button[kind="secondary"] {{
+div.stDownloadButton > button[kind="secondary"],
+[data-testid="stLinkButton"] > a {{
     background: var(--secondary-background-color) !important;
     background-color: var(--secondary-background-color) !important;
     color: var(--text-color) !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.35) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    min-height: 48px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+    text-decoration: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}}
+
+div.stButton > button[kind="secondary"] *,
+div.stDownloadButton > button[kind="secondary"] *,
+[data-testid="stLinkButton"] > a * {{
+    color: var(--text-color) !important;
+    font-weight: 800 !important;
+    text-align: center !important;
 }}
 
 div.stButton > button[kind="secondary"]:hover,
-div.stDownloadButton > button[kind="secondary"]:hover {{
+div.stDownloadButton > button[kind="secondary"]:hover,
+[data-testid="stLinkButton"] > a:hover {{
     border-color: {accent_color} !important;
-    background: rgba(59, 130, 246, 0.08) !important;
+    background: var(--option-hover) !important;
 }}
 
-/* ✳️ 7. تصميم التبويبات: شريط أفقي أنيق على الكمبيوتر + شبكة (2×2) على الجوال */
+/* ✳️ 7. تصميم التبويبات: واضحة تماماً في الوضع الداكن والفاتح + شبكة (2×2) على الجوال */
 .stTabs [data-baseweb="tab-list"] {{
     display: flex !important;
     flex-wrap: wrap !important;
@@ -533,18 +834,32 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
     height: 48px !important;
     margin: 0 !important;
     padding: 8px 14px !important;
-    background-color: var(--secondary-background-color) !important;
+    background-color: var(--tab-bg) !important;
     border-radius: 12px !important;
-    border: 1.5px solid rgba(148, 163, 184, 0.3) !important;
-    color: var(--text-color) !important;
+    border: 1.5px solid var(--border-color) !important;
+    color: var(--tab-text) !important;
     font-weight: 800 !important;
-    font-size: 0.95rem !important;
+    font-size: 0.96rem !important;
+    display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     text-align: center !important;
     flex: 1 1 auto !important;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
     transition: all 0.2s ease !important;
+    opacity: 1 !important;
+}}
+
+/* إجبار نصوص التبويبات غير النشطة على الوضوح التام في الوضع الداكن والفاتح */
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div {{
+    color: var(--tab-text) !important;
+    font-weight: 800 !important;
+    font-size: 0.96rem !important;
+    text-align: center !important;
+    margin: 0 !important;
+    opacity: 1 !important;
 }}
 
 .stTabs [data-baseweb="tab"]:hover {{
@@ -552,45 +867,51 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
     transform: translateY(-1px);
 }}
 
-.stTabs [aria-selected="true"] {{
+.stTabs [data-baseweb="tab"][aria-selected="true"] {{
     background: {header_grad} !important;
+    background-color: {primary_color} !important;
     color: #FFFFFF !important;
     border: 2px solid #F59E0B !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 }}
 
-.stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
+.stTabs [data-baseweb="tab"][aria-selected="true"] p,
+.stTabs [data-baseweb="tab"][aria-selected="true"] span,
+.stTabs [data-baseweb="tab"][aria-selected="true"] div {{
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     font-weight: 900 !important;
+    text-align: center !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
     display: none !important;
 }}
 
 /* ✳️ 8. البطاقات الإحصائية وبطاقات السلوك */
 .metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; }}
-.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid rgba(148, 163, 184, 0.28); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
+.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; }}
 .metric-info {{ text-align: right; }}
-.metric-title {{ color: #94A3B8; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
+.metric-title {{ color: var(--subtle-text); font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
 .metric-val {{ color: var(--text-color); font-size: 26px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }}
+.metric-sub {{ color: var(--subtle-text); font-size: 12px; font-weight: 700; margin-top: 2px; }}
 .metric-icon {{ width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; }}
 .ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
 .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
 .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
 
-.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid rgba(148, 163, 184, 0.28); margin-bottom: 15px; }}
-.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
+.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid var(--border-color); margin-bottom: 15px; }}
+.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; }}
 
 .student-list-card {{
-    background: var(--secondary-background-color);
+    background: var(--secondary-background-color) !important;
     border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
-    border: 1.5px solid rgba(148, 163, 184, 0.28);
+    border: 1.5px solid var(--border-color);
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     display: block !important; width: 100% !important;
-    text-align: right !important; direction: rtl !important; color: var(--text-color);
+    text-align: right !important; direction: rtl !important; color: var(--text-color) !important;
 }}
 .student-card-header {{
     display: flex !important; flex-direction: row !important;
@@ -605,20 +926,22 @@ div.stDownloadButton > button[kind="secondary"]:hover {{
 .student-card-date {{
     background: var(--background-color); padding: 4px 10px; border-radius: 8px;
     font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
-    flex-shrink: 0 !important; direction: ltr !important; border: 1px solid rgba(148, 163, 184, 0.2);
+    flex-shrink: 0 !important; direction: ltr !important; border: 1px solid var(--border-color);
+    color: var(--subtle-text) !important;
 }}
 .student-card-body {{
     text-align: right !important; direction: rtl !important;
     width: 100% !important; font-size: 0.95rem !important;
     line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
+    color: var(--subtle-text) !important;
 }}
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; }}
 .soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 44px; }}
-.btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.12) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.35) !important; }}
-.btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.22) !important; transform: translateY(-1px); }}
-.btn-telegram {{ background-color: rgba(14, 165, 233, 0.12) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.35) !important; }}
-.btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.22) !important; transform: translateY(-1px); }}
+.btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.14) !important; color: #10B981 !important; border: 1.5px solid rgba(16, 185, 129, 0.4) !important; }}
+.btn-whatsapp:hover {{ background-color: rgba(16, 185, 129, 0.24) !important; transform: translateY(-1px); }}
+.btn-telegram {{ background-color: rgba(14, 165, 233, 0.14) !important; color: #0EA5E9 !important; border: 1.5px solid rgba(14, 165, 233, 0.4) !important; }}
+.btn-telegram:hover {{ background-color: rgba(14, 165, 233, 0.24) !important; transform: translateY(-1px); }}
 
 div[data-testid="stElementContainer"]:has(.btn-edit-marker),
 div[data-testid="stElementContainer"]:has(.btn-del-marker),
@@ -635,26 +958,34 @@ div[data-testid="stHorizontalBlock"]:has(.btn-edit-marker) > div[data-testid="co
 }}
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button,
 div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
-    background: rgba(99, 102, 241, 0.12) !important; background-color: rgba(99, 102, 241, 0.12) !important;
-    color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    background: rgba(99, 102, 241, 0.14) !important; background-color: rgba(99, 102, 241, 0.14) !important;
+    color: #6366F1 !important; border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
     border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
     padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
+div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *,
+div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button * {{
+    color: #6366F1 !important;
+}}
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button:hover,
-div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {{ background: rgba(99, 102, 241, 0.22) !important; transform: translateY(-1px); }}
+div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button:hover {{ background: rgba(99, 102, 241, 0.24) !important; transform: translateY(-1px); }}
 
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button,
 div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
-    background: rgba(239, 68, 68, 0.12) !important; background-color: rgba(239, 68, 68, 0.12) !important;
-    color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+    background: rgba(239, 68, 68, 0.14) !important; background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #EF4444 !important; border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
     border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
     padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
+div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *,
+div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{
+    color: #EF4444 !important;
+}}
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button:hover,
-div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ background: rgba(239, 68, 68, 0.22) !important; transform: translateY(-1px); }}
+div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ background: rgba(239, 68, 68, 0.24) !important; transform: translateY(-1px); }}
 
 .medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; }}
-.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid rgba(148, 163, 184, 0.28); box-shadow: {shadow_val}; color: var(--text-color); }}
+.m-card {{ background: var(--secondary-background-color) !important; padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid var(--border-color); box-shadow: {shadow_val}; color: var(--text-color); }}
 .m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
 
 .points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center !important; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); }}
@@ -666,27 +997,36 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
 @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
 .urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 14px; text-align: center !important; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 20px; }}
 
-/* ✳️ 9. تحويل التبويبات تلقائياً إلى شبكة (2×2) على الجوال فقط */
+/* ✳️ 9. تحويل التبويبات تلقائياً إلى شبكة (2×2) واضحة على الجوال دون شريط تمرير مخفي */
 @media (max-width: 768px) {{
-    .header-container {{ padding: 55px 15px 25px 15px; margin: -1rem -1rem 20px -1rem; border-radius: 0 0 28px 28px; }}
-    .main-title {{ font-size: 1.85rem !important; }}
+    .header-container {{ padding: 48px 15px 24px 15px; margin: -1rem -1rem 18px -1rem; border-radius: 0 0 28px 28px; }}
+    [data-testid="stMarkdownContainer"] .header-container h1.main-title,
+    .header-container .main-title {{ font-size: 1.85rem !important; }}
     .logo-icon {{ font-size: 2.3rem; }}
-    .sub-title {{ font-size: 1.05rem !important; }}
+    [data-testid="stMarkdownContainer"] .header-container p.sub-title,
+    .header-container .sub-title {{ font-size: 1.05rem !important; }}
     .metric-container {{ grid-template-columns: repeat(2, 1fr); }}
     .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2; }}
     .stTabs [data-baseweb="tab-list"] {{
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
+        overflow: visible !important;
     }}
     .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
         grid-column: span 2 !important;
     }}
     .stTabs [data-baseweb="tab"] {{
         width: 100% !important;
-        font-size: 0.9rem !important;
-        height: 50px !important;
-        padding: 6px 8px !important;
+        min-height: 48px !important;
+        height: auto !important;
+        padding: 8px 10px !important;
+        white-space: normal !important;
+        line-height: 1.3 !important;
+    }}
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span {{
+        font-size: 0.92rem !important;
         white-space: normal !important;
     }}
 }}
@@ -695,9 +1035,9 @@ div[data-testid="column"]:has(.btn-del-marker) div.stButton > button:hover {{ ba
 <div class="header-container">
     <div class="title-wrapper">
         <div class="logo-icon">{t_colors["icon"]}</div>
-        <h1 class="main-title">{t_colors["title"]}</h1>
+        <h1 class="main-title" style="color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important; text-align: center !important; margin: 0 !important;">{t_colors["title"]}</h1>
     </div>
-    <p class="sub-title">{t_colors["subtitle"]}</p>
+    <p class="sub-title" style="color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important; text-align: center !important; margin: 0 !important;">{t_colors["subtitle"]}</p>
 </div>
 """,
     unsafe_allow_html=True,
@@ -712,7 +1052,7 @@ if st.session_state.role is None:
   with t1:
     st.markdown("<br>", unsafe_allow_html=True)
     with st.form("st_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول الطالب</h4>", unsafe_allow_html=True)
+      st.markdown("<h4 style='text-align:center !important; margin-bottom:15px;'>تسجيل دخول الطالب</h4>", unsafe_allow_html=True)
       sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
       st.markdown("<br>", unsafe_allow_html=True)
       if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
@@ -731,9 +1071,9 @@ if st.session_state.role is None:
   with t2:
     st.markdown("<br>", unsafe_allow_html=True)
     with st.form("tr_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول المعلم</h4>", unsafe_allow_html=True)
-      u = st.text_input("اسم المستخدم", placeholder="User")
-      p = st.text_input("كلمة المرور", type="password", placeholder="******")
+      st.markdown("<h4 style='text-align:center !important; margin-bottom:15px;'>تسجيل دخول المعلم</h4>", unsafe_allow_html=True)
+      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم...")
+      p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
       st.markdown("<br>", unsafe_allow_html=True)
       if st.form_submit_button("🛠️ دخول لوحة التحكم", type="primary", use_container_width=True):
         df = fetch_safe("users")
@@ -767,7 +1107,7 @@ if st.session_state.role is None:
   with t3:
     st.markdown("<br>", unsafe_allow_html=True)
     with st.form("admin_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
+      st.markdown("<h4 style='text-align:center !important; margin-bottom:15px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
       u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
       p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
       st.markdown("<br>", unsafe_allow_html=True)
@@ -970,7 +1310,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             st.rerun()
         with pc2:
           st.markdown(
-              f"<div style='text-align: center; font-weight: bold; padding-top: 8px; color: #94A3B8;'>صفحة {st.session_state.current_page} من {total_pages}<br><small>(إجمالي النتائج: {total_rows} طالب)</small></div>",
+              f"<div style='text-align: center !important; font-weight: bold; padding-top: 8px; color: var(--subtle-text);'>صفحة {st.session_state.current_page} من {total_pages}<br><small>(إجمالي النتائج: {total_rows} طالب)</small></div>",
               unsafe_allow_html=True,
           )
         with pc3:
@@ -1004,7 +1344,7 @@ if st.session_state.role in ["teacher", "viewer"]:
           c6, c7, c8 = st.columns(3)
           f_phone = c6.text_input("رقم الجوال", placeholder="05xxxxxxxx")
           f_mail = c7.text_input("البريد الإلكتروني", placeholder="example@mail.com")
-          f_style = c8.selectbox("نمط التعلم (اختياري)", ["", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"])
+          f_style = c8.selectbox("نمط التعلم (اختياري)", ["غير محدد", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"])
 
           if st.form_submit_button("✅ حفظ الطالب في المنصة", type="primary", use_container_width=True):
             if f_id and f_name:
@@ -1022,7 +1362,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                     "الجوال": cl_p,
                     "الإيميل": f_mail.strip(),
                     "النقاط": "0",
-                    "نمط التعلم": f_style,
+                    "نمط التعلم": "" if f_style == "غير محدد" else f_style,
                 }
                 if safe_append_row("students", st_map):
                   st.session_state.toast_msg = f"✅ تم إضافة الطالب '{f_name}' بنجاح!"
@@ -1079,7 +1419,13 @@ if st.session_state.role in ["teacher", "viewer"]:
                   if current_val not in ls_opts and current_val != "":
                     ls_opts.insert(0, current_val)
                   ls_idx = ls_opts.index(current_val) if current_val in ls_opts else 0
-                  val = st.selectbox(col_name, ls_opts, index=ls_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
+                  val = st.selectbox(
+                      col_name,
+                      ls_opts,
+                      index=ls_idx,
+                      format_func=lambda x: "غير محدد" if x == "" else x,
+                      key=f"inp_edit_{selected_idx}_{col_idx}",
+                  )
                 else:
                   val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
                 new_vals.append(str(val))
@@ -1170,7 +1516,12 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         df_ev_filtered = df_ev if sel_cls_ev == "الكل" else df_ev[df_ev["class"] == sel_cls_ev]
         st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev_filtered.iterrows()}
-        sel = col_f_st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()), key="single_eval_sel_2")
+        sel = col_f_st.selectbox(
+            "🎯 اختر الطالب من القائمة:",
+            [""] + list(st_dict.keys()),
+            format_func=lambda x: "اختر الطالب من القائمة..." if x == "" else x,
+            key="single_eval_sel_2",
+        )
 
         if sel:
           sid = str(st_dict[sel]).strip().split(".")[0]
@@ -1332,14 +1683,14 @@ if st.session_state.role in ["teacher", "viewer"]:
                       color = success_color
 
                     note_txt = str(r.get("note", "")).strip()
-                    note_html = f"<div class='student-card-body' style='color:#94A3B8; font-weight:700;'>📝 {note_txt}</div>" if note_txt else ""
+                    note_html = f"<div class='student-card-body' style='color:var(--subtle-text); font-weight:700;'>📝 {note_txt}</div>" if note_txt else ""
 
                     st.markdown(
                         f"""
                         <div class="student-list-card" style="border-right: 5px solid {color}; margin-bottom: 6px;">
                             <div class="student-card-header">
                                 <div class="student-card-title" style="color: {color};">{b_str}</div>
-                                <div class="student-card-date" style="color: #94A3B8;">📅 {r.get('date')}</div>
+                                <div class="student-card-date">📅 {r.get('date')}</div>
                             </div>
                             {note_html}
                         </div>
@@ -1492,7 +1843,12 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         df_ev_g_filtered = df_ev_g if sel_cls_g == "الكل" else df_ev_g[df_ev_g["class"] == sel_cls_g]
         st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r["clean_id"] for _, r in df_ev_g_filtered.iterrows()}
-        sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد أو تعديل درجاته فردياً:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
+        sel_g_st = col_g_st.selectbox(
+            "🎯 اختر الطالب لرصد أو تعديل درجاته فردياً:",
+            [""] + list(st_dict_g.keys()),
+            format_func=lambda x: "اختر الطالب من القائمة..." if x == "" else x,
+            key="grades_st_sel",
+        )
 
         df_g = st.session_state.df_grades.copy()
         if not df_g.empty:
@@ -1520,13 +1876,13 @@ if st.session_state.role in ["teacher", "viewer"]:
           with st.container(border=True):
             st.markdown(
                 f"""
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding-bottom:12px; border-bottom:1px dashed rgba(148,163,184,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding-bottom:12px; border-bottom:1px dashed var(--border-color);">
                     <div>
                         <span style="font-size:1.1rem; font-weight:900; color:var(--text-color);">👤 الطالب: <span style="color:{accent_color};">{s_nm_g}</span></span>
-                        <span style="color:#94A3B8; font-size:0.9rem; margin-right:10px;">({s_inf_g.get('class', '')})</span>
+                        <span style="color:var(--subtle-text); font-size:0.9rem; margin-right:10px;">({s_inf_g.get('class', '')})</span>
                     </div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); padding:6px 14px; border-radius:10px; font-weight:800; font-size:0.9rem;">
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); padding:6px 14px; border-radius:10px; font-weight:800; font-size:0.9rem; color:var(--text-color);">
                             مشاركة: <b>{cur_p1}</b>/{max_t_val} | اختبار: <b>{cur_p2}</b>/{max_q_val}
                         </div>
                         <div style="background:{tot_color}20; border:1.5px solid {tot_color}; padding:6px 16px; border-radius:10px; color:{tot_color}; font-weight:900; font-size:1.05rem;">
@@ -1768,13 +2124,13 @@ if st.session_state.role in ["teacher", "viewer"]:
       df_st_h["النقاط"] = pd.to_numeric(df_st_h["النقاط"], errors="coerce").fillna(0)
 
     honor_tabs = st.tabs([
-        "🌟 لوحة الشرف (النقاط)",
-        "🎓 المتفوقون أكاديمياً (90%+)",
-        "📜 استخراج شهادات المتفوقين إلكترونياً",
+        "🌟 لوحة الشرف",
+        "🎓 المتفوقون (90%+)",
+        "📜 إصدار الشهادات",
     ])
 
     lux_css = """
-        * { box-sizing: border-box; } 
+        * { box-sizing: border-box; }
         body { margin: 0; padding: 0; background: #F8FAFC; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
         .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
         .card { width: 46%; height: 135mm; border-radius: 15px; position: relative; overflow: hidden; background: #fff; box-shadow: 0 15px 35px rgba(0,0,0,0.15); page-break-inside: avoid; margin-bottom: 20px; }
@@ -1797,9 +2153,9 @@ if st.session_state.role in ["teacher", "viewer"]:
         .rank-2 .b-val { color: #1E293B; font-size: 34px; } .rank-2 .b-lbl { color: #334155; }
         .rank-3 .b-val { color: #78350F; font-size: 34px; } .rank-3 .b-lbl { color: #92400E; }
         .c-footer { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
-        .theme-honor { border: 14px solid #1E40AF; } 
+        .theme-honor { border: 14px solid #1E40AF; }
         .theme-honor .c-name, .theme-honor .b-val:not(.rank-1 .b-val):not(.rank-2 .b-val):not(.rank-3 .b-val), .theme-honor .c-footer { color: #1E40AF; }
-        .theme-academic { border: 14px solid #881337; } 
+        .theme-academic { border: 14px solid #881337; }
         .theme-academic .c-name, .theme-academic .b-val, .theme-academic .c-footer { color: #881337; }
         @media print { @page { size: A4 portrait; margin: 5mm; } body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .card { box-shadow: none; margin-bottom: 10mm; border-width: 10px; } }
     """
@@ -1814,15 +2170,15 @@ if st.session_state.role in ["teacher", "viewer"]:
 
           for i, (_, r) in enumerate(top_10.iterrows(), 1):
             ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-            brd_col = "#F59E0B" if i <= 3 else "rgba(148, 163, 184, 0.35)"
+            brd_col = "#F59E0B" if i <= 3 else "var(--border-color)"
             st.markdown(
                 f"""
-                <div style='background:var(--secondary-background-color); border:1.5px solid rgba(148,163,184,0.28); border-right:5px solid {brd_col}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                <div style='background:var(--secondary-background-color); border:1.5px solid var(--border-color); border-right:5px solid {brd_col}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                     <div style='display:flex; align-items:center; gap:15px;'>
                         <span style='font-size:1.5rem; font-weight:bold; min-width:45px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
                         <div style='text-align: right;'>
                             <b style='font-size:1.1rem; color:{accent_color};'>{r.get('name', '')}</b><br>
-                            <small style='color:#94A3B8;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
+                            <small style='color:var(--subtle-text); font-weight:700;'>🏫 الصف: {r.get('class', '')} | 🆔 ID: {r.get('clean_id', '')}</small>
                         </div>
                     </div>
                     <div style='background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.4); padding:6px 15px; border-radius:10px; color:#F59E0B; font-weight:900; font-size:1.15rem;'>
@@ -1963,12 +2319,12 @@ if st.session_state.role in ["teacher", "viewer"]:
               for _, r in top_academic.iterrows():
                 st.markdown(
                     f"""
-                    <div style='background:var(--secondary-background-color); border:1.5px solid rgba(148,163,184,0.28); border-right:5px solid {success_color}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
+                    <div style='background:var(--secondary-background-color); border:1.5px solid var(--border-color); border-right:5px solid {success_color}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                         <div style='display:flex; align-items:center; gap:15px;'>
                             <span style='font-size:1.5rem;'>🎓</span>
                             <div style='text-align:right;'>
                                 <b style='font-size:1.1rem; color:{success_color};'>{r.get('name', '')}</b><br>
-                                <small style='color:#94A3B8;'>🏫 الصف: {r.get('class', '')} | 📊 الدرجة: {int(r.get('perf_num', 0))}/{max_total} ({round(r.get('percentage', 0), 1)}%)</small>
+                                <small style='color:var(--subtle-text); font-weight:700;'>🏫 الصف: {r.get('class', '')} | 📊 الدرجة: {int(r.get('perf_num', 0))}/{max_total} ({round(r.get('percentage', 0), 1)}%)</small>
                             </div>
                         </div>
                         <div style='background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.4); padding:5px 15px; border-radius:10px; color:{success_color}; font-weight:900;'>
@@ -2403,6 +2759,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                 pass
               on_badge_change()
               st.rerun()
+
 # ==========================================
 # 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (يدعم اختيار عدة فصول معاً)
 # ==========================================
@@ -2451,13 +2808,13 @@ if st.session_state.role in ["teacher", "viewer"]:
     )
 
     rep_tabs = st.tabs([
-        "📑 تقرير طالب شامل",
-        "📊 كشف الدرجات المرصودة",
-        "📝 كشف متابعة فارغ (مرن)",
-        "🖨️ مساعد التفريغ الورقي",
-        "📈 حصر المتفوقين والمتعثرين",
-        "🧠 تقرير أنماط التعلم (VARK)",
-        "📱 كشف أرقام التواصل",
+        "📑 تقرير طالب",
+        "📊 كشف الدرجات",
+        "📝 كشف متابعة",
+        "🖨️ التفريغ الورقي",
+        "📈 فرز المستويات",
+        "🧠 أنماط التعلم",
+        "📱 أرقام التواصل",
     ])
 
     # ---------------------------------------------------------
@@ -2478,7 +2835,12 @@ if st.session_state.role in ["teacher", "viewer"]:
         df_s_rep_f = df_s_rep[df_s_rep["class"].isin(target_r_cls)] if target_r_cls else df_s_rep
 
         st_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_s_rep_f.iterrows()}
-        sel_rep = col_r_st.selectbox("🔍 ابحث عن الطالب لاستخراج التقرير:", [""] + list(st_dict.keys()), key="rep_sel")
+        sel_rep = col_r_st.selectbox(
+            "🔍 ابحث عن الطالب لاستخراج التقرير:",
+            [""] + list(st_dict.keys()),
+            format_func=lambda x: "اختر الطالب من القائمة..." if x == "" else x,
+            key="rep_sel",
+        )
 
         if sel_rep:
           sid = st_dict[sel_rep]
@@ -2501,14 +2863,14 @@ if st.session_state.role in ["teacher", "viewer"]:
 
           st.markdown(
               f"""
-              <div style='background:var(--secondary-background-color); padding:18px; border-radius:14px; border:1.5px solid rgba(148,163,184,0.28); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;'>
+              <div style='background:var(--secondary-background-color); padding:18px; border-radius:14px; border:1.5px solid var(--border-color); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;'>
                   <div>
                       <div style='color:var(--text-color); font-size:1.2rem;'><b>الاسم:</b> <span style='color:{accent_color}; font-weight:900;'>{s_inf['name']}</span></div>
-                      <div style='color:#94A3B8; margin-top:5px; font-weight:700;'><b>الصف:</b> {s_inf.get('class', 'غير محدد')} | <b>الرقم الأكاديمي:</b> {sid}</div>
+                      <div style='color:var(--subtle-text); margin-top:5px; font-weight:700;'><b>الصف:</b> {s_inf.get('class', 'غير محدد')} | <b>الرقم الأكاديمي:</b> {sid}</div>
                   </div>
                   <div style='display:flex; gap:12px; text-align:center;'>
                       <div style='background:{style_color}20; border:1.5px solid {style_color}; padding:8px 15px; border-radius:10px;'>
-                          <div style='font-size:0.8rem; color:#94A3B8; font-weight:bold;'>🧠 نمط التعلم</div>
+                          <div style='font-size:0.8rem; color:var(--subtle-text); font-weight:bold;'>🧠 نمط التعلم</div>
                           <div style='font-size:1.05rem; font-weight:900; color:{style_color};'>{l_style}</div>
                       </div>
                       <div style='background:rgba(245, 158, 11, 0.15); border:1.5px solid #F59E0B; padding:8px 15px; border-radius:10px;'>
@@ -3377,16 +3739,16 @@ if st.session_state.role in ["teacher", "viewer"]:
         with st.container():
           is_urgent = str(r.get("عاجل")).strip() == "نعم"
           anim_class = "urgent-box" if is_urgent else ""
-          border_style = f"2px solid {danger_color}" if is_urgent else "1.5px solid rgba(148, 163, 184, 0.28)"
+          border_style = f"2px solid {danger_color}" if is_urgent else "1.5px solid var(--border-color)"
           bg_style = "rgba(239, 68, 68, 0.12)" if is_urgent else "var(--secondary-background-color)"
           st.markdown(
               f"""
               <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:14px; padding:16px; margin-bottom:10px; text-align:right; direction:rtl;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                       <h4 style="margin:0; color:var(--text-color); font-weight:900;">{r.get('العنوان')}</h4>
-                      <span style="background:var(--background-color); padding:3px 10px; border-radius:8px; font-size:0.82rem; color:#94A3B8; font-weight:bold; direction:ltr;">{r.get('التاريخ')}</span>
+                      <span style="background:var(--background-color); padding:3px 10px; border-radius:8px; font-size:0.82rem; color:var(--subtle-text); font-weight:bold; direction:ltr; border:1px solid var(--border-color);">{r.get('التاريخ')}</span>
                   </div>
-                  <p style="margin:8px 0; color:#94A3B8; font-weight:600;">{r.get('الرابط')}</p>
+                  <p style="margin:8px 0; color:var(--subtle-text); font-weight:700;">{r.get('الرابط')}</p>
                   <small style="color:{accent_color}; font-weight:800;">🎯 الفصول المستهدفة: {r.get('الصف')}</small>
               </div>
               """,
@@ -3519,8 +3881,8 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       st.markdown(
           """
           <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px dashed #EF4444; border-radius: 14px; padding: 15px; margin-bottom: 10px;">
-              <h5 style="color: #EF4444; margin: 0 0 5px 0; font-weight: 900;">🚨 منطقة إجراءات حساسة (تصفير النقاط)</h5>
-              <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">تصفير النقاط يقوم بإرجاع رصيد نقاط جميع الطلاب في الجدول إلى (0). هذا الإجراء يتطلب تأكيداً إضافياً لمنع الضغط بالخطأ.</p>
+              <h5 style="color: #EF4444 !important; margin: 0 0 5px 0; font-weight: 900;">🚨 منطقة إجراءات حساسة (تصفير النقاط)</h5>
+              <p style="color: var(--subtle-text) !important; font-size: 0.9rem; margin: 0; font-weight: 700;">تصفير النقاط يقوم بإرجاع رصيد نقاط جميع الطلاب في الجدول إلى (0). هذا الإجراء يتطلب تأكيداً إضافياً لمنع الضغط بالخطأ.</p>
           </div>
           """,
           unsafe_allow_html=True,
@@ -4096,7 +4458,11 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       with u_tabs[2]:
         df_u_del = fetch_safe("users")
         if not df_u_del.empty:
-          del_u = st.selectbox("اختر المستخدم المراد حذفه:", [""] + df_u_del["username"].tolist())
+          del_u = st.selectbox(
+              "اختر المستخدم المراد حذفه:",
+              [""] + df_u_del["username"].tolist(),
+              format_func=lambda x: "اختر المستخدم..." if x == "" else x,
+          )
           if st.button("🗑️ حذف المستخدم نهائياً", type="primary", use_container_width=True):
             if del_u:
               if del_u == st.session_state.username:
@@ -4140,7 +4506,7 @@ if st.session_state.role in ["teacher", "viewer"]:
   show_footer()
 
 # ==========================================
-# 👨‍🎓 12. واجهة الطالب الكاملة (محدثة ومضبوطة المحاذاة والـ PDF المخبأ في الكاش)
+# 👨‍🎓 12. واجهة الطالب الكاملة (محدثة ومضبوطة المحاذاة والوضع الداكن والـ PDF)
 # ==========================================
 if st.session_state.role == "student":
   sid = str(st.session_state.get("username", "")).strip()
@@ -4195,10 +4561,10 @@ if st.session_state.role == "student":
           st.markdown(
               f"""
               <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
-                  <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 5px;">⚠️ إشعار سلوكي لولي الأمر</div>
-                  <div style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.05rem;">{b_type}</div>
-                  <span style="color: #94A3B8; font-size: 0.9rem; display:block; margin: 6px 0 10px 0;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
-                  <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #EF4444;">
+                  <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 5px; color: {danger_color} !important; text-align: center !important;">⚠️ إشعار سلوكي لولي الأمر</div>
+                  <div style="color: var(--text-color) !important; margin: 0; font-weight: bold; font-size: 1.05rem; text-align: center !important;">{b_type}</div>
+                  <span style="color: var(--subtle-text) !important; font-size: 0.9rem; display:block; margin: 6px 0 10px 0; text-align: center !important;">التفاصيل: {last_record.get('note', 'لا توجد تفاصيل')} | التاريخ: {last_record.get('date', '')}</span>
+                  <div style="background-color: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 8px; font-size: 0.85rem; color: #EF4444 !important; text-align: center !important;">
                       👇 <b>فضلاً:</b> نرجو الانتقال إلى تبويب <b>(📝 السلوك)</b> بالأسفل للاطلاع على السجل التفصيلي.
                   </div>
               </div>
@@ -4210,27 +4576,27 @@ if st.session_state.role == "student":
     st.markdown(
         f"""
         <div class="welcome-card" style="text-align: right; direction: rtl; padding: 22px 20px;">
-            <div style="color: #FFFFFF; font-size: 1.45rem; font-weight: 900; line-height: 1.4; margin-bottom: 14px; text-align: right;">
+            <div style="color: #FFFFFF !important; font-size: 1.45rem; font-weight: 900; line-height: 1.4; margin-bottom: 14px; text-align: right;">
                 👋 أهلاً بك، {s_nm}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; direction: rtl;">
-                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
+                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF !important; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
                     🏫 الصف: {s_cls}
                 </div>
-                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
+                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF !important; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
                     🆔 ID: {sid}
                 </div>
             </div>
         </div>
         <div class="points-banner">
-            <div style="margin:0; opacity:0.95; font-size:1rem; font-weight:800;">رصيد النقاط الحالي</div>
-            <div style="margin:4px 0; font-size:3.6rem; font-weight:900; line-height:1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
-            <div style="margin:0; font-size:0.9rem; font-weight:800;">استمر في التفوق!</div>
+            <div style="margin:0; opacity:0.95; font-size:1rem; font-weight:800; color:#FFFFFF !important; text-align:center !important;">رصيد النقاط الحالي</div>
+            <div style="margin:4px 0; font-size:3.6rem; font-weight:900; line-height:1.1; color:#FFFFFF !important; text-align:center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
+            <div style="margin:0; font-size:0.9rem; font-weight:800; color:#FFFFFF !important; text-align:center !important;">استمر في التفوق!</div>
         </div>
         <div class="medal-flex">
-            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي (100+)</b></div>
-            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #94A3B8;">🥈<br><b>فضي (50+)</b></div>
-            <div class="m-card m-active" style="color: #D97706;">🥉<br><b>برونزي</b></div>
+            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color} !important;">🥇<br><b style="color: {warning_color} !important;">ذهبي (100+)</b></div>
+            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: var(--subtle-text) !important;">🥈<br><b style="color: var(--subtle-text) !important;">فضي (50+)</b></div>
+            <div class="m-card m-active" style="color: #D97706 !important;">🥉<br><b style="color: #D97706 !important;">برونزي</b></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -4268,10 +4634,10 @@ if st.session_state.role == "student":
                 f"""
                 <div class="student-list-card">
                     <div class="student-card-header">
-                        <div class="student-card-title" style="color: var(--text-color);">📢 {r.get('العنوان')}</div>
-                        <div class="student-card-date" style="color: {accent_color};">{r.get('التاريخ')}</div>
+                        <div class="student-card-title" style="color: var(--text-color) !important;">📢 {r.get('العنوان')}</div>
+                        <div class="student-card-date" style="color: {accent_color} !important;">{r.get('التاريخ')}</div>
                     </div>
-                    <div class="student-card-body" style="color: #94A3B8; font-weight: 600;">{row_link_display}</div>
+                    <div class="student-card-body" style="color: var(--subtle-text) !important; font-weight: 700;">{row_link_display}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -4302,13 +4668,13 @@ if st.session_state.role == "student":
             else:
               color = success_color
             note_txt = str(n.get("note", "")).strip()
-            note_html = f"<div class='student-card-body' style='color: var(--text-color); font-weight: 700;'>{note_txt}</div>" if note_txt else ""
+            note_html = f"<div class='student-card-body' style='color: var(--text-color) !important; font-weight: 700;'>{note_txt}</div>" if note_txt else ""
             st.markdown(
                 f"""
                 <div class="student-list-card" style="border-right: 5px solid {color};">
                     <div class="student-card-header">
-                        <div class="student-card-title" style="color: {color};">{n.get('type')}</div>
-                        <div class="student-card-date" style="color: #94A3B8;">{n.get('date')}</div>
+                        <div class="student-card-title" style="color: {color} !important;">{n.get('type')}</div>
+                        <div class="student-card-date">{n.get('date')}</div>
                     </div>
                     {note_html}
                 </div>
@@ -4348,33 +4714,33 @@ if st.session_state.role == "student":
           elif percentage >= 60:
             title, title_color = "💪 واصل تقدمك", primary_color
           else:
-            title, title_color = "🌱 أنت قادر على الأفضل", sub_text
+            title, title_color = "🌱 أنت قادر على الأفضل", "#94A3B8"
 
           st.markdown(
               f"""
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">📝 المشاركة والواجبات</span>
+                  <span style="font-weight:800; color:var(--text-color) !important;">📝 المشاركة والواجبات</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p1')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
+                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color} !important;'>{g.get('p1')}</span>
+                      <span style='color:var(--subtle-text) !important; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
                   </div>
               </div>
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">✍️ الاختبارات القصيرة</span>
+                  <span style="font-weight:800; color:var(--text-color) !important;">✍️ الاختبارات القصيرة</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p2')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
+                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color} !important;'>{g.get('p2')}</span>
+                      <span style='color:var(--subtle-text) !important; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
                   </div>
               </div>
               <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
                   <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                      <span style="color:{accent_color}; font-weight:900;">🏆 المجموع النهائي ({cp})</span>
+                      <span style="color:{accent_color} !important; font-weight:900;">🏆 المجموع النهائي ({cp})</span>
                       <div style="direction: ltr;">
-                          <span style='font-size:1.6rem; font-weight:900; color:{accent_color};'>{perf_score}</span> 
-                          <span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
+                          <span style='font-size:1.6rem; font-weight:900; color:{accent_color} !important;'>{perf_score}</span>
+                          <span style='color:var(--subtle-text) !important; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
                       </div>
                   </div>
-                  <div style="margin-top:10px; width:100%; text-align:center; padding:8px; background:var(--background-color); border-radius:10px; color:{title_color}; font-weight:900; font-size:1.1rem; border:1.5px solid {title_color}55;">
+                  <div style="margin-top:10px; width:100%; text-align:center !important; padding:8px; background:var(--background-color); border-radius:10px; color:{title_color} !important; font-weight:900; font-size:1.1rem; border:1.5px solid {title_color}55;">
                       {title}
                   </div>
               </div>
@@ -4514,15 +4880,15 @@ if st.session_state.role == "student":
       if not active_students.empty:
         for i, (_, r) in enumerate(active_students.sort_values("p_num", ascending=False).head(10).iterrows(), 1):
           ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-          sty = f"border:2px solid {warning_color}; background:rgba(245, 158, 11, 0.1);" if str(r["clean_id"]) == sid else ""
+          sty = f"border:2px solid {warning_color}; background:rgba(245, 158, 11, 0.12);" if str(r["clean_id"]) == sid else ""
           st.markdown(
               f"""
               <div class='mobile-list-item' style='{sty} direction: rtl;'>
                   <div style='display:flex; align-items:center; gap:10px;'>
                       <span style='font-weight:900; font-size:1.2rem; min-width:40px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
-                      <span style='font-weight:bold; text-align:right;'>{r['name']}</span>
+                      <span style='font-weight:bold; text-align:right; color:var(--text-color) !important;'>{r['name']}</span>
                   </div>
-                  <span style='color:{warning_color}; font-weight:900; font-size:1.1rem; white-space:nowrap;'>{int(r['p_num'])} نقطة</span>
+                  <span style='color:{warning_color} !important; font-weight:900; font-size:1.1rem; white-space:nowrap;'>{int(r['p_num'])} نقطة</span>
               </div>
               """,
               unsafe_allow_html=True,
@@ -4550,10 +4916,10 @@ if st.session_state.role == "student":
         )
         st.markdown(
             f"""
-            <div style='background-color:{color}20; border:2px solid {color}; padding:25px; border-radius:16px; text-align:center; margin-top:15px;'>
-                <div style='font-size:45px; margin-bottom:10px;'>{current_style.split()[-1] if len(current_style.split())>1 else '🎯'}</div>
-                <div style='color:{color}; font-size:1.4rem; margin-bottom:8px; font-weight:900;'>أنت متعلم {current_style.replace('👀', '').replace('👂', '').replace('✋', '').replace('🌟', '').strip()}</div>
-                <p style='color:#94A3B8; font-size:14px; margin:0; font-weight:bold;'>تم حفظ نمط تعلمك في ملفك الأكاديمي بنجاح.</p>
+            <div style='background-color:{color}20; border:2px solid {color}; padding:25px; border-radius:16px; text-align:center !important; margin-top:15px;'>
+                <div style='font-size:45px; margin-bottom:10px; text-align:center !important;'>{current_style.split()[-1] if len(current_style.split())>1 else '🎯'}</div>
+                <div style='color:{color} !important; font-size:1.4rem; margin-bottom:8px; font-weight:900; text-align:center !important;'>أنت متعلم {current_style.replace('👀', '').replace('👂', '').replace('✋', '').replace('🌟', '').strip()}</div>
+                <p style='color:var(--subtle-text) !important; font-size:14px; margin:0; font-weight:bold; text-align:center !important;'>تم حفظ نمط تعلمك في ملفك الأكاديمي بنجاح.</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -4711,4 +5077,4 @@ if st.session_state.role == "student":
       st.session_state.role = None
       st.rerun()
 
-  show_footer()      
+  show_footer()
