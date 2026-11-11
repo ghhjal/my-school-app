@@ -174,21 +174,57 @@ if "role" not in st.session_state:
 if "username" not in st.session_state:
   st.session_state.username = None
 
-# --- 🎨 نظام القوالب الديناميكية للمناسبات ---
+# --- 🎨 نظام القوالب الديناميكية للمناسبات والتجديد ---
 active_theme_name = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
 
 themes = {
     "الرئيسي (الافتراضي)": {
         "primary": "#2563EB",
         "accent": "#3B82F6",
-        "header_grad": "linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)",
+        "header_grad": "linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%)",
         "title_color": "#ffffff",
         "sub_color": "#DBEAFE",
         "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
         "icon": "🎓",
         "title": "منصة زياد الذكية",
         "subtitle": "بوابة التعليم الذكية 2026",
-        "bg_pattern": "none",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")",
+    },
+    "الابتكار والمستقبل 🚀": {
+        "primary": "#4F46E5",
+        "accent": "#8B5CF6",
+        "header_grad": "linear-gradient(135deg, #1E1B4B 0%, #4338CA 50%, #7C3AED 100%)",
+        "title_color": "#FFFFFF",
+        "sub_color": "#E0E7FF",
+        "btn_hover": "linear-gradient(135deg, #312E81 0%, #5B21B6 100%)",
+        "icon": "🚀",
+        "title": "منصة زياد الذكية",
+        "subtitle": "نحو تعليم رقمي مبتكر • Smart Learning",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='2'/%3E%3C/svg%3E\")",
+    },
+    "الزمرد الفاخر 💎": {
+        "primary": "#0F766E",
+        "accent": "#14B8A6",
+        "header_grad": "linear-gradient(135deg, #042F2E 0%, #0F766E 55%, #0D9488 100%)",
+        "title_color": "#FFFFFF",
+        "sub_color": "#CCFBF1",
+        "btn_hover": "linear-gradient(135deg, #115E59 0%, #0F766E 100%)",
+        "icon": "💎",
+        "title": "منصة زياد الذكية",
+        "subtitle": "التميز والإتقان في تعلم اللغة الإنجليزية",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3Ccircle cx='22' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E\")",
+    },
+    "الأفق الرقمي ✨": {
+        "primary": "#0284C7",
+        "accent": "#06B6D4",
+        "header_grad": "linear-gradient(135deg, #090D16 0%, #0C4A6E 50%, #0284C7 100%)",
+        "title_color": "#FFFFFF",
+        "sub_color": "#BAE6FD",
+        "btn_hover": "linear-gradient(135deg, #075985 0%, #0369A1 100%)",
+        "icon": "✨",
+        "title": "منصة زياد الذكية",
+        "subtitle": "بيئة تفاعلية ذكية • Interactive Portal",
+        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='0.12' stroke-width='1.5'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='10'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "اليوم الوطني 🇸🇦": {
         "primary": "#006C5B",
@@ -199,7 +235,7 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
         "icon": "🇸🇦",
         "title": "منصة زياد الذكية",
-        "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>اليوم الوطني السعودي 96</span>",
+        "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>اليوم الوطني السعودي 96</span>",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
     "يوم التأسيس 🏛️": {
@@ -211,7 +247,7 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
         "icon": "🐎",
         "title": "منصة زياد الذكية",
-        "subtitle": "يوم بدينا<br><span style='font-size:1.1rem; color:#F5DEB3; opacity:0.9;'>ثلاثة قرون من العز والفخر</span>",
+        "subtitle": "يوم بدينا<br><span style='font-size:1.05rem; color:#F5DEB3; opacity:0.95;'>ثلاثة قرون من العز والفخر</span>",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
     },
     "رمضان المبارك 🌙": {
@@ -223,7 +259,7 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
         "icon": "🌙",
         "title": "منصة زياد الذكية",
-        "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.1rem; color:#D4AF37; opacity:0.9;'>رمضان يجمعنا</span>",
+        "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.05rem; color:#D4AF37; opacity:0.95;'>رمضان يجمعنا</span>",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
     },
     "التفوق والنجاح 🏆": {
@@ -235,7 +271,7 @@ themes = {
         "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
         "icon": "🏆",
         "title": "منصة زياد الذكية",
-        "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.1rem; color:#ffffff; opacity:0.9;'>نهاية العام الدراسي</span>",
+        "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>نهاية العام الدراسي</span>",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
 }
@@ -287,7 +323,6 @@ def show_footer():
   c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
   c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
   c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
-
 
 # ==========================================
 # 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
