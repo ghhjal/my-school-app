@@ -15,7 +15,42 @@ st.markdown("""
     header[data-testid="stHeader"] { display: none !important; }
     .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
     .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stMultiSelect, .stTextInput {
-        direction: rtl; text-align: right; font-family: 'Tajawal', 'Arial', sans-serif;
+        direction: rtl !important; text-align: right !important; font-family: 'Tajawal', 'Arial', sans-serif;
+    }
+
+    /* 💡 إجبار جميع القوائم المنسدلة والخيارات المنبثقة (Popovers) على الاتجاه لليمين والمنتصف */
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"],
+    ul[role="listbox"],
+    li[role="option"] {
+        direction: rtl !important;
+        text-align: right !important;
+        justify-content: flex-start !important;
+        font-family: 'Tajawal', 'Arial', sans-serif !important;
+    }
+    
+    /* محاذاة نص الخيار داخل القائمة المنبثقة لليمين بالكامل */
+    li[role="option"] {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: right !important;
+        padding-right: 14px !important;
+    }
+
+    /* تنسيق صندوق الاختيار الرئيسي للقائمة المنسدلة ليكون النص باليمين أو المنتصف */
+    div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    div[data-testid="stSelectbox"] label, div[data-testid="stMultiSelect"] label {
+        width: 100% !important;
+        text-align: right !important;
+        justify-content: flex-start !important;
+        display: block !important;
     }
     
     /* 💡 الهيدر المطور بهوية المنصة وشارة قسم أنماط التعلم */
@@ -239,11 +274,12 @@ def get_gsheets_conn():
     from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=7200, max_entries=5)
+@st.cache_data(ttl=600, max_entries=5)
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
-        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", dtype=str)
+        # تمرير ttl=0 لـ conn.read يضمن عدم قراءة نسخة قديمة مخزنة داخل GSheetsConnection عند مسح الكاش
+        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
         for col in ['id', 'name', 'role', 'class_name']:
             if col not in df_teachers.columns:
                 df_teachers[col] = ""
@@ -259,9 +295,9 @@ def get_all_teachers():
 def get_all_students():
     conn = get_gsheets_conn()
     try: 
-        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", dtype=str)
+        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
     except: 
-        try: df_students = conn.read(spreadsheet=SHEET_URL, dtype=str)
+        try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
         except: df_students = pd.DataFrame()
         
     required_cols = ['id', 'name', 'grade', 'class_name']
@@ -282,6 +318,7 @@ def get_all_students():
 def clear_all_caches():
     get_all_students.clear()
     get_all_teachers.clear()
+    st.cache_data.clear()
 
 # ==========================================
 # 💡 دوال صلاحيات المعلمين والفلترة الذكية للفصول
@@ -293,7 +330,6 @@ def parse_teacher_classes(class_name_str):
     raw = str(class_name_str).strip()
     if not raw or raw.lower() in ['all', 'الكل', 'جميع الفصول', 'nan', 'none']:
         return 'all'
-    # دعم الفصل بالفاصلة الإنجليزية أو العربية
     classes = [c.strip() for c in raw.replace('،', ',').split(',') if c.strip()]
     return classes if classes else 'all'
 
@@ -316,6 +352,7 @@ def infer_grade_name(row):
     return c if c else "غير محدد"
 
 def render_grade_class_Selector(df_source, key_prefix):
+    """عرض قوائم اختيار الصف والفصل في المنتصف/اليمين بشكل مرتب دون وضع أي قائمة بالجهة اليسرى"""
     df_temp = df_source.copy()
     if df_temp.empty:
         st.warning("⚠️ لا توجد فصول أو بيانات طلاب متاحة في نطاق صلاحياتك.")
@@ -324,10 +361,8 @@ def render_grade_class_Selector(df_source, key_prefix):
     df_temp['_grade_group'] = df_temp.apply(infer_grade_name, axis=1)
     unique_grades = sorted([g for g in df_temp['_grade_group'].unique() if g])
     
-    col_g, col_c = st.columns(2)
-    with col_g:
-        grade_options = ["جميع الصفوف المتاحة"] + unique_grades if len(unique_grades) > 1 else unique_grades
-        selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", grade_options, key=f"{key_prefix}_grade")
+    grade_options = ["جميع الصفوف المتاحة"] + unique_grades if len(unique_grades) > 1 else unique_grades
+    selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", grade_options, key=f"{key_prefix}_grade")
     
     if selected_grade != "جميع الصفوف المتاحة":
         df_filtered_grade = df_temp[df_temp['_grade_group'] == selected_grade].copy()
@@ -335,10 +370,8 @@ def render_grade_class_Selector(df_source, key_prefix):
         df_filtered_grade = df_temp.copy()
         
     unique_classes = sorted([c for c in df_filtered_grade['class_name'].unique() if c])
-    
-    with col_c:
-        class_options = ["جميع الفصول المتاحة"] + unique_classes if len(unique_classes) > 1 else unique_classes
-        selected_class = st.selectbox("2️⃣ اختر الفصل:", class_options, key=f"{key_prefix}_class")
+    class_options = ["جميع الفصول المتاحة"] + unique_classes if len(unique_classes) > 1 else unique_classes
+    selected_class = st.selectbox("2️⃣ اختر الفصل:", class_options, key=f"{key_prefix}_class")
         
     if selected_class != "جميع الفصول المتاحة":
         df_final = df_filtered_grade[df_filtered_grade['class_name'] == selected_class].copy()
@@ -399,14 +432,12 @@ def intelligent_merge_students_and_vak(new_df):
     current_df['id'] = current_df['id'].apply(clean_id)
     new_df['id'] = new_df['id'].apply(clean_id)
     
-    # استبعاد الهويات الفارغة ومنع تكرار أي رقم هوية داخل ملف الإكسل المرفوع نفسه
     new_df = new_df[new_df['id'] != ""].drop_duplicates(subset=['id'], keep='last').copy()
     
     has_vak_cols = any(c in new_df.columns for c in ['vak_result', 'v_score', 'a_score', 'k_score'])
     added_count = 0
     updated_vak_count = 0
     
-    # 1. تحديث بيانات وأنماط الطلاب المسجلين مسبقاً دون تكرارهم
     for _, row in new_df.iterrows():
         s_id = row['id']
         mask = (current_df['id'] == s_id)
@@ -431,7 +462,6 @@ def intelligent_merge_students_and_vak(new_df):
                     current_df.loc[mask, 'k_score'] = k_sc if k_sc not in ['', 'nan', 'None'] else "0"
                     updated_vak_count += 1
 
-    # 2. إضافة الطلاب الجدد غير المسجلين مسبقاً فقط
     if all(col in new_df.columns for col in ['id', 'name', 'grade', 'class_name']):
         new_students = new_df[~new_df['id'].isin(current_df['id'])].copy()
         if not new_students.empty:
@@ -488,14 +518,28 @@ def intelligent_merge_teachers(new_df):
     return 0
 
 def update_teacher_permissions(teacher_id, new_role, new_classes_str):
-    """تحديث صلاحية المعلم والفصول المسندة إليه في Google Sheets"""
-    df_teachers = get_all_teachers().copy()
-    mask = (df_teachers['id'] == clean_id(teacher_id))
+    """تحديث صلاحية المعلم والفصول المسندة إليه مباشرة وبشكل فوري في Google Sheets بدون الحاجة لزر جلب النتائج"""
+    conn = get_gsheets_conn()
+    try:
+        # قراءة مباشرة من الشيت بـ ttl=0 لضمان أحدث نسخة قبل الحفظ
+        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
+    except:
+        df_teachers = get_all_teachers().copy()
+
+    for col in ['id', 'name', 'role', 'class_name']:
+        if col not in df_teachers.columns:
+            df_teachers[col] = ""
+        df_teachers[col] = df_teachers[col].fillna("").astype(str).str.strip()
+
+    df_teachers['id'] = df_teachers['id'].apply(clean_id)
+    target_id = clean_id(teacher_id)
+    mask = (df_teachers['id'] == target_id)
+    
     if mask.any():
         df_teachers.loc[mask, 'role'] = new_role
         df_teachers.loc[mask, 'class_name'] = new_classes_str
-        conn = get_gsheets_conn()
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=df_teachers)
+        # تفريغ الكاش فوراً لكي تظهر التعديلات في نفس اللحظة
         clear_all_caches()
         return True
     return False
@@ -645,6 +689,8 @@ if st.session_state.current_user is None:
         if teacher_id_input:
             with st.spinner("جاري التحقق من الهوية..."):
                 try:
+                    # تفريغ الكاش لقراءة أحدث صلاحيات وفصول للمعلم عند تسجيل الدخول
+                    get_all_teachers.clear()
                     df_teachers = get_all_teachers()
                     norm_id = clean_id(teacher_id_input)
                     t_row = df_teachers[df_teachers['id'] == str(norm_id)]
@@ -1068,23 +1114,19 @@ else:
                     curr_t_role = str(sel_t_row.get('role', 'teacher')).strip()
                     curr_t_classes_parsed = parse_teacher_classes(sel_t_row.get('class_name', 'all'))
                     
-                    col_role, col_all_chk = st.columns([1.2, 1.8])
-                    with col_role:
-                        role_label_map = {"teacher": "معلم (صلاحية حسب الفصول)", "admin": "مدير النظام (صلاحية كاملة)"}
-                        rev_role_map = {v: k for k, v in role_label_map.items()}
-                        default_role_idx = 1 if curr_t_role == 'admin' else 0
-                        chosen_role_label = st.selectbox("🛡️ نوع الحساب:", list(role_label_map.values()), index=default_role_idx, key=f"role_{sel_t_id}")
-                        chosen_role = rev_role_map[chosen_role_label]
+                    role_label_map = {"teacher": "معلم (صلاحية حسب الفصول)", "admin": "مدير النظام (صلاحية كاملة)"}
+                    rev_role_map = {v: k for k, v in role_label_map.items()}
+                    default_role_idx = 1 if curr_t_role == 'admin' else 0
+                    chosen_role_label = st.selectbox("🛡️ نوع الحساب:", list(role_label_map.values()), index=default_role_idx, key=f"role_{sel_t_id}")
+                    chosen_role = rev_role_map[chosen_role_label]
                         
-                    with col_all_chk:
-                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-                        is_all_default = (curr_t_classes_parsed == 'all') or (chosen_role == 'admin')
-                        grant_all_classes = st.checkbox(
-                            "✅ منح صلاحية الوصول وطباعة **جميع الفصول (الكل)**",
-                            value=is_all_default,
-                            disabled=(chosen_role == 'admin'),
-                            key=f"chk_all_{sel_t_id}"
-                        )
+                    is_all_default = (curr_t_classes_parsed == 'all') or (chosen_role == 'admin')
+                    grant_all_classes = st.checkbox(
+                        "✅ منح صلاحية الوصول وطباعة جميع الفصول (الكل)",
+                        value=is_all_default,
+                        disabled=(chosen_role == 'admin'),
+                        key=f"chk_all_{sel_t_id}"
+                    )
                     
                     if chosen_role == 'admin' or grant_all_classes:
                         st.caption("📌 هذا الحساب لديه صلاحية استعراض وطباعة **جميع الفصول** في المدرسة.")
@@ -1104,14 +1146,14 @@ else:
                         if not can_save:
                             st.warning("⚠️ يرجى اختيار فصل واحد على الأقل من القائمة، أو تفعيل خيار (جميع الفصول).")
                             
-                    if st.button("💾 حفظ صلاحيات وفصول المعلم", use_container_width=True, key="btn_save_perm"):
+                    if st.button("💾 حفظ صلاحيات وفصول المعلم فوراً", use_container_width=True, key=f"btn_save_perm_{sel_t_id}"):
                         if not can_save:
                             st.error("⚠️ لا يمكن الحفظ بدون اختيار فصول للمعلم.")
                         else:
-                            with st.spinner("جاري حفظ الصلاحيات وتحديث قاعدة البيانات..."):
+                            with st.spinner("جاري حفظ الصلاحيات وتحديث قاعدة البيانات فوراً..."):
                                 if update_teacher_permissions(sel_t_id, chosen_role, final_classes_str):
-                                    st.success(f"✅ تم تحديث صلاحيات وفصول الأستاذ ({sel_t_row['name']}) بنجاح!")
-                                    time.sleep(1)
+                                    st.success(f"✅ تم تحديث صلاحيات وفصول الأستاذ ({sel_t_row['name']}) فوراً بنجاح!")
+                                    time.sleep(0.8)
                                     st.rerun()
                                 else:
                                     st.error("حدث خطأ أثناء تحديث بيانات المعلم.")
