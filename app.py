@@ -11,6 +11,7 @@ from gspread import Cell
 from gspread.utils import rowcol_to_a1
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ==========================================
 # ⚙️ 1. إعدادات النظام والاتصال الذكي
@@ -341,28 +342,17 @@ st.markdown(
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
-:root {{
---background-color: #F8FAFC;
---secondary-background-color: #FFFFFF;
---input-bg-color: #FFFFFF;
---text-color: #0F172A;
---sub-text-color: #475569;
---border-color: #CBD5E1;
---card-surface: #FFFFFF;
---subtle-text: #64748B;
-}}
-
-@media (prefers-color-scheme: dark) {{
-:root {{
---background-color: #0B1120;
---secondary-background-color: #1E293B;
---input-bg-color: #FFFFFF;
---text-color: #F8FAFC;
---sub-text-color: #CBD5E1;
---border-color: #334155;
---card-surface: #1E293B;
---subtle-text: #94A3B8;
-}}
+:root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+--background-color: #F8FAFC !important;
+--secondary-background-color: #FFFFFF !important;
+--input-bg-color: #FFFFFF !important;
+--text-color: #0F172A !important;
+--sub-text-color: #475569 !important;
+--border-color: #CBD5E1 !important;
+--card-surface: #FFFFFF !important;
+--subtle-text: #475569 !important;
+--primary-color: {primary_color} !important;
+color-scheme: light only !important;
 }}
 
 section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"] {{
@@ -1012,6 +1002,72 @@ white-space: normal !important;
 """,
     unsafe_allow_html=True,
 )
+
+components.html("""
+<script>
+(function() {
+    try {
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        function enforceLightInputs() {
+            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
+            inputBoxes.forEach(function(box) {
+                box.style.setProperty('background-color', '#FFFFFF', 'important');
+                box.style.setProperty('background', '#FFFFFF', 'important');
+                box.style.setProperty('color', '#0F172A', 'important');
+                box.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                var innerEls = box.querySelectorAll('div, span, input, textarea');
+                innerEls.forEach(function(inn) {
+                    if (!inn.closest('[data-baseweb="tag"]')) {
+                        inn.style.setProperty('color', '#0F172A', 'important');
+                        inn.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {
+                            inn.style.setProperty('background-color', '#FFFFFF', 'important');
+                        } else {
+                            inn.style.setProperty('background-color', 'transparent', 'important');
+                        }
+                    }
+                });
+                var svgs = box.querySelectorAll('svg');
+                svgs.forEach(function(s) {
+                    s.style.setProperty('fill', '#0F172A', 'important');
+                    s.style.setProperty('color', '#0F172A', 'important');
+                });
+            });
+
+            var popovers = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"], div[role="option"]');
+            popovers.forEach(function(el) {
+                el.setAttribute('dir', 'rtl');
+                el.style.setProperty('direction', 'rtl', 'important');
+                el.style.setProperty('text-align', 'right', 'important');
+                el.style.setProperty('background-color', '#FFFFFF', 'important');
+                el.style.setProperty('color', '#0F172A', 'important');
+                var chs = el.querySelectorAll('div, span');
+                chs.forEach(function(ch) {
+                    ch.setAttribute('dir', 'rtl');
+                    ch.style.setProperty('direction', 'rtl', 'important');
+                    ch.style.setProperty('text-align', 'right', 'important');
+                    ch.style.setProperty('color', '#0F172A', 'important');
+                    ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                });
+            });
+        }
+
+        enforceLightInputs();
+        if (!window.parent.__ziyadPortalLightObserver) {
+            var obs = new MutationObserver(function() {
+                enforceLightInputs();
+            });
+            obs.observe(pDoc.body, { childList: true, subtree: true });
+            window.parent.__ziyadPortalLightObserver = true;
+        }
+    } catch (e) {}
+})();
+</script>
+""", height=0)
 
 # ==========================================
 # 🔐 3. نظام تسجيل الدخول
