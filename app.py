@@ -320,19 +320,29 @@ def get_school_name_dynamic(cls_name):
 
 
 def show_footer():
-  st.markdown("<br><br>", unsafe_allow_html=True)
+  st.markdown("<br>", unsafe_allow_html=True)
   st.markdown(
       f"""
-    <div style='text-align: center; color: var(--text-color); opacity: 0.8; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
+    <div class="ziyad-footer-wrap" dir="rtl">
+        <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</div>
+        <div class="ziyad-footer-cards">
+            <a href="https://zi-style.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                🧠 منصة أنماط التعلم
+            </a>
+            <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                📢 تليجرام الإدارة
+            </a>
+            <a href="https://wa.me/966534900049" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                💬 واتساب المعلم
+            </a>
+            <a href="mailto:ziyadalamri30@gmail.com" class="ziyad-footer-btn">
+                📧 البريد الإلكتروني
+            </a>
+        </div>
     </div>
     """,
       unsafe_allow_html=True,
   )
-  c1, c2, c3 = st.columns(3)
-  c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
-  c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-  c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
 
 # ==========================================
 # 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
@@ -971,7 +981,7 @@ border-color: {accent_color} !important;
 background: rgba(59, 130, 246, 0.12) !important;
 }}
 
-/* ✳️ 6. التبويبات: سطر مرن على الكمبيوتر + شبكة (2×2) ثابتة على الجوال بدون تمرير جانبي */
+/* ✳️ 6. التبويبات: سطر مرن على الكمبيوتر + شبكة (2×2) ثابتة على الجوال بتباين فائق الوضوح */
 .stTabs [data-baseweb="tab-list"] {{
 display: flex !important;
 flex-wrap: wrap !important;
@@ -985,44 +995,124 @@ width: 100% !important;
 overflow-x: hidden !important;
 }}
 
-.stTabs [data-baseweb="tab"] {{
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) {{
 height: 48px !important;
 margin: 0 !important;
 padding: 8px 14px !important;
-background-color: var(--secondary-background-color) !important;
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
 border-radius: 12px !important;
-border: 1.5px solid var(--border-color) !important;
-color: var(--text-color) !important;
+border: 1.5px solid #CBD5E1 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
-font-size: 0.95rem !important;
+font-size: 14px !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
 flex: 1 1 auto !important;
-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
 transition: all 0.2s ease !important;
+opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span {{
-color: var(--text-color) !important;
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]):hover {{
+background-color: #EFF6FF !important;
+border-color: {accent_color} !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
+}}
+
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div,
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
+font-size: 14px !important;
+margin: 0 !important;
+opacity: 1 !important;
 }}
 
-.stTabs [aria-selected="true"] {{
+.stTabs [data-baseweb="tab"][aria-selected="true"] {{
+height: 48px !important;
+margin: 0 !important;
+padding: 8px 14px !important;
 background: {header_grad} !important;
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 border: 2px solid #F59E0B !important;
 border-radius: 12px !important;
+justify-content: center !important;
+align-items: center !important;
+text-align: center !important;
+flex: 1 1 auto !important;
 box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
+opacity: 1 !important;
 }}
 
-.stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
+.stTabs [data-baseweb="tab"][aria-selected="true"] p,
+.stTabs [data-baseweb="tab"][aria-selected="true"] span,
+.stTabs [data-baseweb="tab"][aria-selected="true"] div,
+.stTabs [data-baseweb="tab"][aria-selected="true"] * {{
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
+font-size: 14px !important;
+margin: 0 !important;
+opacity: 1 !important;
 }}
 
 .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
 display: none !important;
+}}
+
+/* تذييل الصفحة الموحد وبطاقات التواصل والمنصات */
+.ziyad-footer-wrap {{
+margin-top: 32px;
+padding-top: 20px;
+border-top: 1.5px solid #CBD5E1;
+text-align: center;
+direction: rtl !important;
+}}
+.ziyad-footer-copy {{
+color: #475569 !important;
+-webkit-text-fill-color: #475569 !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+margin-bottom: 14px;
+text-align: center !important;
+}}
+.ziyad-footer-cards {{
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 10px;
+direction: rtl !important;
+}}
+a.ziyad-footer-btn {{
+background-color: #FFFFFF !important;
+border: 1.5px solid #CBD5E1 !important;
+border-radius: 12px !important;
+padding: 12px 10px !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+text-decoration: none !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 6px !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+transition: all 0.2s ease !important;
+}}
+a.ziyad-footer-btn:hover {{
+border-color: {accent_color} !important;
+background-color: #EFF6FF !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
+transform: translateY(-2px);
 }}
 
 /* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
@@ -1154,12 +1244,22 @@ gap: 8px !important;
 .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
 grid-column: span 2 !important;
 }}
-.stTabs [data-baseweb="tab"] {{
+.stTabs [data-baseweb="tab"],
+.stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
+.stTabs [data-baseweb="tab"][aria-selected="true"] {{
 width: 100% !important;
 font-size: 13px !important;
 height: 46px !important;
 padding: 6px 8px !important;
 white-space: normal !important;
+}}
+.ziyad-footer-cards {{
+grid-template-columns: repeat(2, 1fr) !important;
+gap: 8px !important;
+}}
+a.ziyad-footer-btn {{
+padding: 11px 8px !important;
+font-size: 12.5px !important;
 }}
 }}
 </style>
@@ -1367,6 +1467,29 @@ components.html(f"""
                     c.style.setProperty('color', '#0F172A', 'important');
                     c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
                 }});
+            }});
+
+            var tabs = pDoc.querySelectorAll('.stTabs [data-baseweb="tab"]');
+            tabs.forEach(function(tab) {{
+                var isSel = tab.getAttribute('aria-selected') === 'true';
+                if (isSel) {{
+                    tab.style.setProperty('color', '#FFFFFF', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#FFFFFF', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                    }});
+                }} else {{
+                    tab.style.setProperty('background-color', '#FFFFFF', 'important');
+                    tab.style.setProperty('background', '#FFFFFF', 'important');
+                    tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
+                    tab.style.setProperty('color', '#0F172A', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#0F172A', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                    }});
+                }}
             }});
         }}
 
