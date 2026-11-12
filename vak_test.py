@@ -680,6 +680,31 @@ st.markdown(f"""
         text-align: right !important;
     }}
 
+    div[data-testid="stAlert"],
+    div[data-testid="stAlert"] > div,
+    div[data-baseweb="notification"],
+    div[role="alert"] {{
+        background-color: var(--tab-hover) !important;
+        background: var(--tab-hover) !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        border: 1.5px solid var(--brand-royal) !important;
+        border-right: 5px solid var(--brand-royal) !important;
+        border-radius: 14px !important;
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+    div[data-testid="stAlert"] *,
+    div[data-baseweb="notification"] *,
+    div[role="alert"] * {{
+        background-color: transparent !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 700 !important;
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+
     div[data-baseweb="popover"],
     div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
@@ -1438,7 +1463,9 @@ components.html(f"""
         `;
 
         function enforceLightInputs() {{
-            pDoc.head.appendChild(existingStyle);
+            if (pDoc.head.lastElementChild !== existingStyle) {{
+                pDoc.head.appendChild(existingStyle);
+            }}
             var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
             inputBoxes.forEach(function(box) {{
                 box.style.setProperty('background-color', '#ffffff', 'important');
@@ -1450,12 +1477,27 @@ components.html(f"""
                     if (!inn.closest('[data-baseweb="tag"]')) {{
                         inn.style.setProperty('color', '#0f172a', 'important');
                         inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {{
-                            inn.style.setProperty('background-color', '#ffffff', 'important');
-                        }} else {{
-                            inn.style.setProperty('background-color', 'transparent', 'important');
-                        }}
+                        inn.style.setProperty('background-color', '#ffffff', 'important');
+                        inn.style.setProperty('background', '#ffffff', 'important');
                     }}
+                }});
+            }});
+
+            var alerts = pDoc.querySelectorAll('[data-testid="stAlert"], [data-baseweb="notification"], div[role="alert"]');
+            alerts.forEach(function(al) {{
+                al.style.setProperty('background-color', '#EFF6FF', 'important');
+                al.style.setProperty('background', '#EFF6FF', 'important');
+                al.style.setProperty('color', '#0F172A', 'important');
+                al.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                al.style.setProperty('border', '1.5px solid #2563EB', 'important');
+                al.style.setProperty('border-right', '5px solid #2563EB', 'important');
+                al.style.setProperty('border-radius', '14px', 'important');
+                var alCh = al.querySelectorAll('div, p, span, li, strong, b');
+                alCh.forEach(function(c) {{
+                    c.style.setProperty('background-color', 'transparent', 'important');
+                    c.style.setProperty('background', 'transparent', 'important');
+                    c.style.setProperty('color', '#0F172A', 'important');
+                    c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
                 }});
             }});
         }}
