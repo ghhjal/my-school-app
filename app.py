@@ -581,24 +581,42 @@ color: var(--text-color) !important;
 font-weight: 800 !important;
 }}
 
-/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (تباين فائق الوضوح في الوضع الفاتح والداكن + RTL كامل) */
+/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (مطابق تماماً لملف الإنجاز المهني 100%) */
 div[data-baseweb="input"],
 div[data-baseweb="input"] > div,
 div[data-baseweb="base-input"],
 div[data-baseweb="textarea"],
 div[data-baseweb="textarea"] > div,
+div[data-baseweb="select"],
 div[data-baseweb="select"] > div,
-div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
-background-color: #FFFFFF !important;
-background: #FFFFFF !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stDateInput"] input,
+div[data-testid="stNumberInput"] div[data-baseweb="input"],
+div[data-baseweb="select"] *,
+input, textarea, select {{
+background-color: #ffffff !important;
+background: #ffffff !important;
+color: #0f172a !important;
+-webkit-text-fill-color: #0f172a !important;
 color-scheme: light !important;
-border: 1.5px solid #CBD5E1 !important;
-border-radius: 12px !important;
-min-height: 48px !important;
+caret-color: {primary_color} !important;
 direction: rtl !important;
 text-align: right !important;
+font-family: 'Cairo', sans-serif !important;
+font-weight: 700 !important;
+opacity: 1 !important;
+}}
+
+div[data-baseweb="input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="select"] > div,
+div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
+border: 1.5px solid #cbd5e1 !important;
+border-radius: 12px !important;
+min-height: 48px !important;
+box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
 div[data-baseweb="input"]:focus-within,
@@ -606,27 +624,7 @@ div[data-baseweb="select"] > div:focus-within,
 div[data-baseweb="textarea"]:focus-within {{
 border-color: {accent_color} !important;
 box-shadow: 0 0 0 3px {primary_color}40 !important;
-background-color: #FFFFFF !important;
-}}
-
-div[data-testid="stTextInput"] input,
-div[data-testid="stTextArea"] textarea,
-div[data-testid="stNumberInput"] input,
-div[data-testid="stDateInput"] input,
-div[data-baseweb="input"] input,
-div[data-baseweb="textarea"] textarea,
-div[data-baseweb="select"] input,
-input, textarea, select {{
-direction: rtl !important;
-text-align: right !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
-caret-color: {primary_color} !important;
-background-color: transparent !important;
-font-weight: 800 !important;
-font-size: 1.02rem !important;
-font-family: 'Cairo', sans-serif !important;
-opacity: 1 !important;
+background-color: #ffffff !important;
 }}
 
 input::placeholder,
@@ -1003,69 +1001,145 @@ white-space: normal !important;
     unsafe_allow_html=True,
 )
 
-components.html("""
+components.html(f"""
 <script>
-(function() {
-    try {
+(function() {{
+    try {{
         var pDoc = window.parent.document;
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
         pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
 
-        function enforceLightInputs() {
-            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
-            inputBoxes.forEach(function(box) {
-                box.style.setProperty('background-color', '#FFFFFF', 'important');
-                box.style.setProperty('background', '#FFFFFF', 'important');
-                box.style.setProperty('color', '#0F172A', 'important');
-                box.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                var innerEls = box.querySelectorAll('div, span, input, textarea');
-                innerEls.forEach(function(inn) {
-                    if (!inn.closest('[data-baseweb="tag"]')) {
-                        inn.style.setProperty('color', '#0F172A', 'important');
-                        inn.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {
-                            inn.style.setProperty('background-color', '#FFFFFF', 'important');
-                        } else {
-                            inn.style.setProperty('background-color', 'transparent', 'important');
-                        }
-                    }
-                });
-                var svgs = box.querySelectorAll('svg');
-                svgs.forEach(function(s) {
-                    s.style.setProperty('fill', '#0F172A', 'important');
-                    s.style.setProperty('color', '#0F172A', 'important');
-                });
-            });
+        var fontId = 'ziyad-google-fonts';
+        if (!pDoc.getElementById(fontId)) {{
+            var link = pDoc.createElement('link');
+            link.id = fontId;
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap';
+            pDoc.head.appendChild(link);
+        }}
 
-            var popovers = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"], div[role="option"]');
-            popovers.forEach(function(el) {
-                el.setAttribute('dir', 'rtl');
-                el.style.setProperty('direction', 'rtl', 'important');
-                el.style.setProperty('text-align', 'right', 'important');
-                el.style.setProperty('background-color', '#FFFFFF', 'important');
-                el.style.setProperty('color', '#0F172A', 'important');
-                var chs = el.querySelectorAll('div, span');
-                chs.forEach(function(ch) {
-                    ch.setAttribute('dir', 'rtl');
-                    ch.style.setProperty('direction', 'rtl', 'important');
-                    ch.style.setProperty('text-align', 'right', 'important');
-                    ch.style.setProperty('color', '#0F172A', 'important');
-                    ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                });
-            });
-        }
+        var styleId = 'ziyad-students-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0f172a !important;
+                --background-color: #F8FAFC !important;
+                --secondary-background-color: #ffffff !important;
+                --primary-color: {primary_color} !important;
+                color-scheme: light only !important;
+                background-color: #F8FAFC !important;
+                color: #0f172a !important;
+            }}
+            div[data-baseweb="input"],
+            div[data-baseweb="input"] > div,
+            div[data-baseweb="base-input"],
+            div[data-baseweb="textarea"],
+            div[data-baseweb="textarea"] > div,
+            div[data-baseweb="select"],
+            div[data-baseweb="select"] > div,
+            div[data-testid="stTextInput"] input,
+            div[data-testid="stTextArea"] textarea,
+            div[data-testid="stDateInput"] input,
+            div[data-testid="stNumberInput"] input,
+            div[data-baseweb="select"] *,
+            input, textarea, select {{
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                color-scheme: light !important;
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: 'Cairo', sans-serif !important;
+                font-weight: 700 !important;
+                opacity: 1 !important;
+            }}
+            div[data-baseweb="select"] span,
+            div[data-baseweb="select"] div,
+            div[data-baseweb="select"] svg,
+            div[data-baseweb="input"] svg,
+            div[data-testid="stNumberInput"] button svg {{
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                fill: #0f172a !important;
+                background-color: transparent !important;
+            }}
+            span[data-baseweb="tag"],
+            span[data-baseweb="tag"] * {{
+                background-color: #EFF6FF !important;
+                color: #1E3A8A !important;
+                -webkit-text-fill-color: #1E3A8A !important;
+            }}
+            input::placeholder, textarea::placeholder {{
+                color: #64748b !important;
+                -webkit-text-fill-color: #64748b !important;
+                opacity: 1 !important;
+            }}
+            div[data-baseweb="popover"],
+            div[data-baseweb="popover"] *,
+            div[data-baseweb="menu"],
+            div[data-baseweb="menu"] *,
+            ul[data-testid="stSelectboxVirtualDropdown"],
+            ul[data-testid="stSelectboxVirtualDropdown"] *,
+            ul[role="listbox"],
+            ul[role="listbox"] *,
+            li[role="option"],
+            li[role="option"] * {{
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: 'Cairo', sans-serif !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+            }}
+            li[role="option"]:hover,
+            li[role="option"][aria-selected="true"] {{
+                background-color: #EFF6FF !important;
+                color: {primary_color} !important;
+                -webkit-text-fill-color: {primary_color} !important;
+                font-weight: 800 !important;
+            }}
+        `;
+
+        function enforceLightInputs() {{
+            pDoc.head.appendChild(existingStyle);
+            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
+            inputBoxes.forEach(function(box) {{
+                box.style.setProperty('background-color', '#ffffff', 'important');
+                box.style.setProperty('background', '#ffffff', 'important');
+                box.style.setProperty('color', '#0f172a', 'important');
+                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                var innerEls = box.querySelectorAll('div, span, input, textarea');
+                innerEls.forEach(function(inn) {{
+                    if (!inn.closest('[data-baseweb="tag"]')) {{
+                        inn.style.setProperty('color', '#0f172a', 'important');
+                        inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {{
+                            inn.style.setProperty('background-color', '#ffffff', 'important');
+                        }} else {{
+                            inn.style.setProperty('background-color', 'transparent', 'important');
+                        }}
+                    }}
+                }});
+            }});
+        }}
 
         enforceLightInputs();
-        if (!window.parent.__ziyadPortalLightObserver) {
-            var obs = new MutationObserver(function() {
+        if (!window.parent.__ziyadPortalLightObserver) {{
+            var obs = new MutationObserver(function() {{
                 enforceLightInputs();
-            });
-            obs.observe(pDoc.body, { childList: true, subtree: true });
+            }});
+            obs.observe(pDoc.body, {{ childList: true, subtree: true }});
             window.parent.__ziyadPortalLightObserver = true;
-        }
-    } catch (e) {}
-})();
+        }}
+    }} catch (e) {{}}
+}})();
 </script>
 """, height=0)
 
