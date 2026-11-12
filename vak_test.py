@@ -6,25 +6,317 @@ import io
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS المتوافق مع الوضع الليلي والنهاري (RTL كامل)
+# 1. إعدادات الصفحة والـ CSS الموحد مع الهوية البصرية للمنصة الأم (RTL + متوافق تماماً مع الجوال)
 # ==========================================
-st.set_page_config(page_title="منصة زياد الذكية | أنماط التعلم (VAK)", page_icon="🎓", layout="centered")
+st.set_page_config(
+    page_title="منصة زياد الذكية | أنماط التعلم (VAK)",
+    page_icon="🎓",
+    layout="centered"
+)
 
 st.markdown("""
 <style>
-    /* 💡 إجبار الصفحة بالكامل مع النوافذ المنبثقة (Popovers) على الاتجاه من اليمين إلى اليسار */
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+    /* ========================================================
+       1. المتغيرات اللونية للهوية البصرية الموحدة (منصة زياد الذكية)
+       ======================================================== */
+    :root {
+        --bg-page: #f7f8fb;
+        --bg-card: #ffffff;
+        --bg-input: #f8f9fc;
+        --brand-dark: #141b3e;
+        --brand-navy: #172661;
+        --brand-royal: #1f379c;
+        --brand-bright: #2958d8;
+        --brand-light: #426bda;
+        --brand-gold: #eb9d11;
+        --text-primary: #1e293b;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --border-hover: #cbd5e1;
+        --shadow-card: 0 8px 24px rgba(20, 27, 62, 0.05);
+        --shadow-header: 0 12px 28px rgba(31, 55, 156, 0.22);
+    }
+
+    /* ========================================================
+       2. ضبط الاتجاه العام (RTL) والخلفية والخطوط
+       ======================================================== */
     html, body, [data-testid="stAppViewContainer"], .stApp {
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', 'Arial', sans-serif !important;
-    }
-    header[data-testid="stHeader"] { display: none !important; }
-    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; direction: rtl !important; }
-    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {
-        direction: rtl !important; text-align: right !important; font-family: 'Tajawal', 'Arial', sans-serif !important;
+        font-family: 'Tajawal', sans-serif !important;
+        background-color: var(--bg-page) !important;
+        color: var(--text-primary) !important;
     }
 
-    /* 💡 حل جذري لاتجاه القوائم المنسدلة والخيارات المنبثقة (تظهر من اليمين لليسار 100%) */
+    header[data-testid="stHeader"] { display: none !important; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+
+    .block-container {
+        max-width: 1020px !important;
+        padding-top: 1.8rem !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: 1.2rem !important;
+        padding-right: 1.2rem !important;
+        direction: rtl !important;
+    }
+
+    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, span, div,
+    .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Tajawal', sans-serif !important;
+    }
+
+    /* ========================================================
+       3. الهيدر الموحد لمنصة زياد الذكية (مطابق تماماً لبوابة التعليم الذكية 2026)
+       ======================================================== */
+    .ziyad-hero-banner {
+        background: linear-gradient(135deg, #2b5ce7 0%, #1f379c 45%, #162044 100%);
+        border-radius: 22px;
+        padding: 28px 28px;
+        margin-bottom: 18px;
+        box-shadow: var(--shadow-header);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    /* دوائر إضاءة خلفية ناعمة تضفي عمقاً فخماً للهيدر */
+    .ziyad-hero-banner::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 260px;
+        height: 260px;
+        background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .ziyad-hero-banner::after {
+        content: "";
+        position: absolute;
+        bottom: -60%;
+        left: -8%;
+        width: 240px;
+        height: 240px;
+        background: radial-gradient(circle, rgba(66,107,218,0.25) 0%, rgba(66,107,218,0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .hero-main-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        z-index: 1;
+        width: 100%;
+    }
+
+    .hero-icon-glass {
+        width: 62px;
+        height: 62px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        animation: float-cap 3.5s ease-in-out infinite;
+        flex-shrink: 0;
+    }
+
+    @keyframes float-cap {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-4px) rotate(-4deg); }
+    }
+
+    .hero-brand-title {
+        font-size: 34px !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.2 !important;
+        letter-spacing: -0.3px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        text-align: center !important;
+    }
+
+    .hero-portal-pill {
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        padding: 6px 18px;
+        border-radius: 999px;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        white-space: nowrap;
+        backdrop-filter: blur(4px);
+    }
+
+    .hero-sub-badge {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        padding: 5px 16px;
+        border-radius: 999px;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #f1f5f9 !important;
+        -webkit-text-fill-color: #f1f5f9 !important;
+        z-index: 1;
+        text-align: center !important;
+    }
+
+    /* ========================================================
+       4. شريط البوابات والتبويبات الموحد (الكحلي بالإطار الذهبي البرتقالي)
+       ======================================================== */
+    .portal-Mode-strip {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        border-bottom: 1.5px solid var(--border-color);
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+    }
+    .portal-pill-active {
+        background: var(--brand-navy);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        border: 2px solid var(--brand-gold);
+        border-radius: 12px;
+        padding: 7px 16px;
+        font-size: 13.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 3px 10px rgba(23, 38, 97, 0.18);
+        white-space: nowrap;
+    }
+    .portal-pill-muted {
+        color: var(--text-muted) !important;
+        -webkit-text-fill-color: var(--text-muted) !important;
+        padding: 7px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: transparent;
+        border-bottom: 1.5px solid var(--border-color);
+        padding-bottom: 10px;
+        gap: 10px;
+        justify-content: flex-start;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent !important;
+        border: 1.5px solid transparent !important;
+        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        font-weight: 700 !important;
+        transition: all 0.2s ease !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #eef2ff !important;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+    }
+    .stTabs [data-baseweb="tab"] * {
+        color: inherit !important;
+        -webkit-text-fill-color: inherit !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: var(--brand-navy) !important;
+        border: 2px solid var(--brand-gold) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(23, 38, 97, 0.22) !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+
+    /* ========================================================
+       5. بطاقة تسجيل الدخول والحاويات البيضاء الفاخرة
+       ======================================================== */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 16px !important;
+        padding: 22px 24px !important;
+        box-shadow: var(--shadow-card) !important;
+        margin-bottom: 18px !important;
+    }
+
+    .card-section-title {
+        font-size: 21px !important;
+        font-weight: 800 !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+        margin: 0 0 6px 0 !important;
+        text-align: right !important;
+    }
+    .card-section-sub {
+        font-size: 13.5px !important;
+        color: var(--text-muted) !important;
+        -webkit-text-fill-color: var(--text-muted) !important;
+        margin: 0 0 16px 0 !important;
+        text-align: right !important;
+        line-height: 1.5;
+    }
+
+    /* تنسيق حقول الإدخال والقوائم المنسدلة (RTL 100%) */
+    div[data-testid="stTextInput"] input {
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        padding: 12px 14px !important;
+        font-size: 14.5px !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+        direction: rtl !important;
+        text-align: right !important;
+        transition: all 0.2s ease;
+    }
+    div[data-testid="stTextInput"] input:focus {
+        border-color: var(--brand-bright) !important;
+        box-shadow: 0 0 0 3px rgba(41, 88, 216, 0.12) !important;
+        background-color: #ffffff !important;
+    }
+
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
     div[data-baseweb="popover"],
@@ -34,10 +326,14 @@ st.markdown("""
     div[role="listbox"] {
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', 'Arial', sans-serif !important;
+        font-family: 'Tajawal', sans-serif !important;
     }
-    
-    /* إجبار كل خيار داخل القائمة المنسدلة على الامتداد بعرض كامل ومحاذاة النص لليمين */
+    div[data-baseweb="select"] > div {
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        min-height: 44px !important;
+    }
     li[role="option"],
     div[role="option"],
     ul[role="listbox"] li {
@@ -48,8 +344,8 @@ st.markdown("""
         justify-content: flex-start !important;
         align-items: center !important;
         width: 100% !important;
-        padding-right: 16px !important;
-        padding-left: 16px !important;
+        padding: 10px 16px !important;
+        font-size: 14px !important;
     }
     li[role="option"] > div,
     li[role="option"] span,
@@ -60,33 +356,206 @@ st.markdown("""
         width: 100% !important;
         display: block !important;
     }
-
-    /* محاذاة القيمة المختارة داخل صندوق الـ Selectbox لليمين */
-    div[data-baseweb="select"] div[ value ],
+    div[data-baseweb="select"] div[value],
     div[data-baseweb="select"] > div > div:first-child {
         direction: rtl !important;
         text-align: right !important;
         justify-content: flex-start !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
     }
-
-    div[data-testid="stSelectbox"] label, div[data-testid="stMultiSelect"] label, div[data-testid="stTextInput"] label {
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stMultiSelect"] label,
+    div[data-testid="stTextInput"] label {
         width: 100% !important;
         text-align: right !important;
         justify-content: flex-start !important;
         display: block !important;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+        margin-bottom: 6px !important;
     }
 
-    /* 💡 تصميم جدول بيانات الطلاب المخصص من اليمين إلى اليسار (RTL) */
+    /* ========================================================
+       6. الأزرار الموحدة (تدرج المنصة الكحلي - الملكي + الأزرار الثانوية)
+       ======================================================== */
+    /* زر الدخول والأزرار الرئيسية (مطابق لزر دخول للمنصة في الفيديو) */
+    div[class*="st-key-btn_login"] button,
+    div[class*="st-key-rep_active"] button,
+    div[class*="st-key-btn_save_perm"] button,
+    div[data-testid="stDownloadButton"] button {
+        background: linear-gradient(90deg, #141b3e 0%, #1f379c 50%, #2958d8 100%) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
+        padding: 11px 18px !important;
+        min-height: 46px !important;
+        box-shadow: 0 4px 14px rgba(31, 55, 156, 0.25) !important;
+        transition: all 0.25s ease !important;
+    }
+    div[class*="st-key-btn_login"] button:hover,
+    div[class*="st-key-rep_active"] button:hover,
+    div[class*="st-key-btn_save_perm"] button:hover,
+    div[data-testid="stDownloadButton"] button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 18px rgba(41, 88, 216, 0.35) !important;
+        filter: brightness(1.06);
+    }
+    div[class*="st-key-btn_login"] button *,
+    div[class*="st-key-rep_active"] button *,
+    div[class*="st-key-btn_save_perm"] button *,
+    div[data-testid="stDownloadButton"] button * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+    }
+
+    /* تمييز زر التقرير النشط بإطار ذهبي مطابق للهوية */
+    div[class*="st-key-rep_active"] button {
+        border: 2px solid var(--brand-gold) !important;
+    }
+
+    /* الأزرار الثانوية القياسية */
+    button[kind="secondary"] {
+        background-color: #ffffff !important;
+        border: 1.5px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+        font-weight: 700 !important;
+        min-height: 44px !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+        transition: all 0.2s ease !important;
+    }
+    button[kind="secondary"]:hover {
+        border-color: var(--brand-bright) !important;
+        background-color: #f8faff !important;
+    }
+    button[kind="secondary"] * {
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+    }
+
+    /* زر تسجيل الخروج (Primary = أحمر ناعم أنيق) */
+    button[kind="primary"] {
+        background-color: #fff1f2 !important;
+        color: #e11d48 !important;
+        -webkit-text-fill-color: #e11d48 !important;
+        border: 1.5px solid #fecdd3 !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        min-height: 44px !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #ffe4e6 !important;
+        border-color: #fda4af !important;
+    }
+    button[kind="primary"] * {
+        color: #e11d48 !important;
+        -webkit-text-fill-color: #e11d48 !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+    }
+
+    div[data-testid="stButton"] button p {
+        font-size: 13.5px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* ========================================================
+       7. لوحة الترحيب وبطاقات الإحصائيات (KPI Cards)
+       ======================================================== */
+    .welcome-banner-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+        border: 1px solid var(--border-color);
+        border-right: 5px solid var(--brand-royal);
+        border-radius: 14px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(20, 27, 62, 0.04);
+        margin-bottom: 10px;
+    }
+    .welcome-user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .welcome-user-name {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+    }
+    .welcome-user-scope {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--brand-bright) !important;
+        -webkit-text-fill-color: var(--brand-bright) !important;
+    }
+
+    .dashboard-stats-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 14px 0 22px 0;
+        direction: rtl !important;
+    }
+    .dash-card {
+        padding: 16px 14px;
+        border-radius: 14px;
+        text-align: center;
+        background-color: #ffffff !important;
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--border-color);
+        border-top: 4px solid;
+        transition: transform 0.2s ease;
+    }
+    .dash-card:hover { transform: translateY(-2px); }
+    .dash-card.total { border-top-color: var(--brand-royal); }
+    .dash-card.completed { border-top-color: #10b981; }
+    .dash-card.pending { border-top-color: var(--brand-gold); }
+    .dash-title {
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        font-weight: 700;
+    }
+    .dash-value {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--brand-dark) !important;
+        -webkit-text-fill-color: var(--brand-dark) !important;
+        line-height: 1.1;
+    }
+
+    /* ========================================================
+       8. تصميم الجداول المخصصة (RTL) والرسوم البيانية
+       ======================================================== */
     .rtl-table-wrapper {
         width: 100%;
         overflow-x: auto;
-        max-height: 440px;
+        -webkit-overflow-scrolling: touch;
+        max-height: 460px;
         overflow-y: auto;
         direction: rtl !important;
-        border: 1px solid #cbd5e1;
-        border-radius: 10px;
-        margin: 12px 0 16px 0;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        margin: 14px 0 18px 0;
+        box-shadow: var(--shadow-card);
         background-color: #ffffff !important;
     }
     table.custom-rtl-table {
@@ -94,219 +563,144 @@ st.markdown("""
         border-collapse: collapse !important;
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', 'Arial', sans-serif !important;
+        font-family: 'Tajawal', sans-serif !important;
         font-size: 14px !important;
         background-color: #ffffff !important;
-        color: #1e293b !important;
+        color: var(--text-primary) !important;
         margin: 0 !important;
     }
     table.custom-rtl-table thead th {
         position: sticky;
         top: 0;
         z-index: 2;
-        background-color: #f1f5f9 !important;
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-weight: bold !important;
-        padding: 10px 12px !important;
-        border-bottom: 2px solid #cbd5e1 !important;
-        border-left: 1px solid #e2e8f0 !important;
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+        font-weight: 800 !important;
+        padding: 12px 14px !important;
+        border-bottom: 2px solid var(--border-hover) !important;
+        border-left: 1px solid var(--border-color) !important;
         text-align: center !important;
         white-space: nowrap;
     }
     table.custom-rtl-table tbody td {
-        padding: 9px 12px !important;
-        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 10px 14px !important;
+        border-bottom: 1px solid var(--border-color) !important;
         border-left: 1px solid #f1f5f9 !important;
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
         text-align: center !important;
+        white-space: nowrap;
     }
-    /* محاذاة عمود الاسم لليمين لسهولة القراءة */
     table.custom-rtl-table tbody td.name-cell {
         text-align: right !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+        color: var(--brand-dark) !important;
+        -webkit-text-fill-color: var(--brand-dark) !important;
     }
     table.custom-rtl-table tbody tr:nth-child(even) {
         background-color: #f8fafc !important;
     }
     table.custom-rtl-table tbody tr:hover {
-        background-color: #ebf5fb !important;
+        background-color: #eff6ff !important;
     }
-    
-    /* 💡 الهيدر المطور بهوية المنصة وشارة قسم أنماط التعلم */
-    .custom-header {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #2980b9 100%);
-        padding: 16px 15px;
-        border-radius: 12px;
-        color: white !important;
-        margin-bottom: 22px;
-        box-shadow: 0 4px 12px rgba(30, 60, 114, 0.2);
+
+    /* الرسم البياني لتوزيع أنماط التعلم */
+    .custom-chart-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 22px 18px;
+        box-shadow: var(--shadow-card);
+        margin-top: 10px;
+    }
+    .custom-chart-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        height: 210px;
+        padding: 24px 10px 12px 10px;
+        border-bottom: 2px solid var(--border-color);
+        margin-top: 10px;
+    }
+    .chart-bar-wrapper {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-end;
+        height: 100%;
+        width: 26%;
+        max-width: 110px;
+    }
+    .chart-value {
+        font-weight: 800;
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+    .chart-bar {
+        width: 100%;
+        border-radius: 10px 10px 0 0;
+        transition: height 0.5s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        min-height: 6px;
+    }
+    .chart-label {
+        margin-top: 12px;
+        font-weight: 700;
+        font-size: 13.5px;
+        color: var(--text-primary);
         text-align: center;
     }
-    .title-wrapper {
+
+    /* ========================================================
+       9. التذييل الموحد وبطاقات التواصل السفلية (مطابق للفيديو)
+       ======================================================== */
+    .ziyad-footer-wrap {
+        margin-top: 44px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+    }
+    .ziyad-footer-copy {
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        font-size: 13.5px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+    .ziyad-footer-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        direction: rtl;
+    }
+    .ziyad-footer-btn {
+        background-color: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 11px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+        text-decoration: none !important;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        margin-bottom: 8px;
-        width: 100%;
-    }
-    .header-main-title {
-        font-size: 25px !important;
-        font-weight: bold;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1.2;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-    }
-    
-    @keyframes float-cap {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        25% { transform: translateY(-3px) rotate(-10deg); }
-        50% { transform: translateY(-5px) rotate(0deg); }
-        75% { transform: translateY(-3px) rotate(10deg); }
-    }
-    .header-icon { font-size: 27px; display: inline-block; animation: float-cap 3.5s ease-in-out infinite; }
-    
-    .header-badge {
-        background-color: rgba(255, 255, 255, 0.16);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 4px 14px;
-        border-radius: 20px;
-        font-size: 13px !important;
-        color: #f1f5f9 !important;
-        -webkit-text-fill-color: #f1f5f9 !important;
-        font-weight: bold;
-        display: inline-block;
-        margin: 0 auto !important;
-        text-align: center !important;
-    }
-
-    /* 💡 بطاقة تسجيل الدخول الاحترافية المتناسقة مع المنصة الأم */
-    .login-card-header {
-        background-color: #f8fafc !important;
-        border: 1px solid #cbd5e1;
-        border-right: 4px solid #2980b9;
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-bottom: 15px;
-        text-align: center;
-    }
-    .login-card-title {
-        font-size: 18px !important;
-        font-weight: bold !important;
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        margin-bottom: 5px;
-    }
-    .login-card-sub {
-        font-size: 13px !important;
-        color: #475569 !important;
-        -webkit-text-fill-color: #475569 !important;
-        margin: 0;
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: transparent;
-        border-bottom: 2px solid #cbd5e1;
-        padding-bottom: 8px;
         gap: 8px;
-        justify-content: right;
-        margin-bottom: 18px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+        transition: all 0.2s ease;
     }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #f1f5f9 !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 8px 14px !important;
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-weight: bold !important;
-    }
-    .stTabs [data-baseweb="tab"] * {
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-size: 13.5px !important;
-        font-weight: bold !important;
-        margin: 0 !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%) !important;
-        border-color: #1f618d !important;
-        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.25) !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }
-    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
-    
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
-    
-    .dashboard-stats-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; direction: rtl !important; }
-    .dash-card { flex: 1; padding: 12px; border-radius: 8px; text-align: center; background-color: #ffffff !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid; }
-    .dash-card.total { border-color: #9b59b6; } 
-    .dash-card.completed { border-color: #2ecc71; } 
-    .dash-card.pending { border-color: #f1c40f; } 
-    .dash-title { font-size: 12px; margin-bottom: 5px; color: #475569 !important; -webkit-text-fill-color: #475569 !important; font-weight: bold; }
-    .dash-value { font-size: 22px; font-weight: bold; color: #1e293b !important; -webkit-text-fill-color: #1e293b !important; }
-    .welcome-box { background-color: #ebf5fb !important; border: 1px solid #3498db; border-radius: 8px; padding: 10px; color: #1f618d !important; -webkit-text-fill-color: #1f618d !important; font-size: 14px; font-weight: bold; }
-    
-    /* 💡 تنسيق الأزرار القياسية وأزرار التحميل (واضحة تماماً في الدارك مود واللايت مود) */
-    button[kind="secondary"], div[data-testid="stDownloadButton"] button {
-        background-color: #f8f9fa !important;
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-weight: bold !important;
-    }
-    button[kind="secondary"] *, div[data-testid="stDownloadButton"] button * {
-        color: #1e293b !important;
-        -webkit-text-fill-color: #1e293b !important;
-        font-weight: bold !important;
-        font-size: 13px !important;
-    }
-    button[kind="primary"] {
-        background-color: #ffeaeb !important;
-        color: #d63031 !important;
-        -webkit-text-fill-color: #d63031 !important;
-        border: 1px solid #ffb8b8 !important;
-        border-radius: 8px !important;
-        font-weight: bold !important;
-    }
-    button[kind="primary"] * {
-        color: #d63031 !important;
-        -webkit-text-fill-color: #d63031 !important;
-        font-weight: bold !important;
-    }
-    div[data-testid="stButton"] button p {
-        font-size: 13px !important;
-        white-space: nowrap !important;
-        overflow: visible !important;
+    .ziyad-footer-btn:hover {
+        border-color: var(--brand-bright);
+        background-color: #f8faff;
+        transform: translateY(-1px);
     }
 
-    /* 💡 تلوين زر التقرير النشط باللون الأزرق الملكي والنص الأبيض */
-    div[class*="st-key-rep_active"] button {
-        background: linear-gradient(135deg, #2c3e50 0%, #2980b9 100%) !important;
-        border: 1.5px solid #1f618d !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        box-shadow: 0 3px 8px rgba(41, 128, 185, 0.35) !important;
-    }
-    div[class*="st-key-rep_active"] button * {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }
-
-    /* 💡 الحفاظ على شبكة أزرار التقارير (2×2) متجاوبة في شاشة الجوال */
+    /* ========================================================
+       10. التوافق الكامل مع الجوال والشاشات الصغيرة (Mobile-First)
+       ======================================================== */
+    /* الحفاظ على شبكة أزرار التقارير (2×2) متجاوبة في شاشة الجوال */
     div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) {
         display: flex !important;
         flex-direction: row !important;
@@ -318,25 +712,88 @@ st.markdown("""
         flex: 1 1 calc(50% - 4px) !important;
         min-width: 0 !important;
     }
-    
-    .custom-chart-container { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; padding: 20px 0; border-bottom: 1px solid #cbd5e1; margin-top: 20px; }
-    .chart-bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 25%; }
-    .chart-value { font-weight: bold; font-size: 15px; margin-bottom: 5px; } 
-    .chart-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .chart-label { margin-top: 10px; font-weight: bold; font-size: 13px; }
-    
-    .custom-footer { text-align: center; color: #7f8c8d; font-size: 13px; margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; font-family: 'Tajawal', sans-serif; }
+
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 0.9rem !important;
+            padding-left: 0.7rem !important;
+            padding-right: 0.7rem !important;
+            padding-bottom: 2rem !important;
+        }
+        .ziyad-hero-banner {
+            padding: 18px 14px;
+            border-radius: 16px;
+            gap: 10px;
+        }
+        .hero-icon-glass {
+            width: 48px;
+            height: 48px;
+            font-size: 25px;
+            border-radius: 12px;
+        }
+        .hero-brand-title {
+            font-size: 23px !important;
+        }
+        .hero-portal-pill {
+            font-size: 12px !important;
+            padding: 4px 12px;
+        }
+        .hero-sub-badge {
+            font-size: 11.5px !important;
+            padding: 4px 12px;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            padding: 16px 14px !important;
+            border-radius: 14px !important;
+        }
+        .dashboard-stats-container {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .dash-card {
+            padding: 10px 6px;
+            border-radius: 10px;
+        }
+        .dash-title {
+            font-size: 11px;
+        }
+        .dash-value {
+            font-size: 20px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            padding: 6px 11px !important;
+            border-radius: 10px !important;
+        }
+        .stTabs [data-baseweb="tab"] * {
+            font-size: 12.5px !important;
+        }
+        div[data-testid="stButton"] button p {
+            font-size: 12.5px !important;
+        }
+        table.custom-rtl-table {
+            font-size: 12.5px !important;
+        }
+        table.custom-rtl-table thead th,
+        table.custom-rtl-table tbody td {
+            padding: 8px 8px !important;
+        }
+        .ziyad-footer-cards {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر فوراً على الشاشة بالهوية الموحدة والشارة التخصصية
+# رسم الهيدر الموحد لمنصة زياد الذكية (مطابق للهوية البصرية لبوابة التعليم الذكية 2026)
 st.markdown("""
-<div class="custom-header">
-    <div class="title-wrapper">
-        <span class="header-icon">🎓</span>
-        <h1 class="header-main-title">منصة زياد الذكية</h1>
+<div class="ziyad-hero-banner">
+    <div class="hero-main-row">
+        <div class="hero-icon-glass">🎓</div>
+        <h1 class="hero-brand-title">منصة زياد الذكية</h1>
+        <span class="hero-portal-pill">بوابة التعليم الذكية 2026</span>
     </div>
-    <div class="header-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
+    <div class="hero-sub-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -374,9 +831,9 @@ def get_all_teachers():
 @st.cache_data(ttl=7200, max_entries=5)
 def get_all_students():
     conn = get_gsheets_conn()
-    try: 
+    try:
         df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
-    except: 
+    except:
         try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
         except: df_students = pd.DataFrame()
         
@@ -451,7 +908,7 @@ def infer_grade_name(row):
     return c if c else "غير محدد"
 
 def render_grade_class_Selector(df_source, key_prefix):
-    """عرض قوائم اختيار الصف والفصل في المنتصف/اليمين بشكل مرتب من اليمين إلى اليسار"""
+    """عرض قوائم اختيار الصف والفصل بشكل مرتب ومتجاوب من اليمين إلى اليسار"""
     df_temp = df_source.copy()
     if df_temp.empty:
         st.warning("⚠️ لا توجد فصول أو بيانات طلاب متاحة في نطاق صلاحياتك.")
@@ -461,7 +918,10 @@ def render_grade_class_Selector(df_source, key_prefix):
     unique_grades = sorted([g for g in df_temp['_grade_group'].unique() if g])
     
     grade_options = ["جميع الصفوف المتاحة"] + unique_grades if len(unique_grades) > 1 else unique_grades
-    selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", grade_options, key=f"{key_prefix}_grade")
+    
+    col_g, col_c = st.columns(2)
+    with col_g:
+        selected_grade = st.selectbox("1️⃣ اختر الصف / المرحلة:", grade_options, key=f"{key_prefix}_grade")
     
     if selected_grade != "جميع الصفوف المتاحة":
         df_filtered_grade = df_temp[df_temp['_grade_group'] == selected_grade].copy()
@@ -470,7 +930,8 @@ def render_grade_class_Selector(df_source, key_prefix):
         
     unique_classes = sorted([c for c in df_filtered_grade['class_name'].unique() if c])
     class_options = ["جميع الفصول المتاحة"] + unique_classes if len(unique_classes) > 1 else unique_classes
-    selected_class = st.selectbox("2️⃣ اختر الفصل:", class_options, key=f"{key_prefix}_class")
+    with col_c:
+        selected_class = st.selectbox("2️⃣ اختر الفصل:", class_options, key=f"{key_prefix}_class")
         
     if selected_class != "جميع الفصول المتاحة":
         df_final = df_filtered_grade[df_filtered_grade['class_name'] == selected_class].copy()
@@ -753,7 +1214,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #2c3e50; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #2980b9; background-color: #ebf5fb; border: 1px solid #3498db; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #3498db; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #e67e22; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #2ecc71; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #3498db; color: #2980b9; background-color: #ebf5fb; }} .stat-card.auditory {{ border-color: #e67e22; color: #d35400; background-color: #fdf2e9; }} .stat-card.kinesthetic {{ border-color: #2ecc71; color: #27ae60; background-color: #eafaf1; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #2c3e50; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: #2980b9; color: white; border: none; padding: 8px 16px; font-size: 14px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal'; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #172661; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #172661; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2958d8; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #eb9d11; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #10b981; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2958d8; color: #1f379c; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #eb9d11; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #10b981; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #172661; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: linear-gradient(90deg, #141b3e, #2958d8); color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -767,41 +1228,54 @@ def create_excel_bytes(df):
     return output.getvalue()
 
 # ==========================================
-# 5. منطق تسجيل الدخول والواجهة الإدارية
+# 5. منطق تسجيل الدخول والواجهة الإدارية الموحدة
 # ==========================================
 if 'current_user' not in st.session_state: st.session_state.current_user = None
 if 'active_report' not in st.session_state: st.session_state.active_report = "comp"
 
 if st.session_state.current_user is None:
+    # شريط البوابات العلوي المطابق لهوية المنصة في الفيديو
     st.markdown("""
-    <div class="login-card-header">
-        <div class="login-card-title">👨‍🏫 تسجيل دخول المعلمين والإدارة</div>
-        <p class="login-card-sub">أدخل رقم الهوية لاستعراض الإحصائيات وطباعة تقارير أنماط التعلم المعتمدة للطلاب والفصول</p>
+    <div class="portal-Mode-strip">
+        <span class="portal-pill-active">👨‍🏫 بوابة المعلمين والإدارة</span>
+        <span class="portal-pill-muted">📊 تشخيص أنماط التعلم (VAK)</span>
+        <span class="portal-pill-muted">🖨️ التقارير الرسمية المعتمدة</span>
     </div>
     """, unsafe_allow_html=True)
-    
-    teacher_id_input = st.text_input("رقم الهوية:", placeholder="أدخل رقم هويتك هنا...")
-    
-    if st.button("تسجيل الدخول للمنصة 🚀", use_container_width=True):
-        if teacher_id_input:
-            with st.spinner("جاري التحقق من الهوية..."):
-                try:
-                    get_all_teachers.clear()
-                    df_teachers = get_all_teachers()
-                    norm_id = clean_id(teacher_id_input)
-                    t_row = df_teachers[df_teachers['id'] == str(norm_id)]
-                    if not t_row.empty:
-                        t_data = t_row.iloc[0]
-                        st.session_state.current_user = {
-                            "id": t_data['id'],
-                            "name": t_data['name'],
-                            "role": t_data['role'],
-                            "class_name": t_data.get('class_name', 'all')
-                        }
-                        st.rerun()
-                    else: st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
-                except Exception as e: st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
-        else: st.warning("الرجاء إدخال رقم الهوية أولاً.")
+
+    # بطاقة تسجيل الدخول البيضاء الفاخرة (مطابقة لبطاقة تسجيل دخول الطالب في المنصة)
+    with st.container(border=True):
+        st.markdown("""
+        <div class="card-section-title">تسجيل دخول المعلمين والإدارة</div>
+        <p class="card-section-sub">أدخل رقم الهوية لاستعراض الإحصائيات وطباعة تقارير أنماط التعلم المعتمدة للطلاب والفصول</p>
+        """, unsafe_allow_html=True)
+        
+        teacher_id_input = st.text_input("رقم الهوية / السجل المدني", placeholder="أدخل الرقم هنا...", key="login_id_input")
+        
+        st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+        if st.button("🚀 دخول للمنصة", use_container_width=True, key="btn_login_submit"):
+            if teacher_id_input:
+                with st.spinner("جاري التحقق من الهوية..."):
+                    try:
+                        get_all_teachers.clear()
+                        df_teachers = get_all_teachers()
+                        norm_id = clean_id(teacher_id_input)
+                        t_row = df_teachers[df_teachers['id'] == str(norm_id)]
+                        if not t_row.empty:
+                            t_data = t_row.iloc[0]
+                            st.session_state.current_user = {
+                                "id": t_data['id'],
+                                "name": t_data['name'],
+                                "role": t_data['role'],
+                                "class_name": t_data.get('class_name', 'all')
+                            }
+                            st.rerun()
+                        else:
+                            st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
+                    except Exception as e:
+                        st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
+            else:
+                st.warning("الرجاء إدخال رقم الهوية أولاً.")
 else:
     df_teachers_latest = get_all_teachers()
     curr_u_id = clean_id(st.session_state.current_user.get('id', ''))
@@ -815,21 +1289,25 @@ else:
     user = st.session_state.current_user
     
     if user['role'] == 'admin':
-        col_user, col_actions, col_logout = st.columns([5.5, 2.5, 2])
-        
-        with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 95px; display: flex; align-items: center; justify-content: center;">مرحباً بك: {user["name"]} (مدير النظام)</div>', unsafe_allow_html=True)
-            
-        with col_actions:
-            if st.button("📥 جلب النتائج", use_container_width=True):
+        st.markdown(f"""
+        <div class="welcome-banner-card">
+            <div class="welcome-user-info">
+                <div class="welcome-user-name">👋 مرحباً بك: {user["name"]}</div>
+                <div class="welcome-user-scope">🛡️ الصلاحية: مدير النظام (وصول كامل لجميع الصفوف والفصول)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_act1, col_act2, col_logout = st.columns([2, 2, 1.5])
+        with col_act1:
+            if st.button("📥 جلب وتصحيح النتائج", use_container_width=True, key="btn_sync_forms"):
                 with st.spinner("جاري جلب وتصحيح الإجابات..."):
                     sync_google_forms()
-            if st.button("🔄 تحديث الشاشة", use_container_width=True):
+        with col_act2:
+            if st.button("🔄 تحديث البيانات", use_container_width=True, key="btn_refresh_admin"):
                 clear_all_caches()
                 st.rerun()
-                
         with col_logout:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
                 st.rerun()
@@ -837,9 +1315,16 @@ else:
     else:
         parsed_cls = parse_teacher_classes(user.get('class_name', 'all'))
         cls_badge = "جميع الفصول" if parsed_cls == 'all' else " ، ".join(parsed_cls)
-        col_user, col_logout = st.columns([8, 2])
+        col_user, col_logout = st.columns([4, 1.2])
         with col_user:
-            st.markdown(f'<div class="welcome-box" style="height: 100%; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;"><div>مرحباً بك: أ. {user["name"]}</div><div style="font-size: 12px; color: #2980b9; margin-top: 3px;">🏫 الفصول المسندة: {cls_badge}</div></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="welcome-banner-card" style="margin-bottom: 0;">
+                <div class="welcome-user-info">
+                    <div class="welcome-user-name">👋 مرحباً بك: أ. {user["name"]}</div>
+                    <div class="welcome-user-scope">🏫 الفصول المسندة: {cls_badge}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         with col_logout:
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
@@ -849,13 +1334,13 @@ else:
     df_all = filter_df_for_user(df_all_raw, user)
 
     df_tested = df_all[df_all['vak_result'] != 'غير مختبر'].copy()
-    for col in ['v_score', 'a_score', 'k_score']: df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
+    for col in ['v_score', 'a_score', 'k_score']:
+        df_tested[col] = pd.to_numeric(df_tested[col], errors='coerce').fillna(0)
 
     total_students = len(df_all)
     completed_tests = len(df_tested)
     pending_tests = total_students - completed_tests
     
-    st.markdown("<hr style='margin: 10px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
     st.markdown(f"""
     <div class="dashboard-stats-container">
         <div class="dash-card total"><div class="dash-title">👥 إجمالي الطلاب</div><div class="dash-value">{total_students}</div></div>
@@ -863,7 +1348,6 @@ else:
         <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{pending_tests}</div></div>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown("<hr style='margin: 10px 0 20px 0; border: 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
     if user['role'] == 'admin':
         tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات والصلاحيات"])
@@ -875,419 +1359,442 @@ else:
 
     if tab_main is not None:
         with tab_main:
-            st.markdown("<h3 style='text-align: center;'>توزيع أنماط التعلم في المدرسة</h3>", unsafe_allow_html=True)
-            if len(df_tested) > 0:
-                v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
-                a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
-                k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
-                max_val = max(v_count, a_count, k_count)
-                h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
-                h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
-                h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
-                
-                chart_html = f"""
-                <div class="custom-chart-container">
-                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #2980b9;">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, #3498db, #2980b9);"></div><div class="chart-label">بصري 👁️</div></div>
-                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #27ae60;">{k_count}</div><div class="chart-bar" style="height: {h_k}%; background: linear-gradient(180deg, #2ecc71, #27ae60);"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
-                    <div class="chart-bar-wrapper"><div class="chart-value" style="color: #d35400;">{a_count}</div><div class="chart-bar" style="height: {h_a}%; background: linear-gradient(180deg, #e67e22, #d35400);"></div><div class="chart-label">سمعي 👂</div></div>
-                </div>
-                """
-                st.markdown(chart_html, unsafe_allow_html=True)
-            else: st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
+            with st.container(border=True):
+                st.markdown("<div class='card-section-title' style='text-align: center !important;'>📊 توزيع أنماط التعلم في المدرسة</div>", unsafe_allow_html=True)
+                st.markdown("<p class='card-section-sub' style='text-align: center !important;'>إحصائية مقارنة لأعداد الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>", unsafe_allow_html=True)
+                if len(df_tested) > 0:
+                    v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
+                    a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
+                    k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
+                    max_val = max(v_count, a_count, k_count)
+                    h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
+                    h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
+                    h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
+                    
+                    chart_html = f"""
+                    <div class="custom-chart-container">
+                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #1f379c;">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, #426bda, #1f379c);"></div><div class="chart-label">بصري 👁️</div></div>
+                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #059669;">{k_count}</div><div class="chart-bar" style="height: {h_k}%; background: linear-gradient(180deg, #34d399, #059669);"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
+                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #d97706;">{a_count}</div><div class="chart-bar" style="height: {h_a}%; background: linear-gradient(180deg, #fbbf24, #d97706);"></div><div class="chart-label">سمعي 👂</div></div>
+                    </div>
+                    """
+                    st.markdown(chart_html, unsafe_allow_html=True)
+                else:
+                    st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
-        curr_rep = st.session_state.active_report
-        
-        r_col1, r_col2 = st.columns(2)
-        with r_col1:
-            lbl_comp = "✅ 📋 الفصول الشامل" if curr_rep == "comp" else "📋 الفصول الشامل"
-            key_comp = "rep_active_comp" if curr_rep == "comp" else "rep_idle_comp"
-            if st.button(lbl_comp, key=key_comp, use_container_width=True):
-                st.session_state.active_report = "comp"
-                st.rerun()
-        with r_col2:
-            lbl_style = "✅ 🎨 فرز الأنماط" if curr_rep == "style" else "🎨 فرز الأنماط"
-            key_style = "rep_active_style" if curr_rep == "style" else "rep_idle_style"
-            if st.button(lbl_style, key=key_style, use_container_width=True):
-                st.session_state.active_report = "style"
-                st.rerun()
-
-        r_col3, r_col4 = st.columns(2)
-        with r_col3:
-            lbl_unt = "✅ ⏳ غير المختبرين" if curr_rep == "untested" else "⏳ غير المختبرين"
-            key_unt = "rep_active_unt" if curr_rep == "untested" else "rep_idle_unt"
-            if st.button(lbl_unt, key=key_unt, use_container_width=True):
-                st.session_state.active_report = "untested"
-                st.rerun()
-        with r_col4:
-            lbl_ind = "✅ 👤 التقرير الفردي" if curr_rep == "indiv" else "👤 التقرير الفردي"
-            key_ind = "rep_active_ind" if curr_rep == "indiv" else "rep_idle_ind"
-            if st.button(lbl_ind, key=key_ind, use_container_width=True):
-                st.session_state.active_report = "indiv"
-                st.rerun()
-
-        st.markdown("<hr style='margin: 12px 0; border: 0; border-top: 1px solid #cbd5e1;'>", unsafe_allow_html=True)
-        
-        # 1️⃣ تقرير الفصول الشامل
-        if curr_rep == "comp":
-            df_class, scope_label = render_grade_class_Selector(df_all, "comp")
-            style_filter = st.selectbox("3️⃣ تصفية حسب نمط التعلم:", ["جميع الأنماط", "بصري", "سمعي", "حركي"], key="sty_comp")
-                
-            df_class_tested = df_class[df_class['vak_result'] != 'غير مختبر'].copy()
+        with st.container(border=True):
+            curr_rep = st.session_state.active_report
             
-            if style_filter != "جميع الأنماط":
-                df_class_tested = df_class_tested[df_class_tested['vak_result'].str.contains(style_filter, na=False)].copy()
+            r_col1, r_col2 = st.columns(2)
+            with r_col1:
+                lbl_comp = "✅ 📋 الفصول الشامل" if curr_rep == "comp" else "📋 الفصول الشامل"
+                key_comp = "rep_active_comp" if curr_rep == "comp" else "rep_idle_comp"
+                if st.button(lbl_comp, key=key_comp, use_container_width=True):
+                    st.session_state.active_report = "comp"
+                    st.rerun()
+            with r_col2:
+                lbl_style = "✅ 🎨 فرز الأنماط" if curr_rep == "style" else "🎨 فرز الأنماط"
+                key_style = "rep_active_style" if curr_rep == "style" else "rep_idle_style"
+                if st.button(lbl_style, key=key_style, use_container_width=True):
+                    st.session_state.active_report = "style"
+                    st.rerun()
+
+            r_col3, r_col4 = st.columns(2)
+            with r_col3:
+                lbl_unt = "✅ ⏳ غير المختبرين" if curr_rep == "untested" else "⏳ غير المختبرين"
+                key_unt = "rep_active_unt" if curr_rep == "untested" else "rep_idle_unt"
+                if st.button(lbl_unt, key=key_unt, use_container_width=True):
+                    st.session_state.active_report = "untested"
+                    st.rerun()
+            with r_col4:
+                lbl_ind = "✅ 👤 التقرير الفردي" if curr_rep == "indiv" else "👤 التقرير الفردي"
+                key_ind = "rep_active_ind" if curr_rep == "indiv" else "rep_idle_ind"
+                if st.button(lbl_ind, key=key_ind, use_container_width=True):
+                    st.session_state.active_report = "indiv"
+                    st.rerun()
+
+            st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
             
-            if len(df_class_tested) > 0:
-                display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(
-                    columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
-                )
-                display_cols = add_serial_column(display_cols)
-                render_rtl_table(display_cols)
+            # 1️⃣ تقرير الفصول الشامل
+            if curr_rep == "comp":
+                df_class, scope_label = render_grade_class_Selector(df_all, "comp")
+                style_filter = st.selectbox("3️⃣ تصفية حسب نمط التعلم:", ["جميع الأنماط", "بصري", "سمعي", "حركي"], key="sty_comp")
+                    
+                df_class_tested = df_class[df_class['vak_result'] != 'غير مختبر'].copy()
                 
-                html_table = display_cols.to_html(index=False, classes="table", justify="center")
-                v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
-                a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
-                k_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('حركي', na=False)]) / len(df_class_tested) * 100, 1)
-                
-                class_content = f"""
-                <div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 15px;">عدد الطلاب في هذا التقرير: {len(df_class_tested)} طالب</span></h3>
-                <div class="stats-container"><div class="stat-card visual"><div class="stat-title">👁️ بصري</div><div class="stat-value">{v_pct}%</div></div><div class="stat-card auditory"><div class="stat-title">👂 سمعي</div><div class="stat-value">{a_pct}%</div></div><div class="stat-card kinesthetic"><div class="stat-title">🏃‍♂️ حركي</div><div class="stat-value">{k_pct}%</div></div></div></div>
-                <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>{html_table}"""
-                
-                base_title = f"تقرير أنماط التعلم - {scope_label}"
                 if style_filter != "جميع الأنماط":
-                    base_title += f" (النمط ال{style_filter})"
-                full_html = generate_html_page(base_title, class_content, get_school_name(df_class_tested))
-                st.download_button(
-                    label="📥 تحميل التقرير للطباعة (A4)",
-                    data=full_html.encode('utf-8'),
-                    file_name=f"Group_Report_{scope_label}_{style_filter}.html",
-                    mime="text/html",
-                    use_container_width=True
-                )
-            else:
-                st.warning("لا يوجد طلاب مختبرين مطابقين لهذا الفلتر في النطاق المحدد.")
-
-        # 2️⃣ تقرير فرز الأنماط المخصص
-        elif curr_rep == "style":
-            df_style_sub, scope_label = render_grade_class_Selector(df_all, "style_only")
-            chosen_style_label = st.selectbox("3️⃣ اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
-            chosen_style_key = chosen_style_label.split()[0]
+                    df_class_tested = df_class_tested[df_class_tested['vak_result'].str.contains(style_filter, na=False)].copy()
                 
-            df_style_matched = df_style_sub[df_style_sub['vak_result'].str.contains(chosen_style_key, na=False)].copy()
-            
-            if len(df_style_matched) > 0:
-                display_cols = df_style_matched[['id', 'name', 'class_name', 'vak_result']].rename(
-                    columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
-                )
-                display_cols = add_serial_column(display_cols)
-                render_rtl_table(display_cols)
-                
-                html_table = display_cols.to_html(index=False, classes="table", justify="center")
-                
-                if chosen_style_key == "بصري":
-                    style_tips = "<li>الاعتماد على الخرائط الذهنية، الصور، والرسوم البيانية على السبورة.</li><li>استخدام الأقلام الملونة لتمييز الكلمات والمفاهيم الأساسية.</li><li>عرض مقاطع الفيديو التعليمية والعروض المرئية.</li>"
-                elif chosen_style_key == "سمعي":
-                    style_tips = "<li>التركيز على الشرح الشفهي المباشر والحوار والنقاش الجماعي.</li><li>توظيف القراءة الجهرية والترديد الصوتي للمعلومات المهمة.</li><li>تشجيع الطلاب على تلخيص الدرس شفهياً لزملائهم.</li>"
+                if len(df_class_tested) > 0:
+                    display_cols = df_class_tested[['id', 'name', 'class_name', 'vak_result']].rename(
+                        columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
+                    )
+                    display_cols = add_serial_column(display_cols)
+                    render_rtl_table(display_cols)
+                    
+                    html_table = display_cols.to_html(index=False, classes="table", justify="center")
+                    v_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('بصري', na=False)]) / len(df_class_tested) * 100, 1)
+                    a_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('سمعي', na=False)]) / len(df_class_tested) * 100, 1)
+                    k_pct = round(len(df_class_tested[df_class_tested['vak_result'].str.contains('حركي', na=False)]) / len(df_class_tested) * 100, 1)
+                    
+                    class_content = f"""
+                    <div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">الإحصائية الإجمالية: <span style="font-weight: normal; font-size: 15px;">عدد الطلاب في هذا التقرير: {len(df_class_tested)} طالب</span></h3>
+                    <div class="stats-container"><div class="stat-card visual"><div class="stat-title">👁️ بصري</div><div class="stat-value">{v_pct}%</div></div><div class="stat-card auditory"><div class="stat-title">👂 سمعي</div><div class="stat-value">{a_pct}%</div></div><div class="stat-card kinesthetic"><div class="stat-title">🏃‍♂️ حركي</div><div class="stat-value">{k_pct}%</div></div></div></div>
+                    <h3 style="margin-top: 20px; font-size: 16px;">قائمة بيانات الطلاب:</h3>{html_table}"""
+                    
+                    base_title = f"تقرير أنماط التعلم - {scope_label}"
+                    if style_filter != "جميع الأنماط":
+                        base_title += f" (النمط ال{style_filter})"
+                    full_html = generate_html_page(base_title, class_content, get_school_name(df_class_tested))
+                    st.download_button(
+                        label="📥 تحميل التقرير للطباعة (A4)",
+                        data=full_html.encode('utf-8'),
+                        file_name=f"Group_Report_{scope_label}_{style_filter}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
                 else:
-                    style_tips = "<li>دمج الأنشطة الحركية والتجارب العملية والمجسمات اليدوية في الدرس.</li><li>تطبيق استراتيجية لعب الأدوار والتعلم بالمحاكاة.</li><li>تقسيم المهام الطويلة وإتاحة فرص للحركة الهادفة داخل الفصل.</li>"
+                    st.warning("لا يوجد طلاب مختبرين مطابقين لهذا الفلتر في النطاق المحدد.")
 
-                style_content = f"""
-                <div class="summary-box">
-                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
-                        إحصائية النمط ({chosen_style_label}): <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_style_matched)} طالب</span>
-                    </h3>
-                    <p style="margin: 5px 0; font-weight: bold; color: #2980b9;">💡 استراتيجيات التدريس الموصى بها لهذه المجموعة داخل الفصل:</p>
-                    <ul style="margin: 5px 0 0 0; line-height: 1.6; font-size: 14px;">{style_tips}</ul>
-                </div>
-                <h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء طلاب النمط ال{chosen_style_key}:</h3>{html_table}"""
+            # 2️⃣ تقرير فرز الأنماط المخصص
+            elif curr_rep == "style":
+                df_style_sub, scope_label = render_grade_class_Selector(df_all, "style_only")
+                chosen_style_label = st.selectbox("3️⃣ اختر نمط التعلم المطلوب استخراجه:", ["بصري 👁️", "سمعي 👂", "حركي 🏃‍♂️"])
+                chosen_style_key = chosen_style_label.split()[0]
+                    
+                df_style_matched = df_style_sub[df_style_sub['vak_result'].str.contains(chosen_style_key, na=False)].copy()
                 
-                report_title = f"تقرير حصر طلاب النمط ال{chosen_style_key} ({chosen_style_label}) - {scope_label}"
-                full_html = generate_html_page(report_title, style_content, get_school_name(df_style_matched))
-                st.download_button(
-                    label=f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة (A4)",
-                    data=full_html.encode('utf-8'),
-                    file_name=f"Style_Report_{chosen_style_key}_{scope_label}.html",
-                    mime="text/html",
-                    use_container_width=True
-                )
-            else:
-                st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
-
-        # 3️⃣ تقرير غير المختبرين
-        elif curr_rep == "untested":
-            df_scope, scope_label = render_grade_class_Selector(df_all, "untested")
-            df_untested = df_scope[df_scope['vak_result'] == 'غير مختبر'].copy()
-            
-            if len(df_untested) > 0:
-                display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
-                display_cols = add_serial_column(display_cols)
-                render_rtl_table(display_cols)
-                
-                html_table = display_cols.to_html(index=False, classes="table", justify="center")
-                untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
-                report_title = f"تقرير حصر الطلاب غير المختبرين - {scope_label}"
-                full_html = generate_html_page(report_title, untested_content, get_school_name(df_untested))
-                st.download_button(
-                    label="📥 تحميل تقرير غير المختبرين للطباعة (A4)",
-                    data=full_html.encode('utf-8'),
-                    file_name=f"Untested_Report_{scope_label}.html",
-                    mime="text/html",
-                    use_container_width=True
-                )
-            else: st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
-
-        # 4️⃣ التقرير الفردي لطالب
-        elif curr_rep == "indiv":
-            st.info("💡 اكتب اسم الطالب أو رقم هويته ثم اضغط على زر (بحث).")
-            
-            col_search_in, col_search_btn = st.columns([4, 1.2])
-            with col_search_in:
-                search_query = st.text_input("🔍 ابحث باسم الطالب أو رقم الهوية:", placeholder="مثال: أحمد خالد أو رقم الهوية...", key="indiv_search_input")
-            with col_search_btn:
-                st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-                search_clicked = st.button("🔍 بحث", use_container_width=True, key="btn_indiv_search")
-                
-            if search_query or search_clicked:
-                norm_query = search_query.strip()
-                if not norm_query:
-                    st.warning("الرجاء كتابة اسم الطالب أو رقم الهوية في مربع البحث أولاً.")
-                else:
-                    matches = df_all[
-                        df_all['name'].apply(lambda x: norm_query in str(x)) |
-                        df_all['id'].apply(lambda x: norm_query in str(x))
-                    ]
-                    if matches.empty:
-                        st.warning("لم يتم العثور على طالب يطابق هذا البحث ضمن الفصول المسندة إليك.")
+                if len(df_style_matched) > 0:
+                    display_cols = df_style_matched[['id', 'name', 'class_name', 'vak_result']].rename(
+                        columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب'}
+                    )
+                    display_cols = add_serial_column(display_cols)
+                    render_rtl_table(display_cols)
+                    
+                    html_table = display_cols.to_html(index=False, classes="table", justify="center")
+                    
+                    if chosen_style_key == "بصري":
+                        style_tips = "<li>الاعتماد على الخرائط الذهنية، الصور، والرسوم البيانية على السبورة.</li><li>استخدام الأقلام الملونة لتمييز الكلمات والمفاهيم الأساسية.</li><li>عرض مقاطع الفيديو التعليمية والعروض المرئية.</li>"
+                    elif chosen_style_key == "سمعي":
+                        style_tips = "<li>التركيز على الشرح الشفهي المباشر والحوار والنقاش الجماعي.</li><li>توظيف القراءة الجهرية والترديد الصوتي للمعلومات المهمة.</li><li>تشجيع الطلاب على تلخيص الدرس شفهياً لزملائهم.</li>"
                     else:
-                        options = matches['name'] + " | الهوية: " + matches['id'] + " | الفصل: " + matches['class_name']
-                        selected_choice = st.selectbox("الطلاب المطابقين للبحث:", options)
-                        
-                        exact_id = selected_choice.split("الهوية: ")[1].split(" |")[0]
-                        s = df_all[df_all['id'] == exact_id].iloc[0]
-                        
-                        if s['vak_result'] == 'غير مختبر':
-                            st.error("⚠️ هذا الطالب لم يجرِ الاختبار بعد.")
+                        style_tips = "<li>دمج الأنشطة الحركية والتجارب العملية والمجسمات اليدوية في الدرس.</li><li>تطبيق استراتيجية لعب الأدوار والتعلم بالمحاكاة.</li><li>تقسيم المهام الطويلة وإتاحة فرص للحركة الهادفة داخل الفصل.</li>"
+
+                    style_content = f"""
+                    <div class="summary-box">
+                        <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
+                            إحصائية النمط ({chosen_style_label}): <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_style_matched)} طالب</span>
+                        </h3>
+                        <p style="margin: 5px 0; font-weight: bold; color: #1f379c;">💡 استراتيجيات التدريس الموصى بها لهذه المجموعة داخل الفصل:</p>
+                        <ul style="margin: 5px 0 0 0; line-height: 1.6; font-size: 14px;">{style_tips}</ul>
+                    </div>
+                    <h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء طلاب النمط ال{chosen_style_key}:</h3>{html_table}"""
+                    
+                    report_title = f"تقرير حصر طلاب النمط ال{chosen_style_key} ({chosen_style_label}) - {scope_label}"
+                    full_html = generate_html_page(report_title, style_content, get_school_name(df_style_matched))
+                    st.download_button(
+                        label=f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة (A4)",
+                        data=full_html.encode('utf-8'),
+                        file_name=f"Style_Report_{chosen_style_key}_{scope_label}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                else:
+                    st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
+
+            # 3️⃣ تقرير غير المختبرين
+            elif curr_rep == "untested":
+                df_scope, scope_label = render_grade_class_Selector(df_all, "untested")
+                df_untested = df_scope[df_scope['vak_result'] == 'غير مختبر'].copy()
+                
+                if len(df_untested) > 0:
+                    display_cols = df_untested[['id', 'name', 'class_name']].rename(columns={'id': 'الرقم', 'name': 'الاسم', 'class_name': 'الفصل'})
+                    display_cols = add_serial_column(display_cols)
+                    render_rtl_table(display_cols)
+                    
+                    html_table = display_cols.to_html(index=False, classes="table", justify="center")
+                    untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
+                    report_title = f"تقرير حصر الطلاب غير المختبرين - {scope_label}"
+                    full_html = generate_html_page(report_title, untested_content, get_school_name(df_untested))
+                    st.download_button(
+                        label="📥 تحميل تقرير غير المختبرين للطباعة (A4)",
+                        data=full_html.encode('utf-8'),
+                        file_name=f"Untested_Report_{scope_label}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                else:
+                    st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
+
+            # 4️⃣ التقرير الفردي لطالب
+            elif curr_rep == "indiv":
+                st.info("💡 اكتب اسم الطالب أو رقم هويته ثم اضغط على زر (بحث).")
+                
+                col_search_in, col_search_btn = st.columns([4, 1.2])
+                with col_search_in:
+                    search_query = st.text_input("🔍 ابحث باسم الطالب أو رقم الهوية:", placeholder="مثال: أحمد خالد أو رقم الهوية...", key="indiv_search_input")
+                with col_search_btn:
+                    st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                    search_clicked = st.button("🔍 بحث", use_container_width=True, key="btn_indiv_search")
+                    
+                if search_query or search_clicked:
+                    norm_query = search_query.strip()
+                    if not norm_query:
+                        st.warning("الرجاء كتابة اسم الطالب أو رقم الهوية في مربع البحث أولاً.")
+                    else:
+                        matches = df_all[
+                            df_all['name'].apply(lambda x: norm_query in str(x)) |
+                            df_all['id'].apply(lambda x: norm_query in str(x))
+                        ]
+                        if matches.empty:
+                            st.warning("لم يتم العثور على طالب يطابق هذا البحث ضمن الفصول المسندة إليك.")
                         else:
-                            school_names_html = get_school_name(pd.DataFrame([s]))
-                            v_pct = int(float(s['v_score'])) * 10
-                            a_pct = int(float(s['a_score'])) * 10
-                            k_pct = int(float(s['k_score'])) * 10
-                            if "بصري" in s['vak_result']: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."; recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
-                            elif "سمعي" in s['vak_result']: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل السمعية والحوارية."; recs = "<li>توظيف الشرح الشفهي والنقاشات الجماعية.</li><li>الاعتماد على الترديد والتسجيلات الصوتية.</li><li>تشجيع الطالب على القراءة بصوت مسموع.</li>"
-                            else: summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."; recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
-                            student_content = f"""
-                            <div class="summary-box"><p><b>اسم الطالب:</b> {s['name']}</p><p><b>الصف والفصل:</b> {s['grade']} - {s['class_name']}</p><p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p></div>
-                            <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>بصري Visual</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>سمعي Auditory</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>حركي Kinesthetic</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
-                            <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#2c3e50; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
-                            <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
-                            """
-                            full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
-                            st.download_button(
-                                label=f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة",
-                                data=full_html.encode('utf-8'),
-                                file_name=f"Student_{s['id']}_Report.html",
-                                mime="text/html",
-                                use_container_width=True
-                            )
+                            options = matches['name'] + " | الهوية: " + matches['id'] + " | الفصل: " + matches['class_name']
+                            selected_choice = st.selectbox("الطلاب المطابقين للبحث:", options)
+                            
+                            exact_id = selected_choice.split("الهوية: ")[1].split(" |")[0]
+                            s = df_all[df_all['id'] == exact_id].iloc[0]
+                            
+                            if s['vak_result'] == 'غير مختبر':
+                                st.error("⚠️ هذا الطالب لم يجرِ الاختبار بعد.")
+                            else:
+                                school_names_html = get_school_name(pd.DataFrame([s]))
+                                v_pct = int(float(s['v_score'])) * 10
+                                a_pct = int(float(s['a_score'])) * 10
+                                k_pct = int(float(s['k_score'])) * 10
+                                if "بصري" in s['vak_result']:
+                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل البصرية المرئية."
+                                    recs = "<li>استخدام الصور والخرائط الذهنية في الشرح.</li><li>الاعتماد على العروض المرئية والفيديوهات.</li><li>استخدام الألوان في التلخيص والتنظيم.</li>"
+                                elif "سمعي" in s['vak_result']:
+                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل السمعية والحوارية."
+                                    recs = "<li>توظيف الشرح الشفهي والنقاشات الجماعية.</li><li>الاعتماد على الترديد والتسجيلات الصوتية.</li><li>تشجيع الطالب على القراءة بصوت مسموع.</li>"
+                                else:
+                                    summary = "يميل الطالب في إجاباته إلى تفضيل الوسائل الحركية والعملية."
+                                    recs = "<li>دمج الأنشطة والتطبيقات العملية اليدوية.</li><li>السماح بالحركة أثناء التعلم أو استخدام المجسمات.</li><li>تطبيق استراتيجية لعب الأدوار.</li>"
+                                student_content = f"""
+                                <div class="summary-box"><p><b>اسم الطالب:</b> {s['name']}</p><p><b>الصف والفصل:</b> {s['grade']} - {s['class_name']}</p><p><b>الرقم المدرسي (الهوية):</b> {s['id']}</p></div>
+                                <h3 style="font-size: 16px;">النتيجة التفصيلية:</h3>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>بصري Visual</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>سمعي Auditory</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
+                                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>حركي Kinesthetic</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
+                                <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#172661; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
+                                <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
+                                """
+                                full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
+                                st.download_button(
+                                    label=f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة",
+                                    data=full_html.encode('utf-8'),
+                                    file_name=f"Student_{s['id']}_Report.html",
+                                    mime="text/html",
+                                    use_container_width=True
+                                )
 
     if tab_data is not None:
         with tab_data:
-            st.subheader("إدارة قواعد البيانات والصلاحيات")
-            sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول"])
-            
-            # 1️⃣ تبويب بيانات الطلاب
-            with sub_tab_students:
-                col1_s, col2_s, col3_s = st.columns(3)
-                with col1_s:
-                    template_s_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
-                    st.download_button("📥 تحميل قالب إضافة الطلاب", data=create_excel_bytes(template_s_df), file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
-                with col2_s:
-                    template_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
-                    st.download_button("🧠 تحميل قالب أنماط التعلم", data=create_excel_bytes(template_vak_df), file_name='vak_learning_styles_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_main")
-                with col3_s:
-                    st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=create_excel_bytes(df_all_raw), file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
+            with st.container(border=True):
+                st.markdown("<div class='card-section-title'>⚙️ إدارة قواعد البيانات والصلاحيات</div>", unsafe_allow_html=True)
+                st.markdown("<p class='card-section-sub'>تحديث قوائم الطلاب، استيراد أنماط التعلم، وتخصيص الفصول المسندة للمعلمين</p>", unsafe_allow_html=True)
+                sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول"])
                 
-                st.markdown("---")
-                st.write("**📤 الاستيراد الذكي لبيانات الطلاب أو قالب أنماط التعلم:**")
-                uploaded_s_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للطلاب أو أنماط التعلم", type=['xlsx', 'csv'], key="up_s")
-                if uploaded_s_file is not None:
-                    try:
-                        new_s_data = pd.read_csv(uploaded_s_file) if uploaded_s_file.name.endswith('.csv') else pd.read_excel(uploaded_s_file)
-                        added_cnt, updated_vak_cnt, ok_flag = intelligent_merge_students_and_vak(new_s_data)
-                        if not ok_flag:
-                            st.error("⚠️ الملف لا يحتوي على عمود رقم الهوية المطلوب (id).")
-                        elif added_cnt > 0 or updated_vak_cnt > 0:
-                            st.success(f"✅ تمت العملية بنجاح! (إضافة طلاب جدد: {added_cnt} | تحديث أنماط تعلم: {updated_vak_cnt})")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.warning("⚠️ جميع البيانات الموجودة في الملف مسجلة ومحدثة بالفعل في النظام.")
-                    except Exception as e:
-                        st.error("حدث خطأ أثناء قراءة الملف.")
-                st.markdown("---")
-                
-                col_db_q, col_db_b = st.columns([4, 1.2])
-                with col_db_q:
-                    db_search_q = st.text_input("🔍 بحث سريع في سجل الطلاب:", placeholder="ابحث بالاسم أو الهوية أو الفصل...", key="db_s_q")
-                with col_db_b:
-                    st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-                    st.button("🔍 بحث", use_container_width=True, key="btn_db_s")
-                
-                df_s_view = df_all_raw.copy()
-                if db_search_q.strip():
-                    q_str = db_search_q.strip()
-                    df_s_view = df_s_view[
-                        df_s_view['name'].apply(lambda x: q_str in str(x)) |
-                        df_s_view['id'].apply(lambda x: q_str in str(x)) |
-                        df_s_view['class_name'].apply(lambda x: q_str in str(x))
-                    ]
-                
-                display_s_df = df_s_view.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
-                display_s_df = add_serial_column(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']])
-                render_rtl_table(display_s_df)
-
-            # 2️⃣ تبويب مخصص لاستيراد وتصدير قالب أنماط التعلم (VAK)
-            with sub_tab_vak:
-                st.info("💡 يمكنك تحميل قالب أنماط التعلم فارغاً، أو محملاً بأسماء الطلاب الحاليين لرصد وتعديل أنماطهم ودرجاتهم (بصري / سمعي / حركي) ثم إعادة رفعه.")
-                col1_v, col2_v = st.columns(2)
-                with col1_v:
-                    empty_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
-                    st.download_button("📥 تحميل قالب أنماط التعلم (فارغ)", data=create_excel_bytes(empty_vak_df), file_name='vak_empty_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_empty")
-                with col2_v:
-                    prefilled_vak_df = df_all_raw[['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].copy()
-                    st.download_button("📋 تحميل كشف رصد الأنماط للطلاب المسجلين", data=create_excel_bytes(prefilled_vak_df), file_name='vak_students_sheet.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_prefilled")
-                
-                st.markdown("---")
-                st.write("**📤 استيراد وتحديث ملف أنماط التعلم (VAK):**")
-                uploaded_vak_file = st.file_uploader("ارفع ملف قالب أنماط التعلم (.xlsx أو .csv) بعد تعبئته", type=['xlsx', 'csv'], key="up_vak_only")
-                if uploaded_vak_file is not None:
-                    try:
-                        new_vak_data = pd.read_csv(uploaded_vak_file) if uploaded_vak_file.name.endswith('.csv') else pd.read_excel(uploaded_vak_file)
-                        added_cnt, updated_vak_cnt, ok_flag = intelligent_merge_students_and_vak(new_vak_data)
-                        if not ok_flag:
-                            st.error("⚠️ الملف لا يحتوي على عمود رقم الهوية المطلوب (id).")
-                        elif added_cnt > 0 or updated_vak_cnt > 0:
-                            st.success(f"🎉 تم تحديث أنماط التعلم لـ {updated_vak_cnt} طالب وإضافة {added_cnt} طالب جديد بنجاح!")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.warning("⚠️ لم يتم رصد أي تغييرات جديدة في أنماط التعلم.")
-                    except Exception as e:
-                        st.error("حدث خطأ أثناء قراءة ملف أنماط التعلم.")
-                
-                st.markdown("---")
-                display_vak_df = df_all_raw[['id', 'name', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].rename(
-                    columns={'id': 'رقم الهوية', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب', 'v_score': 'بصري (V)', 'a_score': 'سمعي (A)', 'k_score': 'حركي (K)'}
-                )
-                display_vak_df = add_serial_column(display_vak_df)
-                render_rtl_table(display_vak_df)
-
-            # 3️⃣ تبويب بيانات المعلمين والتحكم في صلاحيات الفصول
-            with sub_tab_teachers:
-                try: df_teachers = get_all_teachers()
-                except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-
-                st.markdown("#### 🔐 التحكم في صلاحيات المعلمين وتخصيص الفصول")
-                st.info("💡 اختر المعلم لتحديد الفصول المسموح له باستعراضها وطباعة تقاريرها (يمكنك اختيار فصل واحد، عدة فصول، أو منح صلاحية جميع الفصول).")
-                
-                all_available_classes = sorted([c for c in df_all_raw['class_name'].unique() if str(c).strip()])
-                
-                if not df_teachers.empty:
-                    teacher_options = df_teachers['name'] + " | الهوية: " + df_teachers['id']
-                    selected_teacher_opt = st.selectbox("👤 اختر المعلم لتعديل صلاحيته وفصوله:", teacher_options, key="sel_teacher_perm")
+                # 1️⃣ تبويب بيانات الطلاب
+                with sub_tab_students:
+                    col1_s, col2_s, col3_s = st.columns(3)
+                    with col1_s:
+                        template_s_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name'])
+                        st.download_button("📥 تحميل قالب إضافة الطلاب", data=create_excel_bytes(template_s_df), file_name='students_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_s")
+                    with col2_s:
+                        template_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
+                        st.download_button("🧠 تحميل قالب أنماط التعلم", data=create_excel_bytes(template_vak_df), file_name='vak_learning_styles_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_main")
+                    with col3_s:
+                        st.download_button("💾 تحميل نسخة احتياطية (الطلاب)", data=create_excel_bytes(df_all_raw), file_name='students_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_s")
                     
-                    sel_t_id = selected_teacher_opt.split("الهوية: ")[1].strip()
-                    sel_t_row = df_teachers[df_teachers['id'] == sel_t_id].iloc[0]
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    st.write("**📤 الاستيراد الذكي لبيانات الطلاب أو قالب أنماط التعلم:**")
+                    uploaded_s_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للطلاب أو أنماط التعلم", type=['xlsx', 'csv'], key="up_s")
+                    if uploaded_s_file is not None:
+                        try:
+                            new_s_data = pd.read_csv(uploaded_s_file) if uploaded_s_file.name.endswith('.csv') else pd.read_excel(uploaded_s_file)
+                            added_cnt, updated_vak_cnt, ok_flag = intelligent_merge_students_and_vak(new_s_data)
+                            if not ok_flag:
+                                st.error("⚠️ الملف لا يحتوي على عمود رقم الهوية المطلوب (id).")
+                            elif added_cnt > 0 or updated_vak_cnt > 0:
+                                st.success(f"✅ تمت العملية بنجاح! (إضافة طلاب جدد: {added_cnt} | تحديث أنماط تعلم: {updated_vak_cnt})")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ جميع البيانات الموجودة في الملف مسجلة ومحدثة بالفعل في النظام.")
+                        except Exception as e:
+                            st.error("حدث خطأ أثناء قراءة الملف.")
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
                     
-                    curr_t_role = str(sel_t_row.get('role', 'teacher')).strip()
-                    curr_t_classes_parsed = parse_teacher_classes(sel_t_row.get('class_name', 'all'))
+                    col_db_q, col_db_b = st.columns([4, 1.2])
+                    with col_db_q:
+                        db_search_q = st.text_input("🔍 بحث سريع في سجل الطلاب:", placeholder="ابحث بالاسم أو الهوية أو الفصل...", key="db_s_q")
+                    with col_db_b:
+                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                        st.button("🔍 بحث", use_container_width=True, key="btn_db_s")
                     
-                    role_label_map = {"teacher": "معلم (صلاحية حسب الفصول)", "admin": "مدير النظام (صلاحية كاملة)"}
-                    rev_role_map = {v: k for k, v in role_label_map.items()}
-                    default_role_idx = 1 if curr_t_role == 'admin' else 0
-                    chosen_role_label = st.selectbox("🛡️ نوع الحساب:", list(role_label_map.values()), index=default_role_idx, key=f"role_{sel_t_id}")
-                    chosen_role = rev_role_map[chosen_role_label]
-                        
-                    is_all_default = (curr_t_classes_parsed == 'all') or (chosen_role == 'admin')
-                    grant_all_classes = st.checkbox(
-                        "✅ منح صلاحية الوصول وطباعة جميع الفصول (الكل)",
-                        value=is_all_default,
-                        disabled=(chosen_role == 'admin'),
-                        key=f"chk_all_{sel_t_id}"
+                    df_s_view = df_all_raw.copy()
+                    if db_search_q.strip():
+                        q_str = db_search_q.strip()
+                        df_s_view = df_s_view[
+                            df_s_view['name'].apply(lambda x: q_str in str(x)) |
+                            df_s_view['id'].apply(lambda x: q_str in str(x)) |
+                            df_s_view['class_name'].apply(lambda x: q_str in str(x))
+                        ]
+                    
+                    display_s_df = df_s_view.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'grade': 'الصف', 'class_name': 'الفصل', 'vak_result': 'النتيجة الغالبة'})
+                    display_s_df = add_serial_column(display_s_df[['رقم الهوية', 'الاسم', 'الصف', 'الفصل', 'النتيجة الغالبة']])
+                    render_rtl_table(display_s_df)
+
+                # 2️⃣ تبويب مخصص لاستيراد وتصدير قالب أنماط التعلم (VAK)
+                with sub_tab_vak:
+                    st.info("💡 يمكنك تحميل قالب أنماط التعلم فارغاً، أو محملاً بأسماء الطلاب الحاليين لرصد وتعديل أنماطهم ودرجاتهم (بصري / سمعي / حركي) ثم إعادة رفعه.")
+                    col1_v, col2_v = st.columns(2)
+                    with col1_v:
+                        empty_vak_df = pd.DataFrame(columns=['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score'])
+                        st.download_button("📥 تحميل قالب أنماط التعلم (فارغ)", data=create_excel_bytes(empty_vak_df), file_name='vak_empty_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_empty")
+                    with col2_v:
+                        prefilled_vak_df = df_all_raw[['id', 'name', 'grade', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].copy()
+                        st.download_button("📋 تحميل كشف رصد الأنماط للطلاب المسجلين", data=create_excel_bytes(prefilled_vak_df), file_name='vak_students_sheet.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_vak_prefilled")
+                    
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    st.write("**📤 استيراد وتحديث ملف أنماط التعلم (VAK):**")
+                    uploaded_vak_file = st.file_uploader("ارفع ملف قالب أنماط التعلم (.xlsx أو .csv) بعد تعبئته", type=['xlsx', 'csv'], key="up_vak_only")
+                    if uploaded_vak_file is not None:
+                        try:
+                            new_vak_data = pd.read_csv(uploaded_vak_file) if uploaded_vak_file.name.endswith('.csv') else pd.read_excel(uploaded_vak_file)
+                            added_cnt, updated_vak_cnt, ok_flag = intelligent_merge_students_and_vak(new_vak_data)
+                            if not ok_flag:
+                                st.error("⚠️ الملف لا يحتوي على عمود رقم الهوية المطلوب (id).")
+                            elif added_cnt > 0 or updated_vak_cnt > 0:
+                                st.success(f"🎉 تم تحديث أنماط التعلم لـ {updated_vak_cnt} طالب وإضافة {added_cnt} طالب جديد بنجاح!")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ لم يتم رصد أي تغييرات جديدة في أنماط التعلم.")
+                        except Exception as e:
+                            st.error("حدث خطأ أثناء قراءة ملف أنماط التعلم.")
+                    
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    display_vak_df = df_all_raw[['id', 'name', 'class_name', 'vak_result', 'v_score', 'a_score', 'k_score']].rename(
+                        columns={'id': 'رقم الهوية', 'name': 'الاسم', 'class_name': 'الفصل', 'vak_result': 'النمط الغالب', 'v_score': 'بصري (V)', 'a_score': 'سمعي (A)', 'k_score': 'حركي (K)'}
                     )
+                    display_vak_df = add_serial_column(display_vak_df)
+                    render_rtl_table(display_vak_df)
+
+                # 3️⃣ تبويب بيانات المعلمين والتحكم في صلاحيات الفصول
+                with sub_tab_teachers:
+                    try: df_teachers = get_all_teachers()
+                    except: df_teachers = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+
+                    st.markdown("#### 🔐 التحكم في صلاحيات المعلمين وتخصيص الفصول")
+                    st.info("💡 اختر المعلم لتحديد الفصول المسموح له باستعراضها وطباعة تقاريرها (يمكنك اختيار فصل واحد، عدة فصول، أو منح صلاحية جميع الفصول).")
                     
-                    if chosen_role == 'admin' or grant_all_classes:
-                        st.caption("📌 هذا الحساب لديه صلاحية استعراض وطباعة **جميع الفصول** في المدرسة.")
-                        final_classes_str = "all"
-                        can_save = True
-                    else:
-                        default_selected_classes = [c for c in curr_t_classes_parsed if c in all_available_classes] if isinstance(curr_t_classes_parsed, list) else []
-                        selected_multi_classes = st.multiselect(
-                            "🏫 اختر الفصول المحددة لهذا المعلم (قائمة اختيار متعدد):",
-                            options=all_available_classes,
-                            default=default_selected_classes,
-                            placeholder="اختر فصلاً واحداً أو أكثر...",
-                            key=f"multi_cls_{sel_t_id}"
-                        )
-                        final_classes_str = ", ".join(selected_multi_classes)
-                        can_save = len(selected_multi_classes) > 0
-                        if not can_save:
-                            st.warning("⚠️ يرجى اختيار فصل واحد على الأقل من القائمة، أو تفعيل خيار (جميع الفصول).")
+                    all_available_classes = sorted([c for c in df_all_raw['class_name'].unique() if str(c).strip()])
+                    
+                    if not df_teachers.empty:
+                        teacher_options = df_teachers['name'] + " | الهوية: " + df_teachers['id']
+                        selected_teacher_opt = st.selectbox("👤 اختر المعلم لتعديل صلاحيته وفصوله:", teacher_options, key="sel_teacher_perm")
+                        
+                        sel_t_id = selected_teacher_opt.split("الهوية: ")[1].strip()
+                        sel_t_row = df_teachers[df_teachers['id'] == sel_t_id].iloc[0]
+                        
+                        curr_t_role = str(sel_t_row.get('role', 'teacher')).strip()
+                        curr_t_classes_parsed = parse_teacher_classes(sel_t_row.get('class_name', 'all'))
+                        
+                        role_label_map = {"teacher": "معلم (صلاحية حسب الفصول)", "admin": "مدير النظام (صلاحية كاملة)"}
+                        rev_role_map = {v: k for k, v in role_label_map.items()}
+                        default_role_idx = 1 if curr_t_role == 'admin' else 0
+                        chosen_role_label = st.selectbox("🛡️ نوع الحساب:", list(role_label_map.values()), index=default_role_idx, key=f"role_{sel_t_id}")
+                        chosen_role = rev_role_map[chosen_role_label]
                             
-                    if st.button("💾 حفظ صلاحيات وفصول المعلم فوراً", use_container_width=True, key=f"btn_save_perm_{sel_t_id}"):
-                        if not can_save:
-                            st.error("⚠️ لا يمكن الحفظ بدون اختيار فصول للمعلم.")
+                        is_all_default = (curr_t_classes_parsed == 'all') or (chosen_role == 'admin')
+                        grant_all_classes = st.checkbox(
+                            "✅ منح صلاحية الوصول وطباعة جميع الفصول (الكل)",
+                            value=is_all_default,
+                            disabled=(chosen_role == 'admin'),
+                            key=f"chk_all_{sel_t_id}"
+                        )
+                        
+                        if chosen_role == 'admin' or grant_all_classes:
+                            st.caption("📌 هذا الحساب لديه صلاحية استعراض وطباعة **جميع الفصول** في المدرسة.")
+                            final_classes_str = "all"
+                            can_save = True
                         else:
-                            with st.spinner("جاري حفظ الصلاحيات وتحديث قاعدة البيانات فوراً..."):
-                                if update_teacher_permissions(sel_t_id, chosen_role, final_classes_str):
-                                    st.success(f"✅ تم تحديث صلاحيات وفصول الأستاذ ({sel_t_row['name']}) فوراً بنجاح!")
-                                    time.sleep(0.8)
+                            default_selected_classes = [c for c in curr_t_classes_parsed if c in all_available_classes] if isinstance(curr_t_classes_parsed, list) else []
+                            selected_multi_classes = st.multiselect(
+                                "🏫 اختر الفصول المحددة لهذا المعلم (قائمة اختيار متعدد):",
+                                options=all_available_classes,
+                                default=default_selected_classes,
+                                placeholder="اختر فصلاً واحداً أو أكثر...",
+                                key=f"multi_cls_{sel_t_id}"
+                            )
+                            final_classes_str = ", ".join(selected_multi_classes)
+                            can_save = len(selected_multi_classes) > 0
+                            if not can_save:
+                                st.warning("⚠️ يرجى اختيار فصل واحد على الأقل من القائمة، أو تفعيل خيار (جميع الفصول).")
+                                
+                        if st.button("💾 حفظ صلاحيات وفصول المعلم فوراً", use_container_width=True, key=f"btn_save_perm_{sel_t_id}"):
+                            if not can_save:
+                                st.error("⚠️ لا يمكن الحفظ بدون اختيار فصول للمعلم.")
+                            else:
+                                with st.spinner("جاري حفظ الصلاحيات وتحديث قاعدة البيانات فوراً..."):
+                                    if update_teacher_permissions(sel_t_id, chosen_role, final_classes_str):
+                                        st.success(f"✅ تم تحديث صلاحيات وفصول الأستاذ ({sel_t_row['name']}) فوراً بنجاح!")
+                                        time.sleep(0.8)
+                                        st.rerun()
+                                    else:
+                                        st.error("حدث خطأ أثناء تحديث بيانات المعلم.")
+                    else:
+                        st.warning("لا يوجد معلمون مسجلون حالياً.")
+
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    col1_t, col2_t = st.columns(2)
+                    with col1_t:
+                        template_t_df = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+                        st.download_button("📥 تحميل قالب إضافة المعلمين", data=create_excel_bytes(template_t_df), file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
+                    with col2_t:
+                        st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=create_excel_bytes(df_teachers), file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
+                    
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
+                    uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
+                    if uploaded_t_file is not None:
+                        try:
+                            new_t_data = pd.read_csv(uploaded_t_file) if uploaded_t_file.name.endswith('.csv') else pd.read_excel(uploaded_t_file)
+                            std_t_data = standardize_uploaded_columns(new_t_data.copy())
+                            if all(col in std_t_data.columns for col in ['id', 'name']):
+                                added_t_count = intelligent_merge_teachers(std_t_data)
+                                if added_t_count > 0:
+                                    st.success(f"✅ تم إضافة {added_t_count} حساب معلم جديد بنجاح!")
                                     st.rerun()
                                 else:
-                                    st.error("حدث خطأ أثناء تحديث بيانات المعلم.")
-                else:
-                    st.warning("لا يوجد معلمون مسجلون حالياً.")
-
-                st.markdown("---")
-                col1_t, col2_t = st.columns(2)
-                with col1_t:
-                    template_t_df = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-                    st.download_button("📥 تحميل قالب إضافة المعلمين", data=create_excel_bytes(template_t_df), file_name='teachers_template.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_tpl_t")
-                with col2_t:
-                    st.download_button("💾 تحميل نسخة احتياطية (المعلمين)", data=create_excel_bytes(df_teachers), file_name='teachers_backup.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True, key="btn_bkp_t")
-                
-                st.markdown("---")
-                st.write("**📤 الاستيراد الذكي التلقائي لبيانات المعلمين:**")
-                uploaded_t_file = st.file_uploader("اختر ملف Excel (.xlsx أو .csv) للمعلمين", type=['xlsx', 'csv'], key="up_t")
-                if uploaded_t_file is not None:
-                    try:
-                        new_t_data = pd.read_csv(uploaded_t_file) if uploaded_t_file.name.endswith('.csv') else pd.read_excel(uploaded_t_file)
-                        std_t_data = standardize_uploaded_columns(new_t_data.copy())
-                        if all(col in std_t_data.columns for col in ['id', 'name']):
-                            added_t_count = intelligent_merge_teachers(std_t_data)
-                            if added_t_count > 0: st.success(f"✅ تم إضافة {added_t_count} حساب معلم جديد بنجاح!"); st.rerun()
-                            else: st.warning("⚠️ جميع المعلمين الموجودين في الملف مسجلون بالفعل في النظام.")
-                        else: st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name).")
-                    except Exception as e: st.error("حدث خطأ أثناء قراءة الملف.")
-                
-                st.markdown("---")
-                display_t_df = df_teachers.copy()
-                display_t_df['class_name'] = display_t_df['class_name'].apply(lambda x: "جميع الفصول (الكل)" if parse_teacher_classes(x) == 'all' else str(x))
-                display_t_df['role'] = display_t_df['role'].apply(lambda x: "مدير النظام (admin)" if str(x).strip() == 'admin' else "معلم (teacher)")
-                display_t_df = display_t_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول المسموحة'})
-                display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
-                render_rtl_table(display_t_df)
+                                    st.warning("⚠️ جميع المعلمين الموجودين في الملف مسجلون بالفعل في النظام.")
+                            else:
+                                st.error("⚠️ الملف لا يحتوي على الأعمدة المطلوبة (id, name).")
+                        except Exception as e:
+                            st.error("حدث خطأ أثناء قراءة الملف.")
+                    
+                    st.markdown("<hr style='margin: 14px 0; border: 0; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
+                    display_t_df = df_teachers.copy()
+                    display_t_df['class_name'] = display_t_df['class_name'].apply(lambda x: "جميع الفصول (الكل)" if parse_teacher_classes(x) == 'all' else str(x))
+                    display_t_df['role'] = display_t_df['role'].apply(lambda x: "مدير النظام (admin)" if str(x).strip() == 'admin' else "معلم (teacher)")
+                    display_t_df = display_t_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول المسموحة'})
+                    display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
+                    render_rtl_table(display_t_df)
 
 # ==========================================
-# 6. تذييل الصفحة (الحقوق)
+# 6. تذييل الصفحة الموحد وبطاقات الدعم السفلية (مطابق للهوية البصرية في الفيديو)
 # ==========================================
 st.markdown("""
-<div class="custom-footer">
-    جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026
+<div class="ziyad-footer-wrap">
+    <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</div>
+    <div class="ziyad-footer-cards">
+        <div class="ziyad-footer-btn">📢 تليجرام الإدارة</div>
+        <div class="ziyad-footer-btn">💬 واتساب المعلم</div>
+        <div class="ziyad-footer-btn">📧 البريد الإلكتروني</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
