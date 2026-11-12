@@ -607,41 +607,86 @@ st.markdown(f"""
         line-height: 1.5;
     }}
 
-    /* تنسيق حقول الإدخال والقوائم المنسدلة (RTL 100%) */
-    div[data-testid="stTextInput"] input {{
-        background-color: var(--bg-input) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 10px !important;
-        padding: 12px 14px !important;
-        font-size: 14.5px !important;
-        color: var(--text-primary) !important;
-        -webkit-text-fill-color: var(--text-primary) !important;
+    /* تنسيق حقول الإدخال والقوائم المنسدلة (تباين كامل في الوضع الفاتح والداكن + RTL 100%) */
+    div[data-baseweb="input"],
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="base-input"],
+    div[data-baseweb="textarea"],
+    div[data-baseweb="textarea"] > div,
+    div[data-baseweb="select"] > div {{
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        color-scheme: light !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        min-height: 46px !important;
         direction: rtl !important;
         text-align: right !important;
-        transition: all 0.2s ease;
     }}
-    div[data-testid="stTextInput"] input:focus {{
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextArea"] textarea,
+    div[data-baseweb="input"] input,
+    div[data-baseweb="select"] input,
+    input, textarea, select {{
+        background-color: transparent !important;
+        padding: 10px 14px !important;
+        font-size: 14.5px !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        caret-color: var(--brand-bright) !important;
+        direction: rtl !important;
+        text-align: right !important;
+        opacity: 1 !important;
+    }}
+    input::placeholder,
+    textarea::placeholder,
+    div[data-baseweb="input"] input::placeholder {{
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        opacity: 1 !important;
+        direction: rtl !important;
+        text-align: right !important;
+        font-weight: 600 !important;
+    }}
+    div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="select"] > div:focus-within {{
         border-color: var(--brand-bright) !important;
         box-shadow: 0 0 0 3px var(--focus-ring) !important;
         background-color: #ffffff !important;
     }}
 
     div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] *,
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div,
     div[data-baseweb="popover"],
-    div[data-baseweb="popover"] > div,
+    div[data-baseweb="popover"] *,
     div[data-baseweb="menu"],
     ul[role="listbox"],
     div[role="listbox"] {{
         direction: rtl !important;
         text-align: right !important;
         font-family: 'Cairo', sans-serif !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 700 !important;
     }}
-    div[data-baseweb="select"] > div {{
-        background-color: var(--bg-input) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 10px !important;
-        min-height: 44px !important;
+    div[data-baseweb="select"] svg,
+    div[data-baseweb="input"] svg {{
+        fill: #0f172a !important;
+        color: #0f172a !important;
+    }}
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="menu"],
+    ul[role="listbox"],
+    div[role="listbox"] {{
+        background-color: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2) !important;
     }}
     li[role="option"],
     div[role="option"],
@@ -655,6 +700,18 @@ st.markdown(f"""
         width: 100% !important;
         padding: 10px 16px !important;
         font-size: 14px !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 700 !important;
+    }}
+    li[role="option"]:hover,
+    div[role="option"]:hover,
+    li[role="option"][aria-selected="true"],
+    div[role="option"][aria-selected="true"] {{
+        background-color: var(--tab-hover) !important;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
     }}
     li[role="option"] > div,
     li[role="option"] span,
@@ -664,14 +721,16 @@ st.markdown(f"""
         text-align: right !important;
         width: 100% !important;
         display: block !important;
+        color: inherit !important;
+        -webkit-text-fill-color: inherit !important;
     }}
     div[data-baseweb="select"] div[value],
     div[data-baseweb="select"] > div > div:first-child {{
         direction: rtl !important;
         text-align: right !important;
         justify-content: flex-start !important;
-        color: var(--text-primary) !important;
-        -webkit-text-fill-color: var(--text-primary) !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
     }}
     div[data-testid="stSelectbox"] label,
     div[data-testid="stMultiSelect"] label,
