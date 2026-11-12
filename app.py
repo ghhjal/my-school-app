@@ -337,10 +337,21 @@ def show_footer():
 # ==========================================
 # 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
 # ==========================================
+st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
 st.markdown(
     f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
+*:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+font-family: 'Cairo', sans-serif !important;
+letter-spacing: 0px !important;
+}}
 
 :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
 --background-color: #F8FAFC !important;
@@ -545,27 +556,122 @@ margin: 0 0 14px 0 !important;
 line-height: 1.5 !important;
 }}
 
-/* ✳️ 3. محاذاة العناوين والتسميات خارج البنر إلى اليمين */
-h1, h2, h3, h4, h5, h6, p, label,
+/* ✳️ 3. هرمية الخطوط المتوازنة ومحاذاة العناوين والتسميات (Desktop & Mobile) */
+h1, h2, h3, h4, h5, h6, p, label, span, div,
 [data-testid="stHeadingWithActionElements"],
 [data-testid="stHeadingWithActionElements"] *,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p,
 [data-testid="stWidgetLabel"] span,
 [data-testid="stRadio"] label,
-[data-testid="stCheckbox"] label {{
+[data-testid="stRadio"] p,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p {{
 font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
-color: var(--text-color) !important;
+}}
+
+/* ضبط أحجام العناوين خارج البنر العلوي لتكون متوازنة وأنيقة دون تضخم */
+[data-testid="stMain"] h2:not(.unified-main-title),
+[data-testid="stMain"] h3:not(.unified-main-title),
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3 {{
+font-size: 19px !important;
+font-weight: 900 !important;
+line-height: 1.45 !important;
+color: #0F172A !important;
+margin: 6px 0 12px 0 !important;
+padding-bottom: 6px !important;
+border-bottom: 2px solid #E2E8F0 !important;
+}}
+
+[data-testid="stMain"] h4,
+[data-testid="stHeadingWithActionElements"] h4 {{
+font-size: 16.5px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #1E293B !important;
+margin: 8px 0 10px 0 !important;
+}}
+
+[data-testid="stMain"] h5,
+[data-testid="stMain"] h6,
+[data-testid="stHeadingWithActionElements"] h5,
+[data-testid="stHeadingWithActionElements"] h6 {{
+font-size: 15px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #1E293B !important;
+margin: 4px 0 8px 0 !important;
+}}
+
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span {{
+font-size: 14px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #334155 !important;
+margin-bottom: 4px !important;
+}}
+
+/* تنسيق أسئلة وخيارات الاختبار والراديو في واجهة الطالب والمعلم */
+div[data-testid="stRadio"] > div[role="radiogroup"] {{
+gap: 8px !important;
+direction: rtl !important;
+}}
+
+div[data-testid="stRadio"] label {{
+background-color: #F8FAFC !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 12px !important;
+padding: 10px 14px !important;
+margin-bottom: 4px !important;
+transition: all 0.2s ease !important;
+width: 100% !important;
+box-sizing: border-box !important;
+}}
+
+div[data-testid="stRadio"] label:hover {{
+border-color: {accent_color} !important;
+background-color: #EFF6FF !important;
+}}
+
+div[data-testid="stRadio"] label p,
+div[data-testid="stRadio"] label span {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 14px !important;
+font-weight: 700 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+line-height: 1.5 !important;
 }}
 
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{
 font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
-color: var(--sub-text-color) !important;
+color: #64748B !important;
+font-size: 13px !important;
 font-weight: 700 !important;
+line-height: 1.5 !important;
+}}
+
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 22px !important;
+font-weight: 900 !important;
+color: {primary_color} !important;
+}}
+
+[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] * {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+color: #475569 !important;
 }}
 
 [data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
@@ -920,28 +1026,31 @@ display: none !important;
 }}
 
 /* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; box-sizing: border-box; }}
-.metric-info {{ text-align: right; }}
-.metric-title {{ color: var(--sub-text-color); font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
-.metric-val {{ color: var(--text-color); font-size: 25px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: var(--subtle-text); font-size: 12px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 48px; height: 48px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 22px; flex-shrink: 0; }}
-.ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
-.ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
-.ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; direction: rtl; width: 100%; box-sizing: border-box; }}
+.metric-card {{ background-color: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.metric-info {{ text-align: right; font-family: 'Cairo', sans-serif !important; }}
+.metric-title {{ color: #475569; font-size: 13px; font-weight: 800; margin-bottom: 4px; font-family: 'Cairo', sans-serif !important; }}
+.metric-val {{ color: #0F172A; font-size: 22px; font-weight: 900; line-height: 1.15; font-family: 'Cairo', sans-serif !important; }}
+.metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; font-family: 'Cairo', sans-serif !important; }}
+.metric-icon {{ width: 44px; height: 44px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; flex-shrink: 0; }}
+.ic-green {{ background-color: rgba(16, 185, 129, 0.12); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.28); }}
+.ic-blue {{ background-color: rgba(59, 130, 246, 0.12); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.28); }}
+.ic-red {{ background-color: rgba(245, 158, 11, 0.12); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.28); }}
 
-.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid var(--border-color); margin-bottom: 15px; box-sizing: border-box; }}
-.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; box-sizing: border-box; }}
+.app-card {{ background: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); border: 1.5px solid #E2E8F0; margin-bottom: 14px; box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.mobile-list-item {{ background: #FFFFFF; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1.5px solid #E2E8F0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); display: flex; align-items: center; justify-content: space-between; color: #0F172A; direction: rtl; text-align: right; box-sizing: border-box; font-family: 'Cairo', sans-serif !important; font-size: 14.5px !important; }}
+.mobile-list-item * {{ font-family: 'Cairo', sans-serif !important; }}
 
 .student-list-card {{
-background: var(--secondary-background-color);
-border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
-border: 1.5px solid var(--border-color);
-box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+background: #FFFFFF;
+border-radius: 14px; padding: 14px 16px; margin-bottom: 8px;
+border: 1.5px solid #E2E8F0;
+box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 display: block !important; width: 100% !important; box-sizing: border-box !important;
-text-align: right !important; direction: rtl !important; color: var(--text-color);
+text-align: right !important; direction: rtl !important; color: #0F172A;
+font-family: 'Cairo', sans-serif !important;
 }}
+.student-list-card * {{ font-family: 'Cairo', sans-serif !important; }}
 .student-card-header {{
 display: flex !important; flex-direction: row !important;
 justify-content: space-between !important; align-items: center !important;
@@ -949,18 +1058,18 @@ gap: 10px !important; width: 100% !important; direction: rtl !important; margin-
 }}
 .student-card-title {{
 text-align: right !important; direction: rtl !important;
-font-weight: 900 !important; font-size: 1.05rem !important;
-line-height: 1.4 !important; flex: 1 !important; unicode-bidi: plaintext !important;
+font-weight: 800 !important; font-size: 15px !important;
+line-height: 1.45 !important; flex: 1 !important; unicode-bidi: plaintext !important;
 }}
 .student-card-date {{
-background: var(--background-color); padding: 4px 10px; border-radius: 8px;
-font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
-flex-shrink: 0 !important; direction: ltr !important; border: 1px solid var(--border-color);
+background: #F8FAFC; padding: 4px 10px; border-radius: 8px;
+font-size: 12px !important; font-weight: 800; white-space: nowrap !important;
+flex-shrink: 0 !important; direction: ltr !important; border: 1px solid #E2E8F0; color: #475569 !important;
 }}
 .student-card-body {{
 text-align: right !important; direction: rtl !important;
-width: 100% !important; font-size: 0.95rem !important;
-line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
+width: 100% !important; font-size: 13.5px !important;
+line-height: 1.55 !important; margin: 0 !important; unicode-bidi: plaintext !important; color: #475569 !important;
 }}
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; width: 100%; }}
@@ -993,12 +1102,15 @@ padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !i
 }}
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{ color: #EF4444 !important; }}
 
-.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; width: 100%; }}
-.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid var(--border-color); box-shadow: {shadow_val}; color: var(--text-color); }}
-.m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
+.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px 0; direction: rtl; width: 100%; font-family: 'Cairo', sans-serif !important; }}
+.m-card {{ background: #FFFFFF; padding: 12px 6px; border-radius: 14px; text-align: center !important; border: 1.5px solid #E2E8F0; box-shadow: 0 3px 8px rgba(15, 23, 42, 0.04); color: #0F172A; font-family: 'Cairo', sans-serif !important; font-size: 13px !important; line-height: 1.4 !important; }}
+.m-card * {{ font-family: 'Cairo', sans-serif !important; text-align: center !important; }}
+.m-active {{ border: 2px solid {warning_color} !important; background: #FFFBEB !important; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important; }}
 
-.points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center !important; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }}
-.welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 6px 15px rgba(0,0,0, 0.3); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box; }}
+.points-banner {{ background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #F59E0B 100%); color: #FFFFFF !important; padding: 18px 20px; border-radius: 18px; text-align: center !important; margin-bottom: 14px; box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25); border: 1px solid rgba(255,255,255,0.22); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.points-banner * {{ font-family: 'Cairo', sans-serif !important; color: #FFFFFF !important; text-align: center !important; }}
+.welcome-card {{ background: {header_grad}; color: #FFFFFF !important; padding: 18px 20px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18); border: 1px solid rgba(255,255,255,0.18); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.welcome-card * {{ font-family: 'Cairo', sans-serif !important; color: #FFFFFF !important; }}
 
 [data-testid="stDataFrame"] {{ direction: rtl !important; max-width: 100% !important; overflow-x: auto !important; }}
 
@@ -1008,13 +1120,32 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال: شبكة تبويبات (2×2) وثبات تام دون حركة يمين ويسار */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 2.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 20px 14px 18px 14px !important; margin: 8px auto 16px auto !important; border-radius: 20px !important; }}
+.block-container {{ padding-top: 1.2rem !important; padding-left: 0.7rem !important; padding-right: 0.7rem !important; }}
+.header-container {{ padding: 20px 14px 18px 14px !important; margin: 4px auto 14px auto !important; border-radius: 20px !important; }}
 .unified-main-title {{ font-size: 22px !important; }}
 .unified-brand-pill {{ font-size: 13.5px !important; padding: 4px 14px !important; }}
 .unified-sub-desc {{ font-size: 12.5px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
-.metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+[data-testid="stMain"] h2:not(.unified-main-title),
+[data-testid="stMain"] h3:not(.unified-main-title),
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3 {{
+font-size: 17px !important;
+margin: 4px 0 10px 0 !important;
+}}
+[data-testid="stMain"] h4,
+[data-testid="stHeadingWithActionElements"] h4 {{
+font-size: 15.5px !important;
+}}
+[data-testid="stMain"] h5,
+[data-testid="stMain"] h6 {{
+font-size: 14px !important;
+}}
+.metric-container {{ grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }}
+.metric-card {{ padding: 11px 10px !important; border-radius: 13px !important; }}
+.metric-title {{ font-size: 11.5px !important; }}
+.metric-val {{ font-size: 19px !important; }}
+.metric-sub {{ font-size: 10.5px !important; }}
+.metric-icon {{ width: 36px !important; height: 36px !important; font-size: 17px !important; border-radius: 10px !important; }}
 .stTabs [data-baseweb="tab-list"] {{
 display: grid !important;
 grid-template-columns: repeat(2, 1fr) !important;
@@ -1025,8 +1156,8 @@ grid-column: span 2 !important;
 }}
 .stTabs [data-baseweb="tab"] {{
 width: 100% !important;
-font-size: 0.9rem !important;
-height: 50px !important;
+font-size: 13px !important;
+height: 46px !important;
 padding: 6px 8px !important;
 white-space: normal !important;
 }}
@@ -1073,6 +1204,10 @@ components.html(f"""
             pDoc.head.appendChild(existingStyle);
         }}
         existingStyle.innerHTML = `
+            *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+                font-family: 'Cairo', sans-serif !important;
+                letter-spacing: 0px !important;
+            }}
             :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
                 --text-color: #0f172a !important;
                 --background-color: #F8FAFC !important;
@@ -4748,28 +4883,28 @@ if st.session_state.role == "student":
     # 3. بطاقة الطالب المنسقة وبطاقة النقاط
     st.markdown(
         f"""
-        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 22px 20px;">
-            <div style="color: #FFFFFF; font-size: 1.45rem; font-weight: 900; line-height: 1.4; margin-bottom: 14px; text-align: right;">
+        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 18px 20px;">
+            <div style="color: #FFFFFF; font-size: 18px; font-weight: 900; line-height: 1.4; margin-bottom: 10px; text-align: right;">
                 👋 أهلاً بك، {s_nm}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; direction: rtl;">
-                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; direction: rtl;">
+                <div style="background: rgba(255, 255, 255, 0.18); padding: 5px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 13px; white-space: nowrap;">
                     🏫 الصف: {s_cls}
                 </div>
-                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
+                <div style="background: rgba(15, 23, 42, 0.3); border: 1px solid rgba(255, 255, 255, 0.22); padding: 5px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 13px; white-space: nowrap; direction: ltr;">
                     🆔 ID: {sid}
                 </div>
             </div>
         </div>
         <div class="points-banner">
-            <div style="margin:0; opacity:0.95; font-size:1rem; font-weight:800;">رصيد النقاط الحالي</div>
-            <div style="margin:4px 0; font-size:3.6rem; font-weight:900; line-height:1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
-            <div style="margin:0; font-size:0.9rem; font-weight:800;">استمر في التفوق!</div>
+            <div style="margin:0; opacity:0.95; font-size:13.5px; font-weight:800;">⭐ رصيد نقاط التميز الحالي</div>
+            <div style="margin:4px 0; font-size:34px; font-weight:900; line-height:1.15; text-shadow: 0 2px 6px rgba(0,0,0,0.18);">{pts}</div>
+            <div style="margin:0; font-size:12.5px; font-weight:700; opacity:0.92;">استمر في التألق والتميز!</div>
         </div>
         <div class="medal-flex">
-            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي (100+)</b></div>
-            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #94A3B8;">🥈<br><b>فضي (50+)</b></div>
-            <div class="m-card m-active" style="color: #D97706;">🥉<br><b>برونزي</b></div>
+            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: #B45309;"><span style="font-size:20px;">🥇</span><br><b>ذهبي (100+)</b></div>
+            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #475569;"><span style="font-size:20px;">🥈</span><br><b>فضي (50+)</b></div>
+            <div class="m-card m-active" style="color: #92400E;"><span style="font-size:20px;">🥉</span><br><b>برونزي</b></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -4892,28 +5027,28 @@ if st.session_state.role == "student":
           st.markdown(
               f"""
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">📝 المشاركة والواجبات</span>
+                  <span style="font-weight:800; font-size:14.5px; color:#0F172A;">📝 المشاركة والواجبات</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p1')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
+                      <span style='font-size:18px; font-weight:900; color:{primary_color};'>{g.get('p1')}</span> 
+                      <span style='color:#64748B; font-size:13.5px; font-weight:800;'>/ {st.session_state.max_tasks}</span>
                   </div>
               </div>
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">✍️ الاختبارات القصيرة</span>
+                  <span style="font-weight:800; font-size:14.5px; color:#0F172A;">✍️ الاختبارات القصيرة</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p2')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
+                      <span style='font-size:18px; font-weight:900; color:{primary_color};'>{g.get('p2')}</span> 
+                      <span style='color:#64748B; font-size:13.5px; font-weight:800;'>/ {st.session_state.max_quiz}</span>
                   </div>
               </div>
-              <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
+              <div class='mobile-list-item' style='background:#FFFFFF; border: 1.5px solid {accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
                   <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                      <span style="color:{accent_color}; font-weight:900;">🏆 المجموع النهائي ({cp})</span>
+                      <span style="color:{primary_color}; font-weight:900; font-size:15px;">🏆 المجموع النهائي ({cp})</span>
                       <div style="direction: ltr;">
-                          <span style='font-size:1.6rem; font-weight:900; color:{accent_color};'>{perf_score}</span> 
-                          <span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
+                          <span style='font-size:20px; font-weight:900; color:{primary_color};'>{perf_score}</span> 
+                          <span style='color:#64748B; font-size:14px; font-weight:800;'>/ {max_total}</span>
                       </div>
                   </div>
-                  <div style="margin-top:10px; width:100%; text-align:center; padding:8px; background:var(--background-color); border-radius:10px; color:{title_color}; font-weight:900; font-size:1.1rem; border:1.5px solid {title_color}55;">
+                  <div style="margin-top:10px; width:100%; text-align:center; padding:8px; background:#F8FAFC; border-radius:10px; color:{title_color}; font-weight:800; font-size:14.5px; border:1.5px solid {title_color}45;">
                       {title}
                   </div>
               </div>
