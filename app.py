@@ -356,7 +356,7 @@ st.markdown(
 :root {{
 --background-color: #0B1120;
 --secondary-background-color: #1E293B;
---input-bg-color: #0F172A;
+--input-bg-color: #FFFFFF;
 --text-color: #F8FAFC;
 --sub-text-color: #CBD5E1;
 --border-color: #334155;
@@ -591,47 +591,90 @@ color: var(--text-color) !important;
 font-weight: 800 !important;
 }}
 
-/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (RTL كامل) */
-div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="textarea"], div[data-baseweb="select"] > div {{
-background-color: var(--input-bg-color) !important;
-border: 1.5px solid var(--border-color) !important;
+/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (تباين فائق الوضوح في الوضع الفاتح والداكن + RTL كامل) */
+div[data-baseweb="input"],
+div[data-baseweb="input"] > div,
+div[data-baseweb="base-input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="textarea"] > div,
+div[data-baseweb="select"] > div,
+div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+color-scheme: light !important;
+border: 1.5px solid #CBD5E1 !important;
 border-radius: 12px !important;
 min-height: 48px !important;
 direction: rtl !important;
 text-align: right !important;
 }}
 
-div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within, div[data-baseweb="textarea"]:focus-within {{
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"]:focus-within {{
 border-color: {accent_color} !important;
-box-shadow: 0 0 0 2px {primary_color}40 !important;
+box-shadow: 0 0 0 3px {primary_color}40 !important;
+background-color: #FFFFFF !important;
 }}
 
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stDateInput"] input,
+div[data-baseweb="input"] input,
+div[data-baseweb="textarea"] textarea,
+div[data-baseweb="select"] input,
 input, textarea, select {{
 direction: rtl !important;
 text-align: right !important;
-color: var(--text-color) !important;
--webkit-text-fill-color: var(--text-color) !important;
-caret-color: {accent_color} !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+caret-color: {primary_color} !important;
 background-color: transparent !important;
 font-weight: 800 !important;
 font-size: 1.02rem !important;
 font-family: 'Cairo', sans-serif !important;
+opacity: 1 !important;
 }}
 
-::placeholder {{
-color: var(--sub-text-color) !important;
-opacity: 0.75 !important;
--webkit-text-fill-color: var(--sub-text-color) !important;
+input::placeholder,
+textarea::placeholder,
+div[data-baseweb="input"] input::placeholder,
+div[data-baseweb="textarea"] textarea::placeholder {{
+color: #64748B !important;
+opacity: 1 !important;
+-webkit-text-fill-color: #64748B !important;
 text-align: right !important;
 direction: rtl !important;
+font-weight: 600 !important;
 }}
 
-div[data-baseweb="select"], div[data-baseweb="select"] * {{
+div[data-baseweb="select"],
+div[data-baseweb="select"] *,
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div {{
 direction: rtl !important;
 text-align: right !important;
 font-family: 'Cairo', sans-serif !important;
-color: var(--text-color) !important;
-font-weight: 700 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+font-weight: 800 !important;
+opacity: 1 !important;
+}}
+
+div[data-baseweb="select"] svg,
+div[data-baseweb="input"] svg,
+div[data-testid="stNumberInput"] button svg {{
+fill: #0F172A !important;
+color: #0F172A !important;
+}}
+
+div[data-testid="stNumberInput"] button {{
+background-color: #F1F5F9 !important;
+color: #0F172A !important;
+border: none !important;
 }}
 
 div[data-baseweb="select"] > div {{
@@ -641,6 +684,7 @@ justify-content: space-between !important;
 align-items: center !important;
 padding-right: 12px !important;
 padding-left: 8px !important;
+background-color: #FFFFFF !important;
 }}
 
 div[data-baseweb="select"] > div > div:first-child {{
@@ -648,32 +692,59 @@ direction: rtl !important;
 text-align: right !important;
 justify-content: flex-start !important;
 flex: 1 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 }}
 
-span[data-baseweb="tag"] {{
+span[data-baseweb="tag"],
+span[data-baseweb="tag"] * {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
-background-color: {primary_color}25 !important;
+background-color: #EFF6FF !important;
 border: 1px solid {accent_color} !important;
-color: var(--text-color) !important;
+color: #1E3A8A !important;
+-webkit-text-fill-color: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
-div[data-baseweb="popover"], div[data-baseweb="popover"] *, div[data-baseweb="menu"], div[data-baseweb="menu"] *, ul[data-baseweb="menu"], ul[data-baseweb="menu"] *, [data-testid="stSelectboxVirtualDropdown"], [data-testid="stSelectboxVirtualDropdown"] *, [role="listbox"], [role="listbox"] *, [role="option"], [role="option"] * {{
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] *,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] *,
+ul[data-baseweb="menu"],
+ul[data-baseweb="menu"] *,
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] *,
+[role="listbox"],
+[role="listbox"] *,
+[role="option"],
+[role="option"] * {{
 direction: rtl !important;
 text-align: right !important;
 font-family: 'Cairo', sans-serif !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 }}
 
-div[data-baseweb="popover"] > div, div[data-baseweb="menu"], ul[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], [role="listbox"] {{
-background-color: var(--secondary-background-color) !important;
-border: 1.5px solid var(--border-color) !important;
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
+ul[data-baseweb="menu"],
+[data-testid="stSelectboxVirtualDropdown"],
+[role="listbox"] {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+border: 1.5px solid #CBD5E1 !important;
 border-radius: 12px !important;
-box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28) !important;
 }}
 
-div[data-baseweb="popover"] li, ul[data-baseweb="menu"] li, [data-testid="stSelectboxVirtualDropdown"] li, [role="listbox"] li, li[role="option"], div[role="option"] {{
+div[data-baseweb="popover"] li,
+ul[data-baseweb="menu"] li,
+[data-testid="stSelectboxVirtualDropdown"] li,
+[role="listbox"] li,
+li[role="option"],
+div[role="option"] {{
 display: flex !important;
 flex-direction: row !important;
 justify-content: flex-start !important;
@@ -683,21 +754,34 @@ text-align: right !important;
 width: 100% !important;
 padding-right: 16px !important;
 padding-left: 16px !important;
-color: var(--text-color) !important;
-background-color: transparent !important;
-font-weight: 700 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+background-color: #FFFFFF !important;
+font-weight: 800 !important;
 }}
 
-div[data-baseweb="popover"] li:hover, [data-testid="stSelectboxVirtualDropdown"] li:hover, li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
-background-color: {primary_color}25 !important;
+div[data-baseweb="popover"] li:hover,
+[data-testid="stSelectboxVirtualDropdown"] li:hover,
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"],
+div[role="option"][aria-selected="true"] {{
+background-color: #EFF6FF !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
 }}
 
-div[data-baseweb="popover"] li > div, ul[data-baseweb="menu"] li > div, [data-testid="stSelectboxVirtualDropdown"] li > div, [role="listbox"] li > div, li[role="option"] > div, li[role="option"] div {{
+div[data-baseweb="popover"] li > div,
+ul[data-baseweb="menu"] li > div,
+[data-testid="stSelectboxVirtualDropdown"] li > div,
+[role="listbox"] li > div,
+li[role="option"] > div,
+li[role="option"] div {{
 width: 100% !important;
 direction: rtl !important;
 text-align: right !important;
 margin: 0 !important;
-color: var(--text-color) !important;
+color: inherit !important;
+-webkit-text-fill-color: inherit !important;
 }}
 
 /* ✳️ 5. الأزرار الرئيسية والثانوية */
