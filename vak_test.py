@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
 import base64
@@ -259,12 +260,17 @@ st.markdown(f"""
     /* ========================================================
        2. ضبط الاتجاه العام (RTL) والخلفية والخطوط
        ======================================================== */
-    html, body, [data-testid="stAppViewContainer"], .stApp {{
+    :root, html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .stApp {{
+        --text-color: #0f172a !important;
+        --background-color: var(--bg-page) !important;
+        --secondary-background-color: #ffffff !important;
+        --primary-color: var(--brand-royal) !important;
+        color-scheme: light only !important;
         direction: rtl !important;
         text-align: right !important;
         font-family: 'Cairo', sans-serif !important;
         background-color: var(--bg-page) !important;
-        color: var(--text-primary) !important;
+        color: #0f172a !important;
         transition: background-color 0.35s ease;
     }}
 
@@ -1324,6 +1330,72 @@ st.markdown(f"""
     <div class="unified-sub-desc">البصري • السمعي • الحركي</div>
 </div>
 """, unsafe_allow_html=True)
+
+components.html("""
+<script>
+(function() {
+    try {
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        function enforceLightInputs() {
+            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
+            inputBoxes.forEach(function(box) {
+                box.style.setProperty('background-color', '#ffffff', 'important');
+                box.style.setProperty('background', '#ffffff', 'important');
+                box.style.setProperty('color', '#0f172a', 'important');
+                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                var innerEls = box.querySelectorAll('div, span, input, textarea');
+                innerEls.forEach(function(inn) {
+                    if (!inn.closest('[data-baseweb="tag"]')) {
+                        inn.style.setProperty('color', '#0f172a', 'important');
+                        inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {
+                            inn.style.setProperty('background-color', '#ffffff', 'important');
+                        } else {
+                            inn.style.setProperty('background-color', 'transparent', 'important');
+                        }
+                    }
+                });
+                var svgs = box.querySelectorAll('svg');
+                svgs.forEach(function(s) {
+                    s.style.setProperty('fill', '#0f172a', 'important');
+                    s.style.setProperty('color', '#0f172a', 'important');
+                });
+            });
+
+            var popovers = pDoc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], ul[role="listbox"], li[role="option"], div[role="option"]');
+            popovers.forEach(function(el) {
+                el.setAttribute('dir', 'rtl');
+                el.style.setProperty('direction', 'rtl', 'important');
+                el.style.setProperty('text-align', 'right', 'important');
+                el.style.setProperty('background-color', '#ffffff', 'important');
+                el.style.setProperty('color', '#0f172a', 'important');
+                var chs = el.querySelectorAll('div, span');
+                chs.forEach(function(ch) {
+                    ch.setAttribute('dir', 'rtl');
+                    ch.style.setProperty('direction', 'rtl', 'important');
+                    ch.style.setProperty('text-align', 'right', 'important');
+                    ch.style.setProperty('color', '#0f172a', 'important');
+                    ch.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                });
+            });
+        }
+
+        enforceLightInputs();
+        if (!window.parent.__ziyadVakLightObserver) {
+            var obs = new MutationObserver(function() {
+                enforceLightInputs();
+            });
+            obs.observe(pDoc.body, { childList: true, subtree: true });
+            window.parent.__ziyadVakLightObserver = true;
+        }
+    } catch (e) {}
+})();
+</script>
+""", height=0)
 
 # ==========================================
 # 💡 دالة عرض الجداول من اليمين إلى اليسار (RTL) بدلاً من st.dataframe اليساري
