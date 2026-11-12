@@ -6,7 +6,7 @@ import io
 import time
 
 # ==========================================
-# 1. إعدادات الصفحة والـ CSS الموحد مع الهوية البصرية للمنصة الأم (RTL + متوافق تماماً مع الجوال)
+# 1. إعدادات الصفحة ونظام القوالب الديناميكية (Dynamic Themes) + التوافق الكامل مع الجوال (RTL)
 # ==========================================
 st.set_page_config(
     page_title="منصة زياد الذكية | أنماط التعلم (VAK)",
@@ -14,107 +14,290 @@ st.set_page_config(
     layout="centered"
 )
 
-st.markdown("""
+# تعريف القوالب الديناميكية الأربعة للهوية البصرية
+THEMES = {
+    "royal": {
+        "name": "👑 الأزرق الملكي",
+        "desc": "الهوية الرسمية الأساسية للمنصة",
+        "bg_page": "#f7f8fb",
+        "bg_input": "#f8f9fc",
+        "brand_dark": "#141b3e",
+        "brand_navy": "#172661",
+        "brand_royal": "#1f379c",
+        "brand_bright": "#2958d8",
+        "brand_light": "#426bda",
+        "brand_gold": "#eb9d11",
+        "hero_grad": "linear-gradient(135deg, #2b5ce7 0%, #1f379c 45%, #162044 100%)",
+        "btn_grad": "linear-gradient(90deg, #141b3e 0%, #1f379c 50%, #2958d8 100%)",
+        "shadow_header": "0 12px 28px rgba(31, 55, 156, 0.22)",
+        "shadow_btn": "0 4px 14px rgba(31, 55, 156, 0.25)",
+        "focus_ring": "rgba(41, 88, 216, 0.14)",
+        "tab_hover": "#eef2ff",
+        "row_hover": "#eff6ff",
+        "report_bg": "#eff6ff",
+        "report_border": "#bfdbfe",
+        "dot_color": "#2958d8"
+    },
+    "green": {
+        "name": "🌿 الأخضر الوطني",
+        "desc": "طابع تعليمي رسمي مستوحى من الهوية الوطنية",
+        "bg_page": "#f4f9f6",
+        "bg_input": "#f7fbf9",
+        "brand_dark": "#0b2e1f",
+        "brand_navy": "#0f4c35",
+        "brand_royal": "#156f4d",
+        "brand_bright": "#1ea371",
+        "brand_light": "#34d399",
+        "brand_gold": "#d99b16",
+        "hero_grad": "linear-gradient(135deg, #1ea371 0%, #156f4d 48%, #0b2e1f 100%)",
+        "btn_grad": "linear-gradient(90deg, #0b2e1f 0%, #156f4d 50%, #1ea371 100%)",
+        "shadow_header": "0 12px 28px rgba(21, 111, 77, 0.22)",
+        "shadow_btn": "0 4px 14px rgba(21, 111, 77, 0.25)",
+        "focus_ring": "rgba(30, 163, 113, 0.15)",
+        "tab_hover": "#ecfdf5",
+        "row_hover": "#f0fdf4",
+        "report_bg": "#ecfdf5",
+        "report_border": "#a7f3d0",
+        "dot_color": "#1ea371"
+    },
+    "emerald": {
+        "name": "💎 الزمرد الفاخر",
+        "desc": "تصميم زمردي عميق بلمسات ذهبية ملكية فاخرة",
+        "bg_page": "#f3f8f7",
+        "bg_input": "#f6fbfa",
+        "brand_dark": "#072522",
+        "brand_navy": "#0b3b36",
+        "brand_royal": "#0f5e56",
+        "brand_bright": "#128277",
+        "brand_light": "#2dd4bf",
+        "brand_gold": "#f59e0b",
+        "hero_grad": "linear-gradient(135deg, #149689 0%, #0f5e56 48%, #072522 100%)",
+        "btn_grad": "linear-gradient(90deg, #072522 0%, #0f5e56 50%, #149689 100%)",
+        "shadow_header": "0 12px 28px rgba(15, 94, 86, 0.24)",
+        "shadow_btn": "0 4px 14px rgba(15, 94, 86, 0.26)",
+        "focus_ring": "rgba(18, 130, 119, 0.15)",
+        "tab_hover": "#f0fdfa",
+        "row_hover": "#ccfbf1",
+        "report_bg": "#f0fdfa",
+        "report_border": "#99f6e4",
+        "dot_color": "#0f5e56"
+    },
+    "horizon": {
+        "name": "🌌 الأفق الرقمي",
+        "desc": "تدرج تقني عصري يجمع البنفسجي العميق والسماوي المضيء",
+        "bg_page": "#f5f7fc",
+        "bg_input": "#f8f9fe",
+        "brand_dark": "#18143b",
+        "brand_navy": "#26205e",
+        "brand_royal": "#4338ca",
+        "brand_bright": "#0284c7",
+        "brand_light": "#38bdf8",
+        "brand_gold": "#f59e0b",
+        "hero_grad": "linear-gradient(135deg, #0284c7 0%, #4338ca 50%, #1e1b4b 100%)",
+        "btn_grad": "linear-gradient(90deg, #1e1b4b 0%, #4338ca 52%, #0284c7 100%)",
+        "shadow_header": "0 12px 28px rgba(67, 56, 202, 0.23)",
+        "shadow_btn": "0 4px 14px rgba(67, 56, 202, 0.26)",
+        "focus_ring": "rgba(2, 132, 199, 0.15)",
+        "tab_hover": "#eef2ff",
+        "row_hover": "#f0f9ff",
+        "report_bg": "#f0f9ff",
+        "report_border": "#bae6fd",
+        "dot_color": "#4338ca"
+    }
+}
+
+if 'active_theme' not in st.session_state:
+    st.session_state.active_theme = "royal"
+
+cur_t = THEMES.get(st.session_state.active_theme, THEMES["royal"])
+
+st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
     /* ========================================================
-       1. المتغيرات اللونية للهوية البصرية الموحدة (منصة زياد الذكية)
+       1. المتغيرات اللونية للقالب الديناميكي النشط ({cur_t['name']})
        ======================================================== */
-    :root {
-        --bg-page: #f7f8fb;
+    :root {{
+        --bg-page: {cur_t['bg_page']};
         --bg-card: #ffffff;
-        --bg-input: #f8f9fc;
-        --brand-dark: #141b3e;
-        --brand-navy: #172661;
-        --brand-royal: #1f379c;
-        --brand-bright: #2958d8;
-        --brand-light: #426bda;
-        --brand-gold: #eb9d11;
+        --bg-input: {cur_t['bg_input']};
+        --brand-dark: {cur_t['brand_dark']};
+        --brand-navy: {cur_t['brand_navy']};
+        --brand-royal: {cur_t['brand_royal']};
+        --brand-bright: {cur_t['brand_bright']};
+        --brand-light: {cur_t['brand_light']};
+        --brand-gold: {cur_t['brand_gold']};
+        --hero-grad: {cur_t['hero_grad']};
+        --btn-grad: {cur_t['btn_grad']};
+        --tab-hover: {cur_t['tab_hover']};
+        --row-hover: {cur_t['row_hover']};
+        --focus-ring: {cur_t['focus_ring']};
         --text-primary: #1e293b;
         --text-secondary: #475569;
         --text-muted: #64748b;
         --border-color: #e2e8f0;
         --border-hover: #cbd5e1;
         --shadow-card: 0 8px 24px rgba(20, 27, 62, 0.05);
-        --shadow-header: 0 12px 28px rgba(31, 55, 156, 0.22);
-    }
+        --shadow-header: {cur_t['shadow_header']};
+        --shadow-btn: {cur_t['shadow_btn']};
+    }}
 
     /* ========================================================
        2. ضبط الاتجاه العام (RTL) والخلفية والخطوط
        ======================================================== */
-    html, body, [data-testid="stAppViewContainer"], .stApp {
+    html, body, [data-testid="stAppViewContainer"], .stApp {{
         direction: rtl !important;
         text-align: right !important;
         font-family: 'Tajawal', sans-serif !important;
         background-color: var(--bg-page) !important;
         color: var(--text-primary) !important;
-    }
+        transition: background-color 0.35s ease;
+    }}
 
-    header[data-testid="stHeader"] { display: none !important; }
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
+    header[data-testid="stHeader"] {{ display: none !important; }}
+    #MainMenu {{ visibility: hidden; }}
+    footer {{ visibility: hidden; }}
 
-    .block-container {
+    .block-container {{
         max-width: 1020px !important;
-        padding-top: 1.8rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 2.5rem !important;
         padding-left: 1.2rem !important;
         padding-right: 1.2rem !important;
         direction: rtl !important;
-    }
+    }}
 
     .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, span, div,
-    .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {
+    .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {{
         direction: rtl !important;
         text-align: right !important;
         font-family: 'Tajawal', sans-serif !important;
-    }
+    }}
 
     /* ========================================================
-       3. الهيدر الموحد لمنصة زياد الذكية (مطابق تماماً لبوابة التعليم الذكية 2026)
+       3. شريط اختيار القالب الديناميكي (Theme Switcher Bar)
        ======================================================== */
-    .ziyad-hero-banner {
-        background: linear-gradient(135deg, #2b5ce7 0%, #1f379c 45%, #162044 100%);
+    .theme-switcher-header {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding: 0 4px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }}
+    .theme-switcher-label {{
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }}
+    .theme-active-badge {{
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--brand-royal) !important;
+        -webkit-text-fill-color: var(--brand-royal) !important;
+        background: var(--tab-hover);
+        border: 1px solid var(--border-color);
+        padding: 2px 10px;
+        border-radius: 999px;
+    }}
+
+    /* إبقاء أزرار القوالب الأربعة في صف متناسق ومضغوط */
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        margin-bottom: 14px !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
+        flex: 1 1 calc(25% - 8px) !important;
+        min-width: 125px !important;
+    }}
+
+    div[class*="st-key-thm_"] button {{
+        min-height: 38px !important;
+        padding: 5px 10px !important;
+        border-radius: 999px !important;
+        font-size: 12.5px !important;
+        transition: all 0.25s ease !important;
+    }}
+    div[class*="st-key-thm_active_"] button {{
+        background: var(--btn-grad) !important;
+        border: 2px solid var(--brand-gold) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: var(--shadow-btn) !important;
+        transform: translateY(-1px);
+    }}
+    div[class*="st-key-thm_active_"] button * {{
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 12.5px !important;
+    }}
+    div[class*="st-key-thm_idle_"] button {{
+        background-color: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+    }}
+    div[class*="st-key-thm_idle_"] button:hover {{
+        border-color: var(--brand-bright) !important;
+        background-color: var(--tab-hover) !important;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+    }}
+
+    /* ========================================================
+       4. الهيدر الموحد لمنصة زياد الذكية (يتغير ديناميكياً مع القالب)
+       ======================================================== */
+    .ziyad-hero-banner {{
+        background: var(--hero-grad);
         border-radius: 22px;
         padding: 28px 28px;
         margin-bottom: 18px;
         box-shadow: var(--shadow-header);
         position: relative;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.16);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 12px;
-    }
+        transition: all 0.35s ease;
+    }}
 
-    /* دوائر إضاءة خلفية ناعمة تضفي عمقاً فخماً للهيدر */
-    .ziyad-hero-banner::before {
+    .ziyad-hero-banner::before {{
         content: "";
         position: absolute;
         top: -50%;
         right: -10%;
         width: 260px;
         height: 260px;
-        background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+        background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
-    }
-    .ziyad-hero-banner::after {
+    }}
+    .ziyad-hero-banner::after {{
         content: "";
         position: absolute;
         bottom: -60%;
         left: -8%;
         width: 240px;
         height: 240px;
-        background: radial-gradient(circle, rgba(66,107,218,0.25) 0%, rgba(66,107,218,0) 70%);
+        background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
-    }
+    }}
 
-    .hero-main-row {
+    .hero-main-row {{
         display: flex;
         align-items: center;
         justify-content: center;
@@ -122,9 +305,9 @@ st.markdown("""
         flex-wrap: wrap;
         z-index: 1;
         width: 100%;
-    }
+    }}
 
-    .hero-icon-glass {
+    .hero-icon-glass {{
         width: 62px;
         height: 62px;
         border-radius: 16px;
@@ -139,14 +322,14 @@ st.markdown("""
         -webkit-backdrop-filter: blur(8px);
         animation: float-cap 3.5s ease-in-out infinite;
         flex-shrink: 0;
-    }
+    }}
 
-    @keyframes float-cap {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-4px) rotate(-4deg); }
-    }
+    @keyframes float-cap {{
+        0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+        50% {{ transform: translateY(-4px) rotate(-4deg); }}
+    }}
 
-    .hero-brand-title {
+    .hero-brand-title {{
         font-size: 34px !important;
         font-weight: 800 !important;
         color: #ffffff !important;
@@ -157,9 +340,9 @@ st.markdown("""
         letter-spacing: -0.3px;
         text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
         text-align: center !important;
-    }
+    }}
 
-    .hero-portal-pill {
+    .hero-portal-pill {{
         background: rgba(15, 23, 42, 0.35);
         border: 1px solid rgba(255, 255, 255, 0.26);
         padding: 6px 18px;
@@ -170,11 +353,18 @@ st.markdown("""
         -webkit-text-fill-color: #ffffff !important;
         white-space: nowrap;
         backdrop-filter: blur(4px);
-    }
+        text-decoration: none !important;
+        transition: all 0.2s ease;
+    }}
+    a.hero-portal-pill:hover {{
+        background: rgba(15, 23, 42, 0.55);
+        border-color: var(--brand-gold);
+        transform: translateY(-1px);
+    }}
 
-    .hero-sub-badge {
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.22);
+    .hero-sub-badge {{
+        background: rgba(255, 255, 255, 0.13);
+        border: 1px solid rgba(255, 255, 255, 0.24);
         padding: 5px 16px;
         border-radius: 999px;
         font-size: 13px !important;
@@ -183,12 +373,12 @@ st.markdown("""
         -webkit-text-fill-color: #f1f5f9 !important;
         z-index: 1;
         text-align: center !important;
-    }
+    }}
 
     /* ========================================================
-       4. شريط البوابات والتبويبات الموحد (الكحلي بالإطار الذهبي البرتقالي)
+       5. شريط البوابات والتبويبات الموحد (بلون القالب والإطار الذهبي)
        ======================================================== */
-    .portal-Mode-strip {
+    .portal-Mode-strip {{
         display: flex;
         align-items: center;
         justify-content: flex-start;
@@ -197,8 +387,8 @@ st.markdown("""
         padding-bottom: 10px;
         margin-bottom: 20px;
         overflow-x: auto;
-    }
-    .portal-pill-active {
+    }}
+    .portal-pill-active {{
         background: var(--brand-navy);
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
@@ -210,10 +400,10 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        box-shadow: 0 3px 10px rgba(23, 38, 97, 0.18);
+        box-shadow: var(--shadow-btn);
         white-space: nowrap;
-    }
-    .portal-pill-muted {
+    }}
+    .portal-pill-muted {{
         color: var(--text-muted) !important;
         -webkit-text-fill-color: var(--text-muted) !important;
         padding: 7px 12px;
@@ -223,9 +413,14 @@ st.markdown("""
         align-items: center;
         gap: 5px;
         white-space: nowrap;
-    }
+        text-decoration: none !important;
+    }}
+    a.portal-pill-muted:hover {{
+        color: var(--brand-royal) !important;
+        -webkit-text-fill-color: var(--brand-royal) !important;
+    }}
 
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         background-color: transparent;
         border-bottom: 1.5px solid var(--border-color);
         padding-bottom: 10px;
@@ -233,8 +428,8 @@ st.markdown("""
         justify-content: flex-start;
         margin-bottom: 20px;
         flex-wrap: wrap;
-    }
-    .stTabs [data-baseweb="tab"] {
+    }}
+    .stTabs [data-baseweb="tab"] {{
         background-color: transparent !important;
         border: 1.5px solid transparent !important;
         border-radius: 12px !important;
@@ -243,63 +438,63 @@ st.markdown("""
         -webkit-text-fill-color: var(--text-secondary) !important;
         font-weight: 700 !important;
         transition: all 0.2s ease !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #eef2ff !important;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: var(--tab-hover) !important;
         color: var(--brand-navy) !important;
         -webkit-text-fill-color: var(--brand-navy) !important;
-    }
-    .stTabs [data-baseweb="tab"] * {
+    }}
+    .stTabs [data-baseweb="tab"] * {{
         color: inherit !important;
         -webkit-text-fill-color: inherit !important;
         font-size: 14px !important;
         font-weight: 700 !important;
         margin: 0 !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+    }}
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {{
         background: var(--brand-navy) !important;
         border: 2px solid var(--brand-gold) !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(23, 38, 97, 0.22) !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
+        box-shadow: var(--shadow-btn) !important;
+    }}
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-    }
-    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+    }}
+    .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
 
     /* ========================================================
-       5. بطاقة تسجيل الدخول والحاويات البيضاء الفاخرة
+       6. بطاقة تسجيل الدخول والحاويات البيضاء الفاخرة
        ======================================================== */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: var(--bg-card) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 16px !important;
         padding: 22px 24px !important;
         box-shadow: var(--shadow-card) !important;
         margin-bottom: 18px !important;
-    }
+    }}
 
-    .card-section-title {
+    .card-section-title {{
         font-size: 21px !important;
         font-weight: 800 !important;
         color: var(--text-primary) !important;
         -webkit-text-fill-color: var(--text-primary) !important;
         margin: 0 0 6px 0 !important;
         text-align: right !important;
-    }
-    .card-section-sub {
+    }}
+    .card-section-sub {{
         font-size: 13.5px !important;
         color: var(--text-muted) !important;
         -webkit-text-fill-color: var(--text-muted) !important;
         margin: 0 0 16px 0 !important;
         text-align: right !important;
         line-height: 1.5;
-    }
+    }}
 
     /* تنسيق حقول الإدخال والقوائم المنسدلة (RTL 100%) */
-    div[data-testid="stTextInput"] input {
+    div[data-testid="stTextInput"] input {{
         background-color: var(--bg-input) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 10px !important;
@@ -310,12 +505,12 @@ st.markdown("""
         direction: rtl !important;
         text-align: right !important;
         transition: all 0.2s ease;
-    }
-    div[data-testid="stTextInput"] input:focus {
+    }}
+    div[data-testid="stTextInput"] input:focus {{
         border-color: var(--brand-bright) !important;
-        box-shadow: 0 0 0 3px rgba(41, 88, 216, 0.12) !important;
+        box-shadow: 0 0 0 3px var(--focus-ring) !important;
         background-color: #ffffff !important;
-    }
+    }}
 
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
@@ -323,20 +518,20 @@ st.markdown("""
     div[data-baseweb="popover"] > div,
     div[data-baseweb="menu"],
     ul[role="listbox"],
-    div[role="listbox"] {
+    div[role="listbox"] {{
         direction: rtl !important;
         text-align: right !important;
         font-family: 'Tajawal', sans-serif !important;
-    }
-    div[data-baseweb="select"] > div {
+    }}
+    div[data-baseweb="select"] > div {{
         background-color: var(--bg-input) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 10px !important;
         min-height: 44px !important;
-    }
+    }}
     li[role="option"],
     div[role="option"],
-    ul[role="listbox"] li {
+    ul[role="listbox"] li {{
         direction: rtl !important;
         text-align: right !important;
         display: flex !important;
@@ -346,27 +541,27 @@ st.markdown("""
         width: 100% !important;
         padding: 10px 16px !important;
         font-size: 14px !important;
-    }
+    }}
     li[role="option"] > div,
     li[role="option"] span,
     div[role="option"] > div,
-    div[role="option"] span {
+    div[role="option"] span {{
         direction: rtl !important;
         text-align: right !important;
         width: 100% !important;
         display: block !important;
-    }
+    }}
     div[data-baseweb="select"] div[value],
-    div[data-baseweb="select"] > div > div:first-child {
+    div[data-baseweb="select"] > div > div:first-child {{
         direction: rtl !important;
         text-align: right !important;
         justify-content: flex-start !important;
         color: var(--text-primary) !important;
         -webkit-text-fill-color: var(--text-primary) !important;
-    }
+    }}
     div[data-testid="stSelectbox"] label,
     div[data-testid="stMultiSelect"] label,
-    div[data-testid="stTextInput"] label {
+    div[data-testid="stTextInput"] label {{
         width: 100% !important;
         text-align: right !important;
         justify-content: flex-start !important;
@@ -376,17 +571,16 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 13.5px !important;
         margin-bottom: 6px !important;
-    }
+    }}
 
     /* ========================================================
-       6. الأزرار الموحدة (تدرج المنصة الكحلي - الملكي + الأزرار الثانوية)
+       7. الأزرار الموحدة (تتكيف مع تدرج القالب المختار)
        ======================================================== */
-    /* زر الدخول والأزرار الرئيسية (مطابق لزر دخول للمنصة في الفيديو) */
     div[class*="st-key-btn_login"] button,
     div[class*="st-key-rep_active"] button,
     div[class*="st-key-btn_save_perm"] button,
-    div[data-testid="stDownloadButton"] button {
-        background: linear-gradient(90deg, #141b3e 0%, #1f379c 50%, #2958d8 100%) !important;
+    div[data-testid="stDownloadButton"] button {{
+        background: var(--btn-grad) !important;
         border: none !important;
         border-radius: 10px !important;
         color: #ffffff !important;
@@ -394,34 +588,33 @@ st.markdown("""
         font-weight: 700 !important;
         padding: 11px 18px !important;
         min-height: 46px !important;
-        box-shadow: 0 4px 14px rgba(31, 55, 156, 0.25) !important;
+        box-shadow: var(--shadow-btn) !important;
         transition: all 0.25s ease !important;
-    }
+    }}
     div[class*="st-key-btn_login"] button:hover,
     div[class*="st-key-rep_active"] button:hover,
     div[class*="st-key-btn_save_perm"] button:hover,
-    div[data-testid="stDownloadButton"] button:hover {
+    div[data-testid="stDownloadButton"] button:hover {{
         transform: translateY(-1px) !important;
-        box-shadow: 0 6px 18px rgba(41, 88, 216, 0.35) !important;
-        filter: brightness(1.06);
-    }
+        filter: brightness(1.08);
+    }}
     div[class*="st-key-btn_login"] button *,
     div[class*="st-key-rep_active"] button *,
     div[class*="st-key-btn_save_perm"] button *,
-    div[data-testid="stDownloadButton"] button * {
+    div[data-testid="stDownloadButton"] button * {{
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 14px !important;
-    }
+    }}
 
     /* تمييز زر التقرير النشط بإطار ذهبي مطابق للهوية */
-    div[class*="st-key-rep_active"] button {
+    div[class*="st-key-rep_active"] button {{
         border: 2px solid var(--brand-gold) !important;
-    }
+    }}
 
     /* الأزرار الثانوية القياسية */
-    button[kind="secondary"] {
+    button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.5px solid var(--border-color) !important;
         border-radius: 10px !important;
@@ -431,20 +624,20 @@ st.markdown("""
         min-height: 44px !important;
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
         transition: all 0.2s ease !important;
-    }
-    button[kind="secondary"]:hover {
+    }}
+    button[kind="secondary"]:hover {{
         border-color: var(--brand-bright) !important;
-        background-color: #f8faff !important;
-    }
-    button[kind="secondary"] * {
+        background-color: var(--tab-hover) !important;
+    }}
+    button[kind="secondary"] * {{
         color: var(--text-primary) !important;
         -webkit-text-fill-color: var(--text-primary) !important;
         font-weight: 700 !important;
         font-size: 13.5px !important;
-    }
+    }}
 
     /* زر تسجيل الخروج (Primary = أحمر ناعم أنيق) */
-    button[kind="primary"] {
+    button[kind="primary"] {{
         background-color: #fff1f2 !important;
         color: #e11d48 !important;
         -webkit-text-fill-color: #e11d48 !important;
@@ -452,30 +645,30 @@ st.markdown("""
         border-radius: 10px !important;
         font-weight: 700 !important;
         min-height: 44px !important;
-    }
-    button[kind="primary"]:hover {
+    }}
+    button[kind="primary"]:hover {{
         background-color: #ffe4e6 !important;
         border-color: #fda4af !important;
-    }
-    button[kind="primary"] * {
+    }}
+    button[kind="primary"] * {{
         color: #e11d48 !important;
         -webkit-text-fill-color: #e11d48 !important;
         font-weight: 700 !important;
         font-size: 13.5px !important;
-    }
+    }}
 
-    div[data-testid="stButton"] button p {
+    div[data-testid="stButton"] button p {{
         font-size: 13.5px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-    }
+    }}
 
     /* ========================================================
-       7. لوحة الترحيب وبطاقات الإحصائيات (KPI Cards)
+       8. لوحة الترحيب وبطاقات الإحصائيات (KPI Cards)
        ======================================================== */
-    .welcome-banner-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+    .welcome-banner-card {{
+        background: linear-gradient(135deg, #ffffff 0%, var(--bg-input) 100%) !important;
         border: 1px solid var(--border-color);
         border-right: 5px solid var(--brand-royal);
         border-radius: 14px;
@@ -487,33 +680,33 @@ st.markdown("""
         gap: 10px;
         box-shadow: 0 4px 12px rgba(20, 27, 62, 0.04);
         margin-bottom: 10px;
-    }
-    .welcome-user-info {
+    }}
+    .welcome-user-info {{
         display: flex;
         flex-direction: column;
         gap: 4px;
-    }
-    .welcome-user-name {
+    }}
+    .welcome-user-name {{
         font-size: 16px;
         font-weight: 800;
         color: var(--brand-navy) !important;
         -webkit-text-fill-color: var(--brand-navy) !important;
-    }
-    .welcome-user-scope {
+    }}
+    .welcome-user-scope {{
         font-size: 12.5px;
         font-weight: 700;
         color: var(--brand-bright) !important;
         -webkit-text-fill-color: var(--brand-bright) !important;
-    }
+    }}
 
-    .dashboard-stats-container {
+    .dashboard-stats-container {{
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 14px;
         margin: 14px 0 22px 0;
         direction: rtl !important;
-    }
-    .dash-card {
+    }}
+    .dash-card {{
         padding: 16px 14px;
         border-radius: 14px;
         text-align: center;
@@ -522,30 +715,30 @@ st.markdown("""
         border: 1px solid var(--border-color);
         border-top: 4px solid;
         transition: transform 0.2s ease;
-    }
-    .dash-card:hover { transform: translateY(-2px); }
-    .dash-card.total { border-top-color: var(--brand-royal); }
-    .dash-card.completed { border-top-color: #10b981; }
-    .dash-card.pending { border-top-color: var(--brand-gold); }
-    .dash-title {
+    }}
+    .dash-card:hover {{ transform: translateY(-2px); }}
+    .dash-card.total {{ border-top-color: var(--brand-royal); }}
+    .dash-card.completed {{ border-top-color: #10b981; }}
+    .dash-card.pending {{ border-top-color: var(--brand-gold); }}
+    .dash-title {{
         font-size: 13px;
         margin-bottom: 6px;
         color: var(--text-secondary) !important;
         -webkit-text-fill-color: var(--text-secondary) !important;
         font-weight: 700;
-    }
-    .dash-value {
+    }}
+    .dash-value {{
         font-size: 26px;
         font-weight: 800;
         color: var(--brand-dark) !important;
         -webkit-text-fill-color: var(--brand-dark) !important;
         line-height: 1.1;
-    }
+    }}
 
     /* ========================================================
-       8. تصميم الجداول المخصصة (RTL) والرسوم البيانية
+       9. تصميم الجداول المخصصة (RTL) والرسوم البيانية
        ======================================================== */
-    .rtl-table-wrapper {
+    .rtl-table-wrapper {{
         width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -557,8 +750,8 @@ st.markdown("""
         margin: 14px 0 18px 0;
         box-shadow: var(--shadow-card);
         background-color: #ffffff !important;
-    }
-    table.custom-rtl-table {
+    }}
+    table.custom-rtl-table {{
         width: 100% !important;
         border-collapse: collapse !important;
         direction: rtl !important;
@@ -568,8 +761,8 @@ st.markdown("""
         background-color: #ffffff !important;
         color: var(--text-primary) !important;
         margin: 0 !important;
-    }
-    table.custom-rtl-table thead th {
+    }}
+    table.custom-rtl-table thead th {{
         position: sticky;
         top: 0;
         z-index: 2;
@@ -582,8 +775,8 @@ st.markdown("""
         border-left: 1px solid var(--border-color) !important;
         text-align: center !important;
         white-space: nowrap;
-    }
-    table.custom-rtl-table tbody td {
+    }}
+    table.custom-rtl-table tbody td {{
         padding: 10px 14px !important;
         border-bottom: 1px solid var(--border-color) !important;
         border-left: 1px solid #f1f5f9 !important;
@@ -591,30 +784,22 @@ st.markdown("""
         -webkit-text-fill-color: var(--text-primary) !important;
         text-align: center !important;
         white-space: nowrap;
-    }
-    table.custom-rtl-table tbody td.name-cell {
+    }}
+    table.custom-rtl-table tbody td.name-cell {{
         text-align: right !important;
         font-weight: 700 !important;
         color: var(--brand-dark) !important;
         -webkit-text-fill-color: var(--brand-dark) !important;
-    }
-    table.custom-rtl-table tbody tr:nth-child(even) {
+    }}
+    table.custom-rtl-table tbody tr:nth-child(even) {{
         background-color: #f8fafc !important;
-    }
-    table.custom-rtl-table tbody tr:hover {
-        background-color: #eff6ff !important;
-    }
+    }}
+    table.custom-rtl-table tbody tr:hover {{
+        background-color: var(--row-hover) !important;
+    }}
 
     /* الرسم البياني لتوزيع أنماط التعلم */
-    .custom-chart-card {
-        background: #ffffff;
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 22px 18px;
-        box-shadow: var(--shadow-card);
-        margin-top: 10px;
-    }
-    .custom-chart-container {
+    .custom-chart-container {{
         display: flex;
         justify-content: space-around;
         align-items: flex-end;
@@ -622,8 +807,8 @@ st.markdown("""
         padding: 24px 10px 12px 10px;
         border-bottom: 2px solid var(--border-color);
         margin-top: 10px;
-    }
-    .chart-bar-wrapper {
+    }}
+    .chart-bar-wrapper {{
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -631,167 +816,227 @@ st.markdown("""
         height: 100%;
         width: 26%;
         max-width: 110px;
-    }
-    .chart-value {
+    }}
+    .chart-value {{
         font-weight: 800;
         font-size: 16px;
         margin-bottom: 6px;
-    }
-    .chart-bar {
+    }}
+    .chart-bar {{
         width: 100%;
         border-radius: 10px 10px 0 0;
         transition: height 0.5s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         min-height: 6px;
-    }
-    .chart-label {
+    }}
+    .chart-label {{
         margin-top: 12px;
         font-weight: 700;
         font-size: 13.5px;
         color: var(--text-primary);
         text-align: center;
-    }
+    }}
 
     /* ========================================================
-       9. التذييل الموحد وبطاقات التواصل السفلية (مطابق للفيديو)
+       10. التذييل الموحد وبطاقات التواصل التفاعلية السفلية
        ======================================================== */
-    .ziyad-footer-wrap {
+    .ziyad-footer-wrap {{
         margin-top: 44px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border-color);
+        padding-top: 22px;
+        border-top: 1.5px solid var(--border-color);
         text-align: center;
-    }
-    .ziyad-footer-copy {
+    }}
+    .ziyad-footer-copy {{
         color: var(--text-secondary) !important;
         -webkit-text-fill-color: var(--text-secondary) !important;
-        font-size: 13.5px;
-        font-weight: 700;
+        font-size: 14px;
+        font-weight: 800;
         margin-bottom: 16px;
-    }
-    .ziyad-footer-cards {
+    }}
+    .ziyad-footer-cards {{
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
         direction: rtl;
-    }
-    .ziyad-footer-btn {
+    }}
+    a.ziyad-footer-btn {{
         background-color: #ffffff;
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 11px 14px;
-        font-size: 13px;
-        font-weight: 700;
+        border-radius: 14px;
+        padding: 12px 10px;
         color: var(--text-primary) !important;
         -webkit-text-fill-color: var(--text-primary) !important;
         text-decoration: none !important;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-        transition: all 0.2s ease;
-    }
-    .ziyad-footer-btn:hover {
+        gap: 4px;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+        transition: all 0.22s ease;
+    }}
+    a.ziyad-footer-btn:hover {{
         border-color: var(--brand-bright);
-        background-color: #f8faff;
-        transform: translateY(-1px);
-    }
+        background-color: var(--tab-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }}
+    .footer-btn-title {{
+        font-size: 13.5px;
+        font-weight: 800;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }}
+    .footer-btn-sub {{
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted) !important;
+        -webkit-text-fill-color: var(--text-muted) !important;
+        direction: ltr;
+        unicode-bidi: embed;
+    }}
 
     /* ========================================================
-       10. التوافق الكامل مع الجوال والشاشات الصغيرة (Mobile-First)
+       11. التوافق الكامل مع الجوال والشاشات الصغيرة (Mobile-First)
        ======================================================== */
     /* الحفاظ على شبكة أزرار التقارير (2×2) متجاوبة في شاشة الجوال */
-    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) {
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) {{
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 8px !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) > div {
+    }}
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) > div {{
         width: calc(50% - 4px) !important;
         flex: 1 1 calc(50% - 4px) !important;
         min-width: 0 !important;
-    }
+    }}
 
-    @media (max-width: 768px) {
-        .block-container {
-            padding-top: 0.9rem !important;
+    @media (max-width: 768px) {{
+        .block-container {{
+            padding-top: 0.8rem !important;
             padding-left: 0.7rem !important;
             padding-right: 0.7rem !important;
             padding-bottom: 2rem !important;
-        }
-        .ziyad-hero-banner {
+        }}
+        /* شبكة أزرار القوالب 2×2 على الجوال */
+        div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
+            width: calc(50% - 4px) !important;
+            flex: 1 1 calc(50% - 4px) !important;
+            min-width: 0 !important;
+        }}
+        div[class*="st-key-thm_"] button {{
+            min-height: 36px !important;
+            padding: 4px 8px !important;
+        }}
+        div[class*="st-key-thm_"] button p {{
+            font-size: 11.5px !important;
+        }}
+        .ziyad-hero-banner {{
             padding: 18px 14px;
             border-radius: 16px;
             gap: 10px;
-        }
-        .hero-icon-glass {
+        }}
+        .hero-icon-glass {{
             width: 48px;
             height: 48px;
             font-size: 25px;
             border-radius: 12px;
-        }
-        .hero-brand-title {
+        }}
+        .hero-brand-title {{
             font-size: 23px !important;
-        }
-        .hero-portal-pill {
+        }}
+        .hero-portal-pill {{
             font-size: 12px !important;
             padding: 4px 12px;
-        }
-        .hero-sub-badge {
+        }}
+        .hero-sub-badge {{
             font-size: 11.5px !important;
             padding: 4px 12px;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
             padding: 16px 14px !important;
             border-radius: 14px !important;
-        }
-        .dashboard-stats-container {
+        }}
+        .dashboard-stats-container {{
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-        }
-        .dash-card {
+        }}
+        .dash-card {{
             padding: 10px 6px;
             border-radius: 10px;
-        }
-        .dash-title {
+        }}
+        .dash-title {{
             font-size: 11px;
-        }
-        .dash-value {
+        }}
+        .dash-value {{
             font-size: 20px;
-        }
-        .stTabs [data-baseweb="tab"] {
+        }}
+        .stTabs [data-baseweb="tab"] {{
             padding: 6px 11px !important;
             border-radius: 10px !important;
-        }
-        .stTabs [data-baseweb="tab"] * {
+        }}
+        .stTabs [data-baseweb="tab"] * {{
             font-size: 12.5px !important;
-        }
-        div[data-testid="stButton"] button p {
+        }}
+        div[data-testid="stButton"] button p {{
             font-size: 12.5px !important;
-        }
-        table.custom-rtl-table {
+        }}
+        table.custom-rtl-table {{
             font-size: 12.5px !important;
-        }
+        }}
         table.custom-rtl-table thead th,
-        table.custom-rtl-table tbody td {
+        table.custom-rtl-table tbody td {{
             padding: 8px 8px !important;
-        }
-        .ziyad-footer-cards {
-            grid-template-columns: 1fr;
+        }}
+        /* شبكة بطاقات التواصل السفلية 2×2 على شاشة الجوال */
+        .ziyad-footer-cards {{
+            grid-template-columns: repeat(2, 1fr);
             gap: 8px;
-        }
-    }
+        }}
+        a.ziyad-footer-btn {{
+            padding: 10px 6px;
+            border-radius: 12px;
+        }}
+        .footer-btn-title {{
+            font-size: 12px;
+        }}
+        .footer-btn-sub {{
+            font-size: 10.5px;
+        }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر الموحد لمنصة زياد الذكية (مطابق للهوية البصرية لبوابة التعليم الذكية 2026)
+# رسم شريط اختيار القوالب الديناميكية الأربعة في أعلى المنصة
+st.markdown(f"""
+<div class="theme-switcher-header">
+    <span class="theme-switcher-label">🎨 القالب البصري للمنصة:</span>
+    <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
+</div>
+""", unsafe_allow_html=True)
+
+t_cols = st.columns(4)
+for idx, (t_key, t_info) in enumerate(THEMES.items()):
+    with t_cols[idx]:
+        is_curr_t = (st.session_state.active_theme == t_key)
+        btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
+        btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
+        if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
+            if not is_curr_t:
+                st.session_state.active_theme = t_key
+                st.rerun()
+
+# رسم الهيدر الموحد لمنصة زياد الذكية (مع ربط الشارة بالبوابة الرئيسية zi-edu.streamlit.app)
 st.markdown("""
 <div class="ziyad-hero-banner">
     <div class="hero-main-row">
         <div class="hero-icon-glass">🎓</div>
         <h1 class="hero-brand-title">منصة زياد الذكية</h1>
-        <span class="hero-portal-pill">بوابة التعليم الذكية 2026</span>
+        <a href="https://zi-edu.streamlit.app" target="_blank" class="hero-portal-pill" title="الانتقال إلى منصة زياد الذكية الرئيسية">بوابة التعليم الذكية 2026 🔗</a>
     </div>
     <div class="hero-sub-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
 </div>
@@ -1176,7 +1421,7 @@ def sync_google_forms():
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
 # ==========================================
-# 4. الترويسة الذكية وتوليد تقارير HTML والملفات
+# 4. الترويسة الذكية وتوليد تقارير HTML والملفات (متناغمة مع القالب المختار)
 # ==========================================
 def add_serial_column(df):
     df_out = df.copy().reset_index(drop=True)
@@ -1214,7 +1459,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: #172661; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: #172661; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2958d8; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #eb9d11; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #10b981; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2958d8; color: #1f379c; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #eb9d11; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #10b981; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: #172661; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: linear-gradient(90deg, #141b3e, #2958d8); color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: {cur_t['brand_bright']}; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #eb9d11; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #10b981; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: {cur_t['brand_bright']}; color: {cur_t['brand_royal']}; background-color: {cur_t['report_bg']}; }} .stat-card.auditory {{ border-color: #eb9d11; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #10b981; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -1234,16 +1479,16 @@ if 'current_user' not in st.session_state: st.session_state.current_user = None
 if 'active_report' not in st.session_state: st.session_state.active_report = "comp"
 
 if st.session_state.current_user is None:
-    # شريط البوابات العلوي المطابق لهوية المنصة في الفيديو
+    # شريط البوابات العلوي المطابق لهوية المنصة مع رابط مباشر للبوابة الرئيسية
     st.markdown("""
     <div class="portal-Mode-strip">
         <span class="portal-pill-active">👨‍🏫 بوابة المعلمين والإدارة</span>
         <span class="portal-pill-muted">📊 تشخيص أنماط التعلم (VAK)</span>
-        <span class="portal-pill-muted">🖨️ التقارير الرسمية المعتمدة</span>
+        <a href="https://zi-edu.streamlit.app" target="_blank" class="portal-pill-muted">🌐 بوابة المنصة الرئيسية (zi-edu)</a>
     </div>
     """, unsafe_allow_html=True)
 
-    # بطاقة تسجيل الدخول البيضاء الفاخرة (مطابقة لبطاقة تسجيل دخول الطالب في المنصة)
+    # بطاقة تسجيل الدخول البيضاء الفاخرة
     with st.container(border=True):
         st.markdown("""
         <div class="card-section-title">تسجيل دخول المعلمين والإدارة</div>
@@ -1373,7 +1618,7 @@ else:
                     
                     chart_html = f"""
                     <div class="custom-chart-container">
-                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #1f379c;">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, #426bda, #1f379c);"></div><div class="chart-label">بصري 👁️</div></div>
+                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: {cur_t['brand_royal']};">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, {cur_t['brand_light']}, {cur_t['brand_royal']});"></div><div class="chart-label">بصري 👁️</div></div>
                         <div class="chart-bar-wrapper"><div class="chart-value" style="color: #059669;">{k_count}</div><div class="chart-bar" style="height: {h_k}%; background: linear-gradient(180deg, #34d399, #059669);"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
                         <div class="chart-bar-wrapper"><div class="chart-value" style="color: #d97706;">{a_count}</div><div class="chart-bar" style="height: {h_a}%; background: linear-gradient(180deg, #fbbf24, #d97706);"></div><div class="chart-label">سمعي 👂</div></div>
                     </div>
@@ -1486,7 +1731,7 @@ else:
                         <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">
                             إحصائية النمط ({chosen_style_label}): <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_style_matched)} طالب</span>
                         </h3>
-                        <p style="margin: 5px 0; font-weight: bold; color: #1f379c;">💡 استراتيجيات التدريس الموصى بها لهذه المجموعة داخل الفصل:</p>
+                        <p style="margin: 5px 0; font-weight: bold; color: {cur_t['brand_royal']};">💡 استراتيجيات التدريس الموصى بها لهذه المجموعة داخل الفصل:</p>
                         <ul style="margin: 5px 0 0 0; line-height: 1.6; font-size: 14px;">{style_tips}</ul>
                     </div>
                     <h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء طلاب النمط ال{chosen_style_key}:</h3>{html_table}"""
@@ -1578,7 +1823,7 @@ else:
                                 <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>بصري Visual</span><span>{v_pct}%</span></div><div class="bar-bg"><div class="bar-v" style="width: {v_pct}%;"></div></div>
                                 <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>سمعي Auditory</span><span>{a_pct}%</span></div><div class="bar-bg"><div class="bar-a" style="width: {a_pct}%;"></div></div>
                                 <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px;"><span>حركي Kinesthetic</span><span>{k_pct}%</span></div><div class="bar-bg"><div class="bar-k" style="width: {k_pct}%;"></div></div>
-                                <div class="summary-box" style="margin-top: 20px;"><h3 style="color:#172661; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
+                                <div class="summary-box" style="margin-top: 20px;"><h3 style="color:{cur_t['brand_navy']}; text-align:center; margin: 0 0 10px 0; font-size: 18px;">النمط الغالب: {s['vak_result']}</h3><p style="text-align:center; margin: 0; font-size: 14px;">{summary}</p></div>
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
                                 full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
@@ -1786,15 +2031,28 @@ else:
                     render_rtl_table(display_t_df)
 
 # ==========================================
-# 6. تذييل الصفحة الموحد وبطاقات الدعم السفلية (مطابق للهوية البصرية في الفيديو)
+# 6. تذييل الصفحة الموحد وبطاقات التواصل التفاعلية المباشرة
 # ==========================================
 st.markdown("""
 <div class="ziyad-footer-wrap">
     <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</div>
     <div class="ziyad-footer-cards">
-        <div class="ziyad-footer-btn">📢 تليجرام الإدارة</div>
-        <div class="ziyad-footer-btn">💬 واتساب المعلم</div>
-        <div class="ziyad-footer-btn">📧 البريد الإلكتروني</div>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+            <span class="footer-btn-title">🎓 منصة زياد الذكية</span>
+            <span class="footer-btn-sub">zi-edu.streamlit.app</span>
+        </a>
+        <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+            <span class="footer-btn-title">📢 التليجرام</span>
+            <span class="footer-btn-sub">@ZiyadAlmoamri</span>
+        </a>
+        <a href="https://wa.me/966534900049" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+            <span class="footer-btn-title">💬 الواتساب</span>
+            <span class="footer-btn-sub">+966 53 490 0049</span>
+        </a>
+        <a href="mailto:ziyadalamri30@gmail.com" class="ziyad-footer-btn">
+            <span class="footer-btn-title">📧 البريد الإلكتروني</span>
+            <span class="footer-btn-sub">ziyadalamri30@gmail.com</span>
+        </a>
     </div>
 </div>
 """, unsafe_allow_html=True)
