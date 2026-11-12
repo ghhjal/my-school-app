@@ -213,6 +213,7 @@ st.markdown(f"""
 
     /* ========================================================
        1. المتغيرات اللونية للقالب الديناميكي النشط ({cur_t['name']})
+          + الألوان الدلالية الثابتة والمستقلة لأنماط التعلم (VAK)
        ======================================================== */
     :root {{
         --bg-page: {cur_t['bg_page']};
@@ -237,6 +238,22 @@ st.markdown(f"""
         --shadow-card: 0 8px 24px rgba(20, 27, 62, 0.05);
         --shadow-header: {cur_t['shadow_header']};
         --shadow-btn: {cur_t['shadow_btn']};
+
+        /* ألوان دلالية ثابتة عالية التباين لأنماط التعلم الثلاثة لا تتداخل مع أي قالب */
+        --vak-v-main: #2563eb;
+        --vak-v-light: #60a5fa;
+        --vak-v-bg: #eff6ff;
+        --vak-v-border: #bfdbfe;
+
+        --vak-k-main: #059669;
+        --vak-k-light: #34d399;
+        --vak-k-bg: #ecfdf5;
+        --vak-k-border: #a7f3d0;
+
+        --vak-a-main: #d97706;
+        --vak-a-light: #fbbf24;
+        --vak-a-bg: #fffbeb;
+        --vak-a-border: #fde68a;
     }}
 
     /* ========================================================
@@ -838,7 +855,7 @@ st.markdown(f"""
     }}
 
     /* ========================================================
-       9. تصميم الجداول المخصصة (RTL) والرسوم البيانية
+       9. تصميم الجداول المخصصة (RTL) + لوحة توزيع أنماط التعلم (VAK) الاحترافية
        ======================================================== */
     .rtl-table-wrapper {{
         width: 100%;
@@ -900,15 +917,119 @@ st.markdown(f"""
         background-color: var(--row-hover) !important;
     }}
 
-    /* الرسم البياني لتوزيع أنماط التعلم */
+    /* 💡 التصميم الاحترافي الجديد لتوزيع أنماط التعلم (ألوان دلالية ثابتة ومستقلة عن القالب) */
+    .vak-summary-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 14px 0 22px 0;
+        direction: rtl !important;
+    }}
+    .vak-stat-box {{
+        border-radius: 16px;
+        padding: 16px 14px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }}
+    .vak-stat-box:hover {{
+        transform: translateY(-3px);
+    }}
+    .vak-stat-box.visual {{
+        background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%);
+        border: 1.5px solid #bfdbfe;
+        border-right: 5px solid #2563eb;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
+    }}
+    .vak-stat-box.kinesthetic {{
+        background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%);
+        border: 1.5px solid #a7f3d0;
+        border-right: 5px solid #059669;
+        box-shadow: 0 6px 18px rgba(5, 150, 105, 0.08);
+    }}
+    .vak-stat-box.auditory {{
+        background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
+        border: 1.5px solid #fde68a;
+        border-right: 5px solid #d97706;
+        box-shadow: 0 6px 18px rgba(217, 119, 6, 0.08);
+    }}
+    .vak-box-top {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }}
+    .vak-box-label {{
+        font-size: 15px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }}
+    .vak-stat-box.visual .vak-box-label {{ color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; }}
+    .vak-stat-box.kinesthetic .vak-box-label {{ color: #047857 !important; -webkit-text-fill-color: #047857 !important; }}
+    .vak-stat-box.auditory .vak-box-label {{ color: #b45309 !important; -webkit-text-fill-color: #b45309 !important; }}
+
+    .vak-pct-pill {{
+        font-size: 12px;
+        font-weight: 800;
+        padding: 3px 10px;
+        border-radius: 999px;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }}
+    .vak-stat-box.visual .vak-pct-pill {{ background: linear-gradient(135deg, #3b82f6, #1d4ed8); }}
+    .vak-stat-box.kinesthetic .vak-pct-pill {{ background: linear-gradient(135deg, #10b981, #047857); }}
+    .vak-stat-box.auditory .vak-pct-pill {{ background: linear-gradient(135deg, #f59e0b, #b45309); }}
+
+    .vak-box-number {{
+        font-size: 28px;
+        font-weight: 800;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        line-height: 1.1;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }}
+    .vak-box-unit {{
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+    }}
+    .vak-mini-track {{
+        width: 100%;
+        height: 8px;
+        background-color: rgba(148, 163, 184, 0.2);
+        border-radius: 999px;
+        overflow: hidden;
+    }}
+    .vak-mini-fill {{
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.6s ease;
+    }}
+    .vak-stat-box.visual .vak-mini-fill {{ background: linear-gradient(90deg, #60a5fa, #2563eb); }}
+    .vak-stat-box.kinesthetic .vak-mini-fill {{ background: linear-gradient(90deg, #34d399, #059669); }}
+    .vak-stat-box.auditory .vak-mini-fill {{ background: linear-gradient(90deg, #fbbf24, #d97706); }}
+
+    /* أعمدة المقارنة البصرية الثلاثية */
     .custom-chart-container {{
         display: flex;
         justify-content: space-around;
         align-items: flex-end;
-        height: 210px;
-        padding: 24px 10px 12px 10px;
-        border-bottom: 2px solid var(--border-color);
-        margin-top: 10px;
+        height: 220px;
+        padding: 28px 16px 14px 16px;
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid #cbd5e1;
+        border-radius: 16px;
+        margin-top: 8px;
+        position: relative;
     }}
     .chart-bar-wrapper {{
         display: flex;
@@ -916,27 +1037,62 @@ st.markdown(f"""
         align-items: center;
         justify-content: flex-end;
         height: 100%;
-        width: 26%;
-        max-width: 110px;
+        width: 28%;
+        max-width: 125px;
     }}
-    .chart-value {{
+    .chart-value-badge {{
         font-weight: 800;
-        font-size: 16px;
-        margin-bottom: 6px;
+        font-size: 13.5px;
+        margin-bottom: 8px;
+        padding: 3px 12px;
+        border-radius: 999px;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }}
+    .chart-value-badge.v-badge {{
+        background-color: #eff6ff;
+        color: #1d4ed8 !important;
+        -webkit-text-fill-color: #1d4ed8 !important;
+        border: 1px solid #bfdbfe;
+    }}
+    .chart-value-badge.k-badge {{
+        background-color: #ecfdf5;
+        color: #047857 !important;
+        -webkit-text-fill-color: #047857 !important;
+        border: 1px solid #a7f3d0;
+    }}
+    .chart-value-badge.a-badge {{
+        background-color: #fffbeb;
+        color: #b45309 !important;
+        -webkit-text-fill-color: #b45309 !important;
+        border: 1px solid #fde68a;
     }}
     .chart-bar {{
         width: 100%;
-        border-radius: 10px 10px 0 0;
-        transition: height 0.5s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        min-height: 6px;
+        border-radius: 12px 12px 4px 4px;
+        transition: height 0.55s ease;
+        min-height: 10px;
+    }}
+    .chart-bar.v-bar {{
+        background: linear-gradient(180deg, #60a5fa 0%, #2563eb 65%, #1d4ed8 100%);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+    }}
+    .chart-bar.k-bar {{
+        background: linear-gradient(180deg, #34d399 0%, #059669 65%, #047857 100%);
+        box-shadow: 0 6px 16px rgba(5, 150, 105, 0.28);
+    }}
+    .chart-bar.a-bar {{
+        background: linear-gradient(180deg, #fbbf24 0%, #d97706 65%, #b45309 100%);
+        box-shadow: 0 6px 16px rgba(217, 119, 6, 0.28);
     }}
     .chart-label {{
         margin-top: 12px;
-        font-weight: 700;
-        font-size: 13.5px;
-        color: var(--text-primary);
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
         text-align: center;
+        white-space: nowrap;
     }}
 
     /* ========================================================
@@ -988,7 +1144,6 @@ st.markdown(f"""
     /* ========================================================
        11. التوافق الكامل مع الجوال والشاشات الصغيرة (Mobile-First)
        ======================================================== */
-    /* الحفاظ على شبكة أزرار التقارير (2×2) متجاوبة في شاشة الجوال */
     div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-rep_"]) {{
         display: flex !important;
         flex-direction: row !important;
@@ -1008,7 +1163,6 @@ st.markdown(f"""
             padding-right: 0.7rem !important;
             padding-bottom: 2rem !important;
         }}
-        /* شبكة أزرار القوالب 2×2 على الجوال داخل شاشة المدير */
         div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
             width: calc(50% - 4px) !important;
             flex: 1 1 calc(50% - 4px) !important;
@@ -1061,6 +1215,24 @@ st.markdown(f"""
         .dash-value {{
             font-size: 20px;
         }}
+        /* بطاقات أنماط التعلم الثلاث متجاوبة على الجوال */
+        .vak-summary-grid {{
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }}
+        .vak-stat-box {{
+            padding: 12px 14px;
+        }}
+        .vak-box-number {{
+            font-size: 22px;
+        }}
+        .chart-value-badge {{
+            font-size: 11.5px;
+            padding: 2px 8px;
+        }}
+        .chart-label {{
+            font-size: 12.5px;
+        }}
         .stTabs [data-baseweb="tab"] {{
             padding: 6px 11px !important;
             border-radius: 10px !important;
@@ -1078,7 +1250,6 @@ st.markdown(f"""
         table.custom-rtl-table tbody td {{
             padding: 8px 8px !important;
         }}
-        /* شبكة بطاقات التواصل السفلية 2×2 على شاشة الجوال */
         .ziyad-footer-cards {{
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
@@ -1427,7 +1598,7 @@ def sync_google_forms():
         st.toast("اكتمل الفحص ولم يتم رصد درجات جديدة.", icon="ℹ️")
 
 # ==========================================
-# 4. الترويسة الذكية وتوليد تقارير HTML والملفات (متناغمة مع القالب المختار)
+# 4. الترويسة الذكية وتوليد تقارير HTML والملفات (بألوان VAK الدلالية الثابتة)
 # ==========================================
 def add_serial_column(df):
     df_out = df.copy().reset_index(drop=True)
@@ -1465,7 +1636,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: {cur_t['brand_bright']}; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #eb9d11; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #10b981; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: {cur_t['brand_bright']}; color: {cur_t['brand_royal']}; background-color: {cur_t['report_bg']}; }} .stat-card.auditory {{ border-color: #eb9d11; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #10b981; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -1634,21 +1805,66 @@ else:
         with tab_main:
             with st.container(border=True):
                 st.markdown("<div class='card-section-title' style='text-align: center !important;'>📊 توزيع أنماط التعلم في المدرسة</div>", unsafe_allow_html=True)
-                st.markdown("<p class='card-section-sub' style='text-align: center !important;'>إحصائية مقارنة لأعداد الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>", unsafe_allow_html=True)
+                st.markdown("<p class='card-section-sub' style='text-align: center !important;'>إحصائية تحليلية مقارنة لأعداد ونسب الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>", unsafe_allow_html=True)
                 if len(df_tested) > 0:
                     v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
                     a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
                     k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
+                    
+                    total_tested_cnt = len(df_tested)
+                    v_pct = round(v_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
+                    k_pct = round(k_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
+                    a_pct = round(a_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
+
                     max_val = max(v_count, a_count, k_count)
-                    h_v = int((v_count / max_val * 100)) if max_val > 0 else 0
-                    h_a = int((a_count / max_val * 100)) if max_val > 0 else 0
-                    h_k = int((k_count / max_val * 100)) if max_val > 0 else 0
+                    h_v = max(int((v_count / max_val * 100)), 8) if max_val > 0 else 8
+                    h_k = max(int((k_count / max_val * 100)), 8) if max_val > 0 else 8
+                    h_a = max(int((a_count / max_val * 100)), 8) if max_val > 0 else 8
                     
                     chart_html = f"""
+                    <div class="vak-summary-grid">
+                        <div class="vak-stat-box visual">
+                            <div class="vak-box-top">
+                                <span class="vak-box-label">👁️ النمط البصري</span>
+                                <span class="vak-pct-pill">{v_pct}%</span>
+                            </div>
+                            <div class="vak-box-number">{v_count} <span class="vak-box-unit">طالب</span></div>
+                            <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {v_pct}%;"></div></div>
+                        </div>
+                        <div class="vak-stat-box kinesthetic">
+                            <div class="vak-box-top">
+                                <span class="vak-box-label">🏃‍♂️ النمط الحركي</span>
+                                <span class="vak-pct-pill">{k_pct}%</span>
+                            </div>
+                            <div class="vak-box-number">{k_count} <span class="vak-box-unit">طالب</span></div>
+                            <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {k_pct}%;"></div></div>
+                        </div>
+                        <div class="vak-stat-box auditory">
+                            <div class="vak-box-top">
+                                <span class="vak-box-label">👂 النمط السمعي</span>
+                                <span class="vak-pct-pill">{a_pct}%</span>
+                            </div>
+                            <div class="vak-box-number">{a_count} <span class="vak-box-unit">طالب</span></div>
+                            <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {a_pct}%;"></div></div>
+                        </div>
+                    </div>
+
                     <div class="custom-chart-container">
-                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: {cur_t['brand_royal']};">{v_count}</div><div class="chart-bar" style="height: {h_v}%; background: linear-gradient(180deg, {cur_t['brand_light']}, {cur_t['brand_royal']});"></div><div class="chart-label">بصري 👁️</div></div>
-                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #059669;">{k_count}</div><div class="chart-bar" style="height: {h_k}%; background: linear-gradient(180deg, #34d399, #059669);"></div><div class="chart-label">حركي 🏃‍♂️</div></div>
-                        <div class="chart-bar-wrapper"><div class="chart-value" style="color: #d97706;">{a_count}</div><div class="chart-bar" style="height: {h_a}%; background: linear-gradient(180deg, #fbbf24, #d97706);"></div><div class="chart-label">سمعي 👂</div></div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value-badge v-badge">{v_count} ({v_pct}%)</div>
+                            <div class="chart-bar v-bar" style="height: {h_v}%;"></div>
+                            <div class="chart-label">بصري 👁️</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value-badge k-badge">{k_count} ({k_pct}%)</div>
+                            <div class="chart-bar k-bar" style="height: {h_k}%;"></div>
+                            <div class="chart-label">حركي 🏃‍♂️</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-value-badge a-badge">{a_count} ({a_pct}%)</div>
+                            <div class="chart-bar a-bar" style="height: {h_a}%;"></div>
+                            <div class="chart-label">سمعي 👂</div>
+                        </div>
                     </div>
                     """
                     st.markdown(chart_html, unsafe_allow_html=True)
