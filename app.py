@@ -696,6 +696,44 @@ color: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
+/* ✳️ صناديق رسائل المعلومات والنجاح والتنبيه (st.info, st.success, st.warning, st.error) بتباين فائق الوضوح */
+div[data-testid="stAlert"],
+div[data-testid="stAlert"] > div,
+div[data-baseweb="notification"],
+div[role="alert"] {{
+background-color: #EFF6FF !important;
+background: #EFF6FF !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+border: 1.5px solid {primary_color} !important;
+border-right: 5px solid {primary_color} !important;
+border-radius: 14px !important;
+direction: rtl !important;
+text-align: right !important;
+box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+}}
+
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] span,
+div[data-testid="stAlert"] div,
+div[data-testid="stAlert"] li,
+div[data-testid="stAlert"] strong,
+div[data-testid="stAlert"] b,
+div[data-baseweb="notification"] p,
+div[data-baseweb="notification"] span,
+div[data-baseweb="notification"] div,
+div[role="alert"] p,
+div[role="alert"] span,
+div[role="alert"] div {{
+background-color: transparent !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+font-weight: 800 !important;
+direction: rtl !important;
+text-align: right !important;
+opacity: 1 !important;
+}}
+
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] *,
 div[data-baseweb="menu"],
@@ -1076,6 +1114,30 @@ components.html(f"""
                 color: #1E3A8A !important;
                 -webkit-text-fill-color: #1E3A8A !important;
             }}
+            div[data-testid="stAlert"],
+            div[data-testid="stAlert"] > div,
+            div[data-baseweb="notification"],
+            div[role="alert"] {{
+                background-color: #EFF6FF !important;
+                background: #EFF6FF !important;
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                border: 1.5px solid {primary_color} !important;
+                border-right: 5px solid {primary_color} !important;
+                border-radius: 14px !important;
+                direction: rtl !important;
+                text-align: right !important;
+            }}
+            div[data-testid="stAlert"] *,
+            div[data-baseweb="notification"] *,
+            div[role="alert"] * {{
+                background-color: transparent !important;
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                font-weight: 800 !important;
+                direction: rtl !important;
+                text-align: right !important;
+            }}
             input::placeholder, textarea::placeholder {{
                 color: #64748b !important;
                 -webkit-text-fill-color: #64748b !important;
@@ -1108,7 +1170,9 @@ components.html(f"""
         `;
 
         function enforceLightInputs() {{
-            pDoc.head.appendChild(existingStyle);
+            if (pDoc.head.lastElementChild !== existingStyle) {{
+                pDoc.head.appendChild(existingStyle);
+            }}
             var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
             inputBoxes.forEach(function(box) {{
                 box.style.setProperty('background-color', '#ffffff', 'important');
@@ -1120,12 +1184,27 @@ components.html(f"""
                     if (!inn.closest('[data-baseweb="tag"]')) {{
                         inn.style.setProperty('color', '#0f172a', 'important');
                         inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                        if (inn.tagName === 'INPUT' || inn.tagName === 'TEXTAREA') {{
-                            inn.style.setProperty('background-color', '#ffffff', 'important');
-                        }} else {{
-                            inn.style.setProperty('background-color', 'transparent', 'important');
-                        }}
+                        inn.style.setProperty('background-color', '#ffffff', 'important');
+                        inn.style.setProperty('background', '#ffffff', 'important');
                     }}
+                }});
+            }});
+
+            var alerts = pDoc.querySelectorAll('[data-testid="stAlert"], [data-baseweb="notification"], div[role="alert"]');
+            alerts.forEach(function(al) {{
+                al.style.setProperty('background-color', '#EFF6FF', 'important');
+                al.style.setProperty('background', '#EFF6FF', 'important');
+                al.style.setProperty('color', '#0F172A', 'important');
+                al.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                al.style.setProperty('border', '1.5px solid #2563EB', 'important');
+                al.style.setProperty('border-right', '5px solid #2563EB', 'important');
+                al.style.setProperty('border-radius', '14px', 'important');
+                var alCh = al.querySelectorAll('div, p, span, li, strong, b');
+                alCh.forEach(function(c) {{
+                    c.style.setProperty('background-color', 'transparent', 'important');
+                    c.style.setProperty('background', 'transparent', 'important');
+                    c.style.setProperty('color', '#0F172A', 'important');
+                    c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
                 }});
             }});
         }}
