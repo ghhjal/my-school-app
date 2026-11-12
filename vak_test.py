@@ -106,10 +106,106 @@ THEMES = {
     }
 }
 
-if 'active_theme' not in st.session_state:
-    st.session_state.active_theme = "royal"
+# ==========================================
+# 2. دوال الاتصال المشترك والتخزين المؤقت الآمن (مع حفظ القالب النشط للمنصة)
+# ==========================================
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
 
-cur_t = THEMES.get(st.session_state.active_theme, THEMES["royal"])
+def clean_id(val):
+    if pd.isna(val): return ""
+    val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    return val.split('.')[0].strip()
+
+@st.cache_resource
+def get_gsheets_conn():
+    from streamlit_gsheets import GSheetsConnection
+    return st.connection("gsheets", type=GSheetsConnection)
+
+@st.cache_data(ttl=600, max_entries=5)
+def get_all_teachers():
+    conn = get_gsheets_conn()
+    try:
+        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
+        for col in ['id', 'name', 'role', 'class_name', 'theme']:
+            if col not in df_teachers.columns:
+                df_teachers[col] = ""
+            df_teachers[col] = df_teachers[col].fillna("").astype(str).str.strip()
+        df_teachers['id'] = df_teachers['id'].apply(clean_id)
+        df_teachers['role'] = df_teachers['role'].replace("", "teacher")
+        df_teachers['class_name'] = df_teachers['class_name'].replace("", "all")
+        df_teachers['theme'] = df_teachers['theme'].replace("", "royal")
+        return df_teachers
+    except:
+        return pd.DataFrame(columns=['id', 'name', 'role', 'class_name', 'theme'])
+
+@st.cache_data(ttl=7200, max_entries=5)
+def get_all_students():
+    conn = get_gsheets_conn()
+    try:
+        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
+    except:
+        try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
+        except: df_students = pd.DataFrame()
+        
+    required_cols = ['id', 'name', 'grade', 'class_name']
+    for col in required_cols:
+        if col not in df_students.columns: df_students[col] = ""
+        df_students[col] = df_students[col].fillna("").astype(str).str.strip()
+            
+    if 'vak_result' not in df_students.columns: df_students['vak_result'] = "غير مختبر"
+    df_students['vak_result'] = df_students['vak_result'].replace("", "غير مختبر").fillna("غير مختبر")
+    
+    for col in ['v_score', 'a_score', 'k_score']:
+        if col not in df_students.columns: df_students[col] = "0"
+        df_students[col] = df_students[col].replace("", "0").fillna("0")
+        
+    df_students['id'] = df_students['id'].apply(clean_id)
+    return df_students
+
+def clear_all_caches():
+    get_all_students.clear()
+    get_all_teachers.clear()
+    st.cache_data.clear()
+
+def get_platform_theme():
+    """جلب القالب المحفوظ للمنصة من حساب مدير النظام في قاعدة البيانات ليتوحد لجميع الزوار والمعلمين"""
+    if 'active_theme' in st.session_state and st.session_state.active_theme in THEMES:
+        return st.session_state.active_theme
+    try:
+        df_t = get_all_teachers()
+        if not df_t.empty and 'theme' in df_t.columns:
+            admins = df_t[df_t['role'] == 'admin']
+            for val in admins['theme']:
+                if val in THEMES:
+                    st.session_state.active_theme = val
+                    return val
+            for val in df_t['theme']:
+                if val in THEMES:
+                    st.session_state.active_theme = val
+                    return val
+    except:
+        pass
+    st.session_state.active_theme = "royal"
+    return "royal"
+
+def save_platform_theme(new_theme_key):
+    """حفظ القالب الذي يختاره مدير النظام فوراً في الجلسة وفي Google Sheets"""
+    st.session_state.active_theme = new_theme_key
+    try:
+        conn = get_gsheets_conn()
+        df_t = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
+        for col in ['id', 'name', 'role', 'class_name', 'theme']:
+            if col not in df_t.columns:
+                df_t[col] = ""
+            df_t[col] = df_t[col].fillna("").astype(str).str.strip()
+        df_t['theme'] = new_theme_key
+        conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=df_t)
+        clear_all_caches()
+    except:
+        pass
+
+active_theme_key = get_platform_theme()
+cur_t = THEMES.get(active_theme_key, THEMES["royal"])
 
 st.markdown(f"""
 <style>
@@ -161,7 +257,7 @@ st.markdown(f"""
 
     .block-container {{
         max-width: 1020px !important;
-        padding-top: 1.5rem !important;
+        padding-top: 1.6rem !important;
         padding-bottom: 2.5rem !important;
         padding-left: 1.2rem !important;
         padding-right: 1.2rem !important;
@@ -176,86 +272,7 @@ st.markdown(f"""
     }}
 
     /* ========================================================
-       3. شريط اختيار القالب الديناميكي (Theme Switcher Bar)
-       ======================================================== */
-    .theme-switcher-header {{
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        padding: 0 4px;
-        flex-wrap: wrap;
-        gap: 6px;
-    }}
-    .theme-switcher-label {{
-        font-size: 12.5px;
-        font-weight: 700;
-        color: var(--text-secondary) !important;
-        -webkit-text-fill-color: var(--text-secondary) !important;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }}
-    .theme-active-badge {{
-        font-size: 11.5px;
-        font-weight: 700;
-        color: var(--brand-royal) !important;
-        -webkit-text-fill-color: var(--brand-royal) !important;
-        background: var(--tab-hover);
-        border: 1px solid var(--border-color);
-        padding: 2px 10px;
-        border-radius: 999px;
-    }}
-
-    /* إبقاء أزرار القوالب الأربعة في صف متناسق ومضغوط */
-    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) {{
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-        margin-bottom: 14px !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
-        flex: 1 1 calc(25% - 8px) !important;
-        min-width: 125px !important;
-    }}
-
-    div[class*="st-key-thm_"] button {{
-        min-height: 38px !important;
-        padding: 5px 10px !important;
-        border-radius: 999px !important;
-        font-size: 12.5px !important;
-        transition: all 0.25s ease !important;
-    }}
-    div[class*="st-key-thm_active_"] button {{
-        background: var(--btn-grad) !important;
-        border: 2px solid var(--brand-gold) !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        box-shadow: var(--shadow-btn) !important;
-        transform: translateY(-1px);
-    }}
-    div[class*="st-key-thm_active_"] button * {{
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        font-weight: 800 !important;
-        font-size: 12.5px !important;
-    }}
-    div[class*="st-key-thm_idle_"] button {{
-        background-color: #ffffff !important;
-        border: 1px solid var(--border-color) !important;
-        color: var(--text-secondary) !important;
-        -webkit-text-fill-color: var(--text-secondary) !important;
-    }}
-    div[class*="st-key-thm_idle_"] button:hover {{
-        border-color: var(--brand-bright) !important;
-        background-color: var(--tab-hover) !important;
-        color: var(--brand-navy) !important;
-        -webkit-text-fill-color: var(--brand-navy) !important;
-    }}
-
-    /* ========================================================
-       4. الهيدر الموحد لمنصة زياد الذكية (يتغير ديناميكياً مع القالب)
+       3. الهيدر الموحد لمنصة زياد الذكية (يتغير ديناميكياً مع القالب)
        ======================================================== */
     .ziyad-hero-banner {{
         background: var(--hero-grad);
@@ -373,6 +390,91 @@ st.markdown(f"""
         -webkit-text-fill-color: #f1f5f9 !important;
         z-index: 1;
         text-align: center !important;
+    }}
+
+    /* ========================================================
+       4. شريط اختيار القالب الديناميكي داخل شاشة مدير النظام فقط
+       ======================================================== */
+    .admin-theme-box {{
+        background-color: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 12px 16px 6px 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.03);
+    }}
+    .theme-switcher-header {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }}
+    .theme-switcher-label {{
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }}
+    .theme-active-badge {{
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--brand-royal) !important;
+        -webkit-text-fill-color: var(--brand-royal) !important;
+        background: var(--tab-hover);
+        border: 1px solid var(--border-color);
+        padding: 3px 12px;
+        border-radius: 999px;
+    }}
+
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
+        flex: 1 1 calc(25% - 8px) !important;
+        min-width: 125px !important;
+    }}
+
+    div[class*="st-key-thm_"] button {{
+        min-height: 38px !important;
+        padding: 5px 10px !important;
+        border-radius: 999px !important;
+        font-size: 12.5px !important;
+        transition: all 0.25s ease !important;
+    }}
+    div[class*="st-key-thm_active_"] button {{
+        background: var(--btn-grad) !important;
+        border: 2px solid var(--brand-gold) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: var(--shadow-btn) !important;
+        transform: translateY(-1px);
+    }}
+    div[class*="st-key-thm_active_"] button * {{
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 12.5px !important;
+    }}
+    div[class*="st-key-thm_idle_"] button {{
+        background-color: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+    }}
+    div[class*="st-key-thm_idle_"] button:hover {{
+        border-color: var(--brand-bright) !important;
+        background-color: var(--tab-hover) !important;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
     }}
 
     /* ========================================================
@@ -838,7 +940,7 @@ st.markdown(f"""
     }}
 
     /* ========================================================
-       10. التذييل الموحد وبطاقات التواصل التفاعلية السفلية
+       10. التذييل الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام)
        ======================================================== */
     .ziyad-footer-wrap {{
         margin-top: 44px;
@@ -862,16 +964,17 @@ st.markdown(f"""
     a.ziyad-footer-btn {{
         background-color: #ffffff;
         border: 1px solid var(--border-color);
-        border-radius: 14px;
-        padding: 12px 10px;
-        color: var(--text-primary) !important;
-        -webkit-text-fill-color: var(--text-primary) !important;
+        border-radius: 12px;
+        padding: 13px 12px;
+        color: var(--brand-navy) !important;
+        -webkit-text-fill-color: var(--brand-navy) !important;
         text-decoration: none !important;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 8px;
+        font-size: 13.5px;
+        font-weight: 800;
         box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
         transition: all 0.22s ease;
     }}
@@ -880,23 +983,6 @@ st.markdown(f"""
         background-color: var(--tab-hover);
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-    }}
-    .footer-btn-title {{
-        font-size: 13.5px;
-        font-weight: 800;
-        color: var(--brand-navy) !important;
-        -webkit-text-fill-color: var(--brand-navy) !important;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }}
-    .footer-btn-sub {{
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--text-muted) !important;
-        -webkit-text-fill-color: var(--text-muted) !important;
-        direction: ltr;
-        unicode-bidi: embed;
     }}
 
     /* ========================================================
@@ -922,7 +1008,7 @@ st.markdown(f"""
             padding-right: 0.7rem !important;
             padding-bottom: 2rem !important;
         }}
-        /* شبكة أزرار القوالب 2×2 على الجوال */
+        /* شبكة أزرار القوالب 2×2 على الجوال داخل شاشة المدير */
         div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
             width: calc(50% - 4px) !important;
             flex: 1 1 calc(50% - 4px) !important;
@@ -998,109 +1084,25 @@ st.markdown(f"""
             gap: 8px;
         }}
         a.ziyad-footer-btn {{
-            padding: 10px 6px;
-            border-radius: 12px;
-        }}
-        .footer-btn-title {{
-            font-size: 12px;
-        }}
-        .footer-btn-sub {{
-            font-size: 10.5px;
+            padding: 11px 8px;
+            font-size: 12.5px;
+            border-radius: 11px;
         }}
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# رسم شريط اختيار القوالب الديناميكية الأربعة في أعلى المنصة
-st.markdown(f"""
-<div class="theme-switcher-header">
-    <span class="theme-switcher-label">🎨 القالب البصري للمنصة:</span>
-    <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
-</div>
-""", unsafe_allow_html=True)
-
-t_cols = st.columns(4)
-for idx, (t_key, t_info) in enumerate(THEMES.items()):
-    with t_cols[idx]:
-        is_curr_t = (st.session_state.active_theme == t_key)
-        btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
-        btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
-        if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
-            if not is_curr_t:
-                st.session_state.active_theme = t_key
-                st.rerun()
-
-# رسم الهيدر الموحد لمنصة زياد الذكية (مع ربط الشارة بالبوابة الرئيسية zi-edu.streamlit.app)
+# رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
 st.markdown("""
 <div class="ziyad-hero-banner">
     <div class="hero-main-row">
         <div class="hero-icon-glass">🎓</div>
         <h1 class="hero-brand-title">منصة زياد الذكية</h1>
-        <a href="https://zi-edu.streamlit.app" target="_blank" class="hero-portal-pill" title="الانتقال إلى منصة زياد الذكية الرئيسية">بوابة التعليم الذكية 2026 🔗</a>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="hero-portal-pill">بوابة التعليم الذكية 2026</a>
     </div>
     <div class="hero-sub-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
 </div>
 """, unsafe_allow_html=True)
-
-# ==========================================
-# 2. دوال الاتصال المشترك والتخزين المؤقت الآمن
-# ==========================================
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1u3D_ZqDXkzTla-cIkYpoQPs4-0pWXuQQZ--ye817Krs/edit#gid=0"
-
-def clean_id(val):
-    if pd.isna(val): return ""
-    val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
-    return val.split('.')[0].strip()
-
-@st.cache_resource
-def get_gsheets_conn():
-    from streamlit_gsheets import GSheetsConnection
-    return st.connection("gsheets", type=GSheetsConnection)
-
-@st.cache_data(ttl=600, max_entries=5)
-def get_all_teachers():
-    conn = get_gsheets_conn()
-    try:
-        df_teachers = conn.read(spreadsheet=SHEET_URL, worksheet="teachers", ttl=0, dtype=str)
-        for col in ['id', 'name', 'role', 'class_name']:
-            if col not in df_teachers.columns:
-                df_teachers[col] = ""
-            df_teachers[col] = df_teachers[col].fillna("").astype(str).str.strip()
-        df_teachers['id'] = df_teachers['id'].apply(clean_id)
-        df_teachers['role'] = df_teachers['role'].replace("", "teacher")
-        df_teachers['class_name'] = df_teachers['class_name'].replace("", "all")
-        return df_teachers
-    except:
-        return pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-
-@st.cache_data(ttl=7200, max_entries=5)
-def get_all_students():
-    conn = get_gsheets_conn()
-    try:
-        df_students = conn.read(spreadsheet=SHEET_URL, worksheet="df_students", ttl=0, dtype=str)
-    except:
-        try: df_students = conn.read(spreadsheet=SHEET_URL, ttl=0, dtype=str)
-        except: df_students = pd.DataFrame()
-        
-    required_cols = ['id', 'name', 'grade', 'class_name']
-    for col in required_cols:
-        if col not in df_students.columns: df_students[col] = ""
-        df_students[col] = df_students[col].fillna("").astype(str).str.strip()
-            
-    if 'vak_result' not in df_students.columns: df_students['vak_result'] = "غير مختبر"
-    df_students['vak_result'] = df_students['vak_result'].replace("", "غير مختبر").fillna("غير مختبر")
-    
-    for col in ['v_score', 'a_score', 'k_score']:
-        if col not in df_students.columns: df_students[col] = "0"
-        df_students[col] = df_students[col].replace("", "0").fillna("0")
-        
-    df_students['id'] = df_students['id'].apply(clean_id)
-    return df_students
-
-def clear_all_caches():
-    get_all_students.clear()
-    get_all_teachers.clear()
-    st.cache_data.clear()
 
 # ==========================================
 # 💡 دالة عرض الجداول من اليمين إلى اليسار (RTL) بدلاً من st.dataframe اليساري
@@ -1313,9 +1315,13 @@ def intelligent_merge_teachers(new_df):
         else:
             new_teachers['class_name'] = new_teachers['class_name'].fillna('all').replace('', 'all')
             
-        if 'role' not in current_df.columns: current_df['role'] = 'teacher'
-        if 'class_name' not in current_df.columns: current_df['class_name'] = 'all'
-        updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name']]], ignore_index=True)
+        if 'theme' not in new_teachers.columns:
+            new_teachers['theme'] = st.session_state.get('active_theme', 'royal')
+            
+        for col in ['role', 'class_name', 'theme']:
+            if col not in current_df.columns:
+                current_df[col] = ""
+        updated_df = pd.concat([current_df, new_teachers[['id', 'name', 'role', 'class_name', 'theme']]], ignore_index=True)
         conn = get_gsheets_conn()
         conn.update(spreadsheet=SHEET_URL, worksheet="teachers", data=updated_df)
         clear_all_caches()
@@ -1479,12 +1485,12 @@ if 'current_user' not in st.session_state: st.session_state.current_user = None
 if 'active_report' not in st.session_state: st.session_state.active_report = "comp"
 
 if st.session_state.current_user is None:
-    # شريط البوابات العلوي المطابق لهوية المنصة مع رابط مباشر للبوابة الرئيسية
+    # شريط البوابات العلوي المطابق لهوية المنصة
     st.markdown("""
     <div class="portal-Mode-strip">
         <span class="portal-pill-active">👨‍🏫 بوابة المعلمين والإدارة</span>
         <span class="portal-pill-muted">📊 تشخيص أنماط التعلم (VAK)</span>
-        <a href="https://zi-edu.streamlit.app" target="_blank" class="portal-pill-muted">🌐 بوابة المنصة الرئيسية (zi-edu)</a>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="portal-pill-muted">🌐 بوابة المنصة الرئيسية</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1542,6 +1548,28 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        # شريط اختيار القوالب الديناميكية (يظهر فقط داخل شاشة مدير النظام)
+        st.markdown(f"""
+        <div class="admin-theme-box">
+            <div class="theme-switcher-header">
+                <span class="theme-switcher-label">🎨 تخصيص القالب البصري للمنصة:</span>
+                <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        t_cols = st.columns(4)
+        for idx, (t_key, t_info) in enumerate(THEMES.items()):
+            with t_cols[idx]:
+                is_curr_t = (active_theme_key == t_key)
+                btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
+                btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
+                if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
+                    if not is_curr_t:
+                        with st.spinner("جاري تطبيق القالب البصري على المنصة..."):
+                            save_platform_theme(t_key)
+                            st.rerun()
 
         col_act1, col_act2, col_logout = st.columns([2, 2, 1.5])
         with col_act1:
@@ -2031,27 +2059,23 @@ else:
                     render_rtl_table(display_t_df)
 
 # ==========================================
-# 6. تذييل الصفحة الموحد وبطاقات التواصل التفاعلية المباشرة
+# 6. تذييل الصفحة الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام أو الحسابات)
 # ==========================================
 st.markdown("""
 <div class="ziyad-footer-wrap">
     <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</div>
     <div class="ziyad-footer-cards">
         <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
-            <span class="footer-btn-title">🎓 منصة زياد الذكية</span>
-            <span class="footer-btn-sub">zi-edu.streamlit.app</span>
+            🎓 منصة زياد الذكية
         </a>
         <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
-            <span class="footer-btn-title">📢 التليجرام</span>
-            <span class="footer-btn-sub">@ZiyadAlmoamri</span>
+            📢 تليجرام الإدارة
         </a>
         <a href="https://wa.me/966534900049" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
-            <span class="footer-btn-title">💬 الواتساب</span>
-            <span class="footer-btn-sub">+966 53 490 0049</span>
+            💬 واتساب المعلم
         </a>
         <a href="mailto:ziyadalamri30@gmail.com" class="ziyad-footer-btn">
-            <span class="footer-btn-title">📧 البريد الإلكتروني</span>
-            <span class="footer-btn-sub">ziyadalamri30@gmail.com</span>
+            📧 البريد الإلكتروني
         </a>
     </div>
 </div>
