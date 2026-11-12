@@ -9,7 +9,7 @@ import time
 # 1. إعدادات الصفحة ونظام القوالب الديناميكية (Dynamic Themes) + التوافق الكامل مع الجوال (RTL)
 # ==========================================
 st.set_page_config(
-    page_title="منصة زياد الذكية | أنماط التعلم (VAK)",
+    page_title="بوابة اختبار أنماط التعلم (VAK) | منصة زياد الذكية",
     page_icon="🎓",
     layout="centered"
 )
@@ -209,7 +209,7 @@ cur_t = THEMES.get(active_theme_key, THEMES["royal"])
 
 st.markdown(f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
     /* ========================================================
        1. المتغيرات اللونية للقالب الديناميكي النشط ({cur_t['name']})
@@ -262,7 +262,7 @@ st.markdown(f"""
     html, body, [data-testid="stAppViewContainer"], .stApp {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', sans-serif !important;
+        font-family: 'Cairo', sans-serif !important;
         background-color: var(--bg-page) !important;
         color: var(--text-primary) !important;
         transition: background-color 0.35s ease;
@@ -285,7 +285,7 @@ st.markdown(f"""
     .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', sans-serif !important;
+        font-family: 'Cairo', sans-serif !important;
     }}
 
     /* ========================================================
@@ -293,28 +293,30 @@ st.markdown(f"""
        ======================================================== */
     .ziyad-hero-banner {{
         background: var(--hero-grad);
-        border-radius: 22px;
-        padding: 28px 28px;
-        margin-bottom: 18px;
-        box-shadow: var(--shadow-header);
+        border-radius: 24px;
+        padding: 26px 24px 22px 24px;
+        margin-bottom: 16px;
+        box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), var(--shadow-header);
         position: relative;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1.5px solid rgba(255, 255, 255, 0.22);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 10px;
         transition: all 0.35s ease;
+        direction: rtl !important;
+        text-align: center !important;
     }}
 
     .ziyad-hero-banner::before {{
         content: "";
         position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 260px;
-        height: 260px;
+        top: -60px;
+        right: -60px;
+        width: 200px;
+        height: 200px;
         background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
@@ -322,90 +324,80 @@ st.markdown(f"""
     .ziyad-hero-banner::after {{
         content: "";
         position: absolute;
-        bottom: -60%;
-        left: -8%;
-        width: 240px;
-        height: 240px;
+        bottom: -70px;
+        left: -50px;
+        width: 200px;
+        height: 200px;
         background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
     }}
 
-    .hero-main-row {{
-        display: flex;
+    .unified-title-row {{
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
         flex-wrap: wrap;
-        z-index: 1;
-        width: 100%;
+        z-index: 2;
+        direction: rtl !important;
     }}
 
-    .hero-icon-glass {{
-        width: 62px;
-        height: 62px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.14);
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        animation: float-cap 3.5s ease-in-out infinite;
-        flex-shrink: 0;
-    }}
-
-    @keyframes float-cap {{
-        0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-        50% {{ transform: translateY(-4px) rotate(-4deg); }}
-    }}
-
-    .hero-brand-title {{
-        font-size: 34px !important;
-        font-weight: 800 !important;
+    .unified-main-title {{
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 30px !important;
+        font-weight: 900 !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1.2 !important;
-        letter-spacing: -0.3px;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        line-height: 1.25 !important;
+        letter-spacing: 0px !important;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
         text-align: center !important;
     }}
 
-    .hero-portal-pill {{
-        background: rgba(15, 23, 42, 0.35);
+    .unified-brand-row {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        z-index: 2;
+        direction: rtl !important;
+    }}
+
+    .unified-brand-pill {{
+        font-family: 'Cairo', sans-serif !important;
+        background: rgba(15, 23, 42, 0.34);
         border: 1px solid rgba(255, 255, 255, 0.26);
-        padding: 6px 18px;
+        box-shadow: inset 0 1px 2px rgba(255,255,255,0.18);
+        padding: 5px 18px;
         border-radius: 999px;
-        font-size: 13.5px !important;
-        font-weight: 700 !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        color: #fde68a !important;
+        -webkit-text-fill-color: #fde68a !important;
         white-space: nowrap;
         backdrop-filter: blur(4px);
         text-decoration: none !important;
         transition: all 0.2s ease;
     }}
-    a.hero-portal-pill:hover {{
+    a.unified-brand-pill:hover {{
         background: rgba(15, 23, 42, 0.55);
         border-color: var(--brand-gold);
         transform: translateY(-1px);
     }}
 
-    .hero-sub-badge {{
-        background: rgba(255, 255, 255, 0.13);
-        border: 1px solid rgba(255, 255, 255, 0.24);
-        padding: 5px 16px;
-        border-radius: 999px;
-        font-size: 13px !important;
+    .unified-sub-desc {{
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 13.5px !important;
         font-weight: 700 !important;
-        color: #f1f5f9 !important;
-        -webkit-text-fill-color: #f1f5f9 !important;
-        z-index: 1;
+        color: rgba(255, 255, 255, 0.92) !important;
+        -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+        margin: 0 !important;
+        line-height: 1.5 !important;
+        z-index: 2;
         text-align: center !important;
     }}
 
@@ -596,18 +588,21 @@ st.markdown(f"""
     }}
 
     .card-section-title {{
-        font-size: 21px !important;
-        font-weight: 800 !important;
-        color: var(--text-primary) !important;
-        -webkit-text-fill-color: var(--text-primary) !important;
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
         margin: 0 0 6px 0 !important;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f1f5f9;
         text-align: right !important;
     }}
     .card-section-sub {{
         font-size: 13.5px !important;
-        color: var(--text-muted) !important;
-        -webkit-text-fill-color: var(--text-muted) !important;
-        margin: 0 0 16px 0 !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        margin: 0 0 14px 0 !important;
         text-align: right !important;
         line-height: 1.5;
     }}
@@ -640,7 +635,7 @@ st.markdown(f"""
     div[role="listbox"] {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', sans-serif !important;
+        font-family: 'Cairo', sans-serif !important;
     }}
     div[data-baseweb="select"] > div {{
         background-color: var(--bg-input) !important;
@@ -875,7 +870,7 @@ st.markdown(f"""
         border-collapse: collapse !important;
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Tajawal', sans-serif !important;
+        font-family: 'Cairo', sans-serif !important;
         font-size: 14px !important;
         background-color: #ffffff !important;
         color: var(--text-primary) !important;
@@ -1176,26 +1171,19 @@ st.markdown(f"""
             font-size: 11.5px !important;
         }}
         .ziyad-hero-banner {{
-            padding: 18px 14px;
-            border-radius: 16px;
-            gap: 10px;
+            padding: 20px 14px 18px 14px !important;
+            border-radius: 20px !important;
+            gap: 8px;
         }}
-        .hero-icon-glass {{
-            width: 48px;
-            height: 48px;
-            font-size: 25px;
-            border-radius: 12px;
+        .unified-main-title {{
+            font-size: 22px !important;
         }}
-        .hero-brand-title {{
-            font-size: 23px !important;
+        .unified-brand-pill {{
+            font-size: 13.5px !important;
+            padding: 4px 14px !important;
         }}
-        .hero-portal-pill {{
-            font-size: 12px !important;
-            padding: 4px 12px;
-        }}
-        .hero-sub-badge {{
-            font-size: 11.5px !important;
-            padding: 4px 12px;
+        .unified-sub-desc {{
+            font-size: 12.5px !important;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
             padding: 16px 14px !important;
@@ -1264,14 +1252,17 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
-st.markdown("""
-<div class="ziyad-hero-banner">
-    <div class="hero-main-row">
-        <div class="hero-icon-glass">🎓</div>
-        <h1 class="hero-brand-title">منصة زياد الذكية</h1>
-        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="hero-portal-pill">بوابة التعليم الذكية 2026</a>
+ZIYAD_LOGO_SVG = '<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+st.markdown(f"""
+<div class="ziyad-hero-banner" dir="rtl">
+    <div class="unified-title-row">
+        {ZIYAD_LOGO_SVG}
+        <h1 class="unified-main-title">بوابة اختبار أنماط التعلم (VAK)</h1>
     </div>
-    <div class="hero-sub-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
+    <div class="unified-brand-row">
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill">منصة زياد الذكية</a>
+    </div>
+    <div class="unified-sub-desc">البصري • السمعي • الحركي</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1636,7 +1627,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap'); body {{ font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -2277,9 +2268,9 @@ else:
 # ==========================================
 # 6. تذييل الصفحة الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام أو الحسابات)
 # ==========================================
-st.markdown("""
+st.markdown(f"""
 <div class="ziyad-footer-wrap">
-    <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</div>
+    <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.now().year}</div>
     <div class="ziyad-footer-cards">
         <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
             🎓 منصة زياد الذكية
