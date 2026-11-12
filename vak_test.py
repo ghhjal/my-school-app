@@ -349,6 +349,16 @@ st.markdown(f"""
         direction: rtl !important;
     }}
 
+    .floating-cap-logo {{
+        animation: float-cap 3.5s ease-in-out infinite !important;
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
+    }}
+
+    @keyframes float-cap {{
+        0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
+        50% {{ transform: translateY(-6px) rotate(-3deg); }}
+    }}
+
     .unified-main-title {{
         font-family: 'Cairo', sans-serif !important;
         font-size: 30px !important;
@@ -538,48 +548,69 @@ st.markdown(f"""
     }}
 
     .stTabs [data-baseweb="tab-list"] {{
-        background-color: transparent;
-        border-bottom: 1.5px solid var(--border-color);
-        padding-bottom: 10px;
-        gap: 10px;
-        justify-content: flex-start;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        background-color: transparent !important;
+        border-bottom: none !important;
+        padding: 4px 0px !important;
+        gap: 8px !important;
+        justify-content: flex-start !important;
+        margin-bottom: 16px !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
     }}
     .stTabs [data-baseweb="tab"] {{
-        background-color: transparent !important;
-        border: 1.5px solid transparent !important;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
         border-radius: 12px !important;
-        padding: 8px 16px !important;
-        color: var(--text-secondary) !important;
-        -webkit-text-fill-color: var(--text-secondary) !important;
-        font-weight: 700 !important;
+        padding: 8px 14px !important;
+        min-height: 46px !important;
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05) !important;
         transition: all 0.2s ease !important;
+        opacity: 1 !important;
     }}
     .stTabs [data-baseweb="tab"]:hover {{
         background-color: var(--tab-hover) !important;
+        border-color: var(--brand-bright) !important;
         color: var(--brand-navy) !important;
         -webkit-text-fill-color: var(--brand-navy) !important;
     }}
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div,
     .stTabs [data-baseweb="tab"] * {{
-        color: inherit !important;
-        -webkit-text-fill-color: inherit !important;
-        font-size: 14px !important;
-        font-weight: 700 !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        font-size: 13.5px !important;
+        font-weight: 800 !important;
         margin: 0 !important;
+        opacity: 1 !important;
     }}
     .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-        background: var(--brand-navy) !important;
+        background: var(--btn-grad) !important;
         border: 2px solid var(--brand-gold) !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         box-shadow: var(--shadow-btn) !important;
     }}
+    .stTabs [data-baseweb="tab"][aria-selected="true"] p,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] span,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] div,
     .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
+        font-weight: 900 !important;
     }}
-    .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
+    .stTabs [data-baseweb="tab-highlight"],
+    .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
 
     /* ========================================================
        6. بطاقة تسجيل الدخول والحاويات البيضاء الفاخرة
@@ -1318,9 +1349,20 @@ st.markdown(f"""
         .chart-label {{
             font-size: 12.5px;
         }}
+        .stTabs [data-baseweb="tab-list"] {{
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+        }}
+        .stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+            grid-column: span 2 !important;
+        }}
         .stTabs [data-baseweb="tab"] {{
-            padding: 6px 11px !important;
-            border-radius: 10px !important;
+            width: 100% !important;
+            min-height: 46px !important;
+            padding: 6px 8px !important;
+            border-radius: 11px !important;
+            white-space: normal !important;
         }}
         .stTabs [data-baseweb="tab"] * {{
             font-size: 12.5px !important;
@@ -1349,7 +1391,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
-ZIYAD_LOGO_SVG = '<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
+ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 st.markdown(f"""
 <div class="ziyad-hero-banner" dir="rtl">
     <div class="unified-title-row">
@@ -1460,6 +1502,44 @@ components.html(f"""
                 -webkit-text-fill-color: {cur_t['brand_navy']} !important;
                 font-weight: 800 !important;
             }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) {{
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                color: #1e293b !important;
+                -webkit-text-fill-color: #1e293b !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #1e293b !important;
+                -webkit-text-fill-color: #1e293b !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+                background: {cur_t['btn_grad']} !important;
+                border: 2px solid {cur_t['brand_gold']} !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+            }}
+            [data-testid="stExpander"] {{
+                background-color: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 14px !important;
+            }}
+            [data-testid="stExpander"] summary,
+            [data-testid="stExpander"] summary *,
+            [data-testid="stExpanderDetails"] {{
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                font-weight: 800 !important;
+            }}
         `;
 
         function enforceLightInputs() {{
@@ -1499,6 +1579,29 @@ components.html(f"""
                     c.style.setProperty('color', '#0F172A', 'important');
                     c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
                 }});
+            }});
+
+            var tabs = pDoc.querySelectorAll('.stTabs [data-baseweb="tab"]');
+            tabs.forEach(function(tab) {{
+                var isSel = tab.getAttribute('aria-selected') === 'true';
+                if (isSel) {{
+                    tab.style.setProperty('color', '#ffffff', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#ffffff', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                    }});
+                }} else {{
+                    tab.style.setProperty('background-color', '#ffffff', 'important');
+                    tab.style.setProperty('background', '#ffffff', 'important');
+                    tab.style.setProperty('border', '1.5px solid #cbd5e1', 'important');
+                    tab.style.setProperty('color', '#1e293b', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#1e293b', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
+                    }});
+                }}
             }});
         }}
 
@@ -1960,27 +2063,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # شريط اختيار القوالب الديناميكية (يظهر فقط داخل شاشة مدير النظام)
-        st.markdown(f"""
-        <div class="admin-theme-box">
-            <div class="theme-switcher-header">
-                <span class="theme-switcher-label">🎨 تخصيص القالب البصري للمنصة:</span>
-                <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
-        t_cols = st.columns(4)
-        for idx, (t_key, t_info) in enumerate(THEMES.items()):
-            with t_cols[idx]:
-                is_curr_t = (active_theme_key == t_key)
-                btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
-                btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
-                if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
-                    if not is_curr_t:
-                        with st.spinner("جاري تطبيق القالب البصري على المنصة..."):
-                            save_platform_theme(t_key)
-                            st.rerun()
 
         col_act1, col_act2, col_logout = st.columns([2, 2, 1.5])
         with col_act1:
@@ -2324,7 +2407,7 @@ else:
             with st.container(border=True):
                 st.markdown("<div class='card-section-title'>⚙️ إدارة قواعد البيانات والصلاحيات</div>", unsafe_allow_html=True)
                 st.markdown("<p class='card-section-sub'>تحديث قوائم الطلاب، استيراد أنماط التعلم، وتخصيص الفصول المسندة للمعلمين</p>", unsafe_allow_html=True)
-                sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول"])
+                sub_tab_students, sub_tab_vak, sub_tab_teachers, sub_tab_theme = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول", "🎨 تخصيص القالب البصري للمنصة"])
                 
                 # 1️⃣ تبويب بيانات الطلاب
                 with sub_tab_students:
@@ -2513,6 +2596,29 @@ else:
                     display_t_df = display_t_df.rename(columns={'id': 'رقم الهوية', 'name': 'الاسم', 'role': 'الصلاحية', 'class_name': 'نطاق الفصول المسموحة'})
                     display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
                     render_rtl_table(display_t_df)
+
+                # 4️⃣ تبويب تخصيص القالب البصري للمنصة
+                with sub_tab_theme:
+                    st.markdown(f"""
+                    <div class="admin-theme-box">
+                        <div class="theme-switcher-header">
+                            <span class="theme-switcher-label">🎨 تخصيص القالب البصري للمنصة:</span>
+                            <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.info("💡 اختر القالب البصري لتطبيقه فوراً على الهوية البصرية للمنصة لدى جميع الزوار والمعلمين.")
+                    t_cols = st.columns(4)
+                    for idx, (t_key, t_info) in enumerate(THEMES.items()):
+                        with t_cols[idx]:
+                            is_curr_t = (active_theme_key == t_key)
+                            btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
+                            btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
+                            if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
+                                if not is_curr_t:
+                                    with st.spinner("جاري تطبيق القالب البصري على المنصة..."):
+                                        save_platform_theme(t_key)
+                                        st.rerun()
 
 # ==========================================
 # 6. تذييل الصفحة الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام أو الحسابات)
