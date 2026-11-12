@@ -16,7 +16,8 @@ import streamlit as st
 # ⚙️ 1. إعدادات النظام والاتصال الذكي
 # ==========================================
 st.set_page_config(
-    page_title="منصة زياد الذكية",
+    page_title="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية",
+    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -186,8 +187,9 @@ themes = {
         "sub_color": "#DBEAFE",
         "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
         "icon": "🎓",
-        "title": "منصة زياد الذكية",
-        "subtitle": "بوابة التعليم الذكية 2026",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "الابتكار والمستقبل 🚀": {
@@ -198,8 +200,9 @@ themes = {
         "sub_color": "#E0E7FF",
         "btn_hover": "linear-gradient(135deg, #312E81 0%, #5B21B6 100%)",
         "icon": "🚀",
-        "title": "منصة زياد الذكية",
-        "subtitle": "نحو تعليم رقمي مبتكر • Smart Learning",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='2'/%3E%3C/svg%3E\")",
     },
     "الزمرد الفاخر 💎": {
@@ -210,8 +213,9 @@ themes = {
         "sub_color": "#CCFBF1",
         "btn_hover": "linear-gradient(135deg, #115E59 0%, #0F766E 100%)",
         "icon": "💎",
-        "title": "منصة زياد الذكية",
-        "subtitle": "التميز والإتقان في تعلم اللغة الإنجليزية",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3Ccircle cx='22' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "الأفق الرقمي ✨": {
@@ -222,8 +226,9 @@ themes = {
         "sub_color": "#BAE6FD",
         "btn_hover": "linear-gradient(135deg, #075985 0%, #0369A1 100%)",
         "icon": "✨",
-        "title": "منصة زياد الذكية",
-        "subtitle": "بيئة تفاعلية ذكية • Interactive Portal",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='0.12' stroke-width='1.5'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='10'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "اليوم الوطني 🇸🇦": {
@@ -234,8 +239,9 @@ themes = {
         "sub_color": "#D4AF37",
         "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
         "icon": "🇸🇦",
-        "title": "منصة زياد الذكية",
-        "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>اليوم الوطني السعودي 96</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • اليوم الوطني 🇸🇦",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
     "يوم التأسيس 🏛️": {
@@ -246,8 +252,9 @@ themes = {
         "sub_color": "#FAEBD7",
         "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
         "icon": "🐎",
-        "title": "منصة زياد الذكية",
-        "subtitle": "يوم بدينا<br><span style='font-size:1.05rem; color:#F5DEB3; opacity:0.95;'>ثلاثة قرون من العز والفخر</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • يوم التأسيس 🏛️",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
     },
     "رمضان المبارك 🌙": {
@@ -258,8 +265,9 @@ themes = {
         "sub_color": "#E2E8F0",
         "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
         "icon": "🌙",
-        "title": "منصة زياد الذكية",
-        "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.05rem; color:#D4AF37; opacity:0.95;'>رمضان يجمعنا</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • رمضان المبارك 🌙",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
     },
     "التفوق والنجاح 🏆": {
@@ -270,8 +278,9 @@ themes = {
         "sub_color": "#FEF3C7",
         "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
         "icon": "🏆",
-        "title": "منصة زياد الذكية",
-        "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>نهاية العام الدراسي</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • حصاد التفوق 🏆",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
 }
@@ -314,7 +323,7 @@ def show_footer():
   st.markdown(
       f"""
     <div style='text-align: center; color: var(--text-color); opacity: 0.8; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
+        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
     </div>
     """,
       unsafe_allow_html=True,
@@ -330,7 +339,7 @@ def show_footer():
 st.markdown(
     f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
 :root {{
 --background-color: #F8FAFC;
@@ -367,7 +376,7 @@ footer {{ visibility: hidden; }}
 
 /* ✳️ 1. قفل التمرير الأفقي بدون إظهار شريط تمرير رمادي داخلي على اليسار */
 html, body {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 background-color: var(--background-color) !important;
 color: var(--text-color) !important;
 overflow-x: clip !important;
@@ -376,7 +385,7 @@ padding: 0 !important;
 }}
 
 .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 background-color: var(--background-color) !important;
@@ -400,29 +409,34 @@ direction: rtl !important;
 text-align: right !important;
 }}
 
-/* ✳️ 2. البنر العلوي الاحترافي المطور (Glassmorphism 3D + هالات ضوئية) */
+/* ✳️ 2. البنر العلوي الموحد للهوية البصرية (منصة زياد الذكية) */
 .header-container, .header-container * {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 }}
 
 .header-container {{
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 36px 24px 30px 24px !important;
-border-radius: 28px !important;
-margin: 10px auto 24px auto !important;
+padding: 26px 24px 22px 24px !important;
+border-radius: 24px !important;
+margin: 8px auto 18px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 18px 38px -12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35), 0 14px 30px rgba(15, 23, 42, 0.18) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
 border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+display: flex !important;
+flex-direction: column !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 10px !important;
+direction: rtl !important;
 }}
 
-/* هالات ضوئية زجاجية خلفية تضفي عمقاً ثلاثي الأبعاد للبنر */
 .header-container::before {{
 content: "";
 position: absolute;
@@ -430,7 +444,7 @@ top: -60px;
 right: -60px;
 width: 200px;
 height: 200px;
-background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
 border-radius: 50%;
 pointer-events: none;
 }}
@@ -440,73 +454,97 @@ content: "";
 position: absolute;
 bottom: -70px;
 left: -50px;
-width: 220px;
-height: 220px;
-background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+width: 200px;
+height: 200px;
+background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
 border-radius: 50%;
 pointer-events: none;
 }}
 
-.title-wrapper {{
+.unified-title-row {{
 display: inline-flex !important;
 align-items: center !important;
 justify-content: center !important;
 gap: 14px !important;
-margin-bottom: 12px !important;
+flex-wrap: wrap !important;
 direction: rtl !important;
 position: relative;
 z-index: 2;
 }}
 
-/* كبسولة زجاجية أنيقة حول شعار المنصة */
-.logo-icon {{
-font-size: 2.6rem !important;
-width: 64px !important;
-height: 64px !important;
-display: flex !important;
-align-items: center !important;
-justify-content: center !important;
-background: rgba(255, 255, 255, 0.14) !important;
-backdrop-filter: blur(8px) !important;
--webkit-backdrop-filter: blur(8px) !important;
-border: 1.5px solid rgba(255, 255, 255, 0.28) !important;
-border-radius: 18px !important;
-box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
-animation: float 4s ease-in-out infinite;
-line-height: 1 !important;
-}}
-
-.banner-main-title {{
-font-family: 'Tajawal', sans-serif !important;
+.unified-main-title {{
+font-family: 'Cairo', sans-serif !important;
 margin: 0 !important;
-font-size: 2.55rem !important;
+font-size: 30px !important;
 font-weight: 900 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
-line-height: 1.2 !important;
+line-height: 1.25 !important;
+letter-spacing: 0px !important;
 text-align: center !important;
-text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22) !important;
 }}
 
-/* شارة زجاجية سفلية للعنوان الفرعي */
-.banner-sub-title {{
-font-family: 'Tajawal', sans-serif !important;
-display: inline-block !important;
-margin: 0 auto !important;
-padding: 6px 22px !important;
-background: rgba(15, 23, 42, 0.25) !important;
-backdrop-filter: blur(6px) !important;
--webkit-backdrop-filter: blur(6px) !important;
-border: 1px solid rgba(255, 255, 255, 0.2) !important;
+.unified-brand-row {{
+display: inline-flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 8px !important;
+flex-wrap: wrap !important;
+position: relative;
+z-index: 2;
+direction: rtl !important;
+}}
+
+.unified-brand-pill {{
+font-family: 'Cairo', sans-serif !important;
+background: rgba(15, 23, 42, 0.34) !important;
+border: 1px solid rgba(255, 255, 255, 0.26) !important;
+box-shadow: inset 0 1px 2px rgba(255,255,255,0.18) !important;
+padding: 5px 18px !important;
 border-radius: 999px !important;
+font-size: 15px !important;
+font-weight: 800 !important;
+color: #fde68a !important;
+-webkit-text-fill-color: #fde68a !important;
+white-space: nowrap;
+backdrop-filter: blur(4px);
+}}
+
+.unified-sub-desc {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 700 !important;
 color: {t_colors["sub_color"]} !important;
 -webkit-text-fill-color: {t_colors["sub_color"]} !important;
-font-size: 1.08rem !important;
-font-weight: 700 !important;
+margin: 0 !important;
 line-height: 1.5 !important;
 text-align: center !important;
 position: relative;
 z-index: 2;
+}}
+
+.login-card-heading {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 20px !important;
+font-weight: 900 !important;
+color: var(--text-color) !important;
+-webkit-text-fill-color: var(--text-color) !important;
+text-align: right !important;
+margin: 0 0 6px 0 !important;
+padding-bottom: 8px !important;
+border-bottom: 1px solid var(--border-color) !important;
+}}
+
+.login-card-sub {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 600 !important;
+color: var(--sub-text-color) !important;
+-webkit-text-fill-color: var(--sub-text-color) !important;
+text-align: right !important;
+margin: 0 0 14px 0 !important;
+line-height: 1.5 !important;
 }}
 
 /* ✳️ 3. محاذاة العناوين والتسميات خارج البنر إلى اليمين */
@@ -518,14 +556,14 @@ h1, h2, h3, h4, h5, h6, p, label,
 [data-testid="stWidgetLabel"] span,
 [data-testid="stRadio"] label,
 [data-testid="stCheckbox"] label {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 color: var(--text-color) !important;
 }}
 
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 color: var(--sub-text-color) !important;
@@ -577,7 +615,7 @@ caret-color: {accent_color} !important;
 background-color: transparent !important;
 font-weight: 800 !important;
 font-size: 1.02rem !important;
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 }}
 
 ::placeholder {{
@@ -591,7 +629,7 @@ direction: rtl !important;
 div[data-baseweb="select"], div[data-baseweb="select"] * {{
 direction: rtl !important;
 text-align: right !important;
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 color: var(--text-color) !important;
 font-weight: 700 !important;
 }}
@@ -625,7 +663,7 @@ font-weight: 800 !important;
 div[data-baseweb="popover"], div[data-baseweb="popover"] *, div[data-baseweb="menu"], div[data-baseweb="menu"] *, ul[data-baseweb="menu"], ul[data-baseweb="menu"] *, [data-testid="stSelectboxVirtualDropdown"], [data-testid="stSelectboxVirtualDropdown"] *, [role="listbox"], [role="listbox"] *, [role="option"], [role="option"] * {{
 direction: rtl !important;
 text-align: right !important;
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 }}
 
 div[data-baseweb="popover"] > div, div[data-baseweb="menu"], ul[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], [role="listbox"] {{
@@ -853,10 +891,10 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 /* ✳️ 8. ضبط شاشة الجوال: شبكة تبويبات (2×2) وثبات تام دون حركة يمين ويسار */
 @media (max-width: 768px) {{
 .block-container {{ padding-top: 2.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 26px 14px 22px 14px !important; margin: 8px auto 16px auto !important; border-radius: 22px !important; }}
-.banner-main-title {{ font-size: 1.75rem !important; }}
-.logo-icon {{ font-size: 1.9rem !important; width: 50px !important; height: 50px !important; border-radius: 14px !important; }}
-.banner-sub-title {{ font-size: 0.95rem !important; padding: 5px 16px !important; }}
+.header-container {{ padding: 20px 14px 18px 14px !important; margin: 8px auto 16px auto !important; border-radius: 20px !important; }}
+.unified-main-title {{ font-size: 22px !important; }}
+.unified-brand-pill {{ font-size: 13.5px !important; padding: 4px 14px !important; }}
+.unified-sub-desc {{ font-size: 12.5px !important; }}
 .metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
 .stTabs [data-baseweb="tab-list"] {{
@@ -877,12 +915,15 @@ white-space: normal !important;
 }}
 </style>
 
-<div class="header-container" style="font-family: 'Tajawal', sans-serif !important;">
-<div class="title-wrapper">
-<div class="logo-icon">{t_colors["icon"]}</div>
-<div class="banner-main-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</div>
+<div class="header-container" dir="rtl" style="font-family: 'Cairo', sans-serif !important;">
+<div class="unified-title-row">
+<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
+<h1 class="unified-main-title" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</h1>
 </div>
-<div class="banner-sub-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
+<div class="unified-brand-row">
+<span class="unified-brand-pill">{t_colors.get("brand", "منصة زياد الذكية")}</span>
+</div>
+<div class="unified-sub-desc" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
 </div>
 """,
     unsafe_allow_html=True,
@@ -895,11 +936,9 @@ if st.session_state.role is None:
   t1, t2, t3 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم", "🏫 بوابة الإدارة (مشاهد)"])
 
   with t1:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("st_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول الطالب</h4>", unsafe_allow_html=True)
+      st.markdown("<div class='login-card-heading'>تسجيل دخول الطالب</div><div class='login-card-sub'>أدخل رقم الهوية أو الرقم الأكاديمي للاطلاع على الدرجات والاختبارات والملاحظات</div>", unsafe_allow_html=True)
       sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
-      st.markdown("<br>", unsafe_allow_html=True)
       if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
         arabic_to_english = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
         sid = sid.translate(arabic_to_english)
@@ -914,13 +953,11 @@ if st.session_state.role is None:
             st.error("⚠️ الرقم غير مسجل في النظام")
 
   with t2:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("tr_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول المعلم</h4>", unsafe_allow_html=True)
-      u = st.text_input("اسم المستخدم", placeholder="User")
-      p = st.text_input("كلمة المرور", type="password", placeholder="******")
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.form_submit_button("🛠️ دخول لوحة التحكم", type="primary", use_container_width=True):
+      st.markdown("<div class='login-card-heading'>تسجيل دخول المعلم</div><div class='login-card-sub'>أدخل بيانات الحساب للوصول إلى لوحة إدارة ومتابعة الطلاب</div>", unsafe_allow_html=True)
+      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...")
+      p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+      if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
         df = fetch_safe("users")
         if not df.empty and u in df["username"].values:
           ud = df[df["username"] == u].iloc[0]
@@ -950,13 +987,11 @@ if st.session_state.role is None:
           st.error("❌ اسم المستخدم غير موجود.")
 
   with t3:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("admin_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
+      st.markdown("<div class='login-card-heading'>دخول الإدارة والإشراف التربوي</div><div class='login-card-sub'>بوابة مخصصة للإدارة والمشرف التربوي للاطلاع واستخراج التقارير</div>", unsafe_allow_html=True)
       u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
       p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.form_submit_button("👁️ دخول الإشراف", type="primary", use_container_width=True):
+      if st.form_submit_button("👁️ استعراض التقارير والبيانات", type="primary", use_container_width=True):
         df_u = fetch_safe("users")
         if not df_u.empty and u_admin in df_u["username"].values:
           ud = df_u[df_u["username"] == u_admin].iloc[0]
@@ -4896,4 +4931,4 @@ if st.session_state.role == "student":
       st.session_state.role = None
       st.rerun()
 
-  show_footer()      
+  show_footer()
