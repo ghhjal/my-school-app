@@ -295,7 +295,7 @@ st.markdown(f"""
     }}
 
     /* ========================================================
-       3. الهيدر الموحد لمنصة زياد الذكية (يتغير ديناميكياً مع القالب)
+       3. الهيدر الموحد ل الذكية (يتغير ديناميكياً مع القالب)
        ======================================================== */
     .ziyad-hero-banner {{
         background: var(--hero-grad);
@@ -1390,7 +1390,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
+# رسم الهيدر الموحد ل الذكية في أعلى الصفحة مباشرة
 ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 st.markdown(f"""
 <div class="ziyad-hero-banner" dir="rtl">
@@ -1399,7 +1399,7 @@ st.markdown(f"""
         <h1 class="unified-main-title">بوابة اختبار أنماط التعلم (VAK)</h1>
     </div>
     <div class="unified-brand-row">
-        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill">منصة زياد الذكية</a>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill"> الذكية</a>
     </div>
     <div class="unified-sub-desc">البصري • السمعي • الحركي</div>
 </div>
@@ -2628,7 +2628,7 @@ st.markdown(f"""
     <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.now().year}</div>
     <div class="ziyad-footer-cards">
         <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
-            🎓 منصة زياد الذكية
+            🎓 منصة متابعة الطلاب
         </a>
         <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
             📢 تليجرام الإدارة
