@@ -2997,7 +2997,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # --- 2. المتفوقون أكاديمياً (90%+) ---
     with honor_tabs[1]:
       cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
+      st.markdown(f"#### 🎓 لوحة المتفوقين  ({cp})")
 
       if "df_grades" in st.session_state and not st.session_state.df_grades.empty and not df_st_h.empty:
         df_g = st.session_state.df_grades.copy()
