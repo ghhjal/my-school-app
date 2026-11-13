@@ -343,6 +343,115 @@ def show_footer():
     """,
       unsafe_allow_html=True,
   )
+  components.html(f"""
+<script>
+(function() {{
+    try {{
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        var styleId = 'ziyad-students-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0f172a !important;
+                --background-color: #F8FAFC !important;
+                --secondary-background-color: #ffffff !important;
+                --primary-color: {primary_color} !important;
+                color-scheme: light only !important;
+                background-color: #F8FAFC !important;
+                color: #0f172a !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
+            button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+                background-color: #FFFFFF !important;
+                background: #FFFFFF !important;
+                border: 1.5px solid #CBD5E1 !important;
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                background: {header_grad} !important;
+                border: 2px solid #F59E0B !important;
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                opacity: 1 !important;
+            }}
+        `;
+
+        var isRunning = false;
+        function enforceLightUI() {{
+            if (isRunning) return;
+            isRunning = true;
+            try {{
+                if (pDoc.head.lastElementChild !== existingStyle) {{
+                    pDoc.head.appendChild(existingStyle);
+                }}
+                var tabs = pDoc.querySelectorAll('.stTabs [data-baseweb="tab"], button[data-baseweb="tab"]');
+                tabs.forEach(function(tab) {{
+                    var isSel = tab.getAttribute('aria-selected') === 'true';
+                    if (isSel) {{
+                        tab.style.setProperty('background', '{header_grad}', 'important');
+                        tab.style.setProperty('border', '2px solid #F59E0B', 'important');
+                        tab.style.setProperty('color', '#FFFFFF', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                        tab.querySelectorAll('*').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#FFFFFF', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                        }});
+                    }} else {{
+                        tab.style.setProperty('background-color', '#FFFFFF', 'important');
+                        tab.style.setProperty('background', '#FFFFFF', 'important');
+                        tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
+                        tab.style.setProperty('color', '#0F172A', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        tab.querySelectorAll('*').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#0F172A', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        }});
+                    }}
+                }});
+            }} finally {{
+                isRunning = false;
+            }}
+        }}
+
+        enforceLightUI();
+        if (window.parent.__ziyadPortalLightObserverObj) {{
+            try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
+        }}
+        var obs = new MutationObserver(function() {{
+            enforceLightUI();
+        }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        window.parent.__ziyadPortalLightObserverObj = obs;
+    }} catch (e) {{}}
+}})();
+</script>
+""", height=0)
 
 # ==========================================
 # 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
@@ -996,10 +1105,8 @@ border-color: {accent_color} !important;
 background: rgba(59, 130, 246, 0.12) !important;
 }}
 
-/* ✳️ 6. التبويبات: سطر مرن على الكمبيوتر + شبكة (2×2) ثابتة على الجوال بتباين فائق الوضوح */
-.stTabs [data-baseweb="tab-list"],
-[data-testid="stTabs"] [data-baseweb="tab-list"],
-div[role="tablist"] {{
+/* ✳️ 6. التبويبات: نفس التخطيط الأصلي تماماً مع تباين واضح في الوضعين الفاتح والداكن */
+.stTabs [data-baseweb="tab-list"] {{
 display: flex !important;
 flex-wrap: wrap !important;
 gap: 8px !important;
@@ -1013,11 +1120,8 @@ overflow-x: hidden !important;
 }}
 
 .stTabs [data-baseweb="tab"],
-[data-testid="stTabs"] [data-baseweb="tab"],
-button[data-baseweb="tab"],
-button[role="tab"] {{
-min-height: 46px !important;
-height: auto !important;
+button[data-baseweb="tab"] {{
+height: 48px !important;
 margin: 0 !important;
 padding: 8px 14px !important;
 background-color: #FFFFFF !important;
@@ -1032,38 +1136,26 @@ justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
 flex: 1 1 auto !important;
-box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
+box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
 transition: all 0.2s ease !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab"]:not([aria-selected="true"]):hover,
-button[data-baseweb="tab"]:not([aria-selected="true"]):hover,
-button[role="tab"]:not([aria-selected="true"]):hover {{
-background-color: #EFF6FF !important;
-border-color: {accent_color} !important;
-color: {primary_color} !important;
--webkit-text-fill-color: {primary_color} !important;
-}}
-
-.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
-.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
-.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div,
-.stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
-button[data-baseweb="tab"]:not([aria-selected="true"]) *,
-button[role="tab"]:not([aria-selected="true"]) * {{
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div,
+button[data-baseweb="tab"] p,
+button[data-baseweb="tab"] span,
+button[data-baseweb="tab"] div {{
 color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
 font-size: 14px !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab"][aria-selected="true"],
-[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"],
-button[data-baseweb="tab"][aria-selected="true"],
-button[role="tab"][aria-selected="true"] {{
+.stTabs [aria-selected="true"],
+button[data-baseweb="tab"][aria-selected="true"] {{
 background: {header_grad} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
@@ -1073,24 +1165,19 @@ box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab"][aria-selected="true"] p,
-.stTabs [data-baseweb="tab"][aria-selected="true"] span,
-.stTabs [data-baseweb="tab"][aria-selected="true"] div,
-.stTabs [data-baseweb="tab"][aria-selected="true"] *,
-button[data-baseweb="tab"][aria-selected="true"] *,
-button[role="tab"][aria-selected="true"] * {{
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div,
+button[data-baseweb="tab"][aria-selected="true"] p,
+button[data-baseweb="tab"][aria-selected="true"] span,
+button[data-baseweb="tab"][aria-selected="true"] div {{
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
-font-size: 14px !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"],
-.stTabs [data-baseweb="tab-border"],
-[data-baseweb="tab-highlight"],
-[data-baseweb="tab-border"] {{
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
 display: none !important;
 }}
 
@@ -1262,26 +1349,18 @@ font-size: 14px !important;
 .metric-val {{ font-size: 19px !important; }}
 .metric-sub {{ font-size: 10.5px !important; }}
 .metric-icon {{ width: 36px !important; height: 36px !important; font-size: 17px !important; border-radius: 10px !important; }}
-.stTabs [data-baseweb="tab-list"],
-[data-testid="stTabs"] [data-baseweb="tab-list"],
-div[role="tablist"] {{
+.stTabs [data-baseweb="tab-list"] {{
 display: grid !important;
 grid-template-columns: repeat(2, 1fr) !important;
 gap: 8px !important;
-overflow-x: visible !important;
 }}
-.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
-[data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
-div[role="tablist"] > button:last-child:nth-child(odd) {{
+.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
 grid-column: span 2 !important;
 }}
-.stTabs [data-baseweb="tab"],
-button[data-baseweb="tab"],
-button[role="tab"] {{
+.stTabs [data-baseweb="tab"] {{
 width: 100% !important;
 font-size: 13px !important;
-min-height: 46px !important;
-height: auto !important;
+height: 48px !important;
 padding: 6px 8px !important;
 white-space: normal !important;
 }}
@@ -1310,260 +1389,7 @@ font-size: 12.5px !important;
     unsafe_allow_html=True,
 )
 
-components.html(f"""
-<script>
-(function() {{
-    try {{
-        var pDoc = window.parent.document;
-        pDoc.documentElement.setAttribute('dir', 'rtl');
-        pDoc.body.setAttribute('dir', 'rtl');
-        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
 
-        var fontId = 'ziyad-google-fonts';
-        if (!pDoc.getElementById(fontId)) {{
-            var link = pDoc.createElement('link');
-            link.id = fontId;
-            link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap';
-            pDoc.head.appendChild(link);
-        }}
-
-        var styleId = 'ziyad-students-global-portal-rtl';
-        var existingStyle = pDoc.getElementById(styleId);
-        if (!existingStyle) {{
-            existingStyle = pDoc.createElement('style');
-            existingStyle.id = styleId;
-            pDoc.head.appendChild(existingStyle);
-        }}
-        existingStyle.innerHTML = `
-            *:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
-                font-family: 'Cairo', sans-serif !important;
-                letter-spacing: 0px !important;
-            }}
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-                --text-color: #0f172a !important;
-                --background-color: #F8FAFC !important;
-                --secondary-background-color: #ffffff !important;
-                --primary-color: {primary_color} !important;
-                color-scheme: light only !important;
-                background-color: #F8FAFC !important;
-                color: #0f172a !important;
-            }}
-            div[data-baseweb="input"],
-            div[data-baseweb="input"] > div,
-            div[data-baseweb="base-input"],
-            div[data-baseweb="textarea"],
-            div[data-baseweb="textarea"] > div,
-            div[data-baseweb="select"],
-            div[data-baseweb="select"] > div,
-            div[data-testid="stTextInput"] input,
-            div[data-testid="stTextArea"] textarea,
-            div[data-testid="stDateInput"] input,
-            div[data-testid="stNumberInput"] input,
-            div[data-baseweb="select"] *,
-            input, textarea, select {{
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                color-scheme: light !important;
-                direction: rtl !important;
-                text-align: right !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-weight: 700 !important;
-                opacity: 1 !important;
-            }}
-            div[data-baseweb="select"] span,
-            div[data-baseweb="select"] div,
-            div[data-baseweb="select"] svg,
-            div[data-baseweb="input"] svg,
-            div[data-testid="stNumberInput"] button svg {{
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                fill: #0f172a !important;
-                background-color: transparent !important;
-            }}
-            span[data-baseweb="tag"],
-            span[data-baseweb="tag"] * {{
-                background-color: #EFF6FF !important;
-                color: #1E3A8A !important;
-                -webkit-text-fill-color: #1E3A8A !important;
-            }}
-            div[data-testid="stAlert"],
-            div[data-testid="stAlert"] > div,
-            div[data-baseweb="notification"],
-            div[role="alert"] {{
-                background-color: #EFF6FF !important;
-                background: #EFF6FF !important;
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
-                border: 1.5px solid {primary_color} !important;
-                border-right: 5px solid {primary_color} !important;
-                border-radius: 14px !important;
-                direction: rtl !important;
-                text-align: right !important;
-            }}
-            div[data-testid="stAlert"] *,
-            div[data-baseweb="notification"] *,
-            div[role="alert"] * {{
-                background-color: transparent !important;
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
-                font-weight: 800 !important;
-                direction: rtl !important;
-                text-align: right !important;
-            }}
-            input::placeholder, textarea::placeholder {{
-                color: #64748b !important;
-                -webkit-text-fill-color: #64748b !important;
-                opacity: 1 !important;
-            }}
-            div[data-baseweb="popover"],
-            div[data-baseweb="popover"] *,
-            div[data-baseweb="menu"],
-            div[data-baseweb="menu"] *,
-            ul[data-testid="stSelectboxVirtualDropdown"],
-            ul[data-testid="stSelectboxVirtualDropdown"] *,
-            ul[role="listbox"],
-            ul[role="listbox"] *,
-            li[role="option"],
-            li[role="option"] * {{
-                direction: rtl !important;
-                text-align: right !important;
-                font-family: 'Cairo', sans-serif !important;
-                background-color: #ffffff !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-            }}
-            button[data-baseweb="tab"]:not([aria-selected="true"]),
-            button[role="tab"]:not([aria-selected="true"]),
-            [data-baseweb="tab"]:not([aria-selected="true"]) {{
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                border: 1.5px solid #cbd5e1 !important;
-                border-radius: 12px !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                opacity: 1 !important;
-            }}
-            button[data-baseweb="tab"]:not([aria-selected="true"]) *,
-            button[role="tab"]:not([aria-selected="true"]) *,
-            [data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                opacity: 1 !important;
-            }}
-            button[data-baseweb="tab"][aria-selected="true"],
-            button[role="tab"][aria-selected="true"],
-            [data-baseweb="tab"][aria-selected="true"] {{
-                background: {header_grad} !important;
-                border: 2px solid #F59E0B !important;
-                border-radius: 12px !important;
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
-                opacity: 1 !important;
-            }}
-            button[data-baseweb="tab"][aria-selected="true"] *,
-            button[role="tab"][aria-selected="true"] *,
-            [data-baseweb="tab"][aria-selected="true"] * {{
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
-                opacity: 1 !important;
-            }}
-            li[role="option"]:hover,
-            li[role="option"][aria-selected="true"] {{
-                background-color: #EFF6FF !important;
-                color: {primary_color} !important;
-                -webkit-text-fill-color: {primary_color} !important;
-                font-weight: 800 !important;
-            }}
-        `;
-
-        var isRunning = false;
-        function enforceLightInputs() {{
-            if (isRunning) return;
-            isRunning = true;
-            try {{
-                if (pDoc.head.lastElementChild !== existingStyle) {{
-                    pDoc.head.appendChild(existingStyle);
-                }}
-                var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
-                inputBoxes.forEach(function(box) {{
-                    box.style.setProperty('background-color', '#ffffff', 'important');
-                    box.style.setProperty('background', '#ffffff', 'important');
-                    box.style.setProperty('color', '#0f172a', 'important');
-                    box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                    var innerEls = box.querySelectorAll('div, span, input, textarea');
-                    innerEls.forEach(function(inn) {{
-                        if (!inn.closest('[data-baseweb="tag"]')) {{
-                            inn.style.setProperty('color', '#0f172a', 'important');
-                            inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                            inn.style.setProperty('background-color', '#ffffff', 'important');
-                            inn.style.setProperty('background', '#ffffff', 'important');
-                        }}
-                    }});
-                }});
-
-                var alerts = pDoc.querySelectorAll('[data-testid="stAlert"], [data-baseweb="notification"], div[role="alert"]');
-                alerts.forEach(function(al) {{
-                    al.style.setProperty('background-color', '#EFF6FF', 'important');
-                    al.style.setProperty('background', '#EFF6FF', 'important');
-                    al.style.setProperty('color', '#0F172A', 'important');
-                    al.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                    al.style.setProperty('border', '1.5px solid #2563EB', 'important');
-                    al.style.setProperty('border-right', '5px solid #2563EB', 'important');
-                    al.style.setProperty('border-radius', '14px', 'important');
-                    var alCh = al.querySelectorAll('div, p, span, li, strong, b');
-                    alCh.forEach(function(c) {{
-                        c.style.setProperty('background-color', 'transparent', 'important');
-                        c.style.setProperty('background', 'transparent', 'important');
-                        c.style.setProperty('color', '#0F172A', 'important');
-                        c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                    }});
-                }});
-
-                var tabs = pDoc.querySelectorAll('button[data-baseweb="tab"], button[role="tab"], [data-baseweb="tab"]');
-                tabs.forEach(function(tab) {{
-                    var isSel = tab.getAttribute('aria-selected') === 'true';
-                    if (isSel) {{
-                        tab.style.setProperty('background', '{header_grad}', 'important');
-                        tab.style.setProperty('border', '2px solid #F59E0B', 'important');
-                        tab.style.setProperty('color', '#FFFFFF', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                        tab.querySelectorAll('*').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#FFFFFF', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                        }});
-                    }} else {{
-                        tab.style.setProperty('background-color', '#FFFFFF', 'important');
-                        tab.style.setProperty('background', '#FFFFFF', 'important');
-                        tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
-                        tab.style.setProperty('color', '#0F172A', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                        tab.querySelectorAll('*').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#0F172A', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                        }});
-                    }}
-                }});
-            }} finally {{
-                isRunning = false;
-            }}
-        }}
-
-        enforceLightInputs();
-        if (window.parent.__ziyadPortalLightObserverObj) {{
-            try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
-        }}
-        var obs = new MutationObserver(function() {{
-            enforceLightInputs();
-        }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'class'] }});
-        window.parent.__ziyadPortalLightObserverObj = obs;
-    }} catch (e) {{}}
-}})();
-</script>
-""", height=0)
 
 # ==========================================
 # 🔐 3. نظام تسجيل الدخول
