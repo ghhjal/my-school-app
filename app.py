@@ -618,7 +618,7 @@ def show_footer():
 
         enforcePortalStyles();
         {
-            try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
+        try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
         }}
         var obs = new MutationObserver(function() {{
             enforcePortalStyles();
