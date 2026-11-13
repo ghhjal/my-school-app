@@ -295,7 +295,7 @@ st.markdown(f"""
     }}
 
     /* ========================================================
-       3. الهيدر الموحد ل الذكية (يتغير ديناميكياً مع القالب)
+       3. الهيدر الموحد لمنصة زياد الذكية (يتغير ديناميكياً مع القالب)
        ======================================================== */
     .ziyad-hero-banner {{
         background: var(--hero-grad);
@@ -1390,7 +1390,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# رسم الهيدر الموحد ل الذكية في أعلى الصفحة مباشرة
+# رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
 ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
 st.markdown(f"""
 <div class="ziyad-hero-banner" dir="rtl">
@@ -1399,224 +1399,13 @@ st.markdown(f"""
         <h1 class="unified-main-title">بوابة اختبار أنماط التعلم (VAK)</h1>
     </div>
     <div class="unified-brand-row">
-        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill"> الذكية</a>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill">منصة زياد الذكية</a>
     </div>
     <div class="unified-sub-desc">البصري • السمعي • الحركي</div>
 </div>
 """, unsafe_allow_html=True)
 
-components.html(f"""
-<script>
-(function() {{
-    try {{
-        var pDoc = window.parent.document;
-        pDoc.documentElement.setAttribute('dir', 'rtl');
-        pDoc.body.setAttribute('dir', 'rtl');
-        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
 
-        var fontId = 'ziyad-google-fonts';
-        if (!pDoc.getElementById(fontId)) {{
-            var link = pDoc.createElement('link');
-            link.id = fontId;
-            link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap';
-            pDoc.head.appendChild(link);
-        }}
-
-        var styleId = 'ziyad-vak-global-portal-rtl';
-        var existingStyle = pDoc.getElementById(styleId);
-        if (!existingStyle) {{
-            existingStyle = pDoc.createElement('style');
-            existingStyle.id = styleId;
-            pDoc.head.appendChild(existingStyle);
-        }}
-        existingStyle.innerHTML = `
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-                --text-color: #0f172a !important;
-                --background-color: {cur_t['bg_page']} !important;
-                --secondary-background-color: #ffffff !important;
-                --primary-color: {cur_t['brand_royal']} !important;
-                color-scheme: light only !important;
-                background-color: {cur_t['bg_page']} !important;
-                color: #0f172a !important;
-            }}
-            div[data-baseweb="input"],
-            div[data-baseweb="input"] > div,
-            div[data-baseweb="base-input"],
-            div[data-baseweb="textarea"],
-            div[data-baseweb="textarea"] > div,
-            div[data-baseweb="select"],
-            div[data-baseweb="select"] > div,
-            div[data-testid="stTextInput"] input,
-            div[data-testid="stTextArea"] textarea,
-            div[data-testid="stDateInput"] input,
-            div[data-testid="stNumberInput"] input,
-            div[data-baseweb="select"] *,
-            input, textarea {{
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                color-scheme: light !important;
-                direction: rtl !important;
-                text-align: right !important;
-                font-family: 'Cairo', sans-serif !important;
-                font-weight: 700 !important;
-                opacity: 1 !important;
-            }}
-            div[data-baseweb="select"] span,
-            div[data-baseweb="select"] div,
-            div[data-baseweb="select"] svg,
-            div[data-baseweb="input"] svg {{
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                fill: #0f172a !important;
-                background-color: transparent !important;
-            }}
-            input::placeholder, textarea::placeholder {{
-                color: #64748b !important;
-                -webkit-text-fill-color: #64748b !important;
-                opacity: 1 !important;
-            }}
-            div[data-baseweb="popover"],
-            div[data-baseweb="popover"] *,
-            div[data-baseweb="menu"],
-            div[data-baseweb="menu"] *,
-            ul[data-testid="stSelectboxVirtualDropdown"],
-            ul[data-testid="stSelectboxVirtualDropdown"] *,
-            ul[role="listbox"],
-            ul[role="listbox"] *,
-            li[role="option"],
-            li[role="option"] * {{
-                direction: rtl !important;
-                text-align: right !important;
-                font-family: 'Cairo', sans-serif !important;
-                background-color: #ffffff !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-            }}
-            li[role="option"]:hover,
-            li[role="option"][aria-selected="true"] {{
-                background-color: {cur_t['tab_hover']} !important;
-                color: {cur_t['brand_navy']} !important;
-                -webkit-text-fill-color: {cur_t['brand_navy']} !important;
-                font-weight: 800 !important;
-            }}
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) {{
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                border: 1.5px solid #cbd5e1 !important;
-                color: #1e293b !important;
-                -webkit-text-fill-color: #1e293b !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #1e293b !important;
-                -webkit-text-fill-color: #1e293b !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-                background: {cur_t['btn_grad']} !important;
-                border: 2px solid {cur_t['brand_gold']} !important;
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
-                opacity: 1 !important;
-            }}
-            [data-testid="stExpander"] {{
-                background-color: #ffffff !important;
-                border: 1.5px solid #cbd5e1 !important;
-                border-radius: 14px !important;
-            }}
-            [data-testid="stExpander"] summary,
-            [data-testid="stExpander"] summary *,
-            [data-testid="stExpanderDetails"] {{
-                background-color: #ffffff !important;
-                color: #0f172a !important;
-                -webkit-text-fill-color: #0f172a !important;
-                font-weight: 800 !important;
-            }}
-        `;
-
-        function enforceLightInputs() {{
-            if (pDoc.head.lastElementChild !== existingStyle) {{
-                pDoc.head.appendChild(existingStyle);
-            }}
-            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
-            inputBoxes.forEach(function(box) {{
-                box.style.setProperty('background-color', '#ffffff', 'important');
-                box.style.setProperty('background', '#ffffff', 'important');
-                box.style.setProperty('color', '#0f172a', 'important');
-                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                var innerEls = box.querySelectorAll('div, span, input, textarea');
-                innerEls.forEach(function(inn) {{
-                    if (!inn.closest('[data-baseweb="tag"]')) {{
-                        inn.style.setProperty('color', '#0f172a', 'important');
-                        inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                        inn.style.setProperty('background-color', '#ffffff', 'important');
-                        inn.style.setProperty('background', '#ffffff', 'important');
-                    }}
-                }});
-            }});
-
-            var alerts = pDoc.querySelectorAll('[data-testid="stAlert"], [data-baseweb="notification"], div[role="alert"]');
-            alerts.forEach(function(al) {{
-                al.style.setProperty('background-color', '#EFF6FF', 'important');
-                al.style.setProperty('background', '#EFF6FF', 'important');
-                al.style.setProperty('color', '#0F172A', 'important');
-                al.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                al.style.setProperty('border', '1.5px solid #2563EB', 'important');
-                al.style.setProperty('border-right', '5px solid #2563EB', 'important');
-                al.style.setProperty('border-radius', '14px', 'important');
-                var alCh = al.querySelectorAll('div, p, span, li, strong, b');
-                alCh.forEach(function(c) {{
-                    c.style.setProperty('background-color', 'transparent', 'important');
-                    c.style.setProperty('background', 'transparent', 'important');
-                    c.style.setProperty('color', '#0F172A', 'important');
-                    c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                }});
-            }});
-
-            var tabs = pDoc.querySelectorAll('.stTabs [data-baseweb="tab"]');
-            tabs.forEach(function(tab) {{
-                var isSel = tab.getAttribute('aria-selected') === 'true';
-                if (isSel) {{
-                    tab.style.setProperty('color', '#ffffff', 'important');
-                    tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
-                    tab.querySelectorAll('*').forEach(function(ch) {{
-                        ch.style.setProperty('color', '#ffffff', 'important');
-                        ch.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
-                    }});
-                }} else {{
-                    tab.style.setProperty('background-color', '#ffffff', 'important');
-                    tab.style.setProperty('background', '#ffffff', 'important');
-                    tab.style.setProperty('border', '1.5px solid #cbd5e1', 'important');
-                    tab.style.setProperty('color', '#1e293b', 'important');
-                    tab.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
-                    tab.querySelectorAll('*').forEach(function(ch) {{
-                        ch.style.setProperty('color', '#1e293b', 'important');
-                        ch.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
-                    }});
-                }}
-            }});
-        }}
-
-        enforceLightInputs();
-        if (!window.parent.__ziyadVakLightObserver) {{
-            var obs = new MutationObserver(function() {{
-                enforceLightInputs();
-            }});
-            obs.observe(pDoc.body, {{ childList: true, subtree: true }});
-            window.parent.__ziyadVakLightObserver = true;
-        }}
-    }} catch (e) {{}}
-}})();
-</script>
-""", height=0)
 
 # ==========================================
 # 💡 دالة عرض الجداول من اليمين إلى اليسار (RTL) بدلاً من st.dataframe اليساري
@@ -2628,7 +2417,7 @@ st.markdown(f"""
     <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.now().year}</div>
     <div class="ziyad-footer-cards">
         <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
-            🎓 منصة متابعة الطلاب
+            🎓 منصة زياد الذكية
         </a>
         <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
             📢 تليجرام الإدارة
@@ -2642,3 +2431,227 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+
+components.html(f"""
+<script>
+(function() {{
+    try {{
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        var fontId = 'ziyad-google-fonts';
+        if (!pDoc.getElementById(fontId)) {{
+            var link = pDoc.createElement('link');
+            link.id = fontId;
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap';
+            pDoc.head.appendChild(link);
+        }}
+
+        var styleId = 'ziyad-vak-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0f172a !important;
+                --background-color: {cur_t['bg_page']} !important;
+                --secondary-background-color: #ffffff !important;
+                --primary-color: {cur_t['brand_royal']} !important;
+                color-scheme: light only !important;
+                background-color: {cur_t['bg_page']} !important;
+                color: #0f172a !important;
+            }}
+            div[data-baseweb="input"],
+            div[data-baseweb="input"] > div,
+            div[data-baseweb="base-input"],
+            div[data-baseweb="textarea"],
+            div[data-baseweb="textarea"] > div,
+            div[data-baseweb="select"],
+            div[data-baseweb="select"] > div,
+            div[data-testid="stTextInput"] input,
+            div[data-testid="stTextArea"] textarea,
+            div[data-testid="stDateInput"] input,
+            div[data-testid="stNumberInput"] input,
+            div[data-baseweb="select"] *,
+            input, textarea {{
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                color-scheme: light !important;
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: 'Cairo', sans-serif !important;
+                font-weight: 700 !important;
+                opacity: 1 !important;
+            }}
+            div[data-baseweb="select"] span,
+            div[data-baseweb="select"] div,
+            div[data-baseweb="select"] svg,
+            div[data-baseweb="input"] svg {{
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                fill: #0f172a !important;
+                background-color: transparent !important;
+            }}
+            input::placeholder, textarea::placeholder {{
+                color: #64748b !important;
+                -webkit-text-fill-color: #64748b !important;
+                opacity: 1 !important;
+            }}
+            div[data-baseweb="popover"],
+            div[data-baseweb="popover"] *,
+            div[data-baseweb="menu"],
+            div[data-baseweb="menu"] *,
+            ul[data-testid="stSelectboxVirtualDropdown"],
+            ul[data-testid="stSelectboxVirtualDropdown"] *,
+            ul[role="listbox"],
+            ul[role="listbox"] *,
+            li[role="option"],
+            li[role="option"] * {{
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: 'Cairo', sans-serif !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+            }}
+            li[role="option"]:hover,
+            li[role="option"][aria-selected="true"] {{
+                background-color: {cur_t['tab_hover']} !important;
+                color: {cur_t['brand_navy']} !important;
+                -webkit-text-fill-color: {cur_t['brand_navy']} !important;
+                font-weight: 800 !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) {{
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                color: #1e293b !important;
+                -webkit-text-fill-color: #1e293b !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #1e293b !important;
+                -webkit-text-fill-color: #1e293b !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+                background: {cur_t['btn_grad']} !important;
+                border: 2px solid {cur_t['brand_gold']} !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+                opacity: 1 !important;
+            }}
+            [data-testid="stExpander"] {{
+                background-color: #ffffff !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 14px !important;
+            }}
+            [data-testid="stExpander"] summary,
+            [data-testid="stExpander"] summary *,
+            [data-testid="stExpanderDetails"] {{
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+                font-weight: 800 !important;
+            }}
+        `;
+
+        function enforceLightInputs() {{
+            if (pDoc.head.lastElementChild !== existingStyle) {{
+                pDoc.head.appendChild(existingStyle);
+            }}
+            var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"], [data-baseweb="select"] > div');
+            inputBoxes.forEach(function(box) {{
+                box.style.setProperty('background-color', '#ffffff', 'important');
+                box.style.setProperty('background', '#ffffff', 'important');
+                box.style.setProperty('color', '#0f172a', 'important');
+                box.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                var innerEls = box.querySelectorAll('div, span, input, textarea');
+                innerEls.forEach(function(inn) {{
+                    if (!inn.closest('[data-baseweb="tag"]')) {{
+                        inn.style.setProperty('color', '#0f172a', 'important');
+                        inn.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+                        inn.style.setProperty('background-color', '#ffffff', 'important');
+                        inn.style.setProperty('background', '#ffffff', 'important');
+                    }}
+                }});
+            }});
+
+            var alerts = pDoc.querySelectorAll('[data-testid="stAlert"], [data-baseweb="notification"], div[role="alert"]');
+            alerts.forEach(function(al) {{
+                al.style.setProperty('background-color', '#EFF6FF', 'important');
+                al.style.setProperty('background', '#EFF6FF', 'important');
+                al.style.setProperty('color', '#0F172A', 'important');
+                al.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                al.style.setProperty('border', '1.5px solid #2563EB', 'important');
+                al.style.setProperty('border-right', '5px solid #2563EB', 'important');
+                al.style.setProperty('border-radius', '14px', 'important');
+                var alCh = al.querySelectorAll('div, p, span, li, strong, b');
+                alCh.forEach(function(c) {{
+                    c.style.setProperty('background-color', 'transparent', 'important');
+                    c.style.setProperty('background', 'transparent', 'important');
+                    c.style.setProperty('color', '#0F172A', 'important');
+                    c.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                }});
+            }});
+
+            var tabs = pDoc.querySelectorAll('button[data-baseweb="tab"], button[role="tab"], [data-baseweb="tab"]');
+            tabs.forEach(function(tab) {{
+                var isSel = tab.getAttribute('aria-selected') === 'true';
+                if (isSel) {{
+                    tab.style.setProperty('background', '{cur_t["btn_grad"]}', 'important');
+                    tab.style.setProperty('border', '2px solid {cur_t["brand_gold"]}', 'important');
+                    tab.style.setProperty('color', '#ffffff', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#ffffff', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                    }});
+                }} else {{
+                    tab.style.setProperty('background-color', '#ffffff', 'important');
+                    tab.style.setProperty('background', '#ffffff', 'important');
+                    tab.style.setProperty('border', '1.5px solid #cbd5e1', 'important');
+                    tab.style.setProperty('color', '#1e293b', 'important');
+                    tab.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
+                    tab.querySelectorAll('*').forEach(function(ch) {{
+                        ch.style.setProperty('color', '#1e293b', 'important');
+                        ch.style.setProperty('-webkit-text-fill-color', '#1e293b', 'important');
+                    }});
+                }}
+            }});
+        }}
+
+        var isRunningVak = false;
+        function safeEnforceVak() {{
+            if (isRunningVak) return;
+            isRunningVak = true;
+            try {{ enforceLightInputs(); }} finally {{ isRunningVak = false; }}
+        }}
+
+        safeEnforceVak();
+        if (window.parent.__ziyadVakLightObserverObj) {{
+            try {{ window.parent.__ziyadVakLightObserverObj.disconnect(); }} catch (e) {{}}
+        }}
+        var obs = new MutationObserver(function() {{
+            safeEnforceVak();
+        }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'class'] }});
+        window.parent.__ziyadVakLightObserverObj = obs;
+    }} catch (e) {{}}
+}})();
+</script>
+""", height=0)
