@@ -2769,8 +2769,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     with eval_tabs[3]:
       cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
-      st.info("💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً.")
-
+      
       df_st_audit = st.session_state.df_students.copy()
       df_gr_audit = st.session_state.df_grades.copy()
 
