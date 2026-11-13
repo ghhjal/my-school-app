@@ -670,17 +670,13 @@ margin: 0 !important;
 padding: 0 !important;
 }}
 
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-font-family: 'Cairo', sans-serif !important;
-direction: rtl !important;
-text-align: right !important;
-background-color: #F8FAFC !important;
-color: #0F172A !important;
-overflow-x: clip !important;
-overflow-y: visible !important;
-max-width: 100vw !important;
-width: 100% !important;
-}}
+/* منع التبويبات المخفية من حجز مساحة فارغة أسفل الصفحة */
+[data-testid="stTabs"] [role="tabpanel"][hidden] {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
 
 .block-container {{
 padding-top: 1.1rem !important;
