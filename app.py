@@ -370,18 +370,50 @@ def show_footer():
                 font-family: 'Material Symbols Rounded', 'Material Icons' !important;
                 direction: ltr !important;
             }}
+            [data-testid="stTabs"] [data-baseweb="tab-list"],
+            [data-testid="stTabs"] [role="tablist"],
+            .stTabs [data-baseweb="tab-list"],
+            div[data-baseweb="tab-list"] {{
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5px 6px !important;
+                width: 100% !important;
+                overflow: visible !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 2px 0 !important;
+                margin-bottom: 8px !important;
+                direction: rtl !important;
+            }}
+            .ziyad-btn-icon {{
+                font-size: 0.82em !important;
+                line-height: 1 !important;
+                display: inline-block !important;
+                margin-left: 4px !important;
+                vertical-align: -1px !important;
+            }}
             .stTabs [aria-selected="false"],
             .stTabs [role="tab"]:not([aria-selected="true"]),
             [data-testid="stTabs"] [aria-selected="false"],
             [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
             .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
             button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-                background-color: #FFFFFF !important;
-                background: #FFFFFF !important;
-                border: 1.5px solid #CBD5E1 !important;
-                border-radius: 12px !important;
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                background-color: #F1F5F9 !important;
+                background: #F1F5F9 !important;
+                border: 1px solid #E2E8F0 !important;
+                border-radius: 10px !important;
+                color: #334155 !important;
+                -webkit-text-fill-color: #334155 !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: none !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="false"] p,
@@ -390,29 +422,99 @@ def show_footer():
             .stTabs [aria-selected="false"] *,
             .stTabs [role="tab"]:not([aria-selected="true"]) *,
             [data-testid="stTabs"] [aria-selected="false"] *,
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #334155 !important;
+                -webkit-text-fill-color: #334155 !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"],
             .stTabs [role="tab"][aria-selected="true"],
             [data-testid="stTabs"] [aria-selected="true"],
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-                background: {header_grad} !important;
-                border: 2px solid #F59E0B !important;
-                border-radius: 12px !important;
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+                background-color: #2563EB !important;
+                border: 1px solid #1D4ED8 !important;
+                border-radius: 10px !important;
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22) !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
-            [data-testid="stTabs"] [aria-selected="true"] * {{
+            [data-testid="stTabs"] [aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
+            @media (max-width: 768px) {{
+                [data-testid="stTabs"] [data-baseweb="tab-list"],
+                [data-testid="stTabs"] [role="tablist"],
+                .stTabs [data-baseweb="tab-list"],
+                div[data-baseweb="tab-list"] {{
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 5px 6px !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                    margin-bottom: 8px !important;
+                }}
+                [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+                div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+                    grid-column: 1 / -1 !important;
+                }}
+                [data-testid="stTabs"] [role="tab"],
+                button[data-baseweb="tab"],
+                .stTabs [data-baseweb="tab"] {{
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    max-height: 38px !important;
+                    padding: 4px 8px !important;
+                    font-size: 0.82rem !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    line-height: 1.25 !important;
+                }}
+            }}
         `;
+
+        var emojiRegex = /^([\u2600-\u27BF]|[\uD83C-\uDBFF][\uDC00-\uDFFF]|[\uFE0F\u200D])+/;
+        function scaleLeadingEmoji(el) {{
+            if (!el || el.querySelector('.ziyad-btn-icon')) return;
+            var p = el.querySelector('p') || el;
+            if (p && p.childNodes && p.childNodes.length > 0 && p.childNodes[0].nodeType === 3) {{
+                var txt = p.childNodes[0].nodeValue || '';
+                var trimmed = txt.trimStart();
+                var m = trimmed.match(emojiRegex);
+                if (m && m[0]) {{
+                    var span = pDoc.createElement('span');
+                    span.className = 'ziyad-btn-icon';
+                    span.textContent = m[0];
+                    var rest = trimmed.slice(m[0].length);
+                    p.childNodes[0].nodeValue = rest;
+                    p.insertBefore(span, p.childNodes[0]);
+                }}
+            }}
+        }}
 
         var isRunning = false;
         function enforcePortalStyles() {{
@@ -422,35 +524,67 @@ def show_footer():
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
+                var isMobileView = window.parent.innerWidth <= 768;
+                var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
+                tabLists.forEach(function(tl) {{
+                    tl.style.setProperty('gap', '5px 6px', 'important');
+                    tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('overflow', 'visible', 'important');
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    tl.style.setProperty('padding', '2px 0', 'important');
+                    tl.style.setProperty('margin-bottom', '8px', 'important');
+                    if (isMobileView) {{
+                        tl.style.setProperty('display', 'grid', 'important');
+                        tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    }} else {{
+                        tl.style.setProperty('display', 'flex', 'important');
+                        tl.style.setProperty('flex-wrap', 'wrap', 'important');
+                    }}
+                }});
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', 'auto', 'important');
-                    tab.style.setProperty('flex', '0 0 auto', 'important');
+                    scaleLeadingEmoji(tab);
+                    tab.style.setProperty('height', '38px', 'important');
+                    tab.style.setProperty('min-height', '38px', 'important');
+                    tab.style.setProperty('max-height', '38px', 'important');
+                    tab.style.setProperty('padding', isMobileView ? '4px 8px' : '4px 12px', 'important');
                     tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('padding', '6px 13px', 'important');
+                    tab.style.setProperty('min-width', isMobileView ? '0' : 'max-content', 'important');
+                    tab.style.setProperty('width', isMobileView ? '100%' : 'auto', 'important');
+                    tab.style.setProperty('line-height', '1.25', 'important');
+                    tab.style.setProperty('border-radius', '10px', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
-                        tab.style.setProperty('background', '{header_grad}', 'important');
-                        tab.style.setProperty('border', '2px solid #F59E0B', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)', 'important');
+                        tab.style.setProperty('background-color', '#2563EB', 'important');
+                        tab.style.setProperty('border', '1px solid #1D4ED8', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.22)', 'important');
                         tab.style.setProperty('color', '#FFFFFF', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#FFFFFF', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }} else {{
-                        tab.style.setProperty('background-color', '#FFFFFF', 'important');
-                        tab.style.setProperty('background', '#FFFFFF', 'important');
-                        tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
-                        tab.style.setProperty('color', '#0F172A', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        tab.style.setProperty('background-color', '#F1F5F9', 'important');
+                        tab.style.setProperty('background', '#F1F5F9', 'important');
+                        tab.style.setProperty('border', '1px solid #E2E8F0', 'important');
+                        tab.style.setProperty('box-shadow', 'none', 'important');
+                        tab.style.setProperty('color', '#334155', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#334155', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#0F172A', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                            ch.style.setProperty('color', '#334155', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#334155', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }}
+                }});
+                var actionBtns = pDoc.querySelectorAll('.stButton > button:not([role="tab"]), .stDownloadButton > button, [data-testid="stFormSubmitButton"] button, [data-testid="stLinkButton"] a');
+                actionBtns.forEach(function(btn) {{
+                    scaleLeadingEmoji(btn);
                 }});
 
                 var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
@@ -545,16 +679,20 @@ width: 100% !important;
 }}
 
 .block-container {{
-padding-top: 2.2rem !important;
-padding-bottom: 4rem !important;
-padding-left: 1rem !important;
-padding-right: 1rem !important;
+padding-top: 1.1rem !important;
+padding-bottom: 2.5rem !important;
+padding-left: 0.9rem !important;
+padding-right: 0.9rem !important;
 max-width: 1050px !important;
 width: 100% !important;
 box-sizing: border-box !important;
 overflow: visible !important;
 direction: rtl !important;
 text-align: right !important;
+}}
+
+[data-testid="stVerticalBlock"] {{
+gap: 0.55rem !important;
 }}
 
 /* ✳️ 2. البنر العلوي الاحترافي الموحد (الهوية البصرية لمنصة زياد الذكية) */
@@ -566,17 +704,17 @@ font-family: 'Cairo', sans-serif !important;
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 28px 24px 24px 24px !important;
-border-radius: 24px !important;
-margin: 8px auto 20px auto !important;
+padding: 18px 20px 15px 20px !important;
+border-radius: 20px !important;
+margin: 4px auto 12px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 16px 34px -10px rgba(15, 23, 42, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+box-shadow: 0 12px 26px -10px rgba(15, 23, 42, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
-border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+border: 1px solid rgba(255, 255, 255, 0.22) !important;
 }}
 
 .header-container::before {{
@@ -607,36 +745,38 @@ pointer-events: none;
 display: inline-flex !important;
 align-items: center !important;
 justify-content: center !important;
-gap: 14px !important;
+gap: 10px !important;
 flex-wrap: wrap !important;
-margin-bottom: 10px !important;
+margin-bottom: 6px !important;
 direction: rtl !important;
 position: relative;
 z-index: 2;
 }}
 
 .floating-cap-logo {{
+width: 42px !important;
+height: 42px !important;
 animation: float 3.5s ease-in-out infinite !important;
-filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
 }}
 
 .unified-main-title {{
 font-family: 'Cairo', sans-serif !important;
 margin: 0 !important;
-font-size: 30px !important;
+font-size: 26px !important;
 font-weight: 900 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
-line-height: 1.25 !important;
+line-height: 1.2 !important;
 text-align: center !important;
-text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+text-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
 }}
 
 .unified-brand-row {{
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-margin: 0 auto 8px auto !important;
+margin: 0 auto 5px auto !important;
 position: relative;
 z-index: 2;
 }}
@@ -850,7 +990,7 @@ div[data-baseweb="select"] > div,
 div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
 border: 1.5px solid #CBD5E1 !important;
 border-radius: 12px !important;
-min-height: 48px !important;
+min-height: 42px !important;
 box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
@@ -862,6 +1002,14 @@ box-shadow: 0 0 0 3px {primary_color}35 !important;
 background-color: #FFFFFF !important;
 }}
 
+div[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+}}
+
+div[data-baseweb="select"] span:not([data-baseweb="tag"]),
 div[data-baseweb="select"] svg,
 div[data-baseweb="input"] svg,
 div[data-testid="stNumberInput"] button svg {{
@@ -905,15 +1053,29 @@ justify-content: flex-start !important;
 flex: 1 !important;
 }}
 
+[data-baseweb="tag"],
 span[data-baseweb="tag"],
-span[data-baseweb="tag"] * {{
+div[data-baseweb="tag"] {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
 background-color: #EFF6FF !important;
+background: #EFF6FF !important;
 border: 1px solid {accent_color} !important;
+border-radius: 8px !important;
 color: #1E3A8A !important;
 -webkit-text-fill-color: #1E3A8A !important;
+font-weight: 800 !important;
+}}
+
+[data-baseweb="tag"] *,
+span[data-baseweb="tag"] *,
+div[data-baseweb="tag"] * {{
+background-color: transparent !important;
+background: transparent !important;
+color: #1E3A8A !important;
+-webkit-text-fill-color: #1E3A8A !important;
+fill: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
@@ -1029,24 +1191,34 @@ margin: 0 !important;
 color: #0F172A !important;
 }}
 
-/* ✳️ 5. الأزرار الرئيسية والثانوية */
+/* ✳️ 5. الأزرار الرئيسية والثانوية (ارتفاع موحد 42px وأيقونات متناسقة) */
+.ziyad-btn-icon {{
+font-size: 0.82em !important;
+line-height: 1 !important;
+display: inline-block !important;
+margin-left: 4px !important;
+vertical-align: -1px !important;
+}}
+
 [data-testid="stFormSubmitButton"] button,
 [data-testid="baseButton-primary"],
 div.stButton > button:not([kind="secondary"]):not([role="tab"]),
 div.stDownloadButton > button:not([kind="secondary"]) {{
-background: {header_grad} !important;
+background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
 background-color: {primary_color} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 1px solid rgba(255, 255, 255, 0.2) !important;
+border: 1px solid #1D4ED8 !important;
 font-weight: 800 !important;
-font-size: 1.02rem !important;
-border-radius: 14px !important;
-padding: 10px 18px !important;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+font-size: 0.95rem !important;
+border-radius: 11px !important;
+padding: 6px 14px !important;
+box-shadow: 0 3px 8px rgba(37, 99, 235, 0.2) !important;
 transition: all 0.2s ease !important;
 width: 100%;
-min-height: 48px;
+height: 42px !important;
+min-height: 42px !important;
+max-height: 42px !important;
 }}
 
 [data-testid="stFormSubmitButton"] button *,
@@ -1062,48 +1234,64 @@ div.stButton > button:not([kind="secondary"]):not([role="tab"]):hover,
 div.stDownloadButton > button:not([kind="secondary"]):hover {{
 background: {t_colors["btn_hover"]} !important;
 transform: translateY(-1px);
-box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
-border-color: rgba(255, 255, 255, 0.45) !important;
+box-shadow: 0 5px 12px rgba(37, 99, 235, 0.28) !important;
+border-color: #1E40AF !important;
 }}
 
 div.stButton > button[kind="secondary"],
 div.stDownloadButton > button[kind="secondary"],
 [data-testid="stLinkButton"] a {{
-background: #FFFFFF !important;
-background-color: #FFFFFF !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
-border: 1.5px solid #CBD5E1 !important;
-border-radius: 14px !important;
-box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
+background: #F1F5F9 !important;
+background-color: #F1F5F9 !important;
+color: #334155 !important;
+-webkit-text-fill-color: #334155 !important;
+border: 1px solid #E2E8F0 !important;
+border-radius: 11px !important;
+box-shadow: none !important;
 font-weight: 800 !important;
-min-height: 48px !important;
+font-size: 0.92rem !important;
+padding: 6px 12px !important;
+height: 42px !important;
+min-height: 42px !important;
+max-height: 42px !important;
 }}
 
 div.stButton > button[kind="secondary"] *,
 div.stDownloadButton > button[kind="secondary"] *,
 [data-testid="stLinkButton"] a * {{
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
+color: #334155 !important;
+-webkit-text-fill-color: #334155 !important;
 }}
 
 div.stButton > button[kind="secondary"]:hover,
 div.stDownloadButton > button[kind="secondary"]:hover,
 [data-testid="stLinkButton"] a:hover {{
-border-color: {accent_color} !important;
+border-color: #BFDBFE !important;
 background: #EFF6FF !important;
+color: #1E40AF !important;
 }}
 
-/* ✳️ 6. التبويبات: حجم متناسق في سطر واحد غير متكدس مع وضوح تام 100% في الوضع الداكن والفاتح */
+/* ✳️ 6. التبويبات: ارتفاع موحد (38px)، مسافات مدمجة، خلفية هادئة لغير النشط، وإبراز أزرق للتبويب النشط */
+[data-testid="stTabs"],
+.stTabs {{
+width: 100% !important;
+overflow: visible !important;
+}}
+
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
-.stTabs [role="tablist"],
-[data-testid="stTabs"] [role="tablist"] {{
-gap: 8px !important;
+div[data-baseweb="tab-list"] {{
+display: flex !important;
+flex-wrap: wrap !important;
+gap: 5px 6px !important;
 background-color: transparent !important;
 border: none !important;
-margin-bottom: 12px !important;
-padding: 4px 2px !important;
+margin-bottom: 8px !important;
+padding: 2px 0px !important;
 direction: rtl !important;
+width: 100% !important;
+overflow: visible !important;
 }}
 
 .stTabs [data-baseweb="tab"],
@@ -1112,28 +1300,38 @@ direction: rtl !important;
 [data-testid="stTabs"] [aria-selected="false"],
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
 button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-width: auto !important;
-flex: 0 0 auto !important;
-min-height: 42px !important;
-height: 42px !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
 margin: 0 !important;
-padding: 6px 14px !important;
-white-space: nowrap !important;
-background-color: #FFFFFF !important;
-background: #FFFFFF !important;
-border-radius: 12px !important;
-border: 1.5px solid #CBD5E1 !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
+padding: 4px 12px !important;
+background-color: #F1F5F9 !important;
+background: #F1F5F9 !important;
+border-radius: 10px !important;
+border: 1px solid #E2E8F0 !important;
+color: #334155 !important;
+-webkit-text-fill-color: #334155 !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 800 !important;
-font-size: 0.92rem !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
-box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
-transition: all 0.2s ease !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
+box-shadow: none !important;
+transition: all 0.18s ease !important;
 opacity: 1 !important;
+}}
+
+.stTabs [aria-selected="false"]:hover,
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]):hover,
+button[data-baseweb="tab"]:not([aria-selected="true"]):hover {{
+background-color: #E2E8F0 !important;
+border-color: #CBD5E1 !important;
+color: #0F172A !important;
 }}
 
 .stTabs [data-baseweb="tab"] p,
@@ -1148,12 +1346,12 @@ opacity: 1 !important;
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
 button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
 font-family: 'Cairo', sans-serif !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
+color: #334155 !important;
+-webkit-text-fill-color: #334155 !important;
 font-weight: 800 !important;
-font-size: 0.92rem !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
@@ -1161,25 +1359,28 @@ opacity: 1 !important;
 .stTabs [role="tab"][aria-selected="true"],
 [data-testid="stTabs"] [aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"] {{
-width: auto !important;
-flex: 0 0 auto !important;
-min-height: 42px !important;
-height: 42px !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
 margin: 0 !important;
-padding: 6px 14px !important;
-white-space: nowrap !important;
-background: {header_grad} !important;
+padding: 4px 12px !important;
+background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+background-color: #2563EB !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 2px solid #F59E0B !important;
-border-radius: 12px !important;
-box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
+border: 1px solid #1D4ED8 !important;
+border-radius: 10px !important;
+box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22) !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 900 !important;
-font-size: 0.92rem !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
 opacity: 1 !important;
 }}
 
@@ -1194,24 +1395,27 @@ font-family: 'Cairo', sans-serif !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
-font-size: 0.92rem !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"],
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
 display: none !important;
 }}
 
 /* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; box-sizing: border-box; }}
+.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; direction: rtl; width: 100%; box-sizing: border-box; }}
+.metric-card {{ background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05); box-sizing: border-box; }}
 .metric-info {{ text-align: right; }}
-.metric-title {{ color: #475569; font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
-.metric-val {{ color: #0F172A; font-size: 24px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 46px; height: 46px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 21px; flex-shrink: 0; }}
+.metric-title {{ color: #475569; font-size: 12.5px; font-weight: 800; margin-bottom: 2px; }}
+.metric-val {{ color: #0F172A; font-size: 21px; font-weight: 900; line-height: 1.1; }}
+.metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; }}
+.metric-icon {{ width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 17px; flex-shrink: 0; }}
 .ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
 .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
 .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
@@ -1249,7 +1453,7 @@ line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !impo
 }}
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; width: 100%; }}
-.soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 44px; box-sizing: border-box; }}
+.soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 42px; box-sizing: border-box; }}
 .btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.14) !important; color: #059669 !important; border: 1.5px solid rgba(16, 185, 129, 0.4) !important; }}
 .btn-telegram {{ background-color: rgba(14, 165, 233, 0.14) !important; color: #0284C7 !important; border: 1.5px solid rgba(14, 165, 233, 0.4) !important; }}
 
@@ -1265,7 +1469,7 @@ width: 100% !important; min-width: 0 !important; flex: unset !important;
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button, div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
 background: rgba(99, 102, 241, 0.14) !important; background-color: rgba(99, 102, 241, 0.14) !important;
 color: #4F46E5 !important; border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
-border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+border-radius: 12px !important; height: 42px !important; min-height: 42px !important;
 padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button * {{ color: #4F46E5 !important; -webkit-text-fill-color: #4F46E5 !important; }}
@@ -1273,7 +1477,7 @@ div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *, div[d
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
 background: rgba(239, 68, 68, 0.14) !important; background-color: rgba(239, 68, 68, 0.14) !important;
 color: #DC2626 !important; border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
-border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+border-radius: 12px !important; height: 42px !important; min-height: 42px !important;
 padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{ color: #DC2626 !important; -webkit-text-fill-color: #DC2626 !important; }}
@@ -1293,23 +1497,55 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 1.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 20px 14px 18px 14px !important; margin: 6px auto 16px auto !important; border-radius: 22px !important; }}
-.unified-main-title {{ font-size: 22px !important; }}
-.unified-brand-pill {{ font-size: 13.5px !important; padding: 4px 14px !important; }}
-.unified-sub-desc {{ font-size: 12.5px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
+.block-container {{ padding-top: 0.75rem !important; padding-bottom: 2rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
+.header-container {{ padding: 14px 12px 12px 12px !important; margin: 2px auto 10px auto !important; border-radius: 18px !important; }}
+.floating-cap-logo {{ width: 36px !important; height: 36px !important; }}
+.unified-main-title {{ font-size: 20px !important; }}
+.unified-brand-pill {{ font-size: 12.5px !important; padding: 3px 12px !important; }}
+.unified-sub-desc {{ font-size: 11.5px !important; }}
+.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
+.stTabs [data-baseweb="tab-list"],
+div[data-baseweb="tab-list"] {{
+display: grid !important;
+grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+gap: 5px 6px !important;
+width: 100% !important;
+overflow: visible !important;
+margin-bottom: 8px !important;
+padding: 2px 0 !important;
+}}
+[data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+[data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+grid-column: 1 / -1 !important;
+}}
+[data-testid="stTabs"] [role="tab"],
+[data-testid="stTabs"] [aria-selected="false"],
+[data-testid="stTabs"] [aria-selected="true"],
+button[data-baseweb="tab"],
 .stTabs [data-baseweb="tab"],
 .stTabs [aria-selected="false"],
-.stTabs [aria-selected="true"],
-.stTabs [role="tab"] {{
-width: auto !important;
-flex: 0 0 auto !important;
-font-size: 0.88rem !important;
-height: 40px !important;
-min-height: 40px !important;
-padding: 6px 12px !important;
+.stTabs [aria-selected="true"] {{
+width: 100% !important;
+min-width: 0 !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
+font-size: 0.82rem !important;
+line-height: 1.25 !important;
+padding: 4px 8px !important;
+white-space: nowrap !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+}}
+[data-testid="stTabs"] [role="tab"] *,
+button[data-baseweb="tab"] * {{
+font-size: 0.82rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
 }}
 }}
@@ -1322,7 +1558,7 @@ st.markdown(
     f"""
 <div class="header-container" dir="rtl" style="font-family: 'Cairo', sans-serif !important;">
 <div class="unified-title-row">
-<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
+<svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
 <h1 class="unified-main-title" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</h1>
 </div>
 <div class="unified-brand-row">
