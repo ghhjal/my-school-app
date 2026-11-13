@@ -370,18 +370,41 @@ def show_footer():
                 font-family: 'Material Symbols Rounded', 'Material Icons' !important;
                 direction: ltr !important;
             }}
+            [data-testid="stTabs"] [data-baseweb="tab-list"],
+            [data-testid="stTabs"] [role="tablist"],
+            .stTabs [data-baseweb="tab-list"],
+            div[data-baseweb="tab-list"] {{
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                width: 100% !important;
+                overflow: visible !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 4px 0 !important;
+                margin-bottom: 14px !important;
+                direction: rtl !important;
+            }}
             .stTabs [aria-selected="false"],
             .stTabs [role="tab"]:not([aria-selected="true"]),
             [data-testid="stTabs"] [aria-selected="false"],
             [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
             .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
             button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+                min-height: 46px !important;
+                height: auto !important;
+                padding: 8px 14px !important;
+                margin: 0 !important;
                 background-color: #FFFFFF !important;
                 background: #FFFFFF !important;
                 border: 1.5px solid #CBD5E1 !important;
                 border-radius: 12px !important;
                 color: #0F172A !important;
                 -webkit-text-fill-color: #0F172A !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.35 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="false"] p,
@@ -390,27 +413,72 @@ def show_footer():
             .stTabs [aria-selected="false"] *,
             .stTabs [role="tab"]:not([aria-selected="true"]) *,
             [data-testid="stTabs"] [aria-selected="false"] *,
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
                 color: #0F172A !important;
                 -webkit-text-fill-color: #0F172A !important;
+                white-space: inherit !important;
+                line-height: 1.35 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"],
             .stTabs [role="tab"][aria-selected="true"],
             [data-testid="stTabs"] [aria-selected="true"],
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                min-height: 46px !important;
+                height: auto !important;
+                padding: 8px 14px !important;
+                margin: 0 !important;
                 background: {header_grad} !important;
                 border: 2px solid #F59E0B !important;
                 border-radius: 12px !important;
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.35 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
-            [data-testid="stTabs"] [aria-selected="true"] * {{
+            [data-testid="stTabs"] [aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
+                white-space: inherit !important;
+                line-height: 1.35 !important;
                 opacity: 1 !important;
+            }}
+            @media (max-width: 768px) {{
+                [data-testid="stTabs"] [data-baseweb="tab-list"],
+                [data-testid="stTabs"] [role="tablist"],
+                .stTabs [data-baseweb="tab-list"],
+                div[data-baseweb="tab-list"] {{
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 8px !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                }}
+                [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+                div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+                    grid-column: 1 / -1 !important;
+                }}
+                [data-testid="stTabs"] [role="tab"],
+                button[data-baseweb="tab"],
+                .stTabs [data-baseweb="tab"] {{
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    min-height: 46px !important;
+                    height: auto !important;
+                    padding: 8px 10px !important;
+                    white-space: normal !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: break-word !important;
+                    line-height: 1.35 !important;
+                }}
             }}
         `;
 
@@ -422,12 +490,30 @@ def show_footer():
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
+                var isMobileView = window.parent.innerWidth <= 768;
+                var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
+                tabLists.forEach(function(tl) {{
+                    tl.style.setProperty('gap', '8px', 'important');
+                    tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('overflow', 'visible', 'important');
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    if (isMobileView) {{
+                        tl.style.setProperty('display', 'grid', 'important');
+                        tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    }} else {{
+                        tl.style.setProperty('display', 'flex', 'important');
+                        tl.style.setProperty('flex-wrap', 'wrap', 'important');
+                    }}
+                }});
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', 'auto', 'important');
-                    tab.style.setProperty('flex', '0 0 auto', 'important');
-                    tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('padding', '6px 13px', 'important');
+                    tab.style.setProperty('min-height', '46px', 'important');
+                    tab.style.setProperty('height', 'auto', 'important');
+                    tab.style.setProperty('padding', isMobileView ? '8px 10px' : '8px 14px', 'important');
+                    tab.style.setProperty('white-space', isMobileView ? 'normal' : 'nowrap', 'important');
+                    tab.style.setProperty('min-width', isMobileView ? '0' : 'max-content', 'important');
+                    tab.style.setProperty('width', isMobileView ? '100%' : 'auto', 'important');
+                    tab.style.setProperty('line-height', '1.35', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
                         tab.style.setProperty('background', '{header_grad}', 'important');
@@ -438,6 +524,8 @@ def show_footer():
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#FFFFFF', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                            ch.style.setProperty('white-space', isMobileView ? 'normal' : 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.35', 'important');
                         }});
                     }} else {{
                         tab.style.setProperty('background-color', '#FFFFFF', 'important');
@@ -449,6 +537,8 @@ def show_footer():
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#0F172A', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                            ch.style.setProperty('white-space', isMobileView ? 'normal' : 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.35', 'important');
                         }});
                     }}
                 }});
@@ -862,6 +952,14 @@ box-shadow: 0 0 0 3px {primary_color}35 !important;
 background-color: #FFFFFF !important;
 }}
 
+div[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+}}
+
+div[data-baseweb="select"] span:not([data-baseweb="tag"]),
 div[data-baseweb="select"] svg,
 div[data-baseweb="input"] svg,
 div[data-testid="stNumberInput"] button svg {{
@@ -905,15 +1003,29 @@ justify-content: flex-start !important;
 flex: 1 !important;
 }}
 
+[data-baseweb="tag"],
 span[data-baseweb="tag"],
-span[data-baseweb="tag"] * {{
+div[data-baseweb="tag"] {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
 background-color: #EFF6FF !important;
+background: #EFF6FF !important;
 border: 1px solid {accent_color} !important;
+border-radius: 8px !important;
 color: #1E3A8A !important;
 -webkit-text-fill-color: #1E3A8A !important;
+font-weight: 800 !important;
+}}
+
+[data-baseweb="tag"] *,
+span[data-baseweb="tag"] *,
+div[data-baseweb="tag"] * {{
+background-color: transparent !important;
+background: transparent !important;
+color: #1E3A8A !important;
+-webkit-text-fill-color: #1E3A8A !important;
+fill: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
@@ -1094,16 +1206,27 @@ border-color: {accent_color} !important;
 background: #EFF6FF !important;
 }}
 
-/* ✳️ 6. التبويبات: حجم متناسق في سطر واحد غير متكدس مع وضوح تام 100% في الوضع الداكن والفاتح */
+/* ✳️ 6. التبويبات: استهداف شامل لـ [data-testid="stTabs"] و [data-baseweb="tab-list"] لمنع التكدس والقص وضمان وضوح 100% */
+[data-testid="stTabs"],
+.stTabs {{
+width: 100% !important;
+overflow: visible !important;
+}}
+
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
-.stTabs [role="tablist"],
-[data-testid="stTabs"] [role="tablist"] {{
+div[data-baseweb="tab-list"] {{
+display: flex !important;
+flex-wrap: wrap !important;
 gap: 8px !important;
 background-color: transparent !important;
 border: none !important;
-margin-bottom: 12px !important;
-padding: 4px 2px !important;
+margin-bottom: 14px !important;
+padding: 4px 0px !important;
 direction: rtl !important;
+width: 100% !important;
+overflow: visible !important;
 }}
 
 .stTabs [data-baseweb="tab"],
@@ -1112,13 +1235,10 @@ direction: rtl !important;
 [data-testid="stTabs"] [aria-selected="false"],
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
 button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-width: auto !important;
-flex: 0 0 auto !important;
-min-height: 42px !important;
-height: 42px !important;
+min-height: 46px !important;
+height: auto !important;
 margin: 0 !important;
-padding: 6px 14px !important;
-white-space: nowrap !important;
+padding: 8px 14px !important;
 background-color: #FFFFFF !important;
 background: #FFFFFF !important;
 border-radius: 12px !important;
@@ -1127,10 +1247,14 @@ color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 800 !important;
-font-size: 0.92rem !important;
+font-size: 0.94rem !important;
+line-height: 1.35 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
 box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
 transition: all 0.2s ease !important;
 opacity: 1 !important;
@@ -1151,9 +1275,9 @@ font-family: 'Cairo', sans-serif !important;
 color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
-font-size: 0.92rem !important;
-white-space: nowrap !important;
-margin: 0 !important;
+font-size: 0.94rem !important;
+line-height: 1.35 !important;
+white-space: inherit !important;
 opacity: 1 !important;
 }}
 
@@ -1161,13 +1285,10 @@ opacity: 1 !important;
 .stTabs [role="tab"][aria-selected="true"],
 [data-testid="stTabs"] [aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"] {{
-width: auto !important;
-flex: 0 0 auto !important;
-min-height: 42px !important;
-height: 42px !important;
+min-height: 46px !important;
+height: auto !important;
 margin: 0 !important;
-padding: 6px 14px !important;
-white-space: nowrap !important;
+padding: 8px 14px !important;
 background: {header_grad} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
@@ -1176,10 +1297,14 @@ border-radius: 12px !important;
 box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 900 !important;
-font-size: 0.92rem !important;
+font-size: 0.94rem !important;
+line-height: 1.35 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
 opacity: 1 !important;
 }}
 
@@ -1194,13 +1319,16 @@ font-family: 'Cairo', sans-serif !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
-font-size: 0.92rem !important;
-white-space: nowrap !important;
-margin: 0 !important;
+font-size: 0.94rem !important;
+line-height: 1.35 !important;
+white-space: inherit !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"],
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
 display: none !important;
 }}
 
@@ -1300,17 +1428,46 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 .unified-sub-desc {{ font-size: 12.5px !important; }}
 .metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
+.stTabs [data-baseweb="tab-list"],
+div[data-baseweb="tab-list"] {{
+display: grid !important;
+grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+gap: 8px !important;
+width: 100% !important;
+overflow: visible !important;
+}}
+[data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+[data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+grid-column: 1 / -1 !important;
+}}
+[data-testid="stTabs"] [role="tab"],
+[data-testid="stTabs"] [aria-selected="false"],
+[data-testid="stTabs"] [aria-selected="true"],
+button[data-baseweb="tab"],
 .stTabs [data-baseweb="tab"],
 .stTabs [aria-selected="false"],
-.stTabs [aria-selected="true"],
-.stTabs [role="tab"] {{
-width: auto !important;
-flex: 0 0 auto !important;
+.stTabs [aria-selected="true"] {{
+width: 100% !important;
+min-width: 0 !important;
+min-height: 46px !important;
+height: auto !important;
 font-size: 0.88rem !important;
-height: 40px !important;
-min-height: 40px !important;
-padding: 6px 12px !important;
-white-space: nowrap !important;
+line-height: 1.35 !important;
+padding: 8px 10px !important;
+white-space: normal !important;
+word-break: keep-all !important;
+overflow-wrap: break-word !important;
+}}
+[data-testid="stTabs"] [role="tab"] *,
+button[data-baseweb="tab"] * {{
+font-size: 0.88rem !important;
+line-height: 1.35 !important;
+white-space: normal !important;
+word-break: keep-all !important;
 }}
 }}
 </style>
