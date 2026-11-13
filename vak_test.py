@@ -283,11 +283,30 @@ st.markdown(f"""
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
 
+    /* إخفاء أشرطة التمرير تماماً مع الحفاظ على سلاسة التمرير */
+    *, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {{
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }}
+    *::-webkit-scrollbar,
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    .stApp::-webkit-scrollbar,
+    [data-testid="stAppViewContainer"]::-webkit-scrollbar,
+    [data-testid="stMain"]::-webkit-scrollbar,
+    .block-container::-webkit-scrollbar {{
+        display: none !important;
+        width: 0px !important;
+        height: 0px !important;
+        background: transparent !important;
+    }}
+
     .block-container {{
         max-width: 1020px !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        overflow-x: hidden !important;
+        overflow-x: clip !important;
+        overflow-y: visible !important;
         padding-top: 1.4rem !important;
         padding-bottom: 2.5rem !important;
         padding-left: 1rem !important;
@@ -310,7 +329,8 @@ st.markdown(f"""
     }}
     div[data-testid="stVerticalBlockBorderWrapper"],
     [data-baseweb="tab-panel"] {{
-        overflow-x: hidden !important;
+        overflow-x: clip !important;
+        overflow-y: visible !important;
     }}
 
     .stMarkdown, p, h1, h2, h3, h4, h5, h6, label,
@@ -598,7 +618,7 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
     .stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
     [data-testid="stTabs"] [role="tablist"] > button:last-of-type:nth-of-type(odd) {{
-        grid-column: span 2 !important;
+        grid-column: 1 / -1 !important;
     }}
     .stTabs [data-baseweb="tab"],
     .stTabs [aria-selected="false"],
@@ -2670,6 +2690,24 @@ components.html(f"""
                 color-scheme: light only !important;
                 background-color: {cur_t['bg_page']} !important;
                 color: #0f172a !important;
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }}
+            *, .block-container {{
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }}
+            *::-webkit-scrollbar,
+            html::-webkit-scrollbar,
+            body::-webkit-scrollbar,
+            .stApp::-webkit-scrollbar,
+            [data-testid="stAppViewContainer"]::-webkit-scrollbar,
+            [data-testid="stMain"]::-webkit-scrollbar,
+            .block-container::-webkit-scrollbar {{
+                display: none !important;
+                width: 0px !important;
+                height: 0px !important;
+                background: transparent !important;
             }}
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
@@ -2772,7 +2810,7 @@ components.html(f"""
                     var btns = tl.querySelectorAll('button[role="tab"], button[data-baseweb="tab"]');
                     btns.forEach(function(b, idx) {{
                         if (btns.length % 2 === 1 && idx === btns.length - 1) {{
-                            b.style.setProperty('grid-column', 'span 2', 'important');
+                            b.style.setProperty('grid-column', '1 / -1', 'important');
                         }} else {{
                             b.style.removeProperty('grid-column');
                         }}
