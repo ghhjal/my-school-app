@@ -351,18 +351,18 @@ def show_footer():
             pDoc.head.appendChild(existingStyle);
         }}
         existingStyle.innerHTML = `
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-                --text-color: #0F172A !important;
-                --background-color: #F8FAFC !important;
-                --secondary-background-color: #FFFFFF !important;
-                --input-bg-color: #FFFFFF !important;
-                --sub-text-color: #475569 !important;
-                --border-color: #CBD5E1 !important;
-                --primary-color: {primary_color} !important;
-                color-scheme: light only !important;
-                background-color: #F8FAFC !important;
-                color: #0F172A !important;
-            }}
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+                    font-family: 'Cairo', sans-serif !important;
+                    direction: rtl !important;
+                    text-align: right !important;
+                    background-color: #F8FAFC !important;
+                    color: #0F172A !important;
+                    overflow-x: clip !important;
+                    overflow-y: visible !important;
+                    max-width: 100vw !important;
+                    width: 100% !important;
+                    }}
+
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
             .material-icons,
