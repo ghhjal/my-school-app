@@ -2446,7 +2446,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # ---------------------------------------------------------
     with eval_tabs[1]:
       if st.session_state.role == "teacher":
-        st.markdown("#### 👥 رصد السلوك الجماعي السريع للفصل")
+        st.markdown("#### 👥 رصد السلوك للفصل")
         st.info("💡 اختر الصف، وحدد السلوك أو الغياب للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة.")
 
         bulk_class = st.selectbox("🎯 اختر الصف للسلوك الجماعي:", st.session_state.class_options, key="bulk_class_sel")
@@ -2648,7 +2648,7 @@ if st.session_state.role in ["teacher", "viewer"]:
         # --- ب) القائمة السفلية الذكية: الرصد الجماعي داخل st.form لمنع إعادة التحميل مع كل رقم ---
         st.markdown("<br>", unsafe_allow_html=True)
         with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط هنا", expanded=False):
-          st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب بحرية تامة داخل الجدول، ثم اضغط زر الحفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
+          st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب داخل الجدول، ثم اضغط زر الحفظ بالأسفل .")
 
           bulk_gr_cls = st.selectbox("🏫 اختر الفصل لرصد درجاته جماعياً:", st.session_state.class_options, key="bulk_grades_cls_sel")
           cls_st_df = df_ev_g[df_ev_g["class"].astype(str).str.strip() == bulk_gr_cls.strip()].sort_values("name")
