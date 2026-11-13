@@ -11,12 +11,14 @@ from gspread import Cell
 from gspread.utils import rowcol_to_a1
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ==========================================
 # ⚙️ 1. إعدادات النظام والاتصال الذكي
 # ==========================================
 st.set_page_config(
-    page_title="منصة زياد الذكية",
+    page_title="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية",
+    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -186,8 +188,9 @@ themes = {
         "sub_color": "#DBEAFE",
         "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
         "icon": "🎓",
-        "title": "منصة زياد الذكية",
-        "subtitle": "بوابة التعليم الذكية 2026",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "الابتكار والمستقبل 🚀": {
@@ -198,8 +201,9 @@ themes = {
         "sub_color": "#E0E7FF",
         "btn_hover": "linear-gradient(135deg, #312E81 0%, #5B21B6 100%)",
         "icon": "🚀",
-        "title": "منصة زياد الذكية",
-        "subtitle": "نحو تعليم رقمي مبتكر • Smart Learning",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='2'/%3E%3C/svg%3E\")",
     },
     "الزمرد الفاخر 💎": {
@@ -210,8 +214,9 @@ themes = {
         "sub_color": "#CCFBF1",
         "btn_hover": "linear-gradient(135deg, #115E59 0%, #0F766E 100%)",
         "icon": "💎",
-        "title": "منصة زياد الذكية",
-        "subtitle": "التميز والإتقان في تعلم اللغة الإنجليزية",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3Ccircle cx='22' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "الأفق الرقمي ✨": {
@@ -222,8 +227,9 @@ themes = {
         "sub_color": "#BAE6FD",
         "btn_hover": "linear-gradient(135deg, #075985 0%, #0369A1 100%)",
         "icon": "✨",
-        "title": "منصة زياد الذكية",
-        "subtitle": "بيئة تفاعلية ذكية • Interactive Portal",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='0.12' stroke-width='1.5'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='10'/%3E%3C/g%3E%3C/svg%3E\")",
     },
     "اليوم الوطني 🇸🇦": {
@@ -234,8 +240,9 @@ themes = {
         "sub_color": "#D4AF37",
         "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
         "icon": "🇸🇦",
-        "title": "منصة زياد الذكية",
-        "subtitle": "عزّنا بطبعنا<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>اليوم الوطني السعودي 96</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • اليوم الوطني 🇸🇦",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
     "يوم التأسيس 🏛️": {
@@ -246,8 +253,9 @@ themes = {
         "sub_color": "#FAEBD7",
         "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
         "icon": "🐎",
-        "title": "منصة زياد الذكية",
-        "subtitle": "يوم بدينا<br><span style='font-size:1.05rem; color:#F5DEB3; opacity:0.95;'>ثلاثة قرون من العز والفخر</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • يوم التأسيس 🏛️",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
     },
     "رمضان المبارك 🌙": {
@@ -258,8 +266,9 @@ themes = {
         "sub_color": "#E2E8F0",
         "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
         "icon": "🌙",
-        "title": "منصة زياد الذكية",
-        "subtitle": "مبارك عليكم الشهر<br><span style='font-size:1.05rem; color:#D4AF37; opacity:0.95;'>رمضان يجمعنا</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • رمضان المبارك 🌙",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
     },
     "التفوق والنجاح 🏆": {
@@ -270,8 +279,9 @@ themes = {
         "sub_color": "#FEF3C7",
         "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
         "icon": "🏆",
-        "title": "منصة زياد الذكية",
-        "subtitle": "حصاد التفوق والنجاح<br><span style='font-size:1.05rem; color:#ffffff; opacity:0.95;'>نهاية العام الدراسي</span>",
+        "title": "بوابة إدارة ومتابعة الطلاب",
+        "brand": "منصة زياد الذكية • حصاد التفوق 🏆",
+        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
         "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
     },
 }
@@ -310,50 +320,169 @@ def get_school_name_dynamic(cls_name):
 
 
 def show_footer():
-  st.markdown("<br><br>", unsafe_allow_html=True)
+  st.markdown("<br>", unsafe_allow_html=True)
   st.markdown(
       f"""
-    <div style='text-align: center; color: var(--text-color); opacity: 0.8; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 700;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</p>
+    <div class="ziyad-footer-wrap" dir="rtl">
+        <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</div>
+        <div class="ziyad-footer-cards">
+            <a href="https://zi-style.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                🧠 منصة أنماط التعلم
+            </a>
+            <a href="https://t.me/ZiyadAlmoamri" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                📢 تليجرام الإدارة
+            </a>
+            <a href="https://wa.me/966534900049" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
+                💬 واتساب المعلم
+            </a>
+            <a href="mailto:ziyadalamri30@gmail.com" class="ziyad-footer-btn">
+                📧 البريد الإلكتروني
+            </a>
+        </div>
     </div>
     """,
       unsafe_allow_html=True,
   )
-  c1, c2, c3 = st.columns(3)
-  c1.link_button("📢 تليجرام الإدارة", "https://t.me/@ZiyadAlmoami", use_container_width=True)
-  c2.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-  c3.link_button("📧 البريد الإلكتروني", "mailto:ziad.platform.alerts@gmail.com", use_container_width=True)
+  components.html(f"""
+<script>
+(function() {{
+    try {{
+        var pDoc = window.parent.document;
+        pDoc.documentElement.setAttribute('dir', 'rtl');
+        pDoc.body.setAttribute('dir', 'rtl');
+        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        var styleId = 'ziyad-students-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0f172a !important;
+                --background-color: #F8FAFC !important;
+                --secondary-background-color: #ffffff !important;
+                --primary-color: {primary_color} !important;
+                color-scheme: light only !important;
+                background-color: #F8FAFC !important;
+                color: #0f172a !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
+            button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+                background-color: #FFFFFF !important;
+                background: #FFFFFF !important;
+                border: 1.5px solid #CBD5E1 !important;
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #0F172A !important;
+                -webkit-text-fill-color: #0F172A !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                background: {header_grad} !important;
+                border: 2px solid #F59E0B !important;
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [data-baseweb="tab"][aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                opacity: 1 !important;
+            }}
+        `;
+
+        var isRunning = false;
+        function enforceLightUI() {{
+            if (isRunning) return;
+            isRunning = true;
+            try {{
+                if (pDoc.head.lastElementChild !== existingStyle) {{
+                    pDoc.head.appendChild(existingStyle);
+                }}
+                var tabs = pDoc.querySelectorAll('.stTabs [data-baseweb="tab"], button[data-baseweb="tab"]');
+                tabs.forEach(function(tab) {{
+                    var isSel = tab.getAttribute('aria-selected') === 'true';
+                    if (isSel) {{
+                        tab.style.setProperty('background', '{header_grad}', 'important');
+                        tab.style.setProperty('border', '2px solid #F59E0B', 'important');
+                        tab.style.setProperty('color', '#FFFFFF', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                        tab.querySelectorAll('*').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#FFFFFF', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                        }});
+                    }} else {{
+                        tab.style.setProperty('background-color', '#FFFFFF', 'important');
+                        tab.style.setProperty('background', '#FFFFFF', 'important');
+                        tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
+                        tab.style.setProperty('color', '#0F172A', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        tab.querySelectorAll('*').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#0F172A', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        }});
+                    }}
+                }});
+            }} finally {{
+                isRunning = false;
+            }}
+        }}
+
+        enforceLightUI();
+        if (window.parent.__ziyadPortalLightObserverObj) {{
+            try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
+        }}
+        var obs = new MutationObserver(function() {{
+            enforceLightUI();
+        }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        window.parent.__ziyadPortalLightObserverObj = obs;
+    }} catch (e) {{}}
+}})();
+</script>
+""", height=0)
 
 # ==========================================
 # 🎨 2. التصميم الاحترافي (ثابت العرض على الجوال + بنر كامل وواضح + محاذاة RTL)
 # ==========================================
+st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
 st.markdown(
     f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
-:root {{
---background-color: #F8FAFC;
---secondary-background-color: #FFFFFF;
---input-bg-color: #FFFFFF;
---text-color: #0F172A;
---sub-text-color: #475569;
---border-color: #CBD5E1;
---card-surface: #FFFFFF;
---subtle-text: #64748B;
+*:not([data-testid="stIconMaterial"]):not(.material-icons):not([class*="material-symbols"]):not(svg):not(path) {{
+font-family: 'Cairo', sans-serif !important;
+letter-spacing: 0px !important;
 }}
 
-@media (prefers-color-scheme: dark) {{
-:root {{
---background-color: #0B1120;
---secondary-background-color: #1E293B;
---input-bg-color: #0F172A;
---text-color: #F8FAFC;
---sub-text-color: #CBD5E1;
---border-color: #334155;
---card-surface: #1E293B;
---subtle-text: #94A3B8;
-}}
+:root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+--background-color: #F8FAFC !important;
+--secondary-background-color: #FFFFFF !important;
+--input-bg-color: #FFFFFF !important;
+--text-color: #0F172A !important;
+--sub-text-color: #475569 !important;
+--border-color: #CBD5E1 !important;
+--card-surface: #FFFFFF !important;
+--subtle-text: #475569 !important;
+--primary-color: {primary_color} !important;
+color-scheme: light only !important;
 }}
 
 section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"] {{
@@ -367,7 +496,7 @@ footer {{ visibility: hidden; }}
 
 /* ✳️ 1. قفل التمرير الأفقي بدون إظهار شريط تمرير رمادي داخلي على اليسار */
 html, body {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 background-color: var(--background-color) !important;
 color: var(--text-color) !important;
 overflow-x: clip !important;
@@ -376,7 +505,7 @@ padding: 0 !important;
 }}
 
 .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 background-color: var(--background-color) !important;
@@ -400,29 +529,34 @@ direction: rtl !important;
 text-align: right !important;
 }}
 
-/* ✳️ 2. البنر العلوي الاحترافي المطور (Glassmorphism 3D + هالات ضوئية) */
+/* ✳️ 2. البنر العلوي الموحد للهوية البصرية (منصة زياد الذكية) */
 .header-container, .header-container * {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 }}
 
 .header-container {{
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 36px 24px 30px 24px !important;
-border-radius: 28px !important;
-margin: 10px auto 24px auto !important;
+padding: 26px 24px 22px 24px !important;
+border-radius: 24px !important;
+margin: 8px auto 18px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 18px 38px -12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35), 0 14px 30px rgba(15, 23, 42, 0.18) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
 border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+display: flex !important;
+flex-direction: column !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 10px !important;
+direction: rtl !important;
 }}
 
-/* هالات ضوئية زجاجية خلفية تضفي عمقاً ثلاثي الأبعاد للبنر */
 .header-container::before {{
 content: "";
 position: absolute;
@@ -430,7 +564,7 @@ top: -60px;
 right: -60px;
 width: 200px;
 height: 200px;
-background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
 border-radius: 50%;
 pointer-events: none;
 }}
@@ -440,96 +574,223 @@ content: "";
 position: absolute;
 bottom: -70px;
 left: -50px;
-width: 220px;
-height: 220px;
-background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+width: 200px;
+height: 200px;
+background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
 border-radius: 50%;
 pointer-events: none;
 }}
 
-.title-wrapper {{
+@keyframes float-cap {{
+0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
+50% {{ transform: translateY(-6px) rotate(-3deg); }}
+}}
+.floating-cap-logo {{
+animation: float-cap 3.5s ease-in-out infinite !important;
+filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
+}}
+.unified-title-row {{
 display: inline-flex !important;
 align-items: center !important;
 justify-content: center !important;
 gap: 14px !important;
-margin-bottom: 12px !important;
+flex-wrap: wrap !important;
 direction: rtl !important;
 position: relative;
 z-index: 2;
 }}
 
-/* كبسولة زجاجية أنيقة حول شعار المنصة */
-.logo-icon {{
-font-size: 2.6rem !important;
-width: 64px !important;
-height: 64px !important;
-display: flex !important;
-align-items: center !important;
-justify-content: center !important;
-background: rgba(255, 255, 255, 0.14) !important;
-backdrop-filter: blur(8px) !important;
--webkit-backdrop-filter: blur(8px) !important;
-border: 1.5px solid rgba(255, 255, 255, 0.28) !important;
-border-radius: 18px !important;
-box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
-animation: float 4s ease-in-out infinite;
-line-height: 1 !important;
-}}
-
-.banner-main-title {{
-font-family: 'Tajawal', sans-serif !important;
+.unified-main-title {{
+font-family: 'Cairo', sans-serif !important;
 margin: 0 !important;
-font-size: 2.55rem !important;
+font-size: 30px !important;
 font-weight: 900 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
-line-height: 1.2 !important;
+line-height: 1.25 !important;
+letter-spacing: 0px !important;
 text-align: center !important;
-text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22) !important;
 }}
 
-/* شارة زجاجية سفلية للعنوان الفرعي */
-.banner-sub-title {{
-font-family: 'Tajawal', sans-serif !important;
-display: inline-block !important;
-margin: 0 auto !important;
-padding: 6px 22px !important;
-background: rgba(15, 23, 42, 0.25) !important;
-backdrop-filter: blur(6px) !important;
--webkit-backdrop-filter: blur(6px) !important;
-border: 1px solid rgba(255, 255, 255, 0.2) !important;
+.unified-brand-row {{
+display: inline-flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 8px !important;
+flex-wrap: wrap !important;
+position: relative;
+z-index: 2;
+direction: rtl !important;
+}}
+
+.unified-brand-pill {{
+font-family: 'Cairo', sans-serif !important;
+background: rgba(15, 23, 42, 0.34) !important;
+border: 1px solid rgba(255, 255, 255, 0.26) !important;
+box-shadow: inset 0 1px 2px rgba(255,255,255,0.18) !important;
+padding: 5px 18px !important;
 border-radius: 999px !important;
+font-size: 15px !important;
+font-weight: 800 !important;
+color: #fde68a !important;
+-webkit-text-fill-color: #fde68a !important;
+white-space: nowrap;
+backdrop-filter: blur(4px);
+}}
+
+.unified-sub-desc {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 700 !important;
 color: {t_colors["sub_color"]} !important;
 -webkit-text-fill-color: {t_colors["sub_color"]} !important;
-font-size: 1.08rem !important;
-font-weight: 700 !important;
+margin: 0 !important;
 line-height: 1.5 !important;
 text-align: center !important;
 position: relative;
 z-index: 2;
 }}
 
-/* ✳️ 3. محاذاة العناوين والتسميات خارج البنر إلى اليمين */
-h1, h2, h3, h4, h5, h6, p, label,
+.login-card-heading {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 20px !important;
+font-weight: 900 !important;
+color: var(--text-color) !important;
+-webkit-text-fill-color: var(--text-color) !important;
+text-align: right !important;
+margin: 0 0 6px 0 !important;
+padding-bottom: 8px !important;
+border-bottom: 1px solid var(--border-color) !important;
+}}
+
+.login-card-sub {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 600 !important;
+color: var(--sub-text-color) !important;
+-webkit-text-fill-color: var(--sub-text-color) !important;
+text-align: right !important;
+margin: 0 0 14px 0 !important;
+line-height: 1.5 !important;
+}}
+
+/* ✳️ 3. هرمية الخطوط المتوازنة ومحاذاة العناوين والتسميات (Desktop & Mobile) */
+h1, h2, h3, h4, h5, h6, p, label, span, div,
 [data-testid="stHeadingWithActionElements"],
 [data-testid="stHeadingWithActionElements"] *,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p,
 [data-testid="stWidgetLabel"] span,
 [data-testid="stRadio"] label,
-[data-testid="stCheckbox"] label {{
-font-family: 'Tajawal', sans-serif !important;
+[data-testid="stRadio"] p,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p {{
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
-color: var(--text-color) !important;
+}}
+
+/* ضبط أحجام العناوين خارج البنر العلوي لتكون متوازنة وأنيقة دون تضخم */
+[data-testid="stMain"] h2:not(.unified-main-title),
+[data-testid="stMain"] h3:not(.unified-main-title),
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3 {{
+font-size: 19px !important;
+font-weight: 900 !important;
+line-height: 1.45 !important;
+color: #0F172A !important;
+margin: 6px 0 12px 0 !important;
+padding-bottom: 6px !important;
+border-bottom: 2px solid #E2E8F0 !important;
+}}
+
+[data-testid="stMain"] h4,
+[data-testid="stHeadingWithActionElements"] h4 {{
+font-size: 16.5px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #1E293B !important;
+margin: 8px 0 10px 0 !important;
+}}
+
+[data-testid="stMain"] h5,
+[data-testid="stMain"] h6,
+[data-testid="stHeadingWithActionElements"] h5,
+[data-testid="stHeadingWithActionElements"] h6 {{
+font-size: 15px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #1E293B !important;
+margin: 4px 0 8px 0 !important;
+}}
+
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span {{
+font-size: 14px !important;
+font-weight: 800 !important;
+line-height: 1.45 !important;
+color: #334155 !important;
+margin-bottom: 4px !important;
+}}
+
+/* تنسيق أسئلة وخيارات الاختبار والراديو في واجهة الطالب والمعلم */
+div[data-testid="stRadio"] > div[role="radiogroup"] {{
+gap: 8px !important;
+direction: rtl !important;
+}}
+
+div[data-testid="stRadio"] label {{
+background-color: #F8FAFC !important;
+border: 1.5px solid #E2E8F0 !important;
+border-radius: 12px !important;
+padding: 10px 14px !important;
+margin-bottom: 4px !important;
+transition: all 0.2s ease !important;
+width: 100% !important;
+box-sizing: border-box !important;
+}}
+
+div[data-testid="stRadio"] label:hover {{
+border-color: {accent_color} !important;
+background-color: #EFF6FF !important;
+}}
+
+div[data-testid="stRadio"] label p,
+div[data-testid="stRadio"] label span {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 14px !important;
+font-weight: 700 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+line-height: 1.5 !important;
 }}
 
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{
-font-family: 'Tajawal', sans-serif !important;
+font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
-color: var(--sub-text-color) !important;
+color: #64748B !important;
+font-size: 13px !important;
 font-weight: 700 !important;
+line-height: 1.5 !important;
+}}
+
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 22px !important;
+font-weight: 900 !important;
+color: {primary_color} !important;
+}}
+
+[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] * {{
+font-family: 'Cairo', sans-serif !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+color: #475569 !important;
 }}
 
 [data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
@@ -553,47 +814,88 @@ color: var(--text-color) !important;
 font-weight: 800 !important;
 }}
 
-/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (RTL كامل) */
-div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="textarea"], div[data-baseweb="select"] > div {{
-background-color: var(--input-bg-color) !important;
-border: 1.5px solid var(--border-color) !important;
+/* ✳️ 4. حقول الإدخال والقوائم المنسدلة (مطابق تماماً لملف الإنجاز المهني 100%) */
+div[data-baseweb="input"],
+div[data-baseweb="input"] > div,
+div[data-baseweb="base-input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="textarea"] > div,
+div[data-baseweb="select"],
+div[data-baseweb="select"] > div,
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stDateInput"] input,
+div[data-testid="stNumberInput"] div[data-baseweb="input"],
+div[data-baseweb="select"] *,
+input, textarea, select {{
+background-color: #ffffff !important;
+background: #ffffff !important;
+color: #0f172a !important;
+-webkit-text-fill-color: #0f172a !important;
+color-scheme: light !important;
+caret-color: {primary_color} !important;
+direction: rtl !important;
+text-align: right !important;
+font-family: 'Cairo', sans-serif !important;
+font-weight: 700 !important;
+opacity: 1 !important;
+}}
+
+div[data-baseweb="input"],
+div[data-baseweb="textarea"],
+div[data-baseweb="select"] > div,
+div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
+border: 1.5px solid #cbd5e1 !important;
 border-radius: 12px !important;
 min-height: 48px !important;
-direction: rtl !important;
-text-align: right !important;
+box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
-div[data-baseweb="input"]:focus-within, div[data-baseweb="select"] > div:focus-within, div[data-baseweb="textarea"]:focus-within {{
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"]:focus-within {{
 border-color: {accent_color} !important;
-box-shadow: 0 0 0 2px {primary_color}40 !important;
+box-shadow: 0 0 0 3px {primary_color}40 !important;
+background-color: #ffffff !important;
 }}
 
-input, textarea, select {{
+input::placeholder,
+textarea::placeholder,
+div[data-baseweb="input"] input::placeholder,
+div[data-baseweb="textarea"] textarea::placeholder {{
+color: #64748B !important;
+opacity: 1 !important;
+-webkit-text-fill-color: #64748B !important;
+text-align: right !important;
+direction: rtl !important;
+font-weight: 600 !important;
+}}
+
+div[data-baseweb="select"],
+div[data-baseweb="select"] *,
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div {{
 direction: rtl !important;
 text-align: right !important;
-color: var(--text-color) !important;
--webkit-text-fill-color: var(--text-color) !important;
-caret-color: {accent_color} !important;
-background-color: transparent !important;
+font-family: 'Cairo', sans-serif !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
-font-size: 1.02rem !important;
-font-family: 'Tajawal', sans-serif !important;
+opacity: 1 !important;
 }}
 
-::placeholder {{
-color: var(--sub-text-color) !important;
-opacity: 0.75 !important;
--webkit-text-fill-color: var(--sub-text-color) !important;
-text-align: right !important;
-direction: rtl !important;
+div[data-baseweb="select"] svg,
+div[data-baseweb="input"] svg,
+div[data-testid="stNumberInput"] button svg {{
+fill: #0F172A !important;
+color: #0F172A !important;
 }}
 
-div[data-baseweb="select"], div[data-baseweb="select"] * {{
-direction: rtl !important;
-text-align: right !important;
-font-family: 'Tajawal', sans-serif !important;
-color: var(--text-color) !important;
-font-weight: 700 !important;
+div[data-testid="stNumberInput"] button {{
+background-color: #F1F5F9 !important;
+color: #0F172A !important;
+border: none !important;
 }}
 
 div[data-baseweb="select"] > div {{
@@ -603,6 +905,7 @@ justify-content: space-between !important;
 align-items: center !important;
 padding-right: 12px !important;
 padding-left: 8px !important;
+background-color: #FFFFFF !important;
 }}
 
 div[data-baseweb="select"] > div > div:first-child {{
@@ -610,32 +913,97 @@ direction: rtl !important;
 text-align: right !important;
 justify-content: flex-start !important;
 flex: 1 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 }}
 
-span[data-baseweb="tag"] {{
+span[data-baseweb="tag"],
+span[data-baseweb="tag"] * {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
-background-color: {primary_color}25 !important;
+background-color: #EFF6FF !important;
 border: 1px solid {accent_color} !important;
-color: var(--text-color) !important;
+color: #1E3A8A !important;
+-webkit-text-fill-color: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
-div[data-baseweb="popover"], div[data-baseweb="popover"] *, div[data-baseweb="menu"], div[data-baseweb="menu"] *, ul[data-baseweb="menu"], ul[data-baseweb="menu"] *, [data-testid="stSelectboxVirtualDropdown"], [data-testid="stSelectboxVirtualDropdown"] *, [role="listbox"], [role="listbox"] *, [role="option"], [role="option"] * {{
+/* ✳️ صناديق رسائل المعلومات والنجاح والتنبيه (st.info, st.success, st.warning, st.error) بتباين فائق الوضوح */
+div[data-testid="stAlert"],
+div[data-testid="stAlert"] > div,
+div[data-baseweb="notification"],
+div[role="alert"] {{
+background-color: #EFF6FF !important;
+background: #EFF6FF !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+border: 1.5px solid {primary_color} !important;
+border-right: 5px solid {primary_color} !important;
+border-radius: 14px !important;
 direction: rtl !important;
 text-align: right !important;
-font-family: 'Tajawal', sans-serif !important;
+box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
 }}
 
-div[data-baseweb="popover"] > div, div[data-baseweb="menu"], ul[data-baseweb="menu"], [data-testid="stSelectboxVirtualDropdown"], [role="listbox"] {{
-background-color: var(--secondary-background-color) !important;
-border: 1.5px solid var(--border-color) !important;
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] span,
+div[data-testid="stAlert"] div,
+div[data-testid="stAlert"] li,
+div[data-testid="stAlert"] strong,
+div[data-testid="stAlert"] b,
+div[data-baseweb="notification"] p,
+div[data-baseweb="notification"] span,
+div[data-baseweb="notification"] div,
+div[role="alert"] p,
+div[role="alert"] span,
+div[role="alert"] div {{
+background-color: transparent !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+font-weight: 800 !important;
+direction: rtl !important;
+text-align: right !important;
+opacity: 1 !important;
+}}
+
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] *,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] *,
+ul[data-baseweb="menu"],
+ul[data-baseweb="menu"] *,
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] *,
+[role="listbox"],
+[role="listbox"] *,
+[role="option"],
+[role="option"] * {{
+direction: rtl !important;
+text-align: right !important;
+font-family: 'Cairo', sans-serif !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+}}
+
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
+ul[data-baseweb="menu"],
+[data-testid="stSelectboxVirtualDropdown"],
+[role="listbox"] {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+border: 1.5px solid #CBD5E1 !important;
 border-radius: 12px !important;
-box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28) !important;
 }}
 
-div[data-baseweb="popover"] li, ul[data-baseweb="menu"] li, [data-testid="stSelectboxVirtualDropdown"] li, [role="listbox"] li, li[role="option"], div[role="option"] {{
+div[data-baseweb="popover"] li,
+ul[data-baseweb="menu"] li,
+[data-testid="stSelectboxVirtualDropdown"] li,
+[role="listbox"] li,
+li[role="option"],
+div[role="option"] {{
 display: flex !important;
 flex-direction: row !important;
 justify-content: flex-start !important;
@@ -645,31 +1013,50 @@ text-align: right !important;
 width: 100% !important;
 padding-right: 16px !important;
 padding-left: 16px !important;
-color: var(--text-color) !important;
-background-color: transparent !important;
-font-weight: 700 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+background-color: #FFFFFF !important;
+font-weight: 800 !important;
 }}
 
-div[data-baseweb="popover"] li:hover, [data-testid="stSelectboxVirtualDropdown"] li:hover, li[role="option"]:hover, li[role="option"][aria-selected="true"] {{
-background-color: {primary_color}25 !important;
+div[data-baseweb="popover"] li:hover,
+[data-testid="stSelectboxVirtualDropdown"] li:hover,
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"],
+div[role="option"][aria-selected="true"] {{
+background-color: #EFF6FF !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
 }}
 
-div[data-baseweb="popover"] li > div, ul[data-baseweb="menu"] li > div, [data-testid="stSelectboxVirtualDropdown"] li > div, [role="listbox"] li > div, li[role="option"] > div, li[role="option"] div {{
+div[data-baseweb="popover"] li > div,
+ul[data-baseweb="menu"] li > div,
+[data-testid="stSelectboxVirtualDropdown"] li > div,
+[role="listbox"] li > div,
+li[role="option"] > div,
+li[role="option"] div {{
 width: 100% !important;
 direction: rtl !important;
 text-align: right !important;
 margin: 0 !important;
-color: var(--text-color) !important;
+color: inherit !important;
+-webkit-text-fill-color: inherit !important;
 }}
 
 /* ✳️ 5. الأزرار الرئيسية والثانوية */
-[data-testid="stFormSubmitButton"] button, [data-testid="baseButton-primary"], div.stButton > button, div.stDownloadButton > button {{
+[data-testid="stFormSubmitButton"] button,
+[data-testid="baseButton-primary"],
+div[data-testid="stButton"] button[kind="primary"],
+div[data-testid="stDownloadButton"] button[kind="primary"],
+div.stButton > button:not([kind="secondary"]):not([role="tab"]),
+div.stDownloadButton > button:not([kind="secondary"]) {{
 background: {header_grad} !important;
 background-color: {primary_color} !important;
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 border: 1px solid rgba(255, 255, 255, 0.2) !important;
 font-weight: 800 !important;
-font-size: 1.03rem !important;
+font-size: 15px !important;
 border-radius: 14px !important;
 padding: 10px 18px !important;
 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
@@ -678,11 +1065,20 @@ width: 100%;
 min-height: 48px;
 }}
 
-[data-testid="stFormSubmitButton"] button *, div.stButton > button *, div.stDownloadButton > button * {{
+[data-testid="stFormSubmitButton"] button *,
+[data-testid="baseButton-primary"] *,
+div[data-testid="stButton"] button[kind="primary"] *,
+div[data-testid="stDownloadButton"] button[kind="primary"] *,
+div.stButton > button:not([kind="secondary"]):not([role="tab"]) *,
+div.stDownloadButton > button:not([kind="secondary"]) * {{
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 }}
 
-[data-testid="stFormSubmitButton"] button:hover, [data-testid="baseButton-primary"]:hover, div.stButton > button:hover, div.stDownloadButton > button:hover {{
+[data-testid="stFormSubmitButton"] button:hover,
+[data-testid="baseButton-primary"]:hover,
+div.stButton > button:not([kind="secondary"]):not([role="tab"]):hover,
+div.stDownloadButton > button:not([kind="secondary"]):hover {{
 background: {t_colors["btn_hover"]} !important;
 transform: translateY(-1px);
 box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
@@ -709,7 +1105,7 @@ border-color: {accent_color} !important;
 background: rgba(59, 130, 246, 0.12) !important;
 }}
 
-/* ✳️ 6. التبويبات: سطر مرن على الكمبيوتر + شبكة (2×2) ثابتة على الجوال بدون تمرير جانبي */
+/* ✳️ 6. التبويبات: نفس التخطيط الأصلي تماماً مع تباين واضح في الوضعين الفاتح والداكن */
 .stTabs [data-baseweb="tab-list"] {{
 display: flex !important;
 flex-wrap: wrap !important;
@@ -723,69 +1119,141 @@ width: 100% !important;
 overflow-x: hidden !important;
 }}
 
-.stTabs [data-baseweb="tab"] {{
+.stTabs [data-baseweb="tab"],
+button[data-baseweb="tab"] {{
 height: 48px !important;
 margin: 0 !important;
 padding: 8px 14px !important;
-background-color: var(--secondary-background-color) !important;
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
 border-radius: 12px !important;
-border: 1.5px solid var(--border-color) !important;
-color: var(--text-color) !important;
+border: 1.5px solid #CBD5E1 !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
-font-size: 0.95rem !important;
+font-size: 14px !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
 flex: 1 1 auto !important;
-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
 transition: all 0.2s ease !important;
+opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span {{
-color: var(--text-color) !important;
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div,
+button[data-baseweb="tab"] p,
+button[data-baseweb="tab"] span,
+button[data-baseweb="tab"] div {{
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
+font-size: 14px !important;
+opacity: 1 !important;
 }}
 
-.stTabs [aria-selected="true"] {{
+.stTabs [aria-selected="true"],
+button[data-baseweb="tab"][aria-selected="true"] {{
 background: {header_grad} !important;
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 border: 2px solid #F59E0B !important;
 border-radius: 12px !important;
 box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
+opacity: 1 !important;
 }}
 
-.stTabs [aria-selected="true"] p, .stTabs [aria-selected="true"] span {{
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div,
+button[data-baseweb="tab"][aria-selected="true"] p,
+button[data-baseweb="tab"][aria-selected="true"] span,
+button[data-baseweb="tab"][aria-selected="true"] div {{
 color: #FFFFFF !important;
+-webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
+opacity: 1 !important;
 }}
 
 .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
 display: none !important;
 }}
 
-/* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: var(--secondary-background-color); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; box-sizing: border-box; }}
-.metric-info {{ text-align: right; }}
-.metric-title {{ color: var(--sub-text-color); font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }}
-.metric-val {{ color: var(--text-color); font-size: 25px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: var(--subtle-text); font-size: 12px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 48px; height: 48px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 22px; flex-shrink: 0; }}
-.ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
-.ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
-.ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+/* تذييل الصفحة الموحد وبطاقات التواصل والمنصات */
+.ziyad-footer-wrap {{
+margin-top: 32px;
+padding-top: 20px;
+border-top: 1.5px solid #CBD5E1;
+text-align: center;
+direction: rtl !important;
+}}
+.ziyad-footer-copy {{
+color: #475569 !important;
+-webkit-text-fill-color: #475569 !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+margin-bottom: 14px;
+text-align: center !important;
+}}
+.ziyad-footer-cards {{
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 10px;
+direction: rtl !important;
+}}
+a.ziyad-footer-btn {{
+background-color: #FFFFFF !important;
+border: 1.5px solid #CBD5E1 !important;
+border-radius: 12px !important;
+padding: 12px 10px !important;
+color: #0F172A !important;
+-webkit-text-fill-color: #0F172A !important;
+text-decoration: none !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 6px !important;
+font-size: 13.5px !important;
+font-weight: 800 !important;
+box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+transition: all 0.2s ease !important;
+}}
+a.ziyad-footer-btn:hover {{
+border-color: {accent_color} !important;
+background-color: #EFF6FF !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
+transform: translateY(-2px);
+}}
 
-.app-card {{ background: var(--secondary-background-color); padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid var(--border-color); margin-bottom: 15px; box-sizing: border-box; }}
-.mobile-list-item {{ background: var(--secondary-background-color); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; color: var(--text-color); direction: rtl; text-align: right; box-sizing: border-box; }}
+/* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
+.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; direction: rtl; width: 100%; box-sizing: border-box; }}
+.metric-card {{ background-color: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.metric-info {{ text-align: right; font-family: 'Cairo', sans-serif !important; }}
+.metric-title {{ color: #475569; font-size: 13px; font-weight: 800; margin-bottom: 4px; font-family: 'Cairo', sans-serif !important; }}
+.metric-val {{ color: #0F172A; font-size: 22px; font-weight: 900; line-height: 1.15; font-family: 'Cairo', sans-serif !important; }}
+.metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; font-family: 'Cairo', sans-serif !important; }}
+.metric-icon {{ width: 44px; height: 44px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; flex-shrink: 0; }}
+.ic-green {{ background-color: rgba(16, 185, 129, 0.12); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.28); }}
+.ic-blue {{ background-color: rgba(59, 130, 246, 0.12); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.28); }}
+.ic-red {{ background-color: rgba(245, 158, 11, 0.12); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.28); }}
+
+.app-card {{ background: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); border: 1.5px solid #E2E8F0; margin-bottom: 14px; box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.mobile-list-item {{ background: #FFFFFF; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1.5px solid #E2E8F0; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); display: flex; align-items: center; justify-content: space-between; color: #0F172A; direction: rtl; text-align: right; box-sizing: border-box; font-family: 'Cairo', sans-serif !important; font-size: 14.5px !important; }}
+.mobile-list-item * {{ font-family: 'Cairo', sans-serif !important; }}
 
 .student-list-card {{
-background: var(--secondary-background-color);
-border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
-border: 1.5px solid var(--border-color);
-box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+background: #FFFFFF;
+border-radius: 14px; padding: 14px 16px; margin-bottom: 8px;
+border: 1.5px solid #E2E8F0;
+box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 display: block !important; width: 100% !important; box-sizing: border-box !important;
-text-align: right !important; direction: rtl !important; color: var(--text-color);
+text-align: right !important; direction: rtl !important; color: #0F172A;
+font-family: 'Cairo', sans-serif !important;
 }}
+.student-list-card * {{ font-family: 'Cairo', sans-serif !important; }}
 .student-card-header {{
 display: flex !important; flex-direction: row !important;
 justify-content: space-between !important; align-items: center !important;
@@ -793,18 +1261,18 @@ gap: 10px !important; width: 100% !important; direction: rtl !important; margin-
 }}
 .student-card-title {{
 text-align: right !important; direction: rtl !important;
-font-weight: 900 !important; font-size: 1.05rem !important;
-line-height: 1.4 !important; flex: 1 !important; unicode-bidi: plaintext !important;
+font-weight: 800 !important; font-size: 15px !important;
+line-height: 1.45 !important; flex: 1 !important; unicode-bidi: plaintext !important;
 }}
 .student-card-date {{
-background: var(--background-color); padding: 4px 10px; border-radius: 8px;
-font-size: 0.82rem; font-weight: 800; white-space: nowrap !important;
-flex-shrink: 0 !important; direction: ltr !important; border: 1px solid var(--border-color);
+background: #F8FAFC; padding: 4px 10px; border-radius: 8px;
+font-size: 12px !important; font-weight: 800; white-space: nowrap !important;
+flex-shrink: 0 !important; direction: ltr !important; border: 1px solid #E2E8F0; color: #475569 !important;
 }}
 .student-card-body {{
 text-align: right !important; direction: rtl !important;
-width: 100% !important; font-size: 0.95rem !important;
-line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !important;
+width: 100% !important; font-size: 13.5px !important;
+line-height: 1.55 !important; margin: 0 !important; unicode-bidi: plaintext !important; color: #475569 !important;
 }}
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; width: 100%; }}
@@ -837,12 +1305,15 @@ padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !i
 }}
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{ color: #EF4444 !important; }}
 
-.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; direction: rtl; width: 100%; }}
-.m-card {{ background: var(--secondary-background-color); padding: 15px 5px; border-radius: 16px; text-align: center !important; border: 1.5px solid var(--border-color); box-shadow: {shadow_val}; color: var(--text-color); }}
-.m-active {{ border: 2px solid {warning_color} !important; background: rgba(245, 158, 11, 0.15) !important; }}
+.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px 0; direction: rtl; width: 100%; font-family: 'Cairo', sans-serif !important; }}
+.m-card {{ background: #FFFFFF; padding: 12px 6px; border-radius: 14px; text-align: center !important; border: 1.5px solid #E2E8F0; box-shadow: 0 3px 8px rgba(15, 23, 42, 0.04); color: #0F172A; font-family: 'Cairo', sans-serif !important; font-size: 13px !important; line-height: 1.4 !important; }}
+.m-card * {{ font-family: 'Cairo', sans-serif !important; text-align: center !important; }}
+.m-active {{ border: 2px solid {warning_color} !important; background: #FFFBEB !important; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important; }}
 
-.points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 25px; border-radius: 18px; text-align: center !important; margin-bottom: 20px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }}
-.welcome-card {{ background: {header_grad}; color: white; padding: 20px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 6px 15px rgba(0,0,0, 0.3); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box; }}
+.points-banner {{ background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #F59E0B 100%); color: #FFFFFF !important; padding: 18px 20px; border-radius: 18px; text-align: center !important; margin-bottom: 14px; box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25); border: 1px solid rgba(255,255,255,0.22); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.points-banner * {{ font-family: 'Cairo', sans-serif !important; color: #FFFFFF !important; text-align: center !important; }}
+.welcome-card {{ background: {header_grad}; color: #FFFFFF !important; padding: 18px 20px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18); border: 1px solid rgba(255,255,255,0.18); box-sizing: border-box; font-family: 'Cairo', sans-serif !important; }}
+.welcome-card * {{ font-family: 'Cairo', sans-serif !important; color: #FFFFFF !important; }}
 
 [data-testid="stDataFrame"] {{ direction: rtl !important; max-width: 100% !important; overflow-x: auto !important; }}
 
@@ -852,13 +1323,32 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال: شبكة تبويبات (2×2) وثبات تام دون حركة يمين ويسار */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 2.5rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 26px 14px 22px 14px !important; margin: 8px auto 16px auto !important; border-radius: 22px !important; }}
-.banner-main-title {{ font-size: 1.75rem !important; }}
-.logo-icon {{ font-size: 1.9rem !important; width: 50px !important; height: 50px !important; border-radius: 14px !important; }}
-.banner-sub-title {{ font-size: 0.95rem !important; padding: 5px 16px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
-.metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+.block-container {{ padding-top: 1.2rem !important; padding-left: 0.7rem !important; padding-right: 0.7rem !important; }}
+.header-container {{ padding: 20px 14px 18px 14px !important; margin: 4px auto 14px auto !important; border-radius: 20px !important; }}
+.unified-main-title {{ font-size: 22px !important; }}
+.unified-brand-pill {{ font-size: 13.5px !important; padding: 4px 14px !important; }}
+.unified-sub-desc {{ font-size: 12.5px !important; }}
+[data-testid="stMain"] h2:not(.unified-main-title),
+[data-testid="stMain"] h3:not(.unified-main-title),
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3 {{
+font-size: 17px !important;
+margin: 4px 0 10px 0 !important;
+}}
+[data-testid="stMain"] h4,
+[data-testid="stHeadingWithActionElements"] h4 {{
+font-size: 15.5px !important;
+}}
+[data-testid="stMain"] h5,
+[data-testid="stMain"] h6 {{
+font-size: 14px !important;
+}}
+.metric-container {{ grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }}
+.metric-card {{ padding: 11px 10px !important; border-radius: 13px !important; }}
+.metric-title {{ font-size: 11.5px !important; }}
+.metric-val {{ font-size: 19px !important; }}
+.metric-sub {{ font-size: 10.5px !important; }}
+.metric-icon {{ width: 36px !important; height: 36px !important; font-size: 17px !important; border-radius: 10px !important; }}
 .stTabs [data-baseweb="tab-list"] {{
 display: grid !important;
 grid-template-columns: repeat(2, 1fr) !important;
@@ -869,24 +1359,37 @@ grid-column: span 2 !important;
 }}
 .stTabs [data-baseweb="tab"] {{
 width: 100% !important;
-font-size: 0.9rem !important;
-height: 50px !important;
+font-size: 13px !important;
+height: 48px !important;
 padding: 6px 8px !important;
 white-space: normal !important;
+}}
+.ziyad-footer-cards {{
+grid-template-columns: repeat(2, 1fr) !important;
+gap: 8px !important;
+}}
+a.ziyad-footer-btn {{
+padding: 11px 8px !important;
+font-size: 12.5px !important;
 }}
 }}
 </style>
 
-<div class="header-container" style="font-family: 'Tajawal', sans-serif !important;">
-<div class="title-wrapper">
-<div class="logo-icon">{t_colors["icon"]}</div>
-<div class="banner-main-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</div>
+<div class="header-container" dir="rtl" style="font-family: 'Cairo', sans-serif !important;">
+<div class="unified-title-row">
+<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
+<h1 class="unified-main-title" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</h1>
 </div>
-<div class="banner-sub-title" style="font-family: 'Tajawal', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
+<div class="unified-brand-row">
+<span class="unified-brand-pill">{t_colors.get("brand", "منصة زياد الذكية")}</span>
+</div>
+<div class="unified-sub-desc" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
 </div>
 """,
     unsafe_allow_html=True,
 )
+
+
 
 # ==========================================
 # 🔐 3. نظام تسجيل الدخول
@@ -895,11 +1398,9 @@ if st.session_state.role is None:
   t1, t2, t3 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم", "🏫 بوابة الإدارة (مشاهد)"])
 
   with t1:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("st_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول الطالب</h4>", unsafe_allow_html=True)
+      st.markdown("<div class='login-card-heading'>تسجيل دخول الطالب</div><div class='login-card-sub'>أدخل رقم الهوية أو الرقم الأكاديمي للاطلاع على الدرجات والاختبارات والملاحظات</div>", unsafe_allow_html=True)
       sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
-      st.markdown("<br>", unsafe_allow_html=True)
       if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
         arabic_to_english = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
         sid = sid.translate(arabic_to_english)
@@ -914,13 +1415,11 @@ if st.session_state.role is None:
             st.error("⚠️ الرقم غير مسجل في النظام")
 
   with t2:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("tr_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>تسجيل دخول المعلم</h4>", unsafe_allow_html=True)
-      u = st.text_input("اسم المستخدم", placeholder="User")
-      p = st.text_input("كلمة المرور", type="password", placeholder="******")
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.form_submit_button("🛠️ دخول لوحة التحكم", type="primary", use_container_width=True):
+      st.markdown("<div class='login-card-heading'>تسجيل دخول المعلم</div><div class='login-card-sub'>أدخل بيانات الحساب للوصول إلى لوحة إدارة ومتابعة الطلاب</div>", unsafe_allow_html=True)
+      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...")
+      p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+      if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
         df = fetch_safe("users")
         if not df.empty and u in df["username"].values:
           ud = df[df["username"] == u].iloc[0]
@@ -950,13 +1449,11 @@ if st.session_state.role is None:
           st.error("❌ اسم المستخدم غير موجود.")
 
   with t3:
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.form("admin_login"):
-      st.markdown("<h4 style='text-align:center; margin-bottom:15px;'>دخول الإدارة (قراءة واستخراج تقارير)</h4>", unsafe_allow_html=True)
+      st.markdown("<div class='login-card-heading'>دخول الإدارة والإشراف التربوي</div><div class='login-card-sub'>بوابة مخصصة للإدارة والمشرف التربوي للاطلاع واستخراج التقارير</div>", unsafe_allow_html=True)
       u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
       p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.form_submit_button("👁️ دخول الإشراف", type="primary", use_container_width=True):
+      if st.form_submit_button("👁️ استعراض التقارير والبيانات", type="primary", use_container_width=True):
         df_u = fetch_safe("users")
         if not df_u.empty and u_admin in df_u["username"].values:
           ud = df_u[df_u["username"] == u_admin].iloc[0]
@@ -4394,28 +4891,28 @@ if st.session_state.role == "student":
     # 3. بطاقة الطالب المنسقة وبطاقة النقاط
     st.markdown(
         f"""
-        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 22px 20px;">
-            <div style="color: #FFFFFF; font-size: 1.45rem; font-weight: 900; line-height: 1.4; margin-bottom: 14px; text-align: right;">
+        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 18px 20px;">
+            <div style="color: #FFFFFF; font-size: 18px; font-weight: 900; line-height: 1.4; margin-bottom: 10px; text-align: right;">
                 👋 أهلاً بك، {s_nm}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; direction: rtl;">
-                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; direction: rtl;">
+                <div style="background: rgba(255, 255, 255, 0.18); padding: 5px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 13px; white-space: nowrap;">
                     🏫 الصف: {s_cls}
                 </div>
-                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
+                <div style="background: rgba(15, 23, 42, 0.3); border: 1px solid rgba(255, 255, 255, 0.22); padding: 5px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 13px; white-space: nowrap; direction: ltr;">
                     🆔 ID: {sid}
                 </div>
             </div>
         </div>
         <div class="points-banner">
-            <div style="margin:0; opacity:0.95; font-size:1rem; font-weight:800;">رصيد النقاط الحالي</div>
-            <div style="margin:4px 0; font-size:3.6rem; font-weight:900; line-height:1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
-            <div style="margin:0; font-size:0.9rem; font-weight:800;">استمر في التفوق!</div>
+            <div style="margin:0; opacity:0.95; font-size:13.5px; font-weight:800;">⭐ رصيد نقاط التميز الحالي</div>
+            <div style="margin:4px 0; font-size:34px; font-weight:900; line-height:1.15; text-shadow: 0 2px 6px rgba(0,0,0,0.18);">{pts}</div>
+            <div style="margin:0; font-size:12.5px; font-weight:700; opacity:0.92;">استمر في التألق والتميز!</div>
         </div>
         <div class="medal-flex">
-            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي (100+)</b></div>
-            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #94A3B8;">🥈<br><b>فضي (50+)</b></div>
-            <div class="m-card m-active" style="color: #D97706;">🥉<br><b>برونزي</b></div>
+            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: #B45309;"><span style="font-size:20px;">🥇</span><br><b>ذهبي (100+)</b></div>
+            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #475569;"><span style="font-size:20px;">🥈</span><br><b>فضي (50+)</b></div>
+            <div class="m-card m-active" style="color: #92400E;"><span style="font-size:20px;">🥉</span><br><b>برونزي</b></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -4538,28 +5035,28 @@ if st.session_state.role == "student":
           st.markdown(
               f"""
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">📝 المشاركة والواجبات</span>
+                  <span style="font-weight:800; font-size:14.5px; color:#0F172A;">📝 المشاركة والواجبات</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p1')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_tasks}</span>
+                      <span style='font-size:18px; font-weight:900; color:{primary_color};'>{g.get('p1')}</span> 
+                      <span style='color:#64748B; font-size:13.5px; font-weight:800;'>/ {st.session_state.max_tasks}</span>
                   </div>
               </div>
               <div class='mobile-list-item' style="direction: rtl;">
-                  <span style="font-weight:800;">✍️ الاختبارات القصيرة</span>
+                  <span style="font-weight:800; font-size:14.5px; color:#0F172A;">✍️ الاختبارات القصيرة</span>
                   <div style="direction: ltr;">
-                      <span style='font-size:1.4rem; font-weight:900; color:{accent_color};'>{g.get('p2')}</span> 
-                      <span style='color:#94A3B8; font-size:0.9rem; font-weight:bold;'>/ {st.session_state.max_quiz}</span>
+                      <span style='font-size:18px; font-weight:900; color:{primary_color};'>{g.get('p2')}</span> 
+                      <span style='color:#64748B; font-size:13.5px; font-weight:800;'>/ {st.session_state.max_quiz}</span>
                   </div>
               </div>
-              <div class='mobile-list-item' style='background:var(--secondary-background-color); border-color:{accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
+              <div class='mobile-list-item' style='background:#FFFFFF; border: 1.5px solid {accent_color}; display:flex; flex-direction:column; align-items:flex-start; direction: rtl;'>
                   <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                      <span style="color:{accent_color}; font-weight:900;">🏆 المجموع النهائي ({cp})</span>
+                      <span style="color:{primary_color}; font-weight:900; font-size:15px;">🏆 المجموع النهائي ({cp})</span>
                       <div style="direction: ltr;">
-                          <span style='font-size:1.6rem; font-weight:900; color:{accent_color};'>{perf_score}</span> 
-                          <span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>/ {max_total}</span>
+                          <span style='font-size:20px; font-weight:900; color:{primary_color};'>{perf_score}</span> 
+                          <span style='color:#64748B; font-size:14px; font-weight:800;'>/ {max_total}</span>
                       </div>
                   </div>
-                  <div style="margin-top:10px; width:100%; text-align:center; padding:8px; background:var(--background-color); border-radius:10px; color:{title_color}; font-weight:900; font-size:1.1rem; border:1.5px solid {title_color}55;">
+                  <div style="margin-top:10px; width:100%; text-align:center; padding:8px; background:#F8FAFC; border-radius:10px; color:{title_color}; font-weight:800; font-size:14.5px; border:1.5px solid {title_color}45;">
                       {title}
                   </div>
               </div>
@@ -4896,4 +5393,4 @@ if st.session_state.role == "student":
       st.session_state.role = None
       st.rerun()
 
-  show_footer()      
+  show_footer()
