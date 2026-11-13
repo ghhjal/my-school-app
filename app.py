@@ -176,7 +176,7 @@ if "role" not in st.session_state:
 if "username" not in st.session_state:
   st.session_state.username = None
 
-# --- 🎨 نظام القوالب الديناميكية للمناسبات والتجديد ---
+# --- 🎨 نظام ال الديناميكية للمناسبات والتجديد ---
 active_theme_name = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
 
 themes = {
@@ -3408,7 +3408,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         if st.session_state.role == "teacher":
           st.markdown("---")
-          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
+          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً )"):
             st.caption("يمكنك إضافة عبارات جديدة لأي وسام أو تعديل العبارات الحالية، وسيتم حفظها في قاعدة البيانات المركزية (`settings`).")
             edit_badge_target = st.selectbox("اختر الوسام لتحرير عباراته:", badge_titles_list, key="cfg_badge_sel")
             current_lines = "\n".join(phrases_cfg.get(edit_badge_target, []))
