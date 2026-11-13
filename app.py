@@ -625,6 +625,7 @@ def show_footer():
         }});
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
+
     }} catch (e) {{}}
 }})();
 </script>
@@ -1560,6 +1561,12 @@ line-height: 1.25 !important;
 white-space: nowrap !important;
 }}
 }}
+[data-testid="stTabs"] [role="tabpanel"][hidden] {{
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}}
+
 </style>
 """,
     unsafe_allow_html=True,
