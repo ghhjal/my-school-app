@@ -424,6 +424,10 @@ def show_footer():
                 }}
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
+                    tab.style.setProperty('width', 'auto', 'important');
+                    tab.style.setProperty('flex', '0 0 auto', 'important');
+                    tab.style.setProperty('white-space', 'nowrap', 'important');
+                    tab.style.setProperty('padding', '6px 13px', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
                         tab.style.setProperty('background', '{header_grad}', 'important');
@@ -858,8 +862,6 @@ box-shadow: 0 0 0 3px {primary_color}35 !important;
 background-color: #FFFFFF !important;
 }}
 
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] div,
 div[data-baseweb="select"] svg,
 div[data-baseweb="input"] svg,
 div[data-testid="stNumberInput"] button svg {{
@@ -1092,18 +1094,16 @@ border-color: {accent_color} !important;
 background: #EFF6FF !important;
 }}
 
-/* ✳️ 6. التبويبات: استهداف شامل لـ [aria-selected="false"] و [aria-selected="true"] لضمان وضوح 100% في الوضع الداكن والفاتح */
-.stTabs [data-baseweb="tab-list"] {{
-display: flex !important;
-flex-wrap: wrap !important;
+/* ✳️ 6. التبويبات: حجم متناسق في سطر واحد غير متكدس مع وضوح تام 100% في الوضع الداكن والفاتح */
+.stTabs [data-baseweb="tab-list"],
+.stTabs [role="tablist"],
+[data-testid="stTabs"] [role="tablist"] {{
 gap: 8px !important;
 background-color: transparent !important;
 border: none !important;
-margin-bottom: 14px !important;
-padding: 4px 0px !important;
+margin-bottom: 12px !important;
+padding: 4px 2px !important;
 direction: rtl !important;
-width: 100% !important;
-overflow-x: hidden !important;
 }}
 
 .stTabs [data-baseweb="tab"],
@@ -1112,9 +1112,13 @@ overflow-x: hidden !important;
 [data-testid="stTabs"] [aria-selected="false"],
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
 button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-height: 46px !important;
+width: auto !important;
+flex: 0 0 auto !important;
+min-height: 42px !important;
+height: 42px !important;
 margin: 0 !important;
-padding: 8px 14px !important;
+padding: 6px 14px !important;
+white-space: nowrap !important;
 background-color: #FFFFFF !important;
 background: #FFFFFF !important;
 border-radius: 12px !important;
@@ -1123,11 +1127,10 @@ color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 800 !important;
-font-size: 0.94rem !important;
+font-size: 0.92rem !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
-flex: 1 1 auto !important;
 box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
 transition: all 0.2s ease !important;
 opacity: 1 !important;
@@ -1148,7 +1151,9 @@ font-family: 'Cairo', sans-serif !important;
 color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 font-weight: 800 !important;
-font-size: 0.94rem !important;
+font-size: 0.92rem !important;
+white-space: nowrap !important;
+margin: 0 !important;
 opacity: 1 !important;
 }}
 
@@ -1156,9 +1161,13 @@ opacity: 1 !important;
 .stTabs [role="tab"][aria-selected="true"],
 [data-testid="stTabs"] [aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"] {{
-height: 46px !important;
+width: auto !important;
+flex: 0 0 auto !important;
+min-height: 42px !important;
+height: 42px !important;
 margin: 0 !important;
-padding: 8px 14px !important;
+padding: 6px 14px !important;
+white-space: nowrap !important;
 background: {header_grad} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
@@ -1167,11 +1176,10 @@ border-radius: 12px !important;
 box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 900 !important;
-font-size: 0.94rem !important;
+font-size: 0.92rem !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
-flex: 1 1 auto !important;
 opacity: 1 !important;
 }}
 
@@ -1186,7 +1194,9 @@ font-family: 'Cairo', sans-serif !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
-font-size: 0.94rem !important;
+font-size: 0.92rem !important;
+white-space: nowrap !important;
+margin: 0 !important;
 opacity: 1 !important;
 }}
 
@@ -1290,22 +1300,17 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 .unified-sub-desc {{ font-size: 12.5px !important; }}
 .metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
-.stTabs [data-baseweb="tab-list"] {{
-display: grid !important;
-grid-template-columns: repeat(2, 1fr) !important;
-gap: 8px !important;
-}}
-.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
-grid-column: span 2 !important;
-}}
 .stTabs [data-baseweb="tab"],
 .stTabs [aria-selected="false"],
-.stTabs [aria-selected="true"] {{
-width: 100% !important;
+.stTabs [aria-selected="true"],
+.stTabs [role="tab"] {{
+width: auto !important;
+flex: 0 0 auto !important;
 font-size: 0.88rem !important;
-height: 46px !important;
-padding: 6px 10px !important;
-white-space: normal !important;
+height: 40px !important;
+min-height: 40px !important;
+padding: 6px 12px !important;
+white-space: nowrap !important;
 }}
 }}
 </style>
