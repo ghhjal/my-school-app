@@ -617,14 +617,14 @@ def show_footer():
         }}
 
         enforcePortalStyles();
-        if (window.parent.__ziyadPortalLightObserverObj) {{
+        {
             try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
         }}
         var obs = new MutationObserver(function() {{
             enforcePortalStyles();
         }});
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
-        window.parent.__ziyadPortalLightObserverObj = obs;
+        
     }} catch (e) {{}}
 }})();
 </script>
