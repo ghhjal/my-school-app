@@ -404,9 +404,8 @@ def show_footer():
                 max-height: none !important;
                 overflow: visible !important;
             }}
-            div[data-baseweb="tab-panel"]:not([hidden]),
-            [data-testid="stTabs"] [role="tabpanel"]:not([hidden]) {{
-                display: block !important;
+            div[data-baseweb="tab-panel"],
+            [data-testid="stTabs"] [role="tabpanel"] {{
                 width: 100% !important;
                 height: auto !important;
                 min-height: 0 !important;
@@ -414,16 +413,14 @@ def show_footer():
                 overflow: visible !important;
                 padding-bottom: 0 !important;
             }}
-            div[data-baseweb="tab-panel"][hidden],
-            [data-testid="stTabs"] [role="tabpanel"][hidden],
-            div[data-baseweb="tab-panel"][aria-hidden="true"] {{
+            div[data-baseweb="tab-highlight"],
+            div[data-baseweb="tab-border"],
+            [data-baseweb="tab-highlight"],
+            [data-baseweb="tab-border"] {{
                 display: none !important;
                 height: 0 !important;
-                min-height: 0 !important;
-                max-height: 0 !important;
-                overflow: hidden !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                opacity: 0 !important;
+                background: transparent !important;
             }}
             div[data-testid="stElementContainer"]:has(iframe[height="0"]),
             div.element-container:has(iframe[height="0"]),
@@ -700,18 +697,11 @@ def show_footer():
 
                 var tabPanels = pDoc.querySelectorAll('div[data-baseweb="tab-panel"], [data-testid="stTabs"] [role="tabpanel"]');
                 tabPanels.forEach(function(panel) {{
-                    var isHidden = panel.hasAttribute('hidden') || panel.getAttribute('aria-hidden') === 'true';
-                    if (isHidden) {{
-                        panel.style.setProperty('display', 'none', 'important');
-                        panel.style.setProperty('height', '0px', 'important');
-                        panel.style.setProperty('max-height', '0px', 'important');
-                        panel.style.setProperty('overflow', 'hidden', 'important');
-                    }} else {{
-                        panel.style.setProperty('display', 'block', 'important');
-                        panel.style.setProperty('height', 'auto', 'important');
-                        panel.style.setProperty('max-height', 'none', 'important');
-                        panel.style.setProperty('overflow', 'visible', 'important');
-                    }}
+                    panel.style.removeProperty('display');
+                    panel.style.setProperty('height', 'auto', 'important');
+                    panel.style.setProperty('min-height', '0', 'important');
+                    panel.style.setProperty('max-height', 'none', 'important');
+                    panel.style.setProperty('overflow', 'visible', 'important');
                 }});
 
                 if (window.frameElement) {{
@@ -867,27 +857,14 @@ direction: rtl !important;
 text-align: right !important;
 }}
 
-div[data-baseweb="tab-panel"]:not([hidden]),
-[data-testid="stTabs"] [role="tabpanel"]:not([hidden]) {{
-display: block !important;
+div[data-baseweb="tab-panel"],
+[data-testid="stTabs"] [role="tabpanel"] {{
 width: 100% !important;
 height: auto !important;
 min-height: 0 !important;
 max-height: none !important;
 overflow: visible !important;
 padding-bottom: 0 !important;
-}}
-
-div[data-baseweb="tab-panel"][hidden],
-[data-testid="stTabs"] [role="tabpanel"][hidden],
-div[data-baseweb="tab-panel"][aria-hidden="true"] {{
-display: none !important;
-height: 0 !important;
-min-height: 0 !important;
-max-height: 0 !important;
-overflow: hidden !important;
-margin: 0 !important;
-padding: 0 !important;
 }}
 
 div[data-testid="stElementContainer"]:has(iframe[height="0"]),
