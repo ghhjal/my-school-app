@@ -4483,7 +4483,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
     set_tabs = st.tabs([
         "🛠️ الصيانة والنسخ",
         "🎨 الهوية والإعدادات",
-        "📤 استيراد البيانات وأنماط التعلم",
+        "📤 استيراد البيانات",
         "🔐 إدارة المستخدمين",
     ])
 
