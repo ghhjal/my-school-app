@@ -2647,7 +2647,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         # --- ب) القائمة السفلية الذكية: الرصد الجماعي داخل st.form لمنع إعادة التحميل مع كل رقم ---
         st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط لفتح جدول الرصد الجماعي", expanded=False):
+        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط هنا", expanded=False):
           st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب بحرية تامة داخل الجدول، ثم اضغط زر الحفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
 
           bulk_gr_cls = st.selectbox("🏫 اختر الفصل لرصد درجاته جماعياً:", st.session_state.class_options, key="bulk_grades_cls_sel")
