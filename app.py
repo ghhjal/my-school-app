@@ -334,8 +334,7 @@ def show_footer():
   c2.link_button("📢 تليجرام الإدارة", "https://t.me/ZiyadAlmoamri", use_container_width=True)
   c3.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
   c4.link_button("📧 البريد الإلكتروني", "mailto:ziyadalamri30@gmail.com", use_container_width=True)
-    components.html(
-      f"""
+  components.html(f"""
 <script>
 (function() {{
     try {{
@@ -343,6 +342,162 @@ def show_footer():
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
         pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        var styleId = 'ziyad-students-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0F172A !important;
+                --background-color: #F8FAFC !important;
+                --secondary-background-color: #FFFFFF !important;
+                --input-bg-color: #FFFFFF !important;
+                --sub-text-color: #475569 !important;
+                --border-color: #CBD5E1 !important;
+                --primary-color: {primary_color} !important;
+                color-scheme: light only !important;
+                background-color: #F8FAFC !important;
+                color: #0F172A !important;
+            }}
+            span[data-testid="stIconMaterial"],
+            [data-testid="stExpanderToggleIcon"],
+            .material-icons,
+            [class*="material-symbols"] {{
+                font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+                direction: ltr !important;
+            }}
+            [data-testid="stTabs"] [data-baseweb="tab-list"],
+            [data-testid="stTabs"] [role="tablist"],
+            .stTabs [data-baseweb="tab-list"],
+            div[data-baseweb="tab-list"] {{
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5px 6px !important;
+                width: 100% !important;
+                overflow: visible !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 2px 0 !important;
+                margin-bottom: 8px !important;
+                direction: rtl !important;
+            }}
+            .ziyad-btn-icon {{
+                font-size: 0.82em !important;
+                line-height: 1 !important;
+                display: inline-block !important;
+                margin-left: 4px !important;
+                vertical-align: -1px !important;
+            }}
+            .stTabs [aria-selected="false"],
+            .stTabs [role="tab"]:not([aria-selected="true"]),
+            [data-testid="stTabs"] [aria-selected="false"],
+            [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
+            button[data-baseweb="tab"]:not([aria-selected="true"]) {{
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+                background-color: #E2E8F0 !important;
+                border: 1px solid #CBD5E1 !important;
+                border-bottom: 2px solid #94A3B8 !important;
+                border-radius: 10px !important;
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="false"] p,
+            .stTabs [aria-selected="false"] span,
+            .stTabs [aria-selected="false"] div,
+            .stTabs [aria-selected="false"] *,
+            .stTabs [role="tab"]:not([aria-selected="true"]) *,
+            [data-testid="stTabs"] [aria-selected="false"] *,
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="true"],
+            .stTabs [role="tab"][aria-selected="true"],
+            [data-testid="stTabs"] [aria-selected="true"],
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
+                margin: 0 !important;
+                background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+                background-color: #2563EB !important;
+                border: 1px solid #1D4ED8 !important;
+                border-bottom: 2px solid #1E3A8A !important;
+                border-radius: 10px !important;
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25) !important;
+                opacity: 1 !important;
+            }}
+            .stTabs [aria-selected="true"] *,
+            [data-testid="stTabs"] [aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
+                color: #FFFFFF !important;
+                -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
+                opacity: 1 !important;
+            }}
+            @media (max-width: 768px) {{
+                [data-testid="stTabs"] [data-baseweb="tab-list"],
+                [data-testid="stTabs"] [role="tablist"],
+                .stTabs [data-baseweb="tab-list"],
+                div[data-baseweb="tab-list"] {{
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 5px 6px !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                    margin-bottom: 8px !important;
+                }}
+                [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+                div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+                    grid-column: 1 / -1 !important;
+                }}
+                [data-testid="stTabs"] [role="tab"],
+                button[data-baseweb="tab"],
+                .stTabs [data-baseweb="tab"] {{
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    max-height: 38px !important;
+                    padding: 4px 8px !important;
+                    font-size: 0.82rem !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    line-height: 1.25 !important;
+                }}
+            }}
+        `;
 
         function scaleLeadingEmoji(el) {{
             if (!el || el.querySelector('.ziyad-btn-icon')) return;
@@ -363,34 +518,117 @@ def show_footer():
             }}
         }}
 
-        var timer = null;
-        function scheduleStyleUpdate() {{
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(function() {{
-                var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], button[data-baseweb="tab"]');
-                tabs.forEach(scaleLeadingEmoji);
+        var isRunning = false;
+        function enforcePortalStyles() {{
+            if (isRunning) return;
+            isRunning = true;
+            try {{
+                if (pDoc.head.lastElementChild !== existingStyle) {{
+                    pDoc.head.appendChild(existingStyle);
+                }}
+                var isMobileView = window.parent.innerWidth <= 768;
+                var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
+                tabLists.forEach(function(tl) {{
+                    tl.style.setProperty('gap', '5px 6px', 'important');
+                    tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('overflow', 'visible', 'important');
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    tl.style.setProperty('padding', '2px 0', 'important');
+                    tl.style.setProperty('margin-bottom', '8px', 'important');
+                    if (isMobileView) {{
+                        tl.style.setProperty('display', 'grid', 'important');
+                        tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    }} else {{
+                        tl.style.setProperty('display', 'flex', 'important');
+                        tl.style.setProperty('flex-wrap', 'wrap', 'important');
+                    }}
+                }});
+                var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
+                tabs.forEach(function(tab) {{
+                    scaleLeadingEmoji(tab);
+                    tab.style.setProperty('height', '38px', 'important');
+                    tab.style.setProperty('min-height', '38px', 'important');
+                    tab.style.setProperty('max-height', '38px', 'important');
+                    tab.style.setProperty('padding', isMobileView ? '4px 8px' : '4px 12px', 'important');
+                    tab.style.setProperty('white-space', 'nowrap', 'important');
+                    tab.style.setProperty('min-width', isMobileView ? '0' : 'max-content', 'important');
+                    tab.style.setProperty('width', isMobileView ? '100%' : 'auto', 'important');
+                    tab.style.setProperty('line-height', '1.25', 'important');
+                    tab.style.setProperty('border-radius', '10px', 'important');
+                    var isSel = tab.getAttribute('aria-selected') === 'true';
+                    if (isSel) {{
+                        tab.style.setProperty('background', 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)', 'important');
+                        tab.style.setProperty('background-color', '#2563EB', 'important');
+                        tab.style.setProperty('border', '1px solid #1D4ED8', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #1E3A8A', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.25)', 'important');
+                        tab.style.setProperty('color', '#FFFFFF', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#FFFFFF', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
+                        }});
+                    }} else {{
+                        tab.style.setProperty('background', 'linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%)', 'important');
+                        tab.style.setProperty('background-color', '#E2E8F0', 'important');
+                        tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #94A3B8', 'important');
+                        tab.style.setProperty('box-shadow', '0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9)', 'important');
+                        tab.style.setProperty('color', '#1E293B', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
+                            ch.style.setProperty('color', '#1E293B', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
+                        }});
+                    }}
+                }});
                 var actionBtns = pDoc.querySelectorAll('.stButton > button:not([role="tab"]), .stDownloadButton > button, [data-testid="stFormSubmitButton"] button, [data-testid="stLinkButton"] a');
-                actionBtns.forEach(scaleLeadingEmoji);
-            }}, 250);
+                actionBtns.forEach(function(btn) {{
+                    scaleLeadingEmoji(btn);
+                }});
+
+                var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
+                inputBoxes.forEach(function(box) {{
+                    box.style.setProperty('background-color', '#FFFFFF', 'important');
+                    box.style.setProperty('background', '#FFFFFF', 'important');
+                    box.style.setProperty('color', '#0F172A', 'important');
+                    box.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                    box.querySelectorAll('div, input, textarea, button').forEach(function(inn) {{
+                        if (!inn.closest('[data-baseweb="tag"]')) {{
+                            inn.style.setProperty('background-color', '#FFFFFF', 'important');
+                            inn.style.setProperty('background', '#FFFFFF', 'important');
+                            inn.style.setProperty('color', '#0F172A', 'important');
+                            inn.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        }}
+                    }});
+                    box.querySelectorAll('svg').forEach(function(s) {{
+                        s.style.setProperty('fill', '#0F172A', 'important');
+                        s.style.setProperty('color', '#0F172A', 'important');
+                        s.style.setProperty('background', 'transparent', 'important');
+                    }});
+                }});
+            }} finally {{
+                isRunning = false;
+            }}
         }}
 
-        scheduleStyleUpdate();
+        enforcePortalStyles();
         if (window.parent.__ziyadPortalLightObserverObj) {{
             try {{ window.parent.__ziyadPortalLightObserverObj.disconnect(); }} catch (e) {{}}
         }}
-        var obs = new MutationObserver(function(mutations) {{
-            var hasAddedNodes = mutations.some(function(m) {{ return m.addedNodes && m.addedNodes.length > 0; }});
-            if (hasAddedNodes) scheduleStyleUpdate();
+        var obs = new MutationObserver(function() {{
+            enforcePortalStyles();
         }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
     }} catch (e) {{}}
 }})();
 </script>
-""",
-      height=0,
-  )
-
+""", height=0)
 
 # ==========================================
 # 🎨 2. التصميم الاحترافي الموحد (متوافق 100% مع الجوال والوضع الداكن والفاتح)
@@ -1322,12 +1560,6 @@ line-height: 1.25 !important;
 white-space: nowrap !important;
 }}
 }}
-[data-testid="stTabs"] [role="tabpanel"][hidden] {{
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
-}}
-
 </style>
 """,
     unsafe_allow_html=True,
