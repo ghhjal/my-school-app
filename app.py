@@ -320,11 +320,10 @@ def get_school_name_dynamic(cls_name):
 
 
 def show_footer():
-  st.markdown("<br><br>", unsafe_allow_html=True)
   st.markdown(
       f"""
-    <div style='text-align: center; color: #0F172A; opacity: 0.9; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
+    <div id='ziyad-portal-footer' style='text-align: center; color: #0F172A; opacity: 0.95; margin-top: 14px; padding: 14px 10px 6px 10px; border-top: 1px solid {border_color};'>
+        <p style='margin: 0 0 8px 0; font-size: 0.92rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
     </div>
     """,
       unsafe_allow_html=True,
@@ -362,6 +361,81 @@ def show_footer():
                 color-scheme: light only !important;
                 background-color: #F8FAFC !important;
                 color: #0F172A !important;
+            }}
+            html, body {{
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+            }}
+            #root,
+            #root > div,
+            .stApp,
+            [data-testid="stApp"],
+            [data-testid="stAppViewContainer"],
+            [data-testid="stAppViewBlockContainer"],
+            [data-testid="stMain"],
+            .main,
+            [data-testid="stMainBlockContainer"],
+            .block-container {{
+                position: static !important;
+                inset: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                display: block !important;
+                overflow: visible !important;
+            }}
+            [data-testid="stTabs"],
+            .stTabs,
+            div[data-baseweb="tabs"] {{
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }}
+            div[data-baseweb="tab-panel"]:not([hidden]),
+            [data-testid="stTabs"] [role="tabpanel"]:not([hidden]) {{
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding-bottom: 0 !important;
+            }}
+            div[data-baseweb="tab-panel"][hidden],
+            [data-testid="stTabs"] [role="tabpanel"][hidden],
+            div[data-baseweb="tab-panel"][aria-hidden="true"] {{
+                display: none !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                max-height: 0 !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }}
+            div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+            div.element-container:has(iframe[height="0"]),
+            iframe[height="0"] {{
+                height: 0px !important;
+                min-height: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
             }}
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
@@ -611,6 +685,75 @@ def show_footer():
                         s.style.setProperty('background', 'transparent', 'important');
                     }});
                 }});
+
+                var layoutContainers = pDoc.querySelectorAll('#root, #root > div, .stApp, [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stMain"], .main, [data-testid="stMainBlockContainer"], .block-container');
+                layoutContainers.forEach(function(c) {{
+                    c.style.setProperty('position', 'static', 'important');
+                    c.style.setProperty('inset', 'auto', 'important');
+                    c.style.setProperty('height', 'auto', 'important');
+                    c.style.setProperty('min-height', '0', 'important');
+                    c.style.setProperty('max-height', 'none', 'important');
+                    c.style.setProperty('flex', 'none', 'important');
+                    c.style.setProperty('display', 'block', 'important');
+                    c.style.setProperty('overflow', 'visible', 'important');
+                }});
+
+                var tabPanels = pDoc.querySelectorAll('div[data-baseweb="tab-panel"], [data-testid="stTabs"] [role="tabpanel"]');
+                tabPanels.forEach(function(panel) {{
+                    var isHidden = panel.hasAttribute('hidden') || panel.getAttribute('aria-hidden') === 'true';
+                    if (isHidden) {{
+                        panel.style.setProperty('display', 'none', 'important');
+                        panel.style.setProperty('height', '0px', 'important');
+                        panel.style.setProperty('max-height', '0px', 'important');
+                        panel.style.setProperty('overflow', 'hidden', 'important');
+                    }} else {{
+                        panel.style.setProperty('display', 'block', 'important');
+                        panel.style.setProperty('height', 'auto', 'important');
+                        panel.style.setProperty('max-height', 'none', 'important');
+                        panel.style.setProperty('overflow', 'visible', 'important');
+                    }}
+                }});
+
+                if (window.frameElement) {{
+                    window.frameElement.style.setProperty('height', '0px', 'important');
+                    window.frameElement.style.setProperty('min-height', '0px', 'important');
+                    window.frameElement.style.setProperty('margin', '0px', 'important');
+                    window.frameElement.style.setProperty('padding', '0px', 'important');
+                    window.frameElement.style.setProperty('border', 'none', 'important');
+                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
+                    if (feParent) {{
+                        feParent.style.setProperty('height', '0px', 'important');
+                        feParent.style.setProperty('min-height', '0px', 'important');
+                        feParent.style.setProperty('margin', '0px', 'important');
+                        feParent.style.setProperty('padding', '0px', 'important');
+                        feParent.style.setProperty('overflow', 'hidden', 'important');
+                    }}
+                }}
+
+                pDoc.documentElement.style.setProperty('height', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('min-height', '0', 'important');
+                pDoc.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+                pDoc.body.style.setProperty('height', 'auto', 'important');
+                pDoc.body.style.setProperty('min-height', '0', 'important');
+                pDoc.body.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.body.style.setProperty('overflow-x', 'hidden', 'important');
+
+                var pWin = window.parent;
+                var blk = pDoc.querySelector('.block-container, [data-testid="stMainBlockContainer"]');
+                if (blk) {{
+                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 12);
+                    if (pWin.frameElement) {{
+                        try {{
+                            pWin.frameElement.style.setProperty('height', exactH + 'px', 'important');
+                            pWin.frameElement.style.setProperty('min-height', exactH + 'px', 'important');
+                        }} catch (e) {{}}
+                    }}
+                    var maxScroll = Math.max(0, exactH - pWin.innerHeight);
+                    if (pWin.scrollY > maxScroll + 24) {{
+                        pWin.scrollTo(0, maxScroll);
+                    }}
+                }}
             }} finally {{
                 isRunning = false;
             }}
@@ -623,7 +766,7 @@ def show_footer():
         var obs = new MutationObserver(function() {{
             enforcePortalStyles();
         }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
     }} catch (e) {{}}
 }})();
@@ -651,48 +794,113 @@ st.markdown(
 color-scheme: light only !important;
 }}
 
-section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"] {{
+section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"], #MainMenu, footer, [data-testid="stBottom"], [data-testid="stHeader"] {{
 display: none !important;
-}}
-[data-testid="stHeader"] {{
-background: transparent !important;
-}}
-#MainMenu {{ visibility: hidden; }}
-footer {{ visibility: hidden; }}
-
-/* ✳️ 1. قفل التمرير الأفقي وضبط الخلفية والخط العام */
-html, body {{
-font-family: 'Cairo', sans-serif !important;
-background-color: #F8FAFC !important;
-color: #0F172A !important;
-overflow-x: clip !important;
+height: 0 !important;
 margin: 0 !important;
 padding: 0 !important;
 }}
 
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+/* ✳️ 1. تمرير موحد وسلس للصفحة بالكامل حتى التذييل بدون فراغات أو انقطاع أو تمرير مزدوج */
+html, body {{
+font-family: 'Cairo', sans-serif !important;
+background-color: #F8FAFC !important;
+color: #0F172A !important;
+margin: 0 !important;
+padding: 0 !important;
+width: 100% !important;
+max-width: 100vw !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+overflow-x: hidden !important;
+overflow-y: auto !important;
+-webkit-overflow-scrolling: touch !important;
+}}
+
+#root,
+#root > div,
+.stApp,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMain"],
+.main {{
 font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 background-color: #F8FAFC !important;
 color: #0F172A !important;
-overflow-x: clip !important;
-overflow-y: visible !important;
-max-width: 100vw !important;
+position: static !important;
+inset: auto !important;
+top: auto !important;
+bottom: auto !important;
+left: auto !important;
+right: auto !important;
 width: 100% !important;
+max-width: 100vw !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+flex: none !important;
+display: block !important;
+overflow: visible !important;
 }}
 
-.block-container {{
-padding-top: 1.1rem !important;
-padding-bottom: 2.5rem !important;
+.block-container,
+[data-testid="stMainBlockContainer"] {{
+padding-top: 1rem !important;
+padding-bottom: 0.75rem !important;
 padding-left: 0.9rem !important;
 padding-right: 0.9rem !important;
 max-width: 1050px !important;
 width: 100% !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+margin-left: auto !important;
+margin-right: auto !important;
 box-sizing: border-box !important;
+display: block !important;
 overflow: visible !important;
 direction: rtl !important;
 text-align: right !important;
+}}
+
+div[data-baseweb="tab-panel"]:not([hidden]),
+[data-testid="stTabs"] [role="tabpanel"]:not([hidden]) {{
+display: block !important;
+width: 100% !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+overflow: visible !important;
+padding-bottom: 0 !important;
+}}
+
+div[data-baseweb="tab-panel"][hidden],
+[data-testid="stTabs"] [role="tabpanel"][hidden],
+div[data-baseweb="tab-panel"][aria-hidden="true"] {{
+display: none !important;
+height: 0 !important;
+min-height: 0 !important;
+max-height: 0 !important;
+overflow: hidden !important;
+margin: 0 !important;
+padding: 0 !important;
+}}
+
+div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+div.element-container:has(iframe[height="0"]),
+iframe[height="0"] {{
+height: 0px !important;
+min-height: 0px !important;
+max-height: 0px !important;
+margin: 0px !important;
+padding: 0px !important;
+border: none !important;
+overflow: hidden !important;
+line-height: 0 !important;
 }}
 
 [data-testid="stVerticalBlock"] {{
@@ -1508,7 +1716,7 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 0.75rem !important; padding-bottom: 2rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
+.block-container {{ padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
 .header-container {{ padding: 14px 12px 12px 12px !important; margin: 2px auto 10px auto !important; border-radius: 18px !important; }}
 .floating-cap-logo {{ width: 36px !important; height: 36px !important; }}
 .unified-main-title {{ font-size: 20px !important; }}
