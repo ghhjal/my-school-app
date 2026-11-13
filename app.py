@@ -670,12 +670,13 @@ margin: 0 !important;
 padding: 0 !important;
 }}
 
-/* منع التبويبات المخفية من حجز مساحة فارغة أسفل الصفحة */
-[data-testid="stTabs"] [role="tabpanel"][hidden] {
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
 }
+
 
 
 .block-container {{
