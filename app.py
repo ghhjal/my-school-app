@@ -320,11 +320,11 @@ def get_school_name_dynamic(cls_name):
 
 
 def show_footer():
-  st.markdown("<br><br>", unsafe_allow_html=True)
   st.markdown(
       f"""
-    <div style='text-align: center; color: #0F172A; opacity: 0.9; padding: 20px; border-top: 1px solid {border_color};'>
-        <p style='margin-bottom: 10px; font-size: 0.95rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
+    <div id='ziyad-portal-footer' style='text-align: center; color: #0F172A; margin-top: 38px; padding: 20px 14px 10px 14px; border-top: 2px solid #E2E8F0; background: linear-gradient(180deg, rgba(241, 245, 249, 0.75) 0%, rgba(248, 250, 252, 0) 100%); border-radius: 18px 18px 0 0;'>
+        <p style='margin: 0 0 4px 0; font-size: 0.92rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
+        <p style='margin: 0 0 6px 0; font-size: 0.8rem; font-weight: 700; color: #64748B !important;'>قنوات التواصل والروابط السريعة</p>
     </div>
     """,
       unsafe_allow_html=True,
@@ -363,6 +363,78 @@ def show_footer():
                 background-color: #F8FAFC !important;
                 color: #0F172A !important;
             }}
+            html, body {{
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+            }}
+            #root,
+            #root > div,
+            .stApp,
+            [data-testid="stApp"],
+            [data-testid="stAppViewContainer"],
+            [data-testid="stAppViewBlockContainer"],
+            [data-testid="stMain"],
+            .main,
+            [data-testid="stMainBlockContainer"],
+            .block-container {{
+                position: static !important;
+                inset: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                display: block !important;
+                overflow: visible !important;
+            }}
+            [data-testid="stTabs"],
+            .stTabs,
+            div[data-baseweb="tabs"] {{
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }}
+            div[data-baseweb="tab-panel"],
+            [data-testid="stTabs"] [role="tabpanel"] {{
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding-bottom: 0 !important;
+            }}
+            div[data-baseweb="tab-highlight"],
+            div[data-baseweb="tab-border"],
+            [data-baseweb="tab-highlight"],
+            [data-baseweb="tab-border"] {{
+                display: none !important;
+                height: 0 !important;
+                opacity: 0 !important;
+                background: transparent !important;
+            }}
+            div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+            div.element-container:has(iframe[height="0"]),
+            iframe[height="0"] {{
+                height: 0px !important;
+                min-height: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
+            }}
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
             .material-icons,
@@ -370,26 +442,27 @@ def show_footer():
                 font-family: 'Material Symbols Rounded', 'Material Icons' !important;
                 direction: ltr !important;
             }}
-            .stTabs [data-baseweb="tab-list"],
-            .stTabs [role="tablist"],
             [data-testid="stTabs"] [data-baseweb="tab-list"],
-            [data-testid="stTabs"] [role="tablist"] {{
-                display: grid !important;
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 6px 8px !important;
-                background-color: transparent !important;
-                border: none !important;
-                border-bottom: 1.5px solid #E2E8F0 !important;
-                padding: 2px 0 8px 0 !important;
-                margin-bottom: 10px !important;
-                direction: rtl !important;
+            [data-testid="stTabs"] [role="tablist"],
+            .stTabs [data-baseweb="tab-list"],
+            div[data-baseweb="tab-list"] {{
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5px 6px !important;
                 width: 100% !important;
                 overflow: visible !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 2px 0 !important;
+                margin-bottom: 8px !important;
+                direction: rtl !important;
             }}
-            .stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
-            .stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
-            [data-testid="stTabs"] [role="tablist"] > button:last-of-type:nth-of-type(odd) {{
-                grid-column: span 2 !important;
+            .ziyad-btn-icon {{
+                font-size: 0.82em !important;
+                line-height: 1 !important;
+                display: inline-block !important;
+                margin-left: 4px !important;
+                vertical-align: -1px !important;
             }}
             .stTabs [aria-selected="false"],
             .stTabs [role="tab"]:not([aria-selected="true"]),
@@ -397,20 +470,23 @@ def show_footer():
             [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
             .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
             button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-                width: 100% !important;
-                height: 40px !important;
-                min-height: 40px !important;
-                max-height: 40px !important;
-                padding: 4px 10px !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
                 margin: 0 !important;
-                box-sizing: border-box !important;
-                background-color: #F8FAFC !important;
-                background: #F8FAFC !important;
+                background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+                background-color: #E2E8F0 !important;
                 border: 1px solid #CBD5E1 !important;
-                border-radius: 11px !important;
+                border-bottom: 2px solid #94A3B8 !important;
+                border-radius: 10px !important;
                 color: #1E293B !important;
                 -webkit-text-fill-color: #1E293B !important;
-                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="false"] p,
@@ -419,43 +495,100 @@ def show_footer():
             .stTabs [aria-selected="false"] *,
             .stTabs [role="tab"]:not([aria-selected="true"]) *,
             [data-testid="stTabs"] [aria-selected="false"] *,
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
+            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+            button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
                 color: #1E293B !important;
                 -webkit-text-fill-color: #1E293B !important;
-                font-size: 0.86rem !important;
-                font-weight: 800 !important;
-                line-height: 1.2 !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"],
             .stTabs [role="tab"][aria-selected="true"],
             [data-testid="stTabs"] [aria-selected="true"],
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-                width: 100% !important;
-                height: 40px !important;
-                min-height: 40px !important;
-                max-height: 40px !important;
-                padding: 4px 10px !important;
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            button[data-baseweb="tab"][aria-selected="true"] {{
+                height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                padding: 4px 12px !important;
                 margin: 0 !important;
-                box-sizing: border-box !important;
-                background: {header_grad} !important;
-                border: 1.5px solid #F59E0B !important;
-                border-radius: 11px !important;
-                box-shadow: 0 3px 10px rgba(37, 99, 235, 0.22) !important;
+                background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+                background-color: #2563EB !important;
+                border: 1px solid #1D4ED8 !important;
+                border-bottom: 2px solid #1E3A8A !important;
+                border-radius: 10px !important;
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
+                white-space: nowrap !important;
+                flex: 1 1 auto !important;
+                min-width: max-content !important;
+                line-height: 1.25 !important;
+                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25) !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
-            [data-testid="stTabs"] [aria-selected="true"] * {{
+            [data-testid="stTabs"] [aria-selected="true"] *,
+            button[data-baseweb="tab"][aria-selected="true"] * {{
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
-                font-size: 0.86rem !important;
-                font-weight: 900 !important;
-                line-height: 1.2 !important;
+                white-space: nowrap !important;
+                line-height: 1.25 !important;
                 opacity: 1 !important;
             }}
+            @media (max-width: 768px) {{
+                [data-testid="stTabs"] [data-baseweb="tab-list"],
+                [data-testid="stTabs"] [role="tablist"],
+                .stTabs [data-baseweb="tab-list"],
+                div[data-baseweb="tab-list"] {{
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 5px 6px !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                    margin-bottom: 8px !important;
+                }}
+                [data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+                [data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+                div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+                    grid-column: 1 / -1 !important;
+                }}
+                [data-testid="stTabs"] [role="tab"],
+                button[data-baseweb="tab"],
+                .stTabs [data-baseweb="tab"] {{
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    height: 38px !important;
+                    min-height: 38px !important;
+                    max-height: 38px !important;
+                    padding: 4px 8px !important;
+                    font-size: 0.82rem !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    line-height: 1.25 !important;
+                }}
+            }}
         `;
+
+        function scaleLeadingEmoji(el) {{
+            if (!el || el.querySelector('.ziyad-btn-icon')) return;
+            var p = el.querySelector('p') || el;
+            if (p && p.childNodes && p.childNodes.length > 0 && p.childNodes[0].nodeType === 3) {{
+                var txt = (p.childNodes[0].nodeValue || '').trimStart();
+                var spaceIdx = txt.indexOf(' ');
+                if (spaceIdx > 0 && spaceIdx <= 6) {{
+                    var firstToken = txt.slice(0, spaceIdx);
+                    if (firstToken.charCodeAt(0) > 2000) {{
+                        var span = pDoc.createElement('span');
+                        span.className = 'ziyad-btn-icon';
+                        span.textContent = firstToken;
+                        p.childNodes[0].nodeValue = txt.slice(spaceIdx);
+                        p.insertBefore(span, p.childNodes[0]);
+                    }}
+                }}
+            }}
+        }}
 
         var isRunning = false;
         function enforcePortalStyles() {{
@@ -465,70 +598,69 @@ def show_footer():
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
-                var tabLists = pDoc.querySelectorAll('.stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"], [data-testid="stTabs"] [role="tablist"]');
+                var isMobileView = window.parent.innerWidth <= 768;
+                var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
                 tabLists.forEach(function(tl) {{
-                    tl.style.setProperty('display', 'grid', 'important');
-                    tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
-                    tl.style.setProperty('gap', '6px 8px', 'important');
+                    tl.style.setProperty('gap', '5px 6px', 'important');
                     tl.style.setProperty('width', '100%', 'important');
-                    tl.style.setProperty('direction', 'rtl', 'important');
-                    tl.style.setProperty('padding', '2px 0 8px 0', 'important');
-                    tl.style.setProperty('margin-bottom', '10px', 'important');
-                    tl.style.setProperty('border-bottom', '1.5px solid #E2E8F0', 'important');
                     tl.style.setProperty('overflow', 'visible', 'important');
-                    var btns = tl.querySelectorAll('button[role="tab"], button[data-baseweb="tab"]');
-                    btns.forEach(function(b, idx) {{
-                        if (btns.length % 2 === 1 && idx === btns.length - 1) {{
-                            b.style.setProperty('grid-column', 'span 2', 'important');
-                        }} else {{
-                            b.style.removeProperty('grid-column');
-                        }}
-                    }});
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    tl.style.setProperty('padding', '2px 0', 'important');
+                    tl.style.setProperty('margin-bottom', '8px', 'important');
+                    if (isMobileView) {{
+                        tl.style.setProperty('display', 'grid', 'important');
+                        tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    }} else {{
+                        tl.style.setProperty('display', 'flex', 'important');
+                        tl.style.setProperty('flex-wrap', 'wrap', 'important');
+                    }}
                 }});
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', '100%', 'important');
-                    tab.style.setProperty('height', '40px', 'important');
-                    tab.style.setProperty('min-height', '40px', 'important');
-                    tab.style.setProperty('max-height', '40px', 'important');
-                    tab.style.setProperty('margin', '0', 'important');
-                    tab.style.setProperty('padding', '4px 10px', 'important');
-                    tab.style.setProperty('box-sizing', 'border-box', 'important');
+                    scaleLeadingEmoji(tab);
+                    tab.style.setProperty('height', '38px', 'important');
+                    tab.style.setProperty('min-height', '38px', 'important');
+                    tab.style.setProperty('max-height', '38px', 'important');
+                    tab.style.setProperty('padding', isMobileView ? '4px 8px' : '4px 12px', 'important');
                     tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('display', 'flex', 'important');
-                    tab.style.setProperty('align-items', 'center', 'important');
-                    tab.style.setProperty('justify-content', 'center', 'important');
+                    tab.style.setProperty('min-width', isMobileView ? '0' : 'max-content', 'important');
+                    tab.style.setProperty('width', isMobileView ? '100%' : 'auto', 'important');
+                    tab.style.setProperty('line-height', '1.25', 'important');
+                    tab.style.setProperty('border-radius', '10px', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
-                        tab.style.setProperty('background', '{header_grad}', 'important');
-                        tab.style.setProperty('border', '1.5px solid #F59E0B', 'important');
-                        tab.style.setProperty('border-radius', '11px', 'important');
-                        tab.style.setProperty('box-shadow', '0 3px 10px rgba(37, 99, 235, 0.22)', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)', 'important');
+                        tab.style.setProperty('background-color', '#2563EB', 'important');
+                        tab.style.setProperty('border', '1px solid #1D4ED8', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #1E3A8A', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.25)', 'important');
                         tab.style.setProperty('color', '#FFFFFF', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#FFFFFF', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
-                            ch.style.setProperty('font-weight', '900', 'important');
-                            ch.style.setProperty('line-height', '1.2', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }} else {{
-                        tab.style.setProperty('background-color', '#F8FAFC', 'important');
-                        tab.style.setProperty('background', '#F8FAFC', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%)', 'important');
+                        tab.style.setProperty('background-color', '#E2E8F0', 'important');
                         tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
-                        tab.style.setProperty('border-radius', '11px', 'important');
-                        tab.style.setProperty('box-shadow', '0 1px 2px rgba(15, 23, 42, 0.03)', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #94A3B8', 'important');
+                        tab.style.setProperty('box-shadow', '0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9)', 'important');
                         tab.style.setProperty('color', '#1E293B', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#1E293B', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
-                            ch.style.setProperty('font-weight', '800', 'important');
-                            ch.style.setProperty('line-height', '1.2', 'important');
+                            ch.style.setProperty('white-space', 'nowrap', 'important');
+                            ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }}
+                }});
+                var actionBtns = pDoc.querySelectorAll('.stButton > button:not([role="tab"]), .stDownloadButton > button, [data-testid="stFormSubmitButton"] button, [data-testid="stLinkButton"] a');
+                actionBtns.forEach(function(btn) {{
+                    scaleLeadingEmoji(btn);
                 }});
 
                 var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
@@ -551,6 +683,68 @@ def show_footer():
                         s.style.setProperty('background', 'transparent', 'important');
                     }});
                 }});
+
+                var layoutContainers = pDoc.querySelectorAll('#root, #root > div, .stApp, [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stMain"], .main, [data-testid="stMainBlockContainer"], .block-container');
+                layoutContainers.forEach(function(c) {{
+                    c.style.setProperty('position', 'static', 'important');
+                    c.style.setProperty('inset', 'auto', 'important');
+                    c.style.setProperty('height', 'auto', 'important');
+                    c.style.setProperty('min-height', '0', 'important');
+                    c.style.setProperty('max-height', 'none', 'important');
+                    c.style.setProperty('flex', 'none', 'important');
+                    c.style.setProperty('display', 'block', 'important');
+                    c.style.setProperty('overflow', 'visible', 'important');
+                }});
+
+                var tabPanels = pDoc.querySelectorAll('div[data-baseweb="tab-panel"], [data-testid="stTabs"] [role="tabpanel"]');
+                tabPanels.forEach(function(panel) {{
+                    panel.style.removeProperty('display');
+                    panel.style.setProperty('height', 'auto', 'important');
+                    panel.style.setProperty('min-height', '0', 'important');
+                    panel.style.setProperty('max-height', 'none', 'important');
+                    panel.style.setProperty('overflow', 'visible', 'important');
+                }});
+
+                if (window.frameElement) {{
+                    window.frameElement.style.setProperty('height', '0px', 'important');
+                    window.frameElement.style.setProperty('min-height', '0px', 'important');
+                    window.frameElement.style.setProperty('margin', '0px', 'important');
+                    window.frameElement.style.setProperty('padding', '0px', 'important');
+                    window.frameElement.style.setProperty('border', 'none', 'important');
+                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
+                    if (feParent) {{
+                        feParent.style.setProperty('height', '0px', 'important');
+                        feParent.style.setProperty('min-height', '0px', 'important');
+                        feParent.style.setProperty('margin', '0px', 'important');
+                        feParent.style.setProperty('padding', '0px', 'important');
+                        feParent.style.setProperty('overflow', 'hidden', 'important');
+                    }}
+                }}
+
+                pDoc.documentElement.style.setProperty('height', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('min-height', '0', 'important');
+                pDoc.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+                pDoc.body.style.setProperty('height', 'auto', 'important');
+                pDoc.body.style.setProperty('min-height', '0', 'important');
+                pDoc.body.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.body.style.setProperty('overflow-x', 'hidden', 'important');
+
+                var pWin = window.parent;
+                var blk = pDoc.querySelector('.block-container, [data-testid="stMainBlockContainer"]');
+                if (blk) {{
+                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 12);
+                    if (pWin.frameElement) {{
+                        try {{
+                            pWin.frameElement.style.setProperty('height', exactH + 'px', 'important');
+                            pWin.frameElement.style.setProperty('min-height', exactH + 'px', 'important');
+                        }} catch (e) {{}}
+                    }}
+                    var maxScroll = Math.max(0, exactH - pWin.innerHeight);
+                    if (pWin.scrollY > maxScroll + 24) {{
+                        pWin.scrollTo(0, maxScroll);
+                    }}
+                }}
             }} finally {{
                 isRunning = false;
             }}
@@ -563,7 +757,7 @@ def show_footer():
         var obs = new MutationObserver(function() {{
             enforcePortalStyles();
         }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
     }} catch (e) {{}}
 }})();
@@ -591,48 +785,104 @@ st.markdown(
 color-scheme: light only !important;
 }}
 
-section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"] {{
+section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"], #MainMenu, footer, [data-testid="stBottom"], [data-testid="stHeader"] {{
 display: none !important;
-}}
-[data-testid="stHeader"] {{
-background: transparent !important;
-}}
-#MainMenu {{ visibility: hidden; }}
-footer {{ visibility: hidden; }}
-
-/* ✳️ 1. قفل التمرير الأفقي وضبط الخلفية والخط العام */
-html, body {{
-font-family: 'Cairo', sans-serif !important;
-background-color: #F8FAFC !important;
-color: #0F172A !important;
-overflow-x: clip !important;
+height: 0 !important;
 margin: 0 !important;
 padding: 0 !important;
 }}
 
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+/* ✳️ 1. تمرير موحد وسلس للصفحة بالكامل حتى التذييل بدون فراغات أو انقطاع أو تمرير مزدوج */
+html, body {{
+font-family: 'Cairo', sans-serif !important;
+background-color: #F8FAFC !important;
+color: #0F172A !important;
+margin: 0 !important;
+padding: 0 !important;
+width: 100% !important;
+max-width: 100vw !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+overflow-x: hidden !important;
+overflow-y: auto !important;
+-webkit-overflow-scrolling: touch !important;
+}}
+
+#root,
+#root > div,
+.stApp,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMain"],
+.main {{
 font-family: 'Cairo', sans-serif !important;
 direction: rtl !important;
 text-align: right !important;
 background-color: #F8FAFC !important;
 color: #0F172A !important;
-overflow-x: clip !important;
-overflow-y: visible !important;
-max-width: 100vw !important;
+position: static !important;
+inset: auto !important;
+top: auto !important;
+bottom: auto !important;
+left: auto !important;
+right: auto !important;
 width: 100% !important;
+max-width: 100vw !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+flex: none !important;
+display: block !important;
+overflow: visible !important;
 }}
 
-.block-container {{
-padding-top: 2.2rem !important;
-padding-bottom: 4rem !important;
-padding-left: 1rem !important;
-padding-right: 1rem !important;
+.block-container,
+[data-testid="stMainBlockContainer"] {{
+padding-top: 1rem !important;
+padding-bottom: 1.4rem !important;
+padding-left: 0.9rem !important;
+padding-right: 0.9rem !important;
 max-width: 1050px !important;
 width: 100% !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+margin-left: auto !important;
+margin-right: auto !important;
 box-sizing: border-box !important;
+display: block !important;
 overflow: visible !important;
 direction: rtl !important;
 text-align: right !important;
+}}
+
+div[data-baseweb="tab-panel"],
+[data-testid="stTabs"] [role="tabpanel"] {{
+width: 100% !important;
+height: auto !important;
+min-height: 0 !important;
+max-height: none !important;
+overflow: visible !important;
+padding-bottom: 0 !important;
+}}
+
+div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+div.element-container:has(iframe[height="0"]),
+iframe[height="0"] {{
+height: 0px !important;
+min-height: 0px !important;
+max-height: 0px !important;
+margin: 0px !important;
+padding: 0px !important;
+border: none !important;
+overflow: hidden !important;
+line-height: 0 !important;
+}}
+
+[data-testid="stVerticalBlock"] {{
+gap: 0.55rem !important;
 }}
 
 /* ✳️ 2. البنر العلوي الاحترافي الموحد (الهوية البصرية لمنصة زياد الذكية) */
@@ -644,17 +894,17 @@ font-family: 'Cairo', sans-serif !important;
 background: {header_grad} !important;
 background-image: {t_colors["bg_pattern"]}, {header_grad} !important;
 background-blend-mode: overlay;
-padding: 28px 24px 24px 24px !important;
-border-radius: 24px !important;
-margin: 8px auto 20px auto !important;
+padding: 18px 20px 15px 20px !important;
+border-radius: 20px !important;
+margin: 4px auto 12px auto !important;
 width: 100% !important;
 max-width: 100% !important;
 box-sizing: border-box !important;
-box-shadow: 0 16px 34px -10px rgba(15, 23, 42, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+box-shadow: 0 12px 26px -10px rgba(15, 23, 42, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
 text-align: center !important;
 position: relative;
 overflow: hidden;
-border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+border: 1px solid rgba(255, 255, 255, 0.22) !important;
 }}
 
 .header-container::before {{
@@ -685,36 +935,38 @@ pointer-events: none;
 display: inline-flex !important;
 align-items: center !important;
 justify-content: center !important;
-gap: 14px !important;
+gap: 10px !important;
 flex-wrap: wrap !important;
-margin-bottom: 10px !important;
+margin-bottom: 6px !important;
 direction: rtl !important;
 position: relative;
 z-index: 2;
 }}
 
 .floating-cap-logo {{
+width: 42px !important;
+height: 42px !important;
 animation: float 3.5s ease-in-out infinite !important;
-filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
 }}
 
 .unified-main-title {{
 font-family: 'Cairo', sans-serif !important;
 margin: 0 !important;
-font-size: 30px !important;
+font-size: 26px !important;
 font-weight: 900 !important;
 color: {t_colors["title_color"]} !important;
 -webkit-text-fill-color: {t_colors["title_color"]} !important;
-line-height: 1.25 !important;
+line-height: 1.2 !important;
 text-align: center !important;
-text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+text-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
 }}
 
 .unified-brand-row {{
 display: flex !important;
 align-items: center !important;
 justify-content: center !important;
-margin: 0 auto 8px auto !important;
+margin: 0 auto 5px auto !important;
 position: relative;
 z-index: 2;
 }}
@@ -928,7 +1180,7 @@ div[data-baseweb="select"] > div,
 div[data-testid="stNumberInput"] div[data-baseweb="input"] {{
 border: 1.5px solid #CBD5E1 !important;
 border-radius: 12px !important;
-min-height: 48px !important;
+min-height: 42px !important;
 box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }}
 
@@ -940,6 +1192,14 @@ box-shadow: 0 0 0 3px {primary_color}35 !important;
 background-color: #FFFFFF !important;
 }}
 
+div[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+background-color: #FFFFFF !important;
+background: #FFFFFF !important;
+}}
+
+div[data-baseweb="select"] span:not([data-baseweb="tag"]),
 div[data-baseweb="select"] svg,
 div[data-baseweb="input"] svg,
 div[data-testid="stNumberInput"] button svg {{
@@ -983,15 +1243,29 @@ justify-content: flex-start !important;
 flex: 1 !important;
 }}
 
+[data-baseweb="tag"],
 span[data-baseweb="tag"],
-span[data-baseweb="tag"] * {{
+div[data-baseweb="tag"] {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
 background-color: #EFF6FF !important;
+background: #EFF6FF !important;
 border: 1px solid {accent_color} !important;
+border-radius: 8px !important;
 color: #1E3A8A !important;
 -webkit-text-fill-color: #1E3A8A !important;
+font-weight: 800 !important;
+}}
+
+[data-baseweb="tag"] *,
+span[data-baseweb="tag"] *,
+div[data-baseweb="tag"] * {{
+background-color: transparent !important;
+background: transparent !important;
+color: #1E3A8A !important;
+-webkit-text-fill-color: #1E3A8A !important;
+fill: #1E3A8A !important;
 font-weight: 800 !important;
 }}
 
@@ -1107,24 +1381,34 @@ margin: 0 !important;
 color: #0F172A !important;
 }}
 
-/* ✳️ 5. الأزرار الرئيسية والثانوية */
+/* ✳️ 5. الأزرار الرئيسية والثانوية (ارتفاع موحد 42px وأيقونات متناسقة) */
+.ziyad-btn-icon {{
+font-size: 0.82em !important;
+line-height: 1 !important;
+display: inline-block !important;
+margin-left: 4px !important;
+vertical-align: -1px !important;
+}}
+
 [data-testid="stFormSubmitButton"] button,
 [data-testid="baseButton-primary"],
 div.stButton > button:not([kind="secondary"]):not([role="tab"]),
 div.stDownloadButton > button:not([kind="secondary"]) {{
-background: {header_grad} !important;
+background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
 background-color: {primary_color} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 1px solid rgba(255, 255, 255, 0.2) !important;
+border: 1px solid #1D4ED8 !important;
 font-weight: 800 !important;
-font-size: 1.02rem !important;
-border-radius: 14px !important;
-padding: 10px 18px !important;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+font-size: 0.95rem !important;
+border-radius: 11px !important;
+padding: 6px 14px !important;
+box-shadow: 0 3px 8px rgba(37, 99, 235, 0.2) !important;
 transition: all 0.2s ease !important;
 width: 100%;
-min-height: 48px;
+height: 42px !important;
+min-height: 42px !important;
+max-height: 42px !important;
 }}
 
 [data-testid="stFormSubmitButton"] button *,
@@ -1140,60 +1424,68 @@ div.stButton > button:not([kind="secondary"]):not([role="tab"]):hover,
 div.stDownloadButton > button:not([kind="secondary"]):hover {{
 background: {t_colors["btn_hover"]} !important;
 transform: translateY(-1px);
-box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32) !important;
-border-color: rgba(255, 255, 255, 0.45) !important;
+box-shadow: 0 5px 12px rgba(37, 99, 235, 0.28) !important;
+border-color: #1E40AF !important;
 }}
 
 div.stButton > button[kind="secondary"],
 div.stDownloadButton > button[kind="secondary"],
 [data-testid="stLinkButton"] a {{
-background: #FFFFFF !important;
-background-color: #FFFFFF !important;
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
-border: 1.5px solid #CBD5E1 !important;
-border-radius: 14px !important;
-box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
+background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+background-color: #E2E8F0 !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
+border: 1px solid #CBD5E1 !important;
+border-bottom: 2px solid #94A3B8 !important;
+border-radius: 11px !important;
+box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 font-weight: 800 !important;
-min-height: 48px !important;
+font-size: 0.92rem !important;
+padding: 6px 12px !important;
+height: 42px !important;
+min-height: 42px !important;
+max-height: 42px !important;
+transition: all 0.18s ease !important;
 }}
 
 div.stButton > button[kind="secondary"] *,
 div.stDownloadButton > button[kind="secondary"] *,
 [data-testid="stLinkButton"] a * {{
-color: #0F172A !important;
--webkit-text-fill-color: #0F172A !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
 }}
 
 div.stButton > button[kind="secondary"]:hover,
 div.stDownloadButton > button[kind="secondary"]:hover,
 [data-testid="stLinkButton"] a:hover {{
-border-color: {accent_color} !important;
-background: #EFF6FF !important;
+border-color: #93C5FD !important;
+border-bottom-color: #3B82F6 !important;
+background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
+color: #1E40AF !important;
+transform: translateY(-1px);
 }}
 
-/* ✳️ 6. التبويبات: شبكة احترافية (عمودين) بارتفاع موحد، مسافات مدمجة، أيقونات متناسقة، وخلفية هادئة */
-.stTabs [data-baseweb="tab-list"],
-.stTabs [role="tablist"],
-[data-testid="stTabs"] [data-baseweb="tab-list"],
-[data-testid="stTabs"] [role="tablist"] {{
-display: grid !important;
-grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-gap: 6px 8px !important;
-background-color: transparent !important;
-border: none !important;
-border-bottom: 1.5px solid #E2E8F0 !important;
-margin-bottom: 10px !important;
-padding: 2px 0 8px 0 !important;
-direction: rtl !important;
+/* ✳️ 6. التبويبات: ارتفاع موحد (38px)، مسافات مدمجة، خلفية هادئة لغير النشط، وإبراز أزرق للتبويب النشط */
+[data-testid="stTabs"],
+.stTabs {{
 width: 100% !important;
 overflow: visible !important;
 }}
 
-.stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
-.stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
-[data-testid="stTabs"] [role="tablist"] > button:last-of-type:nth-of-type(odd) {{
-grid-column: span 2 !important;
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
+.stTabs [data-baseweb="tab-list"],
+div[data-baseweb="tab-list"] {{
+display: flex !important;
+flex-wrap: wrap !important;
+gap: 5px 6px !important;
+background-color: transparent !important;
+border: none !important;
+margin-bottom: 8px !important;
+padding: 2px 0px !important;
+direction: rtl !important;
+width: 100% !important;
+overflow: visible !important;
 }}
 
 .stTabs [data-baseweb="tab"],
@@ -1202,31 +1494,41 @@ grid-column: span 2 !important;
 [data-testid="stTabs"] [aria-selected="false"],
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
 button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-width: 100% !important;
-min-height: 40px !important;
-height: 40px !important;
-max-height: 40px !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
 margin: 0 !important;
-padding: 4px 10px !important;
-box-sizing: border-box !important;
-white-space: nowrap !important;
-background-color: #F8FAFC !important;
-background: #F8FAFC !important;
-border-radius: 11px !important;
+padding: 4px 12px !important;
+background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+background-color: #E2E8F0 !important;
+border-radius: 10px !important;
 border: 1px solid #CBD5E1 !important;
+border-bottom: 2px solid #94A3B8 !important;
 color: #1E293B !important;
 -webkit-text-fill-color: #1E293B !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 800 !important;
-font-size: 0.86rem !important;
-line-height: 1.2 !important;
-display: flex !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
-box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
-transition: all 0.2s ease !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
+box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+transition: all 0.18s ease !important;
 opacity: 1 !important;
+}}
+
+.stTabs [aria-selected="false"]:hover,
+[data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]):hover,
+button[data-baseweb="tab"]:not([aria-selected="true"]):hover {{
+background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
+border-color: #93C5FD !important;
+border-bottom-color: #3B82F6 !important;
+color: #1E40AF !important;
+transform: translateY(-1px);
 }}
 
 .stTabs [data-baseweb="tab"] p,
@@ -1244,10 +1546,9 @@ font-family: 'Cairo', sans-serif !important;
 color: #1E293B !important;
 -webkit-text-fill-color: #1E293B !important;
 font-weight: 800 !important;
-font-size: 0.86rem !important;
-line-height: 1.2 !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
@@ -1255,28 +1556,28 @@ opacity: 1 !important;
 .stTabs [role="tab"][aria-selected="true"],
 [data-testid="stTabs"] [aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"] {{
-width: 100% !important;
-min-height: 40px !important;
-height: 40px !important;
-max-height: 40px !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
 margin: 0 !important;
-padding: 4px 10px !important;
-box-sizing: border-box !important;
-white-space: nowrap !important;
-background: {header_grad} !important;
+padding: 4px 12px !important;
+background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+background-color: #2563EB !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 1.5px solid #F59E0B !important;
-border-radius: 11px !important;
-box-shadow: 0 3px 10px rgba(37, 99, 235, 0.22) !important;
+border: 1px solid #1D4ED8 !important;
+border-radius: 10px !important;
+box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22) !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 900 !important;
-font-size: 0.86rem !important;
-line-height: 1.2 !important;
-display: flex !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
+white-space: nowrap !important;
 justify-content: center !important;
 align-items: center !important;
 text-align: center !important;
+flex: 1 1 auto !important;
+min-width: max-content !important;
 opacity: 1 !important;
 }}
 
@@ -1291,25 +1592,27 @@ font-family: 'Cairo', sans-serif !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
 font-weight: 900 !important;
-font-size: 0.86rem !important;
-line-height: 1.2 !important;
+font-size: 0.88rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
-margin: 0 !important;
 opacity: 1 !important;
 }}
 
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+[data-testid="stTabs"] [data-baseweb="tab-border"],
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
 display: none !important;
 }}
 
 /* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 14px; padding: 13px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: {shadow_val}; box-sizing: border-box; }}
+.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; direction: rtl; width: 100%; box-sizing: border-box; }}
+.metric-card {{ background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05); box-sizing: border-box; }}
 .metric-info {{ text-align: right; }}
-.metric-title {{ color: #475569; font-size: 13px; font-weight: 800; margin-bottom: 3px; }}
-.metric-val {{ color: #0F172A; font-size: 22px; font-weight: 900; line-height: 1.1; }}
+.metric-title {{ color: #475569; font-size: 12.5px; font-weight: 800; margin-bottom: 2px; }}
+.metric-val {{ color: #0F172A; font-size: 21px; font-weight: 900; line-height: 1.1; }}
 .metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 18px; flex-shrink: 0; }}
+.metric-icon {{ width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 17px; flex-shrink: 0; }}
 .ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
 .ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
 .ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
@@ -1347,7 +1650,7 @@ line-height: 1.5 !important; margin: 0 !important; unicode-bidi: plaintext !impo
 }}
 
 .action-bar-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 8px; direction: rtl; width: 100%; }}
-.soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 44px; box-sizing: border-box; }}
+.soft-link-btn {{ display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; text-decoration: none !important; transition: all 0.2s ease; height: 42px; box-sizing: border-box; }}
 .btn-whatsapp {{ background-color: rgba(16, 185, 129, 0.14) !important; color: #059669 !important; border: 1.5px solid rgba(16, 185, 129, 0.4) !important; }}
 .btn-telegram {{ background-color: rgba(14, 165, 233, 0.14) !important; color: #0284C7 !important; border: 1.5px solid rgba(14, 165, 233, 0.4) !important; }}
 
@@ -1363,7 +1666,7 @@ width: 100% !important; min-width: 0 !important; flex: unset !important;
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button, div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button {{
 background: rgba(99, 102, 241, 0.14) !important; background-color: rgba(99, 102, 241, 0.14) !important;
 color: #4F46E5 !important; border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
-border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+border-radius: 12px !important; height: 42px !important; min-height: 42px !important;
 padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
 div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-edit-marker) div.stButton > button * {{ color: #4F46E5 !important; -webkit-text-fill-color: #4F46E5 !important; }}
@@ -1371,52 +1674,75 @@ div[data-testid="stColumn"]:has(.btn-edit-marker) div.stButton > button *, div[d
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button {{
 background: rgba(239, 68, 68, 0.14) !important; background-color: rgba(239, 68, 68, 0.14) !important;
 color: #DC2626 !important; border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
-border-radius: 12px !important; height: 44px !important; min-height: 44px !important;
+border-radius: 12px !important; height: 42px !important; min-height: 42px !important;
 padding: 8px 12px !important; font-size: 0.92rem !important; font-weight: 800 !important; box-shadow: none !important;
 }}
 div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[data-testid="column"]:has(.btn-del-marker) div.stButton > button * {{ color: #DC2626 !important; -webkit-text-fill-color: #DC2626 !important; }}
 
-.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 12px 0; direction: rtl; width: 100%; }}
-.m-card {{ background: #FFFFFF; padding: 10px 6px; border-radius: 14px; text-align: center !important; border: 1px solid #CBD5E1; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04); color: #0F172A; font-size: 0.85rem; line-height: 1.35; }}
+.medal-flex {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; direction: rtl; width: 100%; }}
+.m-card {{ background: #FFFFFF; padding: 14px 6px; border-radius: 16px; text-align: center !important; border: 1.5px solid #CBD5E1; box-shadow: {shadow_val}; color: #0F172A; }}
 .m-active {{ border: 2px solid {warning_color} !important; background: #FFFBEB !important; }}
 
-.points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 14px 16px; border-radius: 16px; text-align: center !important; margin-bottom: 10px; box-shadow: 0 5px 12px rgba(245, 158, 11, 0.28); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }}
-.welcome-card {{ background: {header_grad}; color: white; padding: 14px 16px; border-radius: 16px; margin-bottom: 10px; box-shadow: 0 5px 12px rgba(0,0,0, 0.2); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box; }}
+.points-banner {{ background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); color: white; padding: 20px; border-radius: 18px; text-align: center !important; margin-bottom: 16px; box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35); border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }}
+.welcome-card {{ background: {header_grad}; color: white; padding: 18px 20px; border-radius: 18px; margin-bottom: 14px; box-shadow: 0 6px 15px rgba(0,0,0, 0.25); border: 1px solid rgba(255,255,255,0.15); box-sizing: border-box; }}
 
 [data-testid="stDataFrame"] {{ direction: rtl !important; max-width: 100% !important; overflow-x: auto !important; }}
 
 @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-7px); }} }}
 @keyframes pulse-red {{ 0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }} 70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }} }}
-.urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 12px; border-radius: 14px; text-align: center !important; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 12px; box-sizing: border-box; }}
+.urgent-box {{ background-color: rgba(239, 68, 68, 0.12); border: 2px solid {danger_color}; color: {danger_color}; padding: 15px; border-radius: 14px; text-align: center !important; animation: pulse-red 2s infinite; font-weight: bold; margin-bottom: 20px; box-sizing: border-box; }}
 
 /* ✳️ 8. ضبط شاشة الجوال */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 1.1rem !important; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }}
-.header-container {{ padding: 16px 12px 14px 12px !important; margin: 4px auto 12px auto !important; border-radius: 20px !important; }}
-.unified-main-title {{ font-size: 21px !important; }}
-.unified-brand-pill {{ font-size: 13px !important; padding: 3px 13px !important; }}
-.unified-sub-desc {{ font-size: 12px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }}
+.block-container {{ padding-top: 0.75rem !important; padding-bottom: 1.25rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
+.header-container {{ padding: 14px 12px 12px 12px !important; margin: 2px auto 10px auto !important; border-radius: 18px !important; }}
+.floating-cap-logo {{ width: 36px !important; height: 36px !important; }}
+.unified-main-title {{ font-size: 20px !important; }}
+.unified-brand-pill {{ font-size: 12.5px !important; padding: 3px 12px !important; }}
+.unified-sub-desc {{ font-size: 11.5px !important; }}
+.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }}
 .metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
-.stTabs [role="tablist"],
-[data-testid="stTabs"] [role="tablist"] {{
+div[data-baseweb="tab-list"] {{
 display: grid !important;
 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-gap: 6px 8px !important;
-padding: 2px 0 8px 0 !important;
-margin-bottom: 10px !important;
+gap: 5px 6px !important;
+width: 100% !important;
+overflow: visible !important;
+margin-bottom: 8px !important;
+padding: 2px 0 !important;
 }}
+[data-testid="stTabs"] [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+[data-testid="stTabs"] [role="tablist"] > [role="tab"]:last-child:nth-child(odd),
+.stTabs [data-baseweb="tab-list"] > button:last-child:nth-child(odd),
+div[data-baseweb="tab-list"] > button:last-child:nth-child(odd) {{
+grid-column: 1 / -1 !important;
+}}
+[data-testid="stTabs"] [role="tab"],
+[data-testid="stTabs"] [aria-selected="false"],
+[data-testid="stTabs"] [aria-selected="true"],
+button[data-baseweb="tab"],
 .stTabs [data-baseweb="tab"],
 .stTabs [aria-selected="false"],
-.stTabs [aria-selected="true"],
-.stTabs [role="tab"] {{
+.stTabs [aria-selected="true"] {{
 width: 100% !important;
-font-size: 0.85rem !important;
-height: 40px !important;
-min-height: 40px !important;
-max-height: 40px !important;
+min-width: 0 !important;
+height: 38px !important;
+min-height: 38px !important;
+max-height: 38px !important;
+font-size: 0.82rem !important;
+line-height: 1.25 !important;
 padding: 4px 8px !important;
+white-space: nowrap !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+}}
+[data-testid="stTabs"] [role="tab"] *,
+button[data-baseweb="tab"] * {{
+font-size: 0.82rem !important;
+line-height: 1.25 !important;
 white-space: nowrap !important;
 }}
 }}
@@ -1429,7 +1755,7 @@ st.markdown(
     f"""
 <div class="header-container" dir="rtl" style="font-family: 'Cairo', sans-serif !important;">
 <div class="unified-title-row">
-<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
+<svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
 <h1 class="unified-main-title" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['title_color']} !important; -webkit-text-fill-color: {t_colors['title_color']} !important;">{t_colors["title"]}</h1>
 </div>
 <div class="unified-brand-row">
@@ -4941,28 +5267,28 @@ if st.session_state.role == "student":
     # 3. بطاقة الطالب المنسقة وبطاقة النقاط
     st.markdown(
         f"""
-        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 14px 16px;">
-            <div style="color: #FFFFFF; font-size: 1.12rem; font-weight: 900; line-height: 1.35; margin-bottom: 8px; text-align: right;">
+        <div class="welcome-card" style="text-align: right; direction: rtl; padding: 18px 20px;">
+            <div style="color: #FFFFFF; font-size: 1.2rem; font-weight: 900; line-height: 1.4; margin-bottom: 12px; text-align: right;">
                 👋 أهلاً بك، {s_nm}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; direction: rtl;">
-                <div style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 0.86rem; white-space: nowrap;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start; direction: rtl;">
+                <div style="background: rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap;">
                     🏫 الصف: {s_cls}
                 </div>
-                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 4px 12px; border-radius: 9px; color: #FFFFFF; font-weight: 800; font-size: 0.86rem; white-space: nowrap; direction: ltr;">
+                <div style="background: rgba(15, 23, 42, 0.28); border: 1px solid rgba(255, 255, 255, 0.25); padding: 6px 14px; border-radius: 10px; color: #FFFFFF; font-weight: 800; font-size: 0.92rem; white-space: nowrap; direction: ltr;">
                     🆔 ID: {sid}
                 </div>
             </div>
         </div>
-        <div class="points-banner" style="padding: 14px 16px;">
-            <div style="margin:0; opacity:0.95; font-size:0.9rem; font-weight:800;">⭐ رصيد نقاط التميز الحالي</div>
-            <div style="margin:2px 0; font-size:2.1rem; font-weight:900; line-height:1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
-            <div style="margin:0; font-size:0.84rem; font-weight:800;">استمر في التفوق!</div>
+        <div class="points-banner" style="padding: 18px 20px;">
+            <div style="margin:0; opacity:0.95; font-size:0.95rem; font-weight:800;">⭐ رصيد نقاط التميز الحالي</div>
+            <div style="margin:4px 0; font-size:2.4rem; font-weight:900; line-height:1.15; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">{pts}</div>
+            <div style="margin:0; font-size:0.88rem; font-weight:800;">استمر في التفوق!</div>
         </div>
         <div class="medal-flex">
-            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};"><span style="font-size:1.05rem; display:inline-block; margin-bottom:2px;">🥇</span><br><b style="font-size:0.83rem;">ذهبي (100+)</b></div>
-            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #94A3B8;"><span style="font-size:1.05rem; display:inline-block; margin-bottom:2px;">🥈</span><br><b style="font-size:0.83rem;">فضي (50+)</b></div>
-            <div class="m-card m-active" style="color: #D97706;"><span style="font-size:1.05rem; display:inline-block; margin-bottom:2px;">🥉</span><br><b style="font-size:0.83rem;">برونزي</b></div>
+            <div class="m-card {'m-active' if pts>=100 else ''}" style="color: {warning_color};">🥇<br><b>ذهبي (100+)</b></div>
+            <div class="m-card {'m-active' if pts>=50 else ''}" style="color: #94A3B8;">🥈<br><b>فضي (50+)</b></div>
+            <div class="m-card m-active" style="color: #D97706;">🥉<br><b>برونزي</b></div>
         </div>
         """,
         unsafe_allow_html=True,
