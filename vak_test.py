@@ -272,6 +272,11 @@ st.markdown(f"""
         background-color: var(--bg-page) !important;
         color: #0f172a !important;
         transition: background-color 0.35s ease;
+        overflow-x: clip !important;
+        max-width: 100vw !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
     }}
 
     header[data-testid="stHeader"] {{ display: none !important; }}
@@ -280,11 +285,32 @@ st.markdown(f"""
 
     .block-container {{
         max-width: 1020px !important;
-        padding-top: 1.6rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+        padding-top: 1.4rem !important;
         padding-bottom: 2.5rem !important;
-        padding-left: 1.2rem !important;
-        padding-right: 1.2rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
         direction: rtl !important;
+    }}
+
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stVerticalBlock"],
+    div[data-testid="stHorizontalBlock"],
+    div[data-testid="stColumn"],
+    div[data-testid="column"],
+    .stTabs,
+    [data-testid="stTabs"],
+    [data-baseweb="tab-panel"],
+    [data-testid="stFileUploader"] {{
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    [data-baseweb="tab-panel"] {{
+        overflow-x: hidden !important;
     }}
 
     .stMarkdown, p, h1, h2, h3, h4, h5, h6, label,
@@ -565,7 +591,9 @@ st.markdown(f"""
         margin-bottom: 10px !important;
         direction: rtl !important;
         width: 100% !important;
-        overflow: visible !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }}
     .stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
     .stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
@@ -579,13 +607,14 @@ st.markdown(f"""
     [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
     button[data-baseweb="tab"]:not([aria-selected="true"]) {{
         width: 100% !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        max-height: 40px !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 42px !important;
+        height: 42px !important;
         margin: 0 !important;
-        padding: 4px 10px !important;
+        padding: 4px 6px !important;
         box-sizing: border-box !important;
-        white-space: nowrap !important;
+        overflow: hidden !important;
         background-color: #F8FAFC !important;
         background: #F8FAFC !important;
         border-radius: 11px !important;
@@ -594,7 +623,7 @@ st.markdown(f"""
         -webkit-text-fill-color: #1E293B !important;
         font-family: 'Cairo', sans-serif !important;
         font-weight: 800 !important;
-        font-size: 0.86rem !important;
+        font-size: 0.82rem !important;
         line-height: 1.2 !important;
         display: flex !important;
         justify-content: center !important;
@@ -625,10 +654,13 @@ st.markdown(f"""
         font-family: 'Cairo', sans-serif !important;
         color: #1E293B !important;
         -webkit-text-fill-color: #1E293B !important;
-        font-size: 0.86rem !important;
+        font-size: 0.82rem !important;
         font-weight: 800 !important;
         line-height: 1.2 !important;
         white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
         margin: 0 !important;
         opacity: 1 !important;
     }}
@@ -637,13 +669,14 @@ st.markdown(f"""
     [data-testid="stTabs"] [aria-selected="true"],
     button[data-baseweb="tab"][aria-selected="true"] {{
         width: 100% !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        max-height: 40px !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 42px !important;
+        height: 42px !important;
         margin: 0 !important;
-        padding: 4px 10px !important;
+        padding: 4px 6px !important;
         box-sizing: border-box !important;
-        white-space: nowrap !important;
+        overflow: hidden !important;
         background: var(--btn-grad) !important;
         border: 1.5px solid var(--brand-gold) !important;
         border-radius: 11px !important;
@@ -652,7 +685,7 @@ st.markdown(f"""
         box-shadow: var(--shadow-btn) !important;
         font-family: 'Cairo', sans-serif !important;
         font-weight: 900 !important;
-        font-size: 0.86rem !important;
+        font-size: 0.82rem !important;
         line-height: 1.2 !important;
         display: flex !important;
         justify-content: center !important;
@@ -670,10 +703,13 @@ st.markdown(f"""
         font-family: 'Cairo', sans-serif !important;
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
-        font-size: 0.86rem !important;
+        font-size: 0.82rem !important;
         font-weight: 900 !important;
         line-height: 1.2 !important;
         white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
         margin: 0 !important;
         opacity: 1 !important;
     }}
@@ -1424,19 +1460,24 @@ st.markdown(f"""
             display: grid !important;
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 6px 8px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
         }}
         .stTabs [data-baseweb="tab"],
         .stTabs [aria-selected="false"],
         .stTabs [aria-selected="true"],
         .stTabs [role="tab"] {{
             width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
             min-height: 40px !important;
             height: 40px !important;
             max-height: 40px !important;
-            padding: 4px 8px !important;
+            padding: 4px 6px !important;
             border-radius: 11px !important;
-            white-space: nowrap !important;
-            font-size: 0.85rem !important;
+            overflow: hidden !important;
+            font-size: 0.8rem !important;
         }}
         div[data-testid="stButton"] button p {{
             font-size: 12.5px !important;
@@ -2367,7 +2408,7 @@ else:
             with st.container(border=True):
                 st.markdown("<div class='card-section-title'>⚙️ إدارة قواعد البيانات والصلاحيات</div>", unsafe_allow_html=True)
                 st.markdown("<p class='card-section-sub'>تحديث قوائم الطلاب، استيراد أنماط التعلم، وتخصيص الفصول المسندة للمعلمين</p>", unsafe_allow_html=True)
-                sub_tab_students, sub_tab_vak, sub_tab_teachers, sub_tab_theme = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول", "🎨 تخصيص القالب البصري للمنصة"])
+                sub_tab_students, sub_tab_vak, sub_tab_teachers, sub_tab_theme = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 أنماط التعلم", "👨‍🏫 صلاحيات المعلمين", "🎨 القالب البصري"])
                 
                 # 1️⃣ تبويب بيانات الطلاب
                 with sub_tab_students:
@@ -2721,11 +2762,13 @@ components.html(f"""
                     tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
                     tl.style.setProperty('gap', '6px 8px', 'important');
                     tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('max-width', '100%', 'important');
+                    tl.style.setProperty('box-sizing', 'border-box', 'important');
                     tl.style.setProperty('direction', 'rtl', 'important');
                     tl.style.setProperty('padding', '2px 0 8px 0', 'important');
                     tl.style.setProperty('margin-bottom', '10px', 'important');
                     tl.style.setProperty('border-bottom', '1.5px solid #E2E8F0', 'important');
-                    tl.style.setProperty('overflow', 'visible', 'important');
+                    tl.style.setProperty('overflow', 'hidden', 'important');
                     var btns = tl.querySelectorAll('button[role="tab"], button[data-baseweb="tab"]');
                     btns.forEach(function(b, idx) {{
                         if (btns.length % 2 === 1 && idx === btns.length - 1) {{
@@ -2738,13 +2781,14 @@ components.html(f"""
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
                     tab.style.setProperty('width', '100%', 'important');
-                    tab.style.setProperty('height', '40px', 'important');
-                    tab.style.setProperty('min-height', '40px', 'important');
-                    tab.style.setProperty('max-height', '40px', 'important');
+                    tab.style.setProperty('max-width', '100%', 'important');
+                    tab.style.setProperty('min-width', '0', 'important');
+                    tab.style.setProperty('height', '42px', 'important');
+                    tab.style.setProperty('min-height', '42px', 'important');
                     tab.style.setProperty('margin', '0', 'important');
-                    tab.style.setProperty('padding', '4px 10px', 'important');
+                    tab.style.setProperty('padding', '4px 6px', 'important');
                     tab.style.setProperty('box-sizing', 'border-box', 'important');
-                    tab.style.setProperty('white-space', 'nowrap', 'important');
+                    tab.style.setProperty('overflow', 'hidden', 'important');
                     tab.style.setProperty('display', 'flex', 'important');
                     tab.style.setProperty('align-items', 'center', 'important');
                     tab.style.setProperty('justify-content', 'center', 'important');
@@ -2758,8 +2802,11 @@ components.html(f"""
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#FFFFFF', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
+                            ch.style.setProperty('font-size', '0.82rem', 'important');
                             ch.style.setProperty('font-weight', '900', 'important');
+                            ch.style.setProperty('max-width', '100%', 'important');
+                            ch.style.setProperty('overflow', 'hidden', 'important');
+                            ch.style.setProperty('text-overflow', 'ellipsis', 'important');
                         }});
                     }} else {{
                         tab.style.setProperty('background-color', '#F8FAFC', 'important');
@@ -2771,8 +2818,11 @@ components.html(f"""
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#1E293B', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
+                            ch.style.setProperty('font-size', '0.82rem', 'important');
                             ch.style.setProperty('font-weight', '800', 'important');
+                            ch.style.setProperty('max-width', '100%', 'important');
+                            ch.style.setProperty('overflow', 'hidden', 'important');
+                            ch.style.setProperty('text-overflow', 'ellipsis', 'important');
                         }});
                     }}
                 }});
