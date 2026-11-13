@@ -403,17 +403,18 @@ def show_footer():
                 max-height: 38px !important;
                 padding: 4px 12px !important;
                 margin: 0 !important;
-                background-color: #F1F5F9 !important;
-                background: #F1F5F9 !important;
-                border: 1px solid #E2E8F0 !important;
+                background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+                background-color: #E2E8F0 !important;
+                border: 1px solid #CBD5E1 !important;
+                border-bottom: 2px solid #94A3B8 !important;
                 border-radius: 10px !important;
-                color: #334155 !important;
-                -webkit-text-fill-color: #334155 !important;
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
                 white-space: nowrap !important;
                 flex: 1 1 auto !important;
                 min-width: max-content !important;
                 line-height: 1.25 !important;
-                box-shadow: none !important;
+                box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="false"] p,
@@ -424,8 +425,8 @@ def show_footer():
             [data-testid="stTabs"] [aria-selected="false"] *,
             .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
             button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #334155 !important;
-                -webkit-text-fill-color: #334155 !important;
+                color: #1E293B !important;
+                -webkit-text-fill-color: #1E293B !important;
                 white-space: nowrap !important;
                 line-height: 1.25 !important;
                 opacity: 1 !important;
@@ -443,6 +444,7 @@ def show_footer():
                 background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
                 background-color: #2563EB !important;
                 border: 1px solid #1D4ED8 !important;
+                border-bottom: 2px solid #1E3A8A !important;
                 border-radius: 10px !important;
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
@@ -450,7 +452,7 @@ def show_footer():
                 flex: 1 1 auto !important;
                 min-width: max-content !important;
                 line-height: 1.25 !important;
-                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22) !important;
+                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25) !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
@@ -497,21 +499,21 @@ def show_footer():
             }}
         `;
 
-        var emojiRegex = /^([\u2600-\u27BF]|[\uD83C-\uDBFF][\uDC00-\uDFFF]|[\uFE0F\u200D])+/;
         function scaleLeadingEmoji(el) {{
             if (!el || el.querySelector('.ziyad-btn-icon')) return;
             var p = el.querySelector('p') || el;
             if (p && p.childNodes && p.childNodes.length > 0 && p.childNodes[0].nodeType === 3) {{
-                var txt = p.childNodes[0].nodeValue || '';
-                var trimmed = txt.trimStart();
-                var m = trimmed.match(emojiRegex);
-                if (m && m[0]) {{
-                    var span = pDoc.createElement('span');
-                    span.className = 'ziyad-btn-icon';
-                    span.textContent = m[0];
-                    var rest = trimmed.slice(m[0].length);
-                    p.childNodes[0].nodeValue = rest;
-                    p.insertBefore(span, p.childNodes[0]);
+                var txt = (p.childNodes[0].nodeValue || '').trimStart();
+                var spaceIdx = txt.indexOf(' ');
+                if (spaceIdx > 0 && spaceIdx <= 6) {{
+                    var firstToken = txt.slice(0, spaceIdx);
+                    if (firstToken.charCodeAt(0) > 2000) {{
+                        var span = pDoc.createElement('span');
+                        span.className = 'ziyad-btn-icon';
+                        span.textContent = firstToken;
+                        p.childNodes[0].nodeValue = txt.slice(spaceIdx);
+                        p.insertBefore(span, p.childNodes[0]);
+                    }}
                 }}
             }}
         }}
@@ -558,7 +560,8 @@ def show_footer():
                         tab.style.setProperty('background', 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)', 'important');
                         tab.style.setProperty('background-color', '#2563EB', 'important');
                         tab.style.setProperty('border', '1px solid #1D4ED8', 'important');
-                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.22)', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #1E3A8A', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.25)', 'important');
                         tab.style.setProperty('color', '#FFFFFF', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
@@ -568,15 +571,16 @@ def show_footer():
                             ch.style.setProperty('line-height', '1.25', 'important');
                         }});
                     }} else {{
-                        tab.style.setProperty('background-color', '#F1F5F9', 'important');
-                        tab.style.setProperty('background', '#F1F5F9', 'important');
-                        tab.style.setProperty('border', '1px solid #E2E8F0', 'important');
-                        tab.style.setProperty('box-shadow', 'none', 'important');
-                        tab.style.setProperty('color', '#334155', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#334155', 'important');
+                        tab.style.setProperty('background', 'linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%)', 'important');
+                        tab.style.setProperty('background-color', '#E2E8F0', 'important');
+                        tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid #94A3B8', 'important');
+                        tab.style.setProperty('box-shadow', '0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9)', 'important');
+                        tab.style.setProperty('color', '#1E293B', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#334155', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#334155', 'important');
+                            ch.style.setProperty('color', '#1E293B', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                             ch.style.setProperty('white-space', 'nowrap', 'important');
                             ch.style.setProperty('line-height', '1.25', 'important');
                         }});
@@ -1241,34 +1245,38 @@ border-color: #1E40AF !important;
 div.stButton > button[kind="secondary"],
 div.stDownloadButton > button[kind="secondary"],
 [data-testid="stLinkButton"] a {{
-background: #F1F5F9 !important;
-background-color: #F1F5F9 !important;
-color: #334155 !important;
--webkit-text-fill-color: #334155 !important;
-border: 1px solid #E2E8F0 !important;
+background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+background-color: #E2E8F0 !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
+border: 1px solid #CBD5E1 !important;
+border-bottom: 2px solid #94A3B8 !important;
 border-radius: 11px !important;
-box-shadow: none !important;
+box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 font-weight: 800 !important;
 font-size: 0.92rem !important;
 padding: 6px 12px !important;
 height: 42px !important;
 min-height: 42px !important;
 max-height: 42px !important;
+transition: all 0.18s ease !important;
 }}
 
 div.stButton > button[kind="secondary"] *,
 div.stDownloadButton > button[kind="secondary"] *,
 [data-testid="stLinkButton"] a * {{
-color: #334155 !important;
--webkit-text-fill-color: #334155 !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
 }}
 
 div.stButton > button[kind="secondary"]:hover,
 div.stDownloadButton > button[kind="secondary"]:hover,
 [data-testid="stLinkButton"] a:hover {{
-border-color: #BFDBFE !important;
-background: #EFF6FF !important;
+border-color: #93C5FD !important;
+border-bottom-color: #3B82F6 !important;
+background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
 color: #1E40AF !important;
+transform: translateY(-1px);
 }}
 
 /* ✳️ 6. التبويبات: ارتفاع موحد (38px)، مسافات مدمجة، خلفية هادئة لغير النشط، وإبراز أزرق للتبويب النشط */
@@ -1305,12 +1313,13 @@ min-height: 38px !important;
 max-height: 38px !important;
 margin: 0 !important;
 padding: 4px 12px !important;
-background-color: #F1F5F9 !important;
-background: #F1F5F9 !important;
+background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%) !important;
+background-color: #E2E8F0 !important;
 border-radius: 10px !important;
-border: 1px solid #E2E8F0 !important;
-color: #334155 !important;
--webkit-text-fill-color: #334155 !important;
+border: 1px solid #CBD5E1 !important;
+border-bottom: 2px solid #94A3B8 !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 800 !important;
 font-size: 0.88rem !important;
@@ -1321,7 +1330,7 @@ align-items: center !important;
 text-align: center !important;
 flex: 1 1 auto !important;
 min-width: max-content !important;
-box-shadow: none !important;
+box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 transition: all 0.18s ease !important;
 opacity: 1 !important;
 }}
@@ -1329,9 +1338,11 @@ opacity: 1 !important;
 .stTabs [aria-selected="false"]:hover,
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]):hover,
 button[data-baseweb="tab"]:not([aria-selected="true"]):hover {{
-background-color: #E2E8F0 !important;
-border-color: #CBD5E1 !important;
-color: #0F172A !important;
+background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
+border-color: #93C5FD !important;
+border-bottom-color: #3B82F6 !important;
+color: #1E40AF !important;
+transform: translateY(-1px);
 }}
 
 .stTabs [data-baseweb="tab"] p,
@@ -1346,8 +1357,8 @@ color: #0F172A !important;
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
 button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
 font-family: 'Cairo', sans-serif !important;
-color: #334155 !important;
--webkit-text-fill-color: #334155 !important;
+color: #1E293B !important;
+-webkit-text-fill-color: #1E293B !important;
 font-weight: 800 !important;
 font-size: 0.88rem !important;
 line-height: 1.25 !important;
