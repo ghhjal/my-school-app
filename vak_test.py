@@ -553,13 +553,24 @@ st.markdown(f"""
 
     .stTabs [data-baseweb="tab-list"],
     .stTabs [role="tablist"],
+    [data-testid="stTabs"] [data-baseweb="tab-list"],
     [data-testid="stTabs"] [role="tablist"] {{
-        gap: 8px !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px 8px !important;
         background-color: transparent !important;
-        border-bottom: none !important;
-        padding: 4px 2px !important;
-        margin-bottom: 14px !important;
+        border: none !important;
+        border-bottom: 1.5px solid #E2E8F0 !important;
+        padding: 2px 0 8px 0 !important;
+        margin-bottom: 10px !important;
         direction: rtl !important;
+        width: 100% !important;
+        overflow: visible !important;
+    }}
+    .stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
+    .stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
+    [data-testid="stTabs"] [role="tablist"] > button:last-of-type:nth-of-type(odd) {{
+        grid-column: span 2 !important;
     }}
     .stTabs [data-baseweb="tab"],
     .stTabs [aria-selected="false"],
@@ -567,26 +578,29 @@ st.markdown(f"""
     [data-testid="stTabs"] [aria-selected="false"],
     [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
     button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-        width: auto !important;
-        flex: 0 0 auto !important;
-        min-height: 42px !important;
-        height: 42px !important;
+        width: 100% !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        max-height: 40px !important;
         margin: 0 !important;
-        padding: 6px 14px !important;
+        padding: 4px 10px !important;
+        box-sizing: border-box !important;
         white-space: nowrap !important;
-        background-color: #FFFFFF !important;
-        background: #FFFFFF !important;
-        border-radius: 12px !important;
-        border: 1.5px solid #CBD5E1 !important;
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
+        background-color: #F8FAFC !important;
+        background: #F8FAFC !important;
+        border-radius: 11px !important;
+        border: 1px solid #CBD5E1 !important;
+        color: #1E293B !important;
+        -webkit-text-fill-color: #1E293B !important;
         font-family: 'Cairo', sans-serif !important;
         font-weight: 800 !important;
-        font-size: 0.92rem !important;
+        font-size: 0.86rem !important;
+        line-height: 1.2 !important;
+        display: flex !important;
         justify-content: center !important;
         align-items: center !important;
         text-align: center !important;
-        box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06) !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
         transition: all 0.2s ease !important;
         opacity: 1 !important;
     }}
@@ -609,10 +623,11 @@ st.markdown(f"""
     [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
     button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
         font-family: 'Cairo', sans-serif !important;
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        font-size: 0.92rem !important;
+        color: #1E293B !important;
+        -webkit-text-fill-color: #1E293B !important;
+        font-size: 0.86rem !important;
         font-weight: 800 !important;
+        line-height: 1.2 !important;
         white-space: nowrap !important;
         margin: 0 !important;
         opacity: 1 !important;
@@ -621,22 +636,25 @@ st.markdown(f"""
     .stTabs [role="tab"][aria-selected="true"],
     [data-testid="stTabs"] [aria-selected="true"],
     button[data-baseweb="tab"][aria-selected="true"] {{
-        width: auto !important;
-        flex: 0 0 auto !important;
-        min-height: 42px !important;
-        height: 42px !important;
+        width: 100% !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        max-height: 40px !important;
         margin: 0 !important;
-        padding: 6px 14px !important;
+        padding: 4px 10px !important;
+        box-sizing: border-box !important;
         white-space: nowrap !important;
         background: var(--btn-grad) !important;
-        border: 2px solid var(--brand-gold) !important;
-        border-radius: 12px !important;
+        border: 1.5px solid var(--brand-gold) !important;
+        border-radius: 11px !important;
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
         box-shadow: var(--shadow-btn) !important;
         font-family: 'Cairo', sans-serif !important;
         font-weight: 900 !important;
-        font-size: 0.92rem !important;
+        font-size: 0.86rem !important;
+        line-height: 1.2 !important;
+        display: flex !important;
         justify-content: center !important;
         align-items: center !important;
         text-align: center !important;
@@ -652,8 +670,9 @@ st.markdown(f"""
         font-family: 'Cairo', sans-serif !important;
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
-        font-size: 0.92rem !important;
+        font-size: 0.86rem !important;
         font-weight: 900 !important;
+        line-height: 1.2 !important;
         white-space: nowrap !important;
         margin: 0 !important;
         opacity: 1 !important;
@@ -1399,18 +1418,25 @@ st.markdown(f"""
         .chart-label {{
             font-size: 12.5px;
         }}
+        .stTabs [data-baseweb="tab-list"],
+        .stTabs [role="tablist"],
+        [data-testid="stTabs"] [role="tablist"] {{
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 6px 8px !important;
+        }}
         .stTabs [data-baseweb="tab"],
         .stTabs [aria-selected="false"],
         .stTabs [aria-selected="true"],
         .stTabs [role="tab"] {{
-            width: auto !important;
-            flex: 0 0 auto !important;
+            width: 100% !important;
             min-height: 40px !important;
             height: 40px !important;
-            padding: 6px 12px !important;
+            max-height: 40px !important;
+            padding: 4px 8px !important;
             border-radius: 11px !important;
             white-space: nowrap !important;
-            font-size: 0.88rem !important;
+            font-size: 0.85rem !important;
         }}
         div[data-testid="stButton"] button p {{
             font-size: 12.5px !important;
@@ -1484,14 +1510,19 @@ def parse_teacher_classes(class_name_str):
     classes = [c.strip() for c in raw.replace('،', ',').split(',') if c.strip()]
     return classes if classes else 'all'
 
+def filter_df_by_classes_str(df_source, class_name_str):
+    """تصفية بيانات الطلاب بناءً على نص الفصول المخصص للمعلم"""
+    allowed = parse_teacher_classes(class_name_str)
+    if allowed == 'all':
+        return df_source.copy()
+    clean_allowed = [c.strip() for c in allowed if c.strip()]
+    return df_source[df_source['class_name'].astype(str).str.strip().isin(clean_allowed)].copy()
+
 def filter_df_for_user(df_source, user):
     """تصفية بيانات الطلاب حسب الفصول المسندة للمعلم"""
     if not user or user.get('role') == 'admin':
         return df_source.copy()
-    allowed = parse_teacher_classes(user.get('class_name', 'all'))
-    if allowed == 'all':
-        return df_source.copy()
-    return df_source[df_source['class_name'].isin(allowed)].copy()
+    return filter_df_by_classes_str(df_source, user.get('class_name', 'all'))
 
 def infer_grade_name(row):
     g = str(row.get('grade', '')).strip()
@@ -1916,17 +1947,20 @@ else:
     else:
         parsed_cls = parse_teacher_classes(user.get('class_name', 'all'))
         cls_badge = "جميع الفصول" if parsed_cls == 'all' else " ، ".join(parsed_cls)
-        col_user, col_logout = st.columns([4, 1.2])
-        with col_user:
-            st.markdown(f"""
-            <div class="welcome-banner-card" style="margin-bottom: 0;">
-                <div class="welcome-user-info">
-                    <div class="welcome-user-name">👋 مرحباً بك: أ. {user["name"]}</div>
-                    <div class="welcome-user-scope">🏫 الفصول المسندة: {cls_badge}</div>
-                </div>
+        st.markdown(f"""
+        <div class="welcome-banner-card">
+            <div class="welcome-user-info">
+                <div class="welcome-user-name">👋 مرحباً بك: أ. {user["name"]}</div>
+                <div class="welcome-user-scope">🏫 الفصول المسندة: {cls_badge}</div>
             </div>
-            """, unsafe_allow_html=True)
-        with col_logout:
+        </div>
+        """, unsafe_allow_html=True)
+        col_t_ref, col_t_logout = st.columns([2, 1.5])
+        with col_t_ref:
+            if st.button("🔄 تحديث البيانات", use_container_width=True, key="btn_refresh_teacher"):
+                clear_all_caches()
+                st.rerun()
+        with col_t_logout:
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
                 st.rerun()
@@ -1954,21 +1988,90 @@ else:
         tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات والصلاحيات"])
         tab_main, tab_reports, tab_data = tabs
     else:
-        tabs = st.tabs(["📊 التقارير (طباعة)"])
-        tab_reports = tabs[0]
-        tab_main, tab_data = None, None
+        tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)"])
+        tab_main, tab_reports = tabs
+        tab_data = None
 
     if tab_main is not None:
         with tab_main:
             with st.container(border=True):
-                st.markdown("<div class='card-section-title' style='text-align: center !important;'>📊 توزيع أنماط التعلم في المدرسة</div>", unsafe_allow_html=True)
+                # تحديد نطاق بيانات الإحصائية: للمعلم حسب فصوله المسندة، وللمدير إما المدرسة كاملة أو اختيار معلم محدد حسب فصوله
+                df_stat_scope = df_all.copy()
+                stat_heading_title = "📊 توزيع أنماط التعلم في المدرسة"
+                stat_scope_badge = ""
+
+                if user['role'] == 'admin':
+                    try:
+                        df_teachers_stat = get_all_teachers()
+                    except:
+                        df_teachers_stat = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
+
+                    teacher_filter_options = ["🏫 جميع فصول المدرسة (الإحصائية العامة)"]
+                    teacher_lookup_map = {}
+                    if not df_teachers_stat.empty:
+                        for _, t_r in df_teachers_stat.iterrows():
+                            t_nm = str(t_r.get('name', '')).strip()
+                            t_id_val = str(t_r.get('id', '')).strip()
+                            t_cls_raw = t_r.get('class_name', 'all')
+                            t_parsed = parse_teacher_classes(t_cls_raw)
+                            t_cls_lbl = "جميع الفصول" if t_parsed == 'all' else " ، ".join(t_parsed)
+                            opt_label = f"👨‍🏫 أ. {t_nm} — الفصول: ({t_cls_lbl})"
+                            teacher_filter_options.append(opt_label)
+                            teacher_lookup_map[opt_label] = (t_nm, t_cls_raw, t_cls_lbl)
+
+                    selected_teacher_stat = st.selectbox(
+                        "👨‍🏫 عرض إحصائية أنماط التعلم حسب المعلم وفصوله المخصصة:",
+                        teacher_filter_options,
+                        key="admin_stat_teacher_filter"
+                    )
+
+                    if selected_teacher_stat != "🏫 جميع فصول المدرسة (الإحصائية العامة)" and selected_teacher_stat in teacher_lookup_map:
+                        t_nm, t_cls_raw, t_cls_lbl = teacher_lookup_map[selected_teacher_stat]
+                        df_stat_scope = filter_df_by_classes_str(df_all_raw, t_cls_raw)
+                        stat_heading_title = f"📊 توزيع أنماط التعلم — فصول أ. {t_nm}"
+                        stat_scope_badge = f"الفصول المخصصة: {t_cls_lbl}"
+
+                    avail_stat_classes = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
+                    if len(avail_stat_classes) > 1:
+                        selected_sub_cls = st.selectbox(
+                            "🏫 تصفية إضافية حسب فصل محدد ضمن النطاق:",
+                            ["جميع الفصول المحددة"] + avail_stat_classes,
+                            key="admin_stat_class_subfilter"
+                        )
+                        if selected_sub_cls != "جميع الفصول المحددة":
+                            df_stat_scope = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == selected_sub_cls].copy()
+                            stat_heading_title = f"📊 توزيع أنماط التعلم — فصل ({selected_sub_cls})"
+                else:
+                    parsed_t_cls = parse_teacher_classes(user.get('class_name', 'all'))
+                    t_cls_badge_str = "جميع الفصول" if parsed_t_cls == 'all' else " ، ".join(parsed_t_cls)
+                    stat_heading_title = "📊 توزيع أنماط التعلم في فصولي"
+                    stat_scope_badge = f"الفصول المخصصة لك: {t_cls_badge_str}"
+
+                    avail_t_classes = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
+                    if len(avail_t_classes) > 1:
+                        selected_t_cls = st.selectbox(
+                            "🏫 اختر الفصل لعرض إحصائيته (أو جميع فصولك المسندة):",
+                            [f"جميع فصولي المسندة ({len(avail_t_classes)} فصول)"] + avail_t_classes,
+                            key="teacher_stat_class_filter"
+                        )
+                        if not selected_t_cls.startswith("جميع فصولي المسندة"):
+                            df_stat_scope = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == selected_t_cls].copy()
+                            stat_heading_title = f"📊 توزيع أنماط التعلم — فصل ({selected_t_cls})"
+                            stat_scope_badge = f"الفصل المحدد: {selected_t_cls}"
+
+                df_stat_tested = df_stat_scope[df_stat_scope['vak_result'] != 'غير مختبر'].copy()
+
+                st.markdown(f"<div class='card-section-title' style='text-align: center !important;'>{stat_heading_title}</div>", unsafe_allow_html=True)
+                if stat_scope_badge:
+                    st.markdown(f"<div style='text-align: center; margin-bottom: 6px;'><span style='display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 4px 14px; font-size: 12.5px; font-weight: 800;'>🏫 {stat_scope_badge} | المختبرون: {len(df_stat_tested)} من {len(df_stat_scope)} طالب</span></div>", unsafe_allow_html=True)
                 st.markdown("<p class='card-section-sub' style='text-align: center !important;'>إحصائية تحليلية مقارنة لأعداد ونسب الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>", unsafe_allow_html=True)
-                if len(df_tested) > 0:
-                    v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
-                    a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
-                    k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
+
+                if len(df_stat_tested) > 0:
+                    v_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('بصري', na=False)])
+                    a_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('سمعي', na=False)])
+                    k_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('حركي', na=False)])
                     
-                    total_tested_cnt = len(df_tested)
+                    total_tested_cnt = len(df_stat_tested)
                     v_pct = round(v_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
                     k_pct = round(k_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
                     a_pct = round(a_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
@@ -2025,8 +2128,31 @@ else:
                     </div>
                     """
                     st.markdown(chart_html, unsafe_allow_html=True)
+
+                    # جدول تفصيلي سريع لكل فصل ضمن نطاق الفصول المخصصة
+                    scope_classes_list = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
+                    if len(scope_classes_list) > 1:
+                        with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المخصص"):
+                            cls_rows = []
+                            for c_name in scope_classes_list:
+                                sub_c = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == c_name]
+                                sub_t = sub_c[sub_c['vak_result'] != 'غير مختبر']
+                                tot_t = len(sub_t)
+                                vc = len(sub_t[sub_t['vak_result'].str.contains('بصري', na=False)])
+                                kc = len(sub_t[sub_t['vak_result'].str.contains('حركي', na=False)])
+                                ac = len(sub_t[sub_t['vak_result'].str.contains('سمعي', na=False)])
+                                cls_rows.append({
+                                    "الفصل": c_name,
+                                    "إجمالي الطلاب": len(sub_c),
+                                    "المختبرون": tot_t,
+                                    "بصري 👁️": f"{vc} ({round(vc/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
+                                    "حركي 🏃‍♂️": f"{kc} ({round(kc/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
+                                    "سمعي 👂": f"{ac} ({round(ac/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
+                                })
+                            df_cls_breakdown = add_serial_column(pd.DataFrame(cls_rows))
+                            render_rtl_table(df_cls_breakdown)
                 else:
-                    st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
+                    st.info("لا توجد بيانات طلاب مختبرين كافية في الفصول المخصصة لعرض الرسم البياني.")
 
     with tab_reports:
         with st.container(border=True):
@@ -2589,33 +2715,64 @@ components.html(f"""
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
+                var tabLists = pDoc.querySelectorAll('.stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"], [data-testid="stTabs"] [role="tablist"]');
+                tabLists.forEach(function(tl) {{
+                    tl.style.setProperty('display', 'grid', 'important');
+                    tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+                    tl.style.setProperty('gap', '6px 8px', 'important');
+                    tl.style.setProperty('width', '100%', 'important');
+                    tl.style.setProperty('direction', 'rtl', 'important');
+                    tl.style.setProperty('padding', '2px 0 8px 0', 'important');
+                    tl.style.setProperty('margin-bottom', '10px', 'important');
+                    tl.style.setProperty('border-bottom', '1.5px solid #E2E8F0', 'important');
+                    tl.style.setProperty('overflow', 'visible', 'important');
+                    var btns = tl.querySelectorAll('button[role="tab"], button[data-baseweb="tab"]');
+                    btns.forEach(function(b, idx) {{
+                        if (btns.length % 2 === 1 && idx === btns.length - 1) {{
+                            b.style.setProperty('grid-column', 'span 2', 'important');
+                        }} else {{
+                            b.style.removeProperty('grid-column');
+                        }}
+                    }});
+                }});
                 var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
                 tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', 'auto', 'important');
-                    tab.style.setProperty('flex', '0 0 auto', 'important');
+                    tab.style.setProperty('width', '100%', 'important');
+                    tab.style.setProperty('height', '40px', 'important');
+                    tab.style.setProperty('min-height', '40px', 'important');
+                    tab.style.setProperty('max-height', '40px', 'important');
+                    tab.style.setProperty('margin', '0', 'important');
+                    tab.style.setProperty('padding', '4px 10px', 'important');
+                    tab.style.setProperty('box-sizing', 'border-box', 'important');
                     tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('padding', '6px 13px', 'important');
+                    tab.style.setProperty('display', 'flex', 'important');
+                    tab.style.setProperty('align-items', 'center', 'important');
+                    tab.style.setProperty('justify-content', 'center', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
                         tab.style.setProperty('background', '{cur_t["btn_grad"]}', 'important');
-                        tab.style.setProperty('border', '2px solid {cur_t["brand_gold"]}', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
+                        tab.style.setProperty('border', '1.5px solid {cur_t["brand_gold"]}', 'important');
+                        tab.style.setProperty('border-radius', '11px', 'important');
                         tab.style.setProperty('color', '#FFFFFF', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
                             ch.style.setProperty('color', '#FFFFFF', 'important');
                             ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
+                            ch.style.setProperty('font-size', '0.86rem', 'important');
+                            ch.style.setProperty('font-weight', '900', 'important');
                         }});
                     }} else {{
-                        tab.style.setProperty('background-color', '#FFFFFF', 'important');
-                        tab.style.setProperty('background', '#FFFFFF', 'important');
-                        tab.style.setProperty('border', '1.5px solid #CBD5E1', 'important');
-                        tab.style.setProperty('border-radius', '12px', 'important');
-                        tab.style.setProperty('color', '#0F172A', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                        tab.style.setProperty('background-color', '#F8FAFC', 'important');
+                        tab.style.setProperty('background', '#F8FAFC', 'important');
+                        tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
+                        tab.style.setProperty('border-radius', '11px', 'important');
+                        tab.style.setProperty('color', '#1E293B', 'important');
+                        tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#0F172A', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
+                            ch.style.setProperty('color', '#1E293B', 'important');
+                            ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
+                            ch.style.setProperty('font-size', '0.86rem', 'important');
+                            ch.style.setProperty('font-weight', '800', 'important');
                         }});
                     }}
                 }});
