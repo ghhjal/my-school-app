@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
 import base64
@@ -10,7 +9,7 @@ import time
 # 1. إعدادات الصفحة ونظام القوالب الديناميكية (Dynamic Themes) + التوافق الكامل مع الجوال (RTL)
 # ==========================================
 st.set_page_config(
-    page_title="بوابة اختبار أنماط التعلم (VAK) | منصة زياد الذكية",
+    page_title="منصة زياد الذكية | أنماط التعلم (VAK)",
     page_icon="🎓",
     layout="centered"
 )
@@ -210,7 +209,7 @@ cur_t = THEMES.get(active_theme_key, THEMES["royal"])
 
 st.markdown(f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
     /* ========================================================
        1. المتغيرات اللونية للقالب الديناميكي النشط ({cur_t['name']})
@@ -260,17 +259,12 @@ st.markdown(f"""
     /* ========================================================
        2. ضبط الاتجاه العام (RTL) والخلفية والخطوط
        ======================================================== */
-    :root, html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .stApp {{
-        --text-color: #0f172a !important;
-        --background-color: var(--bg-page) !important;
-        --secondary-background-color: #ffffff !important;
-        --primary-color: var(--brand-royal) !important;
-        color-scheme: light only !important;
+    html, body, [data-testid="stAppViewContainer"], .stApp {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Cairo', sans-serif !important;
+        font-family: 'Tajawal', sans-serif !important;
         background-color: var(--bg-page) !important;
-        color: #0f172a !important;
+        color: var(--text-primary) !important;
         transition: background-color 0.35s ease;
     }}
 
@@ -287,15 +281,11 @@ st.markdown(f"""
         direction: rtl !important;
     }}
 
-    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label,
+    .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, span, div,
     .stRadio, .stSelectbox, .stMultiSelect, .stTextInput, .stCheckbox {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Cairo', sans-serif !important;
-    }}
-    span[data-testid="stIconMaterial"], [data-testid="stExpanderToggleIcon"], .material-icons, [class*="material-symbols"] {{
-        font-family: 'Material Symbols Rounded', 'Material Icons' !important;
-        direction: ltr !important;
+        font-family: 'Tajawal', sans-serif !important;
     }}
 
     /* ========================================================
@@ -303,30 +293,28 @@ st.markdown(f"""
        ======================================================== */
     .ziyad-hero-banner {{
         background: var(--hero-grad);
-        border-radius: 24px;
-        padding: 26px 24px 22px 24px;
-        margin-bottom: 16px;
-        box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), var(--shadow-header);
+        border-radius: 22px;
+        padding: 28px 28px;
+        margin-bottom: 18px;
+        box-shadow: var(--shadow-header);
         position: relative;
         overflow: hidden;
-        border: 1.5px solid rgba(255, 255, 255, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.16);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 12px;
         transition: all 0.35s ease;
-        direction: rtl !important;
-        text-align: center !important;
     }}
 
     .ziyad-hero-banner::before {{
         content: "";
         position: absolute;
-        top: -60px;
-        right: -60px;
-        width: 200px;
-        height: 200px;
+        top: -50%;
+        right: -10%;
+        width: 260px;
+        height: 260px;
         background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
@@ -334,90 +322,90 @@ st.markdown(f"""
     .ziyad-hero-banner::after {{
         content: "";
         position: absolute;
-        bottom: -70px;
-        left: -50px;
-        width: 200px;
-        height: 200px;
+        bottom: -60%;
+        left: -8%;
+        width: 240px;
+        height: 240px;
         background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
         border-radius: 50%;
         pointer-events: none;
     }}
 
-    .unified-title-row {{
-        display: inline-flex;
+    .hero-main-row {{
+        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 14px;
+        gap: 16px;
         flex-wrap: wrap;
-        z-index: 2;
-        direction: rtl !important;
+        z-index: 1;
+        width: 100%;
     }}
 
-    .floating-cap-logo {{
-        animation: float-cap 3.5s ease-in-out infinite !important;
-        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
+    .hero-icon-glass {{
+        width: 62px;
+        height: 62px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        animation: float-cap 3.5s ease-in-out infinite;
+        flex-shrink: 0;
     }}
 
     @keyframes float-cap {{
-        0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
-        50% {{ transform: translateY(-6px) rotate(-3deg); }}
+        0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+        50% {{ transform: translateY(-4px) rotate(-4deg); }}
     }}
 
-    .unified-main-title {{
-        font-family: 'Cairo', sans-serif !important;
-        font-size: 30px !important;
-        font-weight: 900 !important;
+    .hero-brand-title {{
+        font-size: 34px !important;
+        font-weight: 800 !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1.25 !important;
-        letter-spacing: 0px !important;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+        line-height: 1.2 !important;
+        letter-spacing: -0.3px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
         text-align: center !important;
     }}
 
-    .unified-brand-row {{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        z-index: 2;
-        direction: rtl !important;
-    }}
-
-    .unified-brand-pill {{
-        font-family: 'Cairo', sans-serif !important;
-        background: rgba(15, 23, 42, 0.34);
+    .hero-portal-pill {{
+        background: rgba(15, 23, 42, 0.35);
         border: 1px solid rgba(255, 255, 255, 0.26);
-        box-shadow: inset 0 1px 2px rgba(255,255,255,0.18);
-        padding: 5px 18px;
+        padding: 6px 18px;
         border-radius: 999px;
-        font-size: 15px !important;
-        font-weight: 800 !important;
-        color: #fde68a !important;
-        -webkit-text-fill-color: #fde68a !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
         white-space: nowrap;
         backdrop-filter: blur(4px);
         text-decoration: none !important;
         transition: all 0.2s ease;
     }}
-    a.unified-brand-pill:hover {{
+    a.hero-portal-pill:hover {{
         background: rgba(15, 23, 42, 0.55);
         border-color: var(--brand-gold);
         transform: translateY(-1px);
     }}
 
-    .unified-sub-desc {{
-        font-family: 'Cairo', sans-serif !important;
-        font-size: 13.5px !important;
+    .hero-sub-badge {{
+        background: rgba(255, 255, 255, 0.13);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        padding: 5px 16px;
+        border-radius: 999px;
+        font-size: 13px !important;
         font-weight: 700 !important;
-        color: rgba(255, 255, 255, 0.92) !important;
-        -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
-        margin: 0 !important;
-        line-height: 1.5 !important;
-        z-index: 2;
+        color: #f1f5f9 !important;
+        -webkit-text-fill-color: #f1f5f9 !important;
+        z-index: 1;
         text-align: center !important;
     }}
 
@@ -551,134 +539,49 @@ st.markdown(f"""
         -webkit-text-fill-color: var(--brand-royal) !important;
     }}
 
-    .stTabs [data-baseweb="tab-list"],
-    .stTabs [role="tablist"],
-    [data-testid="stTabs"] [data-baseweb="tab-list"],
-    [data-testid="stTabs"] [role="tablist"] {{
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 6px 8px !important;
+    .stTabs [data-baseweb="tab-list"] {{
+        background-color: transparent;
+        border-bottom: 1.5px solid var(--border-color);
+        padding-bottom: 10px;
+        gap: 10px;
+        justify-content: flex-start;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }}
+    .stTabs [data-baseweb="tab"] {{
         background-color: transparent !important;
-        border: none !important;
-        border-bottom: 1.5px solid #E2E8F0 !important;
-        padding: 2px 0 8px 0 !important;
-        margin-bottom: 10px !important;
-        direction: rtl !important;
-        width: 100% !important;
-        overflow: visible !important;
-    }}
-    .stTabs [data-baseweb="tab-list"] > button:last-of-type:nth-of-type(odd),
-    .stTabs [role="tablist"] > button:last-of-type:nth-of-type(odd),
-    [data-testid="stTabs"] [role="tablist"] > button:last-of-type:nth-of-type(odd) {{
-        grid-column: span 2 !important;
-    }}
-    .stTabs [data-baseweb="tab"],
-    .stTabs [aria-selected="false"],
-    .stTabs [role="tab"]:not([aria-selected="true"]),
-    [data-testid="stTabs"] [aria-selected="false"],
-    [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
-    button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-        width: 100% !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        max-height: 40px !important;
-        margin: 0 !important;
-        padding: 4px 10px !important;
-        box-sizing: border-box !important;
-        white-space: nowrap !important;
-        background-color: #F8FAFC !important;
-        background: #F8FAFC !important;
-        border-radius: 11px !important;
-        border: 1px solid #CBD5E1 !important;
-        color: #1E293B !important;
-        -webkit-text-fill-color: #1E293B !important;
-        font-family: 'Cairo', sans-serif !important;
-        font-weight: 800 !important;
-        font-size: 0.86rem !important;
-        line-height: 1.2 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        text-align: center !important;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+        border: 1.5px solid transparent !important;
+        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        color: var(--text-secondary) !important;
+        -webkit-text-fill-color: var(--text-secondary) !important;
+        font-weight: 700 !important;
         transition: all 0.2s ease !important;
-        opacity: 1 !important;
     }}
-    .stTabs [data-baseweb="tab"]:not([aria-selected="true"]):hover,
-    .stTabs [aria-selected="false"]:hover {{
+    .stTabs [data-baseweb="tab"]:hover {{
         background-color: var(--tab-hover) !important;
-        border-color: var(--brand-bright) !important;
         color: var(--brand-navy) !important;
         -webkit-text-fill-color: var(--brand-navy) !important;
     }}
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span,
-    .stTabs [data-baseweb="tab"] div,
-    .stTabs [aria-selected="false"] p,
-    .stTabs [aria-selected="false"] span,
-    .stTabs [aria-selected="false"] div,
-    .stTabs [aria-selected="false"] *,
-    .stTabs [role="tab"]:not([aria-selected="true"]) *,
-    [data-testid="stTabs"] [aria-selected="false"] *,
-    [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]) *,
-    button[data-baseweb="tab"]:not([aria-selected="true"]) * {{
-        font-family: 'Cairo', sans-serif !important;
-        color: #1E293B !important;
-        -webkit-text-fill-color: #1E293B !important;
-        font-size: 0.86rem !important;
-        font-weight: 800 !important;
-        line-height: 1.2 !important;
-        white-space: nowrap !important;
+    .stTabs [data-baseweb="tab"] * {{
+        color: inherit !important;
+        -webkit-text-fill-color: inherit !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
         margin: 0 !important;
-        opacity: 1 !important;
     }}
-    .stTabs [aria-selected="true"],
-    .stTabs [role="tab"][aria-selected="true"],
-    [data-testid="stTabs"] [aria-selected="true"],
-    button[data-baseweb="tab"][aria-selected="true"] {{
-        width: 100% !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        max-height: 40px !important;
-        margin: 0 !important;
-        padding: 4px 10px !important;
-        box-sizing: border-box !important;
-        white-space: nowrap !important;
-        background: var(--btn-grad) !important;
-        border: 1.5px solid var(--brand-gold) !important;
-        border-radius: 11px !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+        background: var(--brand-navy) !important;
+        border: 2px solid var(--brand-gold) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
         box-shadow: var(--shadow-btn) !important;
-        font-family: 'Cairo', sans-serif !important;
-        font-weight: 900 !important;
-        font-size: 0.86rem !important;
-        line-height: 1.2 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        text-align: center !important;
-        opacity: 1 !important;
     }}
-    .stTabs [aria-selected="true"] p,
-    .stTabs [aria-selected="true"] span,
-    .stTabs [aria-selected="true"] div,
-    .stTabs [aria-selected="true"] *,
-    .stTabs [role="tab"][aria-selected="true"] *,
-    [data-testid="stTabs"] [aria-selected="true"] *,
-    button[data-baseweb="tab"][aria-selected="true"] * {{
-        font-family: 'Cairo', sans-serif !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        font-size: 0.86rem !important;
-        font-weight: 900 !important;
-        line-height: 1.2 !important;
-        white-space: nowrap !important;
-        margin: 0 !important;
-        opacity: 1 !important;
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }}
-    .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
+    .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
 
     /* ========================================================
        6. بطاقة تسجيل الدخول والحاويات البيضاء الفاخرة
@@ -693,138 +596,57 @@ st.markdown(f"""
     }}
 
     .card-section-title {{
-        font-size: 20px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
+        font-size: 21px !important;
+        font-weight: 800 !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
         margin: 0 0 6px 0 !important;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #f1f5f9;
         text-align: right !important;
     }}
     .card-section-sub {{
         font-size: 13.5px !important;
-        font-weight: 600 !important;
-        color: #64748b !important;
-        -webkit-text-fill-color: #64748b !important;
-        margin: 0 0 14px 0 !important;
+        color: var(--text-muted) !important;
+        -webkit-text-fill-color: var(--text-muted) !important;
+        margin: 0 0 16px 0 !important;
         text-align: right !important;
         line-height: 1.5;
     }}
 
-    /* تنسيق حقول الإدخال والقوائم المنسدلة (تباين كامل 100% في الوضع الفاتح والداكن) */
-    div[data-baseweb="input"],
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="base-input"],
-    div[data-baseweb="input"] button,
-    div[data-baseweb="base-input"] button,
-    div[data-baseweb="textarea"],
-    div[data-baseweb="textarea"] > div,
-    div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
-    div[data-testid="stTextInput"] input,
-    div[data-testid="stTextArea"] textarea,
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stNumberInput"] input,
-    div[data-baseweb="select"] *,
-    input, textarea {{
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        color-scheme: light !important;
-        caret-color: var(--brand-bright) !important;
+    /* تنسيق حقول الإدخال والقوائم المنسدلة (RTL 100%) */
+    div[data-testid="stTextInput"] input {{
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        padding: 12px 14px !important;
+        font-size: 14.5px !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
         direction: rtl !important;
         text-align: right !important;
-        font-weight: 700 !important;
-        opacity: 1 !important;
+        transition: all 0.2s ease;
     }}
-
-    input, textarea, select,
-    div[data-baseweb="select"] div,
-    div[data-baseweb="select"] span:not([data-testid="stIconMaterial"]):not([class*="material"]) {{
-        font-family: 'Cairo', sans-serif !important;
-    }}
-
-    div[data-baseweb="input"],
-    div[data-baseweb="textarea"],
-    div[data-baseweb="select"] > div {{
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
-        min-height: 46px !important;
-    }}
-
-    div[data-baseweb="input"]:focus-within,
-    div[data-baseweb="select"] > div:focus-within,
-    div[data-baseweb="textarea"]:focus-within {{
+    div[data-testid="stTextInput"] input:focus {{
         border-color: var(--brand-bright) !important;
         box-shadow: 0 0 0 3px var(--focus-ring) !important;
         background-color: #ffffff !important;
     }}
 
-    div[data-baseweb="select"] svg,
-    div[data-baseweb="input"] svg {{
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        fill: #0f172a !important;
-        background-color: transparent !important;
-        background: transparent !important;
-    }}
-
-    input::placeholder, textarea::placeholder {{
-        color: #64748b !important;
-        -webkit-text-fill-color: #64748b !important;
-        opacity: 1 !important;
-        direction: rtl !important;
-        text-align: right !important;
-    }}
-
-    div[data-testid="stAlert"],
-    div[data-testid="stAlert"] > div,
-    div[data-baseweb="notification"],
-    div[role="alert"] {{
-        background-color: var(--tab-hover) !important;
-        background: var(--tab-hover) !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        border: 1.5px solid var(--brand-royal) !important;
-        border-right: 5px solid var(--brand-royal) !important;
-        border-radius: 14px !important;
-        direction: rtl !important;
-        text-align: right !important;
-    }}
-    div[data-testid="stAlert"] *,
-    div[data-baseweb="notification"] *,
-    div[role="alert"] * {{
-        background-color: transparent !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        font-weight: 700 !important;
-        direction: rtl !important;
-        text-align: right !important;
-    }}
-
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
     div[data-baseweb="popover"],
-    div[data-baseweb="popover"] *,
-    div[data-baseweb="menu"],
-    ul[role="listbox"],
-    div[role="listbox"] {{
-        direction: rtl !important;
-        text-align: right !important;
-        font-family: 'Cairo', sans-serif !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        font-weight: 700 !important;
-    }}
     div[data-baseweb="popover"] > div,
     div[data-baseweb="menu"],
     ul[role="listbox"],
     div[role="listbox"] {{
-        background-color: #ffffff !important;
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2) !important;
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Tajawal', sans-serif !important;
+    }}
+    div[data-baseweb="select"] > div {{
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        min-height: 44px !important;
     }}
     li[role="option"],
     div[role="option"],
@@ -838,18 +660,6 @@ st.markdown(f"""
         width: 100% !important;
         padding: 10px 16px !important;
         font-size: 14px !important;
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        font-weight: 700 !important;
-    }}
-    li[role="option"]:hover,
-    div[role="option"]:hover,
-    li[role="option"][aria-selected="true"],
-    div[role="option"][aria-selected="true"] {{
-        background-color: var(--tab-hover) !important;
-        color: var(--brand-navy) !important;
-        -webkit-text-fill-color: var(--brand-navy) !important;
     }}
     li[role="option"] > div,
     li[role="option"] span,
@@ -859,16 +669,14 @@ st.markdown(f"""
         text-align: right !important;
         width: 100% !important;
         display: block !important;
-        color: inherit !important;
-        -webkit-text-fill-color: inherit !important;
     }}
     div[data-baseweb="select"] div[value],
     div[data-baseweb="select"] > div > div:first-child {{
         direction: rtl !important;
         text-align: right !important;
         justify-content: flex-start !important;
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
     }}
     div[data-testid="stSelectbox"] label,
     div[data-testid="stMultiSelect"] label,
@@ -1067,7 +875,7 @@ st.markdown(f"""
         border-collapse: collapse !important;
         direction: rtl !important;
         text-align: right !important;
-        font-family: 'Cairo', sans-serif !important;
+        font-family: 'Tajawal', sans-serif !important;
         font-size: 14px !important;
         background-color: #ffffff !important;
         color: var(--text-primary) !important;
@@ -1368,19 +1176,26 @@ st.markdown(f"""
             font-size: 11.5px !important;
         }}
         .ziyad-hero-banner {{
-            padding: 20px 14px 18px 14px !important;
-            border-radius: 20px !important;
-            gap: 8px;
+            padding: 18px 14px;
+            border-radius: 16px;
+            gap: 10px;
         }}
-        .unified-main-title {{
-            font-size: 22px !important;
+        .hero-icon-glass {{
+            width: 48px;
+            height: 48px;
+            font-size: 25px;
+            border-radius: 12px;
         }}
-        .unified-brand-pill {{
-            font-size: 13.5px !important;
-            padding: 4px 14px !important;
+        .hero-brand-title {{
+            font-size: 23px !important;
         }}
-        .unified-sub-desc {{
-            font-size: 12.5px !important;
+        .hero-portal-pill {{
+            font-size: 12px !important;
+            padding: 4px 12px;
+        }}
+        .hero-sub-badge {{
+            font-size: 11.5px !important;
+            padding: 4px 12px;
         }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{
             padding: 16px 14px !important;
@@ -1418,25 +1233,12 @@ st.markdown(f"""
         .chart-label {{
             font-size: 12.5px;
         }}
-        .stTabs [data-baseweb="tab-list"],
-        .stTabs [role="tablist"],
-        [data-testid="stTabs"] [role="tablist"] {{
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 6px 8px !important;
+        .stTabs [data-baseweb="tab"] {{
+            padding: 6px 11px !important;
+            border-radius: 10px !important;
         }}
-        .stTabs [data-baseweb="tab"],
-        .stTabs [aria-selected="false"],
-        .stTabs [aria-selected="true"],
-        .stTabs [role="tab"] {{
-            width: 100% !important;
-            min-height: 40px !important;
-            height: 40px !important;
-            max-height: 40px !important;
-            padding: 4px 8px !important;
-            border-radius: 11px !important;
-            white-space: nowrap !important;
-            font-size: 0.85rem !important;
+        .stTabs [data-baseweb="tab"] * {{
+            font-size: 12.5px !important;
         }}
         div[data-testid="stButton"] button p {{
             font-size: 12.5px !important;
@@ -1462,21 +1264,16 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # رسم الهيدر الموحد لمنصة زياد الذكية في أعلى الصفحة مباشرة
-ZIYAD_LOGO_SVG = '<svg class="floating-cap-logo" width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float-cap 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>'
-st.markdown(f"""
-<div class="ziyad-hero-banner" dir="rtl">
-    <div class="unified-title-row">
-        {ZIYAD_LOGO_SVG}
-        <h1 class="unified-main-title">بوابة اختبار أنماط التعلم (VAK)</h1>
+st.markdown("""
+<div class="ziyad-hero-banner">
+    <div class="hero-main-row">
+        <div class="hero-icon-glass">🎓</div>
+        <h1 class="hero-brand-title">منصة زياد الذكية</h1>
+        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="hero-portal-pill">بوابة التعليم الذكية 2026</a>
     </div>
-    <div class="unified-brand-row">
-        <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="unified-brand-pill">منصة زياد الذكية</a>
-    </div>
-    <div class="unified-sub-desc">البصري • السمعي • الحركي</div>
+    <div class="hero-sub-badge">🧠 نظام تشخيص أنماط التعلم (VAK) | بوابة المعلمين والإدارة</div>
 </div>
 """, unsafe_allow_html=True)
-
-
 
 # ==========================================
 # 💡 دالة عرض الجداول من اليمين إلى اليسار (RTL) بدلاً من st.dataframe اليساري
@@ -1510,19 +1307,14 @@ def parse_teacher_classes(class_name_str):
     classes = [c.strip() for c in raw.replace('،', ',').split(',') if c.strip()]
     return classes if classes else 'all'
 
-def filter_df_by_classes_str(df_source, class_name_str):
-    """تصفية بيانات الطلاب بناءً على نص الفصول المخصص للمعلم"""
-    allowed = parse_teacher_classes(class_name_str)
-    if allowed == 'all':
-        return df_source.copy()
-    clean_allowed = [c.strip() for c in allowed if c.strip()]
-    return df_source[df_source['class_name'].astype(str).str.strip().isin(clean_allowed)].copy()
-
 def filter_df_for_user(df_source, user):
     """تصفية بيانات الطلاب حسب الفصول المسندة للمعلم"""
     if not user or user.get('role') == 'admin':
         return df_source.copy()
-    return filter_df_by_classes_str(df_source, user.get('class_name', 'all'))
+    allowed = parse_teacher_classes(user.get('class_name', 'all'))
+    if allowed == 'all':
+        return df_source.copy()
+    return df_source[df_source['class_name'].isin(allowed)].copy()
 
 def infer_grade_name(row):
     g = str(row.get('grade', '')).strip()
@@ -1844,7 +1636,7 @@ def generate_html_page(title, content, school_names_html):
     </div>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap'); body {{ font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
+    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap'); body {{ font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
     <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
     <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
     <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -1928,7 +1720,27 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
+        # شريط اختيار القوالب الديناميكية (يظهر فقط داخل شاشة مدير النظام)
+        st.markdown(f"""
+        <div class="admin-theme-box">
+            <div class="theme-switcher-header">
+                <span class="theme-switcher-label">🎨 تخصيص القالب البصري للمنصة:</span>
+                <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
+        t_cols = st.columns(4)
+        for idx, (t_key, t_info) in enumerate(THEMES.items()):
+            with t_cols[idx]:
+                is_curr_t = (active_theme_key == t_key)
+                btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
+                btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
+                if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
+                    if not is_curr_t:
+                        with st.spinner("جاري تطبيق القالب البصري على المنصة..."):
+                            save_platform_theme(t_key)
+                            st.rerun()
 
         col_act1, col_act2, col_logout = st.columns([2, 2, 1.5])
         with col_act1:
@@ -1947,20 +1759,17 @@ else:
     else:
         parsed_cls = parse_teacher_classes(user.get('class_name', 'all'))
         cls_badge = "جميع الفصول" if parsed_cls == 'all' else " ، ".join(parsed_cls)
-        st.markdown(f"""
-        <div class="welcome-banner-card">
-            <div class="welcome-user-info">
-                <div class="welcome-user-name">👋 مرحباً بك: أ. {user["name"]}</div>
-                <div class="welcome-user-scope">🏫 الفصول المسندة: {cls_badge}</div>
+        col_user, col_logout = st.columns([4, 1.2])
+        with col_user:
+            st.markdown(f"""
+            <div class="welcome-banner-card" style="margin-bottom: 0;">
+                <div class="welcome-user-info">
+                    <div class="welcome-user-name">👋 مرحباً بك: أ. {user["name"]}</div>
+                    <div class="welcome-user-scope">🏫 الفصول المسندة: {cls_badge}</div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        col_t_ref, col_t_logout = st.columns([2, 1.5])
-        with col_t_ref:
-            if st.button("🔄 تحديث البيانات", use_container_width=True, key="btn_refresh_teacher"):
-                clear_all_caches()
-                st.rerun()
-        with col_t_logout:
+            """, unsafe_allow_html=True)
+        with col_logout:
             if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
                 st.session_state.current_user = None
                 st.rerun()
@@ -1988,90 +1797,21 @@ else:
         tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)", "👥 إدارة البيانات والصلاحيات"])
         tab_main, tab_reports, tab_data = tabs
     else:
-        tabs = st.tabs(["🏠 الرئيسية (الإحصائيات)", "📊 التقارير (طباعة)"])
-        tab_main, tab_reports = tabs
-        tab_data = None
+        tabs = st.tabs(["📊 التقارير (طباعة)"])
+        tab_reports = tabs[0]
+        tab_main, tab_data = None, None
 
     if tab_main is not None:
         with tab_main:
             with st.container(border=True):
-                # تحديد نطاق بيانات الإحصائية: للمعلم حسب فصوله المسندة، وللمدير إما المدرسة كاملة أو اختيار معلم محدد حسب فصوله
-                df_stat_scope = df_all.copy()
-                stat_heading_title = "📊 توزيع أنماط التعلم في المدرسة"
-                stat_scope_badge = ""
-
-                if user['role'] == 'admin':
-                    try:
-                        df_teachers_stat = get_all_teachers()
-                    except:
-                        df_teachers_stat = pd.DataFrame(columns=['id', 'name', 'role', 'class_name'])
-
-                    teacher_filter_options = ["🏫 جميع فصول المدرسة (الإحصائية العامة)"]
-                    teacher_lookup_map = {}
-                    if not df_teachers_stat.empty:
-                        for _, t_r in df_teachers_stat.iterrows():
-                            t_nm = str(t_r.get('name', '')).strip()
-                            t_id_val = str(t_r.get('id', '')).strip()
-                            t_cls_raw = t_r.get('class_name', 'all')
-                            t_parsed = parse_teacher_classes(t_cls_raw)
-                            t_cls_lbl = "جميع الفصول" if t_parsed == 'all' else " ، ".join(t_parsed)
-                            opt_label = f"👨‍🏫 أ. {t_nm} — الفصول: ({t_cls_lbl})"
-                            teacher_filter_options.append(opt_label)
-                            teacher_lookup_map[opt_label] = (t_nm, t_cls_raw, t_cls_lbl)
-
-                    selected_teacher_stat = st.selectbox(
-                        "👨‍🏫 عرض إحصائية أنماط التعلم حسب المعلم وفصوله المخصصة:",
-                        teacher_filter_options,
-                        key="admin_stat_teacher_filter"
-                    )
-
-                    if selected_teacher_stat != "🏫 جميع فصول المدرسة (الإحصائية العامة)" and selected_teacher_stat in teacher_lookup_map:
-                        t_nm, t_cls_raw, t_cls_lbl = teacher_lookup_map[selected_teacher_stat]
-                        df_stat_scope = filter_df_by_classes_str(df_all_raw, t_cls_raw)
-                        stat_heading_title = f"📊 توزيع أنماط التعلم — فصول أ. {t_nm}"
-                        stat_scope_badge = f"الفصول المخصصة: {t_cls_lbl}"
-
-                    avail_stat_classes = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
-                    if len(avail_stat_classes) > 1:
-                        selected_sub_cls = st.selectbox(
-                            "🏫 تصفية إضافية حسب فصل محدد ضمن النطاق:",
-                            ["جميع الفصول المحددة"] + avail_stat_classes,
-                            key="admin_stat_class_subfilter"
-                        )
-                        if selected_sub_cls != "جميع الفصول المحددة":
-                            df_stat_scope = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == selected_sub_cls].copy()
-                            stat_heading_title = f"📊 توزيع أنماط التعلم — فصل ({selected_sub_cls})"
-                else:
-                    parsed_t_cls = parse_teacher_classes(user.get('class_name', 'all'))
-                    t_cls_badge_str = "جميع الفصول" if parsed_t_cls == 'all' else " ، ".join(parsed_t_cls)
-                    stat_heading_title = "📊 توزيع أنماط التعلم في فصولي"
-                    stat_scope_badge = f"الفصول المخصصة لك: {t_cls_badge_str}"
-
-                    avail_t_classes = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
-                    if len(avail_t_classes) > 1:
-                        selected_t_cls = st.selectbox(
-                            "🏫 اختر الفصل لعرض إحصائيته (أو جميع فصولك المسندة):",
-                            [f"جميع فصولي المسندة ({len(avail_t_classes)} فصول)"] + avail_t_classes,
-                            key="teacher_stat_class_filter"
-                        )
-                        if not selected_t_cls.startswith("جميع فصولي المسندة"):
-                            df_stat_scope = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == selected_t_cls].copy()
-                            stat_heading_title = f"📊 توزيع أنماط التعلم — فصل ({selected_t_cls})"
-                            stat_scope_badge = f"الفصل المحدد: {selected_t_cls}"
-
-                df_stat_tested = df_stat_scope[df_stat_scope['vak_result'] != 'غير مختبر'].copy()
-
-                st.markdown(f"<div class='card-section-title' style='text-align: center !important;'>{stat_heading_title}</div>", unsafe_allow_html=True)
-                if stat_scope_badge:
-                    st.markdown(f"<div style='text-align: center; margin-bottom: 6px;'><span style='display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 4px 14px; font-size: 12.5px; font-weight: 800;'>🏫 {stat_scope_badge} | المختبرون: {len(df_stat_tested)} من {len(df_stat_scope)} طالب</span></div>", unsafe_allow_html=True)
+                st.markdown("<div class='card-section-title' style='text-align: center !important;'>📊 توزيع أنماط التعلم في المدرسة</div>", unsafe_allow_html=True)
                 st.markdown("<p class='card-section-sub' style='text-align: center !important;'>إحصائية تحليلية مقارنة لأعداد ونسب الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>", unsafe_allow_html=True)
-
-                if len(df_stat_tested) > 0:
-                    v_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('بصري', na=False)])
-                    a_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('سمعي', na=False)])
-                    k_count = len(df_stat_tested[df_stat_tested['vak_result'].str.contains('حركي', na=False)])
+                if len(df_tested) > 0:
+                    v_count = len(df_tested[df_tested['vak_result'].str.contains('بصري', na=False)])
+                    a_count = len(df_tested[df_tested['vak_result'].str.contains('سمعي', na=False)])
+                    k_count = len(df_tested[df_tested['vak_result'].str.contains('حركي', na=False)])
                     
-                    total_tested_cnt = len(df_stat_tested)
+                    total_tested_cnt = len(df_tested)
                     v_pct = round(v_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
                     k_pct = round(k_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
                     a_pct = round(a_count / total_tested_cnt * 100, 1) if total_tested_cnt > 0 else 0
@@ -2128,31 +1868,8 @@ else:
                     </div>
                     """
                     st.markdown(chart_html, unsafe_allow_html=True)
-
-                    # جدول تفصيلي سريع لكل فصل ضمن نطاق الفصول المخصصة
-                    scope_classes_list = sorted([c for c in df_stat_scope['class_name'].astype(str).str.strip().unique() if c and c not in ['nan', 'None']])
-                    if len(scope_classes_list) > 1:
-                        with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المخصص"):
-                            cls_rows = []
-                            for c_name in scope_classes_list:
-                                sub_c = df_stat_scope[df_stat_scope['class_name'].astype(str).str.strip() == c_name]
-                                sub_t = sub_c[sub_c['vak_result'] != 'غير مختبر']
-                                tot_t = len(sub_t)
-                                vc = len(sub_t[sub_t['vak_result'].str.contains('بصري', na=False)])
-                                kc = len(sub_t[sub_t['vak_result'].str.contains('حركي', na=False)])
-                                ac = len(sub_t[sub_t['vak_result'].str.contains('سمعي', na=False)])
-                                cls_rows.append({
-                                    "الفصل": c_name,
-                                    "إجمالي الطلاب": len(sub_c),
-                                    "المختبرون": tot_t,
-                                    "بصري 👁️": f"{vc} ({round(vc/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
-                                    "حركي 🏃‍♂️": f"{kc} ({round(kc/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
-                                    "سمعي 👂": f"{ac} ({round(ac/tot_t*100, 1)}%)" if tot_t > 0 else "0 (0%)",
-                                })
-                            df_cls_breakdown = add_serial_column(pd.DataFrame(cls_rows))
-                            render_rtl_table(df_cls_breakdown)
                 else:
-                    st.info("لا توجد بيانات طلاب مختبرين كافية في الفصول المخصصة لعرض الرسم البياني.")
+                    st.info("لا توجد بيانات كافية لعرض الرسم البياني.")
 
     with tab_reports:
         with st.container(border=True):
@@ -2367,7 +2084,7 @@ else:
             with st.container(border=True):
                 st.markdown("<div class='card-section-title'>⚙️ إدارة قواعد البيانات والصلاحيات</div>", unsafe_allow_html=True)
                 st.markdown("<p class='card-section-sub'>تحديث قوائم الطلاب، استيراد أنماط التعلم، وتخصيص الفصول المسندة للمعلمين</p>", unsafe_allow_html=True)
-                sub_tab_students, sub_tab_vak, sub_tab_teachers, sub_tab_theme = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول", "🎨 تخصيص القالب البصري للمنصة"])
+                sub_tab_students, sub_tab_vak, sub_tab_teachers = st.tabs(["👨‍🎓 بيانات الطلاب", "🧠 بيانات أنماط التعلم", "👨‍🏫 المعلمين وصلاحيات الفصول"])
                 
                 # 1️⃣ تبويب بيانات الطلاب
                 with sub_tab_students:
@@ -2557,35 +2274,12 @@ else:
                     display_t_df = add_serial_column(display_t_df[['رقم الهوية', 'الاسم', 'الصلاحية', 'نطاق الفصول المسموحة']])
                     render_rtl_table(display_t_df)
 
-                # 4️⃣ تبويب تخصيص القالب البصري للمنصة
-                with sub_tab_theme:
-                    st.markdown(f"""
-                    <div class="admin-theme-box">
-                        <div class="theme-switcher-header">
-                            <span class="theme-switcher-label">🎨 تخصيص القالب البصري للمنصة:</span>
-                            <span class="theme-active-badge">{cur_t['name']} — {cur_t['desc']}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.info("💡 اختر القالب البصري لتطبيقه فوراً على الهوية البصرية للمنصة لدى جميع الزوار والمعلمين.")
-                    t_cols = st.columns(4)
-                    for idx, (t_key, t_info) in enumerate(THEMES.items()):
-                        with t_cols[idx]:
-                            is_curr_t = (active_theme_key == t_key)
-                            btn_t_key = f"thm_active_{t_key}" if is_curr_t else f"thm_idle_{t_key}"
-                            btn_t_lbl = f"✨ {t_info['name']}" if is_curr_t else t_info['name']
-                            if st.button(btn_t_lbl, key=btn_t_key, use_container_width=True):
-                                if not is_curr_t:
-                                    with st.spinner("جاري تطبيق القالب البصري على المنصة..."):
-                                        save_platform_theme(t_key)
-                                        st.rerun()
-
 # ==========================================
 # 6. تذييل الصفحة الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام أو الحسابات)
 # ==========================================
-st.markdown(f"""
+st.markdown("""
 <div class="ziyad-footer-wrap">
-    <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.now().year}</div>
+    <div class="ziyad-footer-copy">جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © 2026</div>
     <div class="ziyad-footer-cards">
         <a href="https://zi-edu.streamlit.app" target="_blank" rel="noopener noreferrer" class="ziyad-footer-btn">
             🎓 منصة زياد الذكية
@@ -2602,216 +2296,3 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-
-components.html(f"""
-<script>
-(function() {{
-    try {{
-        var pDoc = window.parent.document;
-        pDoc.documentElement.setAttribute('dir', 'rtl');
-        pDoc.body.setAttribute('dir', 'rtl');
-        pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
-
-        var styleId = 'ziyad-vak-global-portal-rtl';
-        var existingStyle = pDoc.getElementById(styleId);
-        if (!existingStyle) {{
-            existingStyle = pDoc.createElement('style');
-            existingStyle.id = styleId;
-            pDoc.head.appendChild(existingStyle);
-        }}
-        existingStyle.innerHTML = `
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-                --text-color: #0f172a !important;
-                --background-color: {cur_t['bg_page']} !important;
-                --secondary-background-color: #ffffff !important;
-                --primary-color: {cur_t['brand_royal']} !important;
-                color-scheme: light only !important;
-                background-color: {cur_t['bg_page']} !important;
-                color: #0f172a !important;
-            }}
-            span[data-testid="stIconMaterial"],
-            [data-testid="stExpanderToggleIcon"],
-            .material-icons,
-            [class*="material-symbols"] {{
-                font-family: 'Material Symbols Rounded', 'Material Icons' !important;
-                direction: ltr !important;
-            }}
-            .stTabs [aria-selected="false"],
-            .stTabs [role="tab"]:not([aria-selected="true"]),
-            [data-testid="stTabs"] [aria-selected="false"],
-            [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]),
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]),
-            button[data-baseweb="tab"]:not([aria-selected="true"]) {{
-                width: auto !important;
-                flex: 0 0 auto !important;
-                white-space: nowrap !important;
-                background-color: #FFFFFF !important;
-                background: #FFFFFF !important;
-                border: 1.5px solid #CBD5E1 !important;
-                border-radius: 12px !important;
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [aria-selected="false"] p,
-            .stTabs [aria-selected="false"] span,
-            .stTabs [aria-selected="false"] div,
-            .stTabs [aria-selected="false"] *,
-            .stTabs [role="tab"]:not([aria-selected="true"]) *,
-            [data-testid="stTabs"] [aria-selected="false"] *,
-            .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {{
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
-                white-space: nowrap !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [aria-selected="true"],
-            .stTabs [role="tab"][aria-selected="true"],
-            [data-testid="stTabs"] [aria-selected="true"],
-            .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-                width: auto !important;
-                flex: 0 0 auto !important;
-                white-space: nowrap !important;
-                background: {cur_t['btn_grad']} !important;
-                border: 2px solid {cur_t['brand_gold']} !important;
-                border-radius: 12px !important;
-                color: #FFFFFF !important;
-                -webkit-text-fill-color: #FFFFFF !important;
-                opacity: 1 !important;
-            }}
-            .stTabs [aria-selected="true"] *,
-            [data-testid="stTabs"] [aria-selected="true"] * {{
-                color: #FFFFFF !important;
-                -webkit-text-fill-color: #FFFFFF !important;
-                white-space: nowrap !important;
-                opacity: 1 !important;
-            }}
-            [data-testid="stExpander"] {{
-                background-color: #FFFFFF !important;
-                border: 1.5px solid #CBD5E1 !important;
-                border-radius: 14px !important;
-            }}
-            [data-testid="stExpander"] details,
-            [data-testid="stExpander"] summary,
-            [data-testid="stExpanderDetails"] {{
-                background-color: #FFFFFF !important;
-                color: #0F172A !important;
-            }}
-            [data-testid="stExpander"] summary p,
-            [data-testid="stExpander"] summary [data-testid="stMarkdownContainer"] p {{
-                font-family: 'Cairo', sans-serif !important;
-                color: #0F172A !important;
-                -webkit-text-fill-color: #0F172A !important;
-                font-weight: 800 !important;
-            }}
-        `;
-
-        var isRunningVak = false;
-        function enforceVakPortalStyles() {{
-            if (isRunningVak) return;
-            isRunningVak = true;
-            try {{
-                if (pDoc.head.lastElementChild !== existingStyle) {{
-                    pDoc.head.appendChild(existingStyle);
-                }}
-                var tabLists = pDoc.querySelectorAll('.stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"], [data-testid="stTabs"] [role="tablist"]');
-                tabLists.forEach(function(tl) {{
-                    tl.style.setProperty('display', 'grid', 'important');
-                    tl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
-                    tl.style.setProperty('gap', '6px 8px', 'important');
-                    tl.style.setProperty('width', '100%', 'important');
-                    tl.style.setProperty('direction', 'rtl', 'important');
-                    tl.style.setProperty('padding', '2px 0 8px 0', 'important');
-                    tl.style.setProperty('margin-bottom', '10px', 'important');
-                    tl.style.setProperty('border-bottom', '1.5px solid #E2E8F0', 'important');
-                    tl.style.setProperty('overflow', 'visible', 'important');
-                    var btns = tl.querySelectorAll('button[role="tab"], button[data-baseweb="tab"]');
-                    btns.forEach(function(b, idx) {{
-                        if (btns.length % 2 === 1 && idx === btns.length - 1) {{
-                            b.style.setProperty('grid-column', 'span 2', 'important');
-                        }} else {{
-                            b.style.removeProperty('grid-column');
-                        }}
-                    }});
-                }});
-                var tabs = pDoc.querySelectorAll('.stTabs [role="tab"], .stTabs [aria-selected], [data-testid="stTabs"] [role="tab"], button[data-baseweb="tab"]');
-                tabs.forEach(function(tab) {{
-                    tab.style.setProperty('width', '100%', 'important');
-                    tab.style.setProperty('height', '40px', 'important');
-                    tab.style.setProperty('min-height', '40px', 'important');
-                    tab.style.setProperty('max-height', '40px', 'important');
-                    tab.style.setProperty('margin', '0', 'important');
-                    tab.style.setProperty('padding', '4px 10px', 'important');
-                    tab.style.setProperty('box-sizing', 'border-box', 'important');
-                    tab.style.setProperty('white-space', 'nowrap', 'important');
-                    tab.style.setProperty('display', 'flex', 'important');
-                    tab.style.setProperty('align-items', 'center', 'important');
-                    tab.style.setProperty('justify-content', 'center', 'important');
-                    var isSel = tab.getAttribute('aria-selected') === 'true';
-                    if (isSel) {{
-                        tab.style.setProperty('background', '{cur_t["btn_grad"]}', 'important');
-                        tab.style.setProperty('border', '1.5px solid {cur_t["brand_gold"]}', 'important');
-                        tab.style.setProperty('border-radius', '11px', 'important');
-                        tab.style.setProperty('color', '#FFFFFF', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#FFFFFF', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
-                            ch.style.setProperty('font-weight', '900', 'important');
-                        }});
-                    }} else {{
-                        tab.style.setProperty('background-color', '#F8FAFC', 'important');
-                        tab.style.setProperty('background', '#F8FAFC', 'important');
-                        tab.style.setProperty('border', '1px solid #CBD5E1', 'important');
-                        tab.style.setProperty('border-radius', '11px', 'important');
-                        tab.style.setProperty('color', '#1E293B', 'important');
-                        tab.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
-                        tab.querySelectorAll('p, span, div').forEach(function(ch) {{
-                            ch.style.setProperty('color', '#1E293B', 'important');
-                            ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
-                            ch.style.setProperty('font-size', '0.86rem', 'important');
-                            ch.style.setProperty('font-weight', '800', 'important');
-                        }});
-                    }}
-                }});
-
-                var inputBoxes = pDoc.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"]');
-                inputBoxes.forEach(function(box) {{
-                    box.style.setProperty('background-color', '#FFFFFF', 'important');
-                    box.style.setProperty('background', '#FFFFFF', 'important');
-                    box.style.setProperty('color', '#0F172A', 'important');
-                    box.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                    box.querySelectorAll('div, input, textarea, button').forEach(function(inn) {{
-                        if (!inn.closest('[data-baseweb="tag"]')) {{
-                            inn.style.setProperty('background-color', '#FFFFFF', 'important');
-                            inn.style.setProperty('background', '#FFFFFF', 'important');
-                            inn.style.setProperty('color', '#0F172A', 'important');
-                            inn.style.setProperty('-webkit-text-fill-color', '#0F172A', 'important');
-                        }}
-                    }});
-                    box.querySelectorAll('svg').forEach(function(s) {{
-                        s.style.setProperty('fill', '#0F172A', 'important');
-                        s.style.setProperty('color', '#0F172A', 'important');
-                        s.style.setProperty('background', 'transparent', 'important');
-                    }});
-                }});
-            }} finally {{
-                isRunningVak = false;
-            }}
-        }}
-
-        enforceVakPortalStyles();
-        if (window.parent.__ziyadVakLightObserverObj) {{
-            try {{ window.parent.__ziyadVakLightObserverObj.disconnect(); }} catch (e) {{}}
-        }}
-        var obs = new MutationObserver(function() {{
-            enforceVakPortalStyles();
-        }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
-        window.parent.__ziyadVakLightObserverObj = obs;
-    }} catch (e) {{}}
-}})();
-</script>
-""", height=0)
