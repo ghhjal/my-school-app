@@ -4065,11 +4065,11 @@ if st.session_state.role in ["teacher", "viewer"]:
         st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
 
     # ---------------------------------------------------------
-    # 5. تقرير حصر المتفوقين ومتدني المستوى (يدعم اختيار عدة فصول معاً)
+    # 5. منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور
     # ---------------------------------------------------------
     with rep_tabs[4]:
-      st.markdown("#### 📈 تقرير حصر المتفوقين ومتدني المستوى (للخطط العلاجية والتعزيز)")
-      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل فصول الخامس الأربعة) لاستخراج كشف موحد للخطط العلاجية أو المتفوقين بترويسة المدرسة المناسبة.")
+      st.markdown("#### 📈 منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور")
+      st.info("💡 منظومة تشخيصية ذكية تربط درجات الطالب (المشاركة والاختبارات) بنمط تعلمه (VAK) لتوليد: **خطة إثرائية للمتفوقين**، و**خطة علاجية تشخيصية (قبلي/بعدي)**، و**إشعارات أولياء الأمور (ورقية + واتساب)** كشواهد أداء رسمية جاهزة للطباعة.")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -4081,7 +4081,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             key="rep_lvl_cls_multi",
         )
         rep_per = c2.selectbox(
-            "📅 الفترة:",
+            "📅 الفترة الدراسية:",
             [
                 "الفصل الأول - فترة أولى",
                 "الفصل الأول - فترة ثانية",
@@ -4091,12 +4091,40 @@ if st.session_state.role in ["teacher", "viewer"]:
             key="rep_lvl_per",
         )
 
-        c3, c4 = st.columns(2)
-        rep_type = c3.selectbox("🎯 الفئة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
-        default_thresh = 54 if "المتفوقين" in rep_type else 36
-        threshold = c4.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}")
+        max_t_lvl = int(st.session_state.get("max_tasks", 60))
+        max_q_lvl = int(st.session_state.get("max_quiz", 40))
+        max_tot_lvl = max_t_lvl + max_q_lvl
+        default_high = int(round(max_tot_lvl * 0.90)) if max_tot_lvl > 0 else 54
+        default_low = int(round(max_tot_lvl * 0.60)) if max_tot_lvl > 0 else 36
 
-        if st.button("🖨️ توليد تقرير الحصر للفصول المحددة", type="primary", use_container_width=True):
+        c3, c4, c5 = st.columns([1.4, 1.8, 1])
+        rep_type = c3.selectbox("🎯 الفئة المستهدفة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
+        is_top_cat = "المتفوقين" in rep_type
+
+        if is_top_cat:
+          sub_rep_mode = c4.selectbox(
+              "📑 نوع التقرير المطلوب:",
+              [
+                  "🚀 تقرير الخطة الإثرائية للمتفوقين (مخصص حسب VAK)",
+                  "📋 كشف حصر الطلاب المتفوقين (عام)",
+              ],
+              key="sub_rep_mode_top",
+          )
+        else:
+          sub_rep_mode = c4.selectbox(
+              "📑 نوع التقرير المطلوب:",
+              [
+                  "🛠️ تقرير الخطة العلاجية التشخيصية المقترحة (قبلي/بعدي)",
+                  "📩 إشعارات أولياء الأمور الرسمية (للطباعة والتوقيع + واتساب)",
+                  "📋 كشف حصر الطلاب متدني المستوى (عام)",
+              ],
+              key="sub_rep_mode_low",
+          )
+
+        default_thresh = default_high if is_top_cat else default_low
+        threshold = c5.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}_{max_tot_lvl}")
+
+        if st.button("🖨️ توليد التقرير والنماذج للفصول المحددة", type="primary", use_container_width=True):
           target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(rep_cls_list, avail_lvl_cls)
           if not target_lvl_cls:
             st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
@@ -4111,103 +4139,505 @@ if st.session_state.role in ["teacher", "viewer"]:
                 df_g_all["period"] = "الفصل الأول - فترة أولى"
               df_g_all["period"] = df_g_all["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
 
-              df_g_filtered = df_g_all[df_g_all["period"] == rep_per]
+              df_g_filtered = df_g_all[df_g_all["period"] == rep_per].drop_duplicates(subset=["clean_id"], keep="last")
               df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on="clean_id", how="inner")
-              df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl["perf"], errors="coerce").fillna(0)
+              df_merged_lvl["p1_num"] = pd.to_numeric(df_merged_lvl.get("p1", 0), errors="coerce").fillna(0).astype(int)
+              df_merged_lvl["p2_num"] = pd.to_numeric(df_merged_lvl.get("p2", 0), errors="coerce").fillna(0).astype(int)
+              df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl.get("perf", 0), errors="coerce").fillna(0).astype(int)
 
-              if "المتفوقين" in rep_type:
+              if is_top_cat:
                 final_df = df_merged_lvl[df_merged_lvl["perf_num"] >= threshold].sort_values(by=["class", "perf_num"], ascending=[True, False])
-                report_title = "حصر الطلاب المتفوقين"
-                action_text = "تكريم في لوحة الشرف / تعزيز إيجابي"
-                color_theme = "#10B981"
               else:
                 final_df = df_merged_lvl[df_merged_lvl["perf_num"] < threshold].sort_values(by=["class", "perf_num"], ascending=[True, True])
-                report_title = "حصر الطلاب متدني المستوى"
-                action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
-                color_theme = "#EF4444"
 
               if final_df.empty:
-                st.success(f"✅ لا يوجد طلاب يطابقون معيار ({report_title}) في الفصول المحددة.")
+                st.success(f"✅ لا يوجد طلاب يطابقون المعيار المحدد في ({label_lvl_cls}).")
               else:
-                rows_lvl = ""
-                excel_lvl_rows = []
-                for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                  rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
-                  excel_lvl_rows.append({
-                      "م": i,
-                      "اسم الطالب": row["name"],
-                      "الصف": row.get("class", ""),
-                      f"المجموع ({rep_per})": row["perf_num"],
-                      "الإجراء المقترح": action_text,
-                  })
+                def get_student_vak_label(row_obj):
+                  raw_v = str(row_obj.get("نمط التعلم", "")).strip()
+                  if not raw_v or raw_v.lower() in ["nan", "none"]:
+                    return "متنوع 🌟"
+                  return raw_v
 
-                lvl_report_html = f"""
-                <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-                <style>
-                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
-                    .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
-                    .title-container {{ text-align: center; margin-bottom: 15px; }}
-                    .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
-                    .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
-                    table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
-                    th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
-                    th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
-                    .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                    @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-                </style></head><body>
-                    <div class="header-box">
-                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                        <div class="header-text" style="align-self: center;">
-                            <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
-                            <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                def get_enrichment_plan_for_student(vak_str):
+                  if "بصري" in vak_str:
+                    return (
+                        "تصميم خريطة مفاهيم / عرض مرئي للمفردات والقواعد",
+                        "بطاقات تحدي إثرائية مصورة (Super Goal Challenge)",
+                        "تنمية مهارات التلخيص البصري والكتابة الإبداعية",
+                    )
+                  if "سمعي" in vak_str:
+                    return (
+                        "قيادة الحوار الصفي وتقديم فقرة إذاعية باللغة الإنجليزية",
+                        "تدريبات استماع ونطق متقدمة (Speaking & Fluency)",
+                        "تعزيز الطلاقة اللغوية والثقة في التحدث أمام الزملاء",
+                    )
+                  if "حركي" in vak_str:
+                    return (
+                        "قيادة مجموعات التعلم التعاوني (دور المعلم الصغير)",
+                        "تنفيذ مشروع تطبيقي ومسابقات تفاعلية صفية",
+                        "تنمية مهارات القيادة والتعلم بالمارسة والتطبيق",
+                    )
+                  return (
+                      "تكليف بمهام قيادية (المعلم الصغير) + أنشطة تفكير عليا",
+                      "أوراق عمل إثرائية متقدمة ومسابقات تحدي الأبطال",
+                      "استدامة التفوق وتحفيز الدافعية الذاتية والإبداع",
+                  )
+
+                def get_remedial_diagnosis_and_plan(p1_v, p2_v, vak_str):
+                  p1_ratio = (p1_v / max_t_lvl) if max_t_lvl > 0 else 1.0
+                  p2_ratio = (p2_v / max_q_lvl) if max_q_lvl > 0 else 1.0
+                  if p1_ratio < 0.60 and p2_ratio < 0.60:
+                    diag = "ضعف في إتقان المهارات الأساسية + قصور في استكمال المهام والواجبات"
+                  elif p1_ratio < p2_ratio:
+                    diag = "قصور في أداء المهام الأدائية والواجبات والمشاركة الصفية"
+                  else:
+                    diag = "ضعف في مهارات الورقة الامتحانية (المفردات والقواعد والقراءة)"
+
+                  if "بصري" in vak_str:
+                    strategy = "ملخصات بصرية ملونة + بطاقات مفردات مصورة (Flashcards) + أوراق عمل علاجية"
+                  elif "سمعي" in vak_str:
+                    strategy = "شرح صوتي مباشر + تكرار النطق السمعي + متابعة فردية داخل الحصة"
+                  elif "حركي" in vak_str:
+                    strategy = "تعلم بالأقران (قرين متفوق) + تدريبات تطبيقية مجزأة قصيرة"
+                  else:
+                    strategy = "أوراق عمل علاجية مركزة + تعلم بالأقران + إعادة تقييم المهارات"
+
+                  return diag, strategy
+
+                issue_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+                curr_yr_str = st.session_state.get("current_year", "1448هـ")
+
+                # ---------------------------------------------------------
+                # أ) تقرير الخطة الإثرائية للمتفوقين
+                # ---------------------------------------------------------
+                if is_top_cat and "الإثرائية" in sub_rep_mode:
+                  rows_enrich_html = ""
+                  excel_enrich_rows = []
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    vak_lbl = get_student_vak_label(row)
+                    prog_name, resource_name, impact_name = get_enrichment_plan_for_student(vak_lbl)
+                    pct_s = round((row["perf_num"] / max_tot_lvl) * 100, 1) if max_tot_lvl > 0 else 100
+                    rows_enrich_html += f"""
+                    <tr>
+                        <td>{i}</td>
+                        <td style="text-align:right; font-weight:800;">{row['name']}</td>
+                        <td>{row.get('class', '')}</td>
+                        <td style="font-weight:900; color:#059669;">{row['perf_num']} / {max_tot_lvl} ({pct_s}%)</td>
+                        <td style="font-weight:700; color:#1E40AF;">{vak_lbl}</td>
+                        <td style="text-align:right; font-weight:700;">{prog_name}</td>
+                        <td style="text-align:right; font-size:11px; color:#334155;">{resource_name}</td>
+                        <td style="font-size:11px; color:#059669; font-weight:700;">{impact_name}</td>
+                    </tr>
+                    """
+                    excel_enrich_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        "الدرجة": f"{row['perf_num']} / {max_tot_lvl}",
+                        "النسبة": f"{pct_s}%",
+                        "نمط التعلم": vak_lbl,
+                        "البرنامج الإثرائي المخصص": prog_name,
+                        "الأدوات والأنشطة الإثرائية": resource_name,
+                        "الأثر المتوقع": impact_name,
+                    })
+
+                  enrich_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة الإثرائية للمتفوقين</title>
+                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                  <style>
+                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                      .header-box {{ border: 2px solid #065f46; background: #f0fdf4; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
+                      .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #064e3b; }}
+                      .title-banner {{ text-align: center; margin-bottom: 12px; }}
+                      .main-title {{ font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #065f46, #10b981); color: white; display: inline-block; padding: 5px 26px; border-radius: 99px; margin-bottom: 4px; }}
+                      .goals-box {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; }}
+                      table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11.5px; }}
+                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 6px; }}
+                      th {{ background-color: #065f46; color: #ffffff; font-weight: 800; }}
+                      tr:nth-child(even) {{ background-color: #f8fafc; }}
+                      .footer-sigs {{ margin-top: 28px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; }}
+                      @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                  </style></head><body>
+                      <div class="header-box">
+                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                          <div class="header-text">
+                              <div style="font-size:15px; font-weight:900; color:#065f46;">شواهد الأداء الوظيفي — معيار تحسين نتائج المتعلمين</div>
+                              <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
+                          </div>
+                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
+                      </div>
+                      <div class="title-banner">
+                          <div class="main-title">🌟 خطة البرامج الإثرائية ورعاية الطلاب المتفوقين (وفق أنماط التعلم VAK)</div>
+                          <div style="font-size:12px; font-weight:700; color:#475569; margin-top:3px;">
+                              الفصول: ({label_lvl_cls}) | معيار التفوق: ({threshold} من {max_tot_lvl} فأعلى) | إجمالي المتفوقين: ({len(final_df)} طالب)
+                          </div>
+                      </div>
+                      <div class="goals-box">
+                          <div><b>🎯 الهدف العام:</b> استدامة تفوق الطلاب المتميزين وتنمية مهارات التفكير العليا والقيادة اللغوية.</div>
+                          <div><b>🧠 آلية التخصيص:</b> مواءمة النشاط الإثرائي مع نمط تعلم كل طالب (بصري / سمعي / حركي).</div>
+                          <div><b>🏆 نظام التحفيز:</b> لوحة الشرف الإلكترونية + شهادات التفوق + وسام المعلم الصغير.</div>
+                      </div>
+                      <table>
+                          <thead>
+                              <tr>
+                                  <th style="width:3%;">م</th>
+                                  <th style="width:20%; text-align:right;">اسم الطالب</th>
+                                  <th style="width:9%;">الصف</th>
+                                  <th style="width:11%;">الدرجة والنسبة</th>
+                                  <th style="width:9%;">نمط التعلم</th>
+                                  <th style="width:20%; text-align:right;">البرنامج الإثرائي المخصص</th>
+                                  <th style="width:15%; text-align:right;">الأدوات والمهام الإثرائية</th>
+                                  <th style="width:13%;">مؤشر الأثر</th>
+                              </tr>
+                          </thead>
+                          <tbody>{rows_enrich_html}</tbody>
+                      </table>
+                      <div class="footer-sigs">
+                          <div>الموجه الطلابي<br><br>.................................</div>
+                          <div>معلم المادة<br><br>أ. زياد المعمري</div>
+                          <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
+                      </div>
+                      <script>window.onload = function() {{ window.print(); }}</script>
+                  </body></html>"""
+
+                  st.success(f"✅ تم إعداد تقرير الخطة الإثرائية لعدد ({len(final_df)}) طالباً متفوقاً مخصصاً وفق أنماط تعلمهم.")
+                  dl_e1, dl_e2 = st.columns(2)
+                  dl_e1.download_button(
+                      label="🖨️ تحميل وطباعة تقرير الخطة الإثرائية (A4 جاهز للطباعة)",
+                      data=enrich_html,
+                      file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_e2.download_button(
+                      label="📥 تصدير الخطة الإثرائية (Excel)",
+                      data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
+                      file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+
+                # ---------------------------------------------------------
+                # ب) تقرير الخطة العلاجية التشخيصية المقترحة (لمتدني المستوى)
+                # ---------------------------------------------------------
+                elif (not is_top_cat) and "العلاجية" in sub_rep_mode:
+                  rows_rem_html = ""
+                  excel_rem_rows = []
+                  target_pass_score = max(threshold, int(round(max_tot_lvl * 0.65)))
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    vak_lbl = get_student_vak_label(row)
+                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+                    rows_rem_html += f"""
+                    <tr>
+                        <td>{i}</td>
+                        <td style="text-align:right; font-weight:800;">{row['name']}</td>
+                        <td>{row.get('class', '')}</td>
+                        <td>{row['p1_num']}/{max_t_lvl}</td>
+                        <td>{row['p2_num']}/{max_q_lvl}</td>
+                        <td style="font-weight:900; color:#dc2626; background:#fef2f2;">{row['perf_num']}/{max_tot_lvl}</td>
+                        <td style="font-weight:700; color:#1e40af;">{vak_lbl}</td>
+                        <td style="text-align:right; font-size:11px; font-weight:700; color:#991b1b;">{diag_txt}</td>
+                        <td style="text-align:right; font-size:11px; color:#1e293b;">{strat_txt}</td>
+                        <td style="color:#059669; font-weight:800;">{target_pass_score}+ / ____</td>
+                    </tr>
+                    """
+                    excel_rem_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        f"المشاركة ({max_t_lvl})": row["p1_num"],
+                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                        f"القياس القبلي ({max_tot_lvl})": row["perf_num"],
+                        "نمط التعلم": vak_lbl,
+                        "تشخيص مكمن الضعف": diag_txt,
+                        "الإجراء العلاجي المخصص": strat_txt,
+                        "المستهدف / القياس البعدي": f"{target_pass_score}+",
+                    })
+
+                  remedial_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة العلاجية المقترحة</title>
+                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                  <style>
+                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                      .header-box {{ border: 2px solid #991b1b; background: #fef2f2; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
+                      .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #7f1d1d; }}
+                      .title-banner {{ text-align: center; margin-bottom: 12px; }}
+                      .main-title {{ font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #991b1b, #dc2626); color: white; display: inline-block; padding: 5px 26px; border-radius: 99px; margin-bottom: 4px; }}
+                      .plan-pillars {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 11px; }}
+                      table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }}
+                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 5px; }}
+                      th {{ background-color: #991b1b; color: #ffffff; font-weight: 800; }}
+                      tr:nth-child(even) {{ background-color: #f8fafc; }}
+                      .footer-sigs {{ margin-top: 26px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; }}
+                      @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                  </style></head><body>
+                      <div class="header-box">
+                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                          <div class="header-text">
+                              <div style="font-size:15px; font-weight:900; color:#991b1b;">شواهد الأداء الوظيفي — الخطة العلاجية ورفع التحصيل الدراسي</div>
+                              <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
+                          </div>
+                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
+                      </div>
+                      <div class="title-banner">
+                          <div class="main-title">🛠️ الخطة العلاجية التشخيصية للطلاب متدني التحصيل (قياس قبلي وبعدي)</div>
+                          <div style="font-size:12px; font-weight:700; color:#475569; margin-top:3px;">
+                              الفصول: ({label_lvl_cls}) | حد التدني: (أقل من {threshold} من {max_tot_lvl}) | العدد المستهدف: ({len(final_df)} طالب)
+                          </div>
+                      </div>
+                      <div class="plan-pillars">
+                          <div><b>1️⃣ التشخيص الدقيق:</b> تحليل درجتي المشاركة ({max_t_lvl}) والاختبارات ({max_q_lvl}) لتحديد سبب التعثر.</div>
+                          <div><b>2️⃣ التمايز (VAK):</b> توظيف نمط تعلم الطالب (بصري/سمعي/حركي) في تقديم الدعم العلاجي.</div>
+                          <div><b>3️⃣ الشراكة الأسرية:</b> إشعار ولي الأمر بخطة العمل وتزويد الطالب بأوراق عمل علاجية مركزة.</div>
+                          <div><b>4️⃣ قياس الأثر:</b> رصد الدرجة القبلية ومقارنتها بالقياس البعدي بعد تطبيق الخطة.</div>
+                      </div>
+                      <table>
+                          <thead>
+                              <tr>
+                                  <th style="width:3%;">م</th>
+                                  <th style="width:18%; text-align:right;">اسم الطالب</th>
+                                  <th style="width:7%;">الصف</th>
+                                  <th style="width:6%;">مشاركة</th>
+                                  <th style="width:6%;">اختبار</th>
+                                  <th style="width:8%;">القياس القبلي</th>
+                                  <th style="width:8%;">نمط التعلم</th>
+                                  <th style="width:18%; text-align:right;">تشخيص مكمن الضعف</th>
+                                  <th style="width:18%; text-align:right;">الإجراء العلاجي المخصص</th>
+                                  <th style="width:8%;">القياس البعدي</th>
+                              </tr>
+                          </thead>
+                          <tbody>{rows_rem_html}</tbody>
+                      </table>
+                      <div class="footer-sigs">
+                          <div>الموجه الطلابي<br><br>.................................</div>
+                          <div>معلم المادة<br><br>أ. زياد المعمري</div>
+                          <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
+                      </div>
+                      <script>window.onload = function() {{ window.print(); }}</script>
+                  </body></html>"""
+
+                  st.success(f"✅ تم توليد الخطة العلاجية التشخيصية لعدد ({len(final_df)}) طالباً مع تحديد مكمن الضعف والإجراء المقترح تلقائياً.")
+                  dl_r1, dl_r2 = st.columns(2)
+                  dl_r1.download_button(
+                      label="🖨️ تحميل وطباعة الخطة العلاجية التشخيصية (A4 جاهز للطباعة)",
+                      data=remedial_html,
+                      file_name=f"Remedial_Plan_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_r2.download_button(
+                      label="📥 تصدير الخطة العلاجية (Excel)",
+                      data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
+                      file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+
+                # ---------------------------------------------------------
+                # ج) إشعارات أولياء الأمور الرسمية (نماذج للطباعة والتوقيع + إرسال واتساب)
+                # ---------------------------------------------------------
+                elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
+                  notices_cards_html = ""
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    s_name = row["name"]
+                    s_cls_item = row.get("class", "")
+                    sch_item = get_school_name_dynamic(s_cls_item).replace("<br>", " - ")
+                    vak_lbl = get_student_vak_label(row)
+                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+
+                    notices_cards_html += f"""
+                    <div class="notice-card">
+                        <div class="nc-header">
+                            <div>المملكة العربية السعودية - وزارة التعليم<br>{sch_item}</div>
+                            <div class="nc-badge">إشعار متابعة مستوى دراسي لولي الأمر</div>
+                            <div>العام الدراسي: {curr_yr_str}<br>{rep_per} | التاريخ: {issue_date_str}</div>
                         </div>
-                        <div class="header-text">العام الدراسي: {st.session_state.get('current_year', '')}<br>{rep_per}<br>المعلم: زياد المعمري</div>
-                    </div>
-                    <div class="title-container">
-                        <div class="main-title">{report_title}</div>
-                        <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
-                        <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
-                            (الفصول: {label_lvl_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
+                        <div class="nc-body">
+                            <p style="margin:4px 0;">المكرم ولي أمر الطالب: <b style="color:#991b1b; font-size:14px;">{s_name}</b> &nbsp;&nbsp;|&nbsp;&nbsp; الصف: <b>({s_cls_item})</b> &nbsp;&nbsp;&nbsp; وفقه الله</p>
+                            <p style="margin:4px 0; font-size:11.5px;">السلام عليكم ورحمة الله وبركاته، حرصاً من المدرسة على تعزيز الشراكة الأسرية والارتقاء بالمستوى التحصيلي لابنكم في مادة <b>(اللغة الإنجليزية)</b>، نفيدكم بتفاصيل أدائه الحالي وخطة الدعم المقترحة:</p>
+                            <table class="nc-table">
+                                <tr>
+                                    <th>درجة المشاركة والمهام (من {max_t_lvl})</th>
+                                    <th>درجة الاختبارات القصيرة (من {max_q_lvl})</th>
+                                    <th>المجموع الحالي (من {max_tot_lvl})</th>
+                                    <th>نمط التعلم المفضل</th>
+                                </tr>
+                                <tr>
+                                    <td><b>{row['p1_num']}</b> / {max_t_lvl}</td>
+                                    <td><b>{row['p2_num']}</b> / {max_q_lvl}</td>
+                                    <td style="color:#dc2626; font-weight:900; font-size:13.5px;">{row['perf_num']} / {max_tot_lvl}</td>
+                                    <td style="color:#1e40af; font-weight:800;">{vak_lbl}</td>
+                                </tr>
+                            </table>
+                            <div class="nc-diag">
+                                <div><b>🔍 تشخيص مكمن الاحتياج:</b> {diag_txt}.</div>
+                                <div><b>🛠️ الإجراء العلاجي بالمدرسة:</b> {strat_txt}.</div>
+                                <div><b>🏠 المطلوب من الأسرة:</b> متابعة حل أوراق العمل العلاجية والواجبات اليومية ومراجعة المفردات الأساسية بالمنزل.</div>
+                            </div>
+                        </div>
+                        <div class="nc-footer">
+                            <div>معلم المادة: <b>أ. زياد المعمري</b></div>
+                            <div>الموجه الطلابي: .........................</div>
+                            <div>مدير المدرسة: <b>أ. عبدالمجيد الحربي</b></div>
+                        </div>
+                        <div class="nc-tear">
+                            ✂️ <b>قسيمة رد ولي الأمر:</b> أقر أنا ولي أمر الطالب (<b>{s_name}</b>) بالاطلاع على إشعار المستوى والخطة العلاجية، وأؤكد متابعته منزلياً. &nbsp;|&nbsp; التوقيع: ........................... &nbsp;|&nbsp; الجوال: ...........................
                         </div>
                     </div>
-                    <table>
-                        <tr>
-                            <th style="width: 5%;">م</th>
-                            <th style="width: 35%; text-align: right;">اسم الطالب</th>
-                            <th style="width: 15%;">الصف</th>
-                            <th style="width: 15%;">المجموع ({rep_per})</th>
-                            <th style="width: 30%;">الإجراء المتخذ (مقترح)</th>
-                        </tr>
-                        {rows_lvl}
-                    </table>
-                    <div class="footer-sigs">
-                        <div>الموجه الطلابي <br><br>........................</div>
-                        <div>معلم المادة <br><br>زياد المعمري</div>
-                        <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                    </div>
-                    <script>window.onload = function() {{ window.print(); }}</script>
-                </body></html>
-                """
-                dl_l1, dl_l2 = st.columns(2)
-                dl_l1.download_button(
-                    label="🖨️ تحميل التقرير للطباعة المباشرة",
-                    data=lvl_report_html,
-                    file_name=f"Performance_Report_{datetime.date.today()}.html",
-                    mime="text/html",
-                    type="primary",
-                    use_container_width=True,
-                )
-                df_ex_lvl = pd.DataFrame(excel_lvl_rows)
-                dl_l2.download_button(
-                    label="📥 تصدير التقرير (Excel)",
-                    data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
-                    file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="secondary",
-                    use_container_width=True,
-                )
+                    """
+
+                  parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية</title>
+                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                  <style>
+                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 8px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                      .notice-card {{ border: 2px solid #1e293b; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; page-break-inside: avoid; height: 134mm; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }}
+                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; font-size: 11px; font-weight: 800; }}
+                      .nc-badge {{ background: #991b1b; color: white; padding: 4px 16px; border-radius: 99px; font-size: 13px; font-weight: 900; }}
+                      .nc-body {{ font-size: 12px; line-height: 1.45; }}
+                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 6px 0; font-size: 11.5px; }}
+                      .nc-table th, .nc-table td {{ border: 1px solid #cbd5e1; padding: 4px 6px; }}
+                      .nc-table th {{ background: #f8fafc; color: #1e293b; font-weight: 800; }}
+                      .nc-diag {{ background: #fef2f2; border: 1px solid #fecaca; border-right: 4px solid #dc2626; border-radius: 6px; padding: 6px 10px; font-size: 11px; line-height: 1.5; }}
+                      .nc-footer {{ display: flex; justify-content: space-between; font-size: 11.5px; padding-top: 4px; }}
+                      .nc-tear {{ border-top: 1.5px dashed #64748b; padding-top: 6px; font-size: 11px; background: #f8fafc; padding: 6px 8px; border-radius: 6px; }}
+                      @media print {{ @page {{ size: A4 portrait; margin: 8mm; }} body {{ padding: 0; }} }}
+                  </style></head><body>
+                      {notices_cards_html}
+                      <script>window.onload = function() {{ window.print(); }}</script>
+                  </body></html>"""
+
+                  st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي لولي الأمر (بطاقتان في كل ورقة A4 مع قسيمة توقيع ولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
+                  st.download_button(
+                      label=f"🖨️ تحميل وطباعة إشعارات أولياء الأمور الرسمية ({len(final_df)} إشعار - جاهز للطباعة)",
+                      data=parent_notices_html,
+                      file_name=f"Parent_Notices_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="primary",
+                      use_container_width=True,
+                  )
+
+                  with st.expander("📲 إرسال إشعار المستوى والخطة العلاجية لأولياء الأمور عبر واتساب فوراً", expanded=True):
+                    for _, s_row in final_df.iterrows():
+                      s_n = s_row.get("name", "")
+                      s_p = clean_phone_number(s_row.get("الجوال", ""))
+                      vak_w = get_student_vak_label(s_row)
+                      diag_w, strat_w = get_remedial_diagnosis_and_plan(s_row["p1_num"], s_row["p2_num"], vak_w)
+                      wa_notice_msg = urllib.parse.quote(
+                          f"🔔 *إشعار متابعة مستوى دراسي وخطة دعم علاجية*\n"
+                          f"المكرم ولي أمر الطالب: *{s_n}* ({s_row.get('class', '')})\n"
+                          f"السلام عليكم ورحمة الله وبركاته،\n"
+                          f"حرصاً منا على الارتقاء بالمستوى التحصيلي لابنكم في مادة اللغة الإنجليزية ({rep_per})، نفيدكم بدرجاته الحالية:\n"
+                          f"📝 المشاركة والمهام: {s_row['p1_num']} من {max_t_lvl}\n"
+                          f"✍️ الاختبارات القصيرة: {s_row['p2_num']} من {max_q_lvl}\n"
+                          f"📊 المجموع الحالي: {s_row['perf_num']} من {max_tot_lvl}\n\n"
+                          f"🔍 *التشخيص:* {diag_w}\n"
+                          f"🛠️ *خطة الدعم بالمدرسة:* {strat_w}\n"
+                          f"🏠 *نأمل منكم:* متابعة استكمال المهام وأوراق العمل العلاجية بالمنزل، شاكرين لكم تعاونكم الدائم.\n"
+                          f"معلم المادة: أ. زياد المعمري"
+                      )
+                      cw1, cw2 = st.columns([2.6, 1.2])
+                      cw1.markdown(f"<div style='padding-top:8px; font-weight:800;'>👤 {s_n} — ({s_row.get('class', '')}) | الدرجة: <span style='color:#dc2626;'>{s_row['perf_num']}/{max_tot_lvl}</span></div>", unsafe_allow_html=True)
+                      cw2.link_button("📲 إرسال الإشعار واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={wa_notice_msg}", use_container_width=True)
+
+                # ---------------------------------------------------------
+                # د) كشف الحصر العام (للمتفوقين أو متدني المستوى)
+                # ---------------------------------------------------------
+                else:
+                  if is_top_cat:
+                    report_title = "حصر الطلاب المتفوقين"
+                    action_text = "تكريم في لوحة الشرف / إدراج في الخطة الإثرائية"
+                    color_theme = "#10B981"
+                  else:
+                    report_title = "حصر الطلاب متدني المستوى"
+                    action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
+                    color_theme = "#EF4444"
+
+                  rows_lvl = ""
+                  excel_lvl_rows = []
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td>{row['p1_num']}</td><td>{row['p2_num']}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+                    excel_lvl_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        f"المشاركة ({max_t_lvl})": row["p1_num"],
+                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                        f"المجموع ({rep_per})": row["perf_num"],
+                        "الإجراء المقترح": action_text,
+                    })
+
+                  lvl_report_html = f"""
+                  <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
+                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                  <style>
+                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                      .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
+                      .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
+                      .title-container {{ text-align: center; margin-bottom: 15px; }}
+                      .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
+                      .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
+                      table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
+                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
+                      th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
+                      .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
+                      @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                  </style></head><body>
+                      <div class="header-box">
+                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                          <div class="header-text" style="align-self: center;">
+                              <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
+                              <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {issue_date_str}</div>
+                          </div>
+                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>المعلم: زياد المعمري</div>
+                      </div>
+                      <div class="title-container">
+                          <div class="main-title">{report_title}</div>
+                          <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
+                          <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
+                              (الفصول: {label_lvl_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
+                          </div>
+                      </div>
+                      <table>
+                          <tr>
+                              <th style="width: 5%;">م</th>
+                              <th style="width: 31%; text-align: right;">اسم الطالب</th>
+                              <th style="width: 12%;">الصف</th>
+                              <th style="width: 10%;">المشاركة</th>
+                              <th style="width: 10%;">الاختبارات</th>
+                              <th style="width: 12%;">المجموع</th>
+                              <th style="width: 20%;">الإجراء المتخذ</th>
+                          </tr>
+                          {rows_lvl}
+                      </table>
+                      <div class="footer-sigs">
+                          <div>الموجه الطلابي <br><br>........................</div>
+                          <div>معلم المادة <br><br>زياد المعمري</div>
+                          <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                      </div>
+                      <script>window.onload = function() {{ window.print(); }}</script>
+                  </body></html>
+                  """
+                  dl_l1, dl_l2 = st.columns(2)
+                  dl_l1.download_button(
+                      label="🖨️ تحميل كشف الحصر للطباعة المباشرة",
+                      data=lvl_report_html,
+                      file_name=f"Performance_Report_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  df_ex_lvl = pd.DataFrame(excel_lvl_rows)
+                  dl_l2.download_button(
+                      label="📥 تصدير كشف الحصر (Excel)",
+                      data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
+                      file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
 
     # ---------------------------------------------------------
     # 6. تقرير حصر أنماط التعلم (VARK) - يدعم تحديد عدة فصول معاً + طباعة وExcel
