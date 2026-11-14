@@ -176,7 +176,7 @@ if "role" not in st.session_state:
 if "username" not in st.session_state:
   st.session_state.username = None
 
-# --- 🎨 نظام ال الديناميكية للمناسبات والتجديد ---
+# --- 🎨 نظام القوالب الديناميكية للمناسبات والتجديد ---
 active_theme_name = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
 
 themes = {
@@ -2446,7 +2446,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # ---------------------------------------------------------
     with eval_tabs[1]:
       if st.session_state.role == "teacher":
-        st.markdown("#### 👥 رصد السلوك للفصل")
+        st.markdown("#### 👥 رصد السلوك الجماعي السريع للفصل")
         st.info("💡 اختر الصف، وحدد السلوك أو الغياب للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة.")
 
         bulk_class = st.selectbox("🎯 اختر الصف للسلوك الجماعي:", st.session_state.class_options, key="bulk_class_sel")
@@ -2647,8 +2647,8 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         # --- ب) القائمة السفلية الذكية: الرصد الجماعي داخل st.form لمنع إعادة التحميل مع كل رقم ---
         st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط هنا", expanded=False):
-          st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب داخل الجدول، ثم اضغط زر الحفظ بالأسفل .")
+        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط لفتح جدول الرصد الجماعي", expanded=False):
+          st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب بحرية تامة داخل الجدول، ثم اضغط زر الحفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
 
           bulk_gr_cls = st.selectbox("🏫 اختر الفصل لرصد درجاته جماعياً:", st.session_state.class_options, key="bulk_grades_cls_sel")
           cls_st_df = df_ev_g[df_ev_g["class"].astype(str).str.strip() == bulk_gr_cls.strip()].sort_values("name")
@@ -2769,7 +2769,8 @@ if st.session_state.role in ["teacher", "viewer"]:
     with eval_tabs[3]:
       cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
       st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
-      
+      st.info("💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً.")
+
       df_st_audit = st.session_state.df_students.copy()
       df_gr_audit = st.session_state.df_grades.copy()
 
@@ -2997,7 +2998,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # --- 2. المتفوقون أكاديمياً (90%+) ---
     with honor_tabs[1]:
       cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      st.markdown(f"#### 🎓 لوحة المتفوقين  ({cp})")
+      st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
 
       if "df_grades" in st.session_state and not st.session_state.df_grades.empty and not df_st_h.empty:
         df_g = st.session_state.df_grades.copy()
@@ -3075,8 +3076,8 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     # --- 3. مركز إصدار شهادات المتفوقين والشكر الإلكترونية ---
     with honor_tabs[2]:
-      st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر ")
-      st.info("💡 يمكنك تحديد عدة فصول معاً أو اختيار طالب/عدة طلاب لاستخراج شهادات الشكر والتقدير .")
+      st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
+      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) أو اختيار طالب/عدة طلاب بالاسم لاستخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة دفعة واحدة.")
 
       DEFAULT_CERT_PHRASES = {
           "وسام التميز الأكاديمي": [
@@ -3144,7 +3145,6 @@ if st.session_state.role in ["teacher", "viewer"]:
                 "🌟 جميع المتفوقين (90%+) في الفصول",
                 "👤 طالب محدد (أو عدة طلاب بالاسم)",
                 "🏆 أبطال لوحة الشرف (أعلى النقاط)",
-
             ],
             key="cert_gen_mode",
         )
@@ -3409,7 +3409,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
         if st.session_state.role == "teacher":
           st.markdown("---")
-          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً )"):
+          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
             st.caption("يمكنك إضافة عبارات جديدة لأي وسام أو تعديل العبارات الحالية، وسيتم حفظها في قاعدة البيانات المركزية (`settings`).")
             edit_badge_target = st.selectbox("اختر الوسام لتحرير عباراته:", badge_titles_list, key="cfg_badge_sel")
             current_lines = "\n".join(phrases_cfg.get(edit_badge_target, []))
@@ -3466,8 +3466,8 @@ if st.session_state.role in ["teacher", "viewer"]:
 # ==========================================
 if st.session_state.role in ["teacher", "viewer"]:
   with tab_reports:
-    st.subheader("🖨️ مركز التقارير والطباعة ")
-    st.caption("جميع تقارير الطباعة، شواهد الأداء، الكشوفات ، وتصدير ملفات Excel في مكان واحد مع دعم تحديد عدة فصول دفعة واحدة")
+    st.subheader("🖨️ مركز التقارير والطباعة والاستخراج")
+    st.caption("جميع تقارير الطباعة، شواهد الأداء، الكشوفات المرنة، وتصدير ملفات Excel في مكان واحد مع دعم تحديد عدة فصول دفعة واحدة")
 
     df_s_rep = st.session_state.df_students.copy()
     if not df_s_rep.empty:
@@ -3522,7 +3522,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # 1. تقرير الطالب الشامل المفصل
     # ---------------------------------------------------------
     with rep_tabs[0]:
-      st.markdown("#### 📑 التقرير الشامل للطالب")
+      st.markdown("#### 📑 التقرير الشامل المفصل للطالب")
       if not df_s_rep.empty:
         col_r_cls, col_r_st = st.columns([1.3, 2.2])
         sel_r_cls = col_r_cls.multiselect(
@@ -3704,7 +3704,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # ---------------------------------------------------------
     with rep_tabs[1]:
       st.markdown("#### 📊 استخراج كشف الدرجات المرصودة للطباعة")
-      st.info("💡 يمكنك اختيار عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف واحد جاهز للطباعة .")
+      st.info("💡 يمكنك اختيار عدة فصول معاً (مثل جميع فصول الخامس) ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد جاهز للطباعة دفعة واحدة.")
 
       if not df_s_rep.empty:
         col_g1, col_g2 = st.columns([2, 1.2])
@@ -3841,8 +3841,8 @@ if st.session_state.role in ["teacher", "viewer"]:
     # 3. كشف متابعة فارغ مرن (يدعم طباعة عدة فصول في ملف واحد)
     # ---------------------------------------------------------
     with rep_tabs[2]:
-      st.markdown("#### 📝 استخراج كشف متابعة (فارغ للرصد)")
-      st.info("💡 اختر عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف واحد.")
+      st.markdown("#### 📝 استخراج كشف متابعة مرن (فارغ للرصد اليدوي)")
+      st.info("💡 اختر عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد دون الحاجة لتكرار الطباعة لكل فصل.")
 
       if not df_s_rep.empty:
         col_opt1, col_opt2 = st.columns([2, 1])
@@ -4052,8 +4052,8 @@ if st.session_state.role in ["teacher", "viewer"]:
     # 5. تقرير حصر المتفوقين ومتدني المستوى (يدعم اختيار عدة فصول معاً)
     # ---------------------------------------------------------
     with rep_tabs[4]:
-      st.markdown("#### 📈 تقرير حصر المتفوقين ومتدني المستوى")
-      st.info("💡 يمكنك تحديد عدة فصول معاً لاستخراج كشف موحد للخطط العلاجية أو المتفوقين .")
+      st.markdown("#### 📈 تقرير حصر المتفوقين ومتدني المستوى (للخطط العلاجية والتعزيز)")
+      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل فصول الخامس الأربعة) لاستخراج كشف موحد للخطط العلاجية أو المتفوقين بترويسة المدرسة المناسبة.")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -4197,8 +4197,8 @@ if st.session_state.role in ["teacher", "viewer"]:
     # 6. تقرير حصر أنماط التعلم (VARK) - يدعم تحديد عدة فصول معاً + طباعة وExcel
     # ---------------------------------------------------------
     with rep_tabs[5]:
-      st.markdown("#### 🧠 استخراج تقرير أنماط التعلم")
-      st.info("💡 يمكنك تحديد عدة فصول معاً أو اختيار 'الكل' لاستخراج تقرير واحد جاهز للطباعة أو التصدير لملف Excel.")
+      st.markdown("#### 🧠 استخراج تقرير أنماط التعلم (للإدارة والتوثيق)")
+      st.info("💡 يمكنك تحديد عدة فصول معاً (مثلاً: الخامس/1، الخامس/2، الخامس/3، الخامس/4) أو اختيار 'الكل' لاستخراج تقرير واحد مجمع جاهز للطباعة أو التصدير لملف Excel.")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -4345,8 +4345,8 @@ if st.session_state.role in ["teacher", "viewer"]:
     # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
     # ---------------------------------------------------------
     with rep_tabs[6]:
-      st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب")
-      st.info("💡 يمكنك تحديد عدة فصول معاً لتحميل أرقام تواصلهم في ملف Excel واحد مرتب.")
+      st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب (واتساب)")
+      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) لتحميل أرقام تواصلهم في ملف Excel واحد مرتب.")
 
       if not df_s_rep.empty:
         all_classes = st.session_state.get("class_options", all_cls_in_db)
@@ -4482,15 +4482,15 @@ if st.session_state.role == "teacher" and tab_settings is not None:
     st.subheader("⚙️ إعدادات النظام وإدارة البيانات")
 
     set_tabs = st.tabs([
-        "🛠️ الصيانة والنسخ",
-        "🎨 الهوية والإعدادات",
-        "📤 استيراد البيانات",
+        "🛠️ الصيانة والنسخ الاحتياطي",
+        "🎨 الهوية والإعدادات الأكاديمية",
+        "📤 استيراد البيانات وأنماط التعلم",
         "🔐 إدارة المستخدمين",
     ])
 
     # --- 1. الصيانة والنسخ الاحتياطي (بأزرار مميزة وحماية تأكيد قبل التصفير) ---
     with set_tabs[0]:
-      st.markdown("#### 🛠️ أدوات الصيانة والنسخ ومزامنة الأرصدة")
+      st.markdown("#### 🛠️ أدوات الصيانة ومزامنة الأرصدة")
 
       c1, c2 = st.columns(2)
       with c1:
