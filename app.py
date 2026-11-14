@@ -4509,8 +4509,10 @@ if st.session_state.role in ["teacher", "viewer"]:
                             <div>مدير المدرسة<br><span class="sig-space"></span><b>أ. عبدالمجيد الحربي</b></div>
                         </div>
 
+                        <div class="ack-separator"></div>
+
                         <div class="nc-ack">
-                            <div class="ack-title">✍️ ثالثاً: إقرار اطلاع ومتابعة ولي الأمر <span style="font-size:11px; font-weight:700; color:#475569;">(نسخة لولي الأمر ونسخة تُحفظ في ملف المتابعة بالمدرسة)</span></div>
+                            <div class="ack-title">✍️ ثالثاً: إقرار اطلاع ومتابعة ولي الأمر <span style="font-size:11.5px; font-weight:700; color:#475569;">(نسخة لولي الأمر ونسخة تُحفظ في ملف المتابعة بالمدرسة)</span></div>
                             <p class="ack-text">
                                 أقر أنا ولي أمر الطالب / <b>{s_name}</b> بالصف (<b>{s_cls_item}</b>) باطلاعي على إشعار متابعة المستوى الدراسي والخطة العلاجية المعتمدة لابني في مادة اللغة الإنجليزية، وأؤكد التعاون مع المدرسة في متابعته منزلياً.
                             </p>
@@ -4530,28 +4532,29 @@ if st.session_state.role in ["teacher", "viewer"]:
                   <style>
                       * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
                       html, body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 0; color: #0f172a; }}
-                      .notice-page {{ width: 100%; border: 2px solid #1e293b; border-radius: 12px; padding: 12px 18px; margin: 0 auto 8mm auto; page-break-after: always; page-break-inside: avoid; break-inside: avoid; background: #ffffff; }}
+                      .notice-page {{ width: 100%; min-height: 246mm; border: 2px solid #1e293b; border-radius: 12px; padding: 14px 20px; margin: 0 auto 8mm auto; page-break-after: always; page-break-inside: avoid; break-inside: avoid; background: #ffffff; display: flex; flex-direction: column; }}
                       .notice-page:last-of-type {{ page-break-after: auto; margin-bottom: 0; }}
-                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 8px; margin-bottom: 10px; }}
-                      .nc-hdr-side {{ font-size: 11.5px; font-weight: 800; line-height: 1.45; text-align: center; color: #1e293b; }}
-                      .nc-badge {{ background: #991b1b; color: white; padding: 5px 20px; border-radius: 99px; font-size: 14.5px; font-weight: 900; display: inline-block; }}
-                      .student-banner {{ display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 7px 14px; font-size: 13px; font-weight: 900; margin-bottom: 8px; }}
-                      .greeting-p {{ font-size: 12.5px; line-height: 1.6; color: #1e293b; margin: 0 0 8px 0; text-align: justify; }}
-                      .section-lbl {{ font-size: 13px; font-weight: 900; color: #991b1b; margin: 8px 0 5px 0; border-right: 4px solid #991b1b; padding-right: 8px; }}
-                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 4px 0 10px 0; font-size: 12.5px; }}
-                      .nc-table th, .nc-table td {{ border: 1.5px solid #cbd5e1; padding: 6px 6px; }}
-                      .nc-table th {{ background: #f1f5f9; color: #0f172a; font-weight: 900; font-size: 12px; }}
-                      .nc-diag {{ background: #fef2f2; border: 1.5px solid #fecaca; border-right: 5px solid #dc2626; border-radius: 9px; padding: 9px 14px; font-size: 12px; line-height: 1.6; }}
-                      .diag-row {{ margin-bottom: 5px; }}
+                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 12px; }}
+                      .nc-hdr-side {{ font-size: 12px; font-weight: 800; line-height: 1.45; text-align: center; color: #1e293b; }}
+                      .nc-badge {{ background: #991b1b; color: white; padding: 5px 22px; border-radius: 99px; font-size: 15px; font-weight: 900; display: inline-block; }}
+                      .student-banner {{ display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 9px 16px; font-size: 13.5px; font-weight: 900; margin-bottom: 10px; }}
+                      .greeting-p {{ font-size: 13px; line-height: 1.65; color: #1e293b; margin: 0 0 10px 0; text-align: justify; }}
+                      .section-lbl {{ font-size: 13.5px; font-weight: 900; color: #991b1b; margin: 10px 0 6px 0; border-right: 4px solid #991b1b; padding-right: 8px; }}
+                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 4px 0 12px 0; font-size: 13px; }}
+                      .nc-table th, .nc-table td {{ border: 1.5px solid #cbd5e1; padding: 7px 6px; }}
+                      .nc-table th {{ background: #f1f5f9; color: #0f172a; font-weight: 900; font-size: 12.5px; }}
+                      .nc-diag {{ background: #fef2f2; border: 1.5px solid #fecaca; border-right: 5px solid #dc2626; border-radius: 9px; padding: 11px 16px; font-size: 12.5px; line-height: 1.65; }}
+                      .diag-row {{ margin-bottom: 6px; }}
                       .diag-row:last-child {{ margin-bottom: 0; }}
-                      .nc-footer {{ display: flex; justify-content: space-between; text-align: center; font-size: 12.5px; font-weight: 800; padding: 8px 16px; border-top: 1px solid #e2e8f0; margin-top: 8px; }}
-                      .sig-space {{ display: block; height: 14px; }}
-                      .nc-ack {{ border: 1.5px solid #94a3b8; background: #f8fafc; padding: 10px 14px; border-radius: 10px; margin-top: 8px; }}
-                      .ack-title {{ font-size: 12.5px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 5px; }}
-                      .ack-text {{ margin: 4px 0; font-size: 12px; line-height: 1.55; color: #1e293b; }}
-                      .ack-notes {{ font-size: 11.5px; margin: 6px 0 8px 0; color: #334155; }}
-                      .ack-sigs {{ display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #0f172a; padding-top: 4px; }}
-                      @media print {{ @page {{ size: A4 portrait; margin: 7mm; }} body {{ padding: 0; }} .notice-page {{ margin: 0; }} }}
+                      .nc-footer {{ display: flex; justify-content: space-between; text-align: center; font-size: 13px; font-weight: 800; padding: 12px 20px 6px 20px; border-top: 1px solid #e2e8f0; margin-top: 12px; }}
+                      .sig-space {{ display: block; height: 18px; }}
+                      .ack-separator {{ margin-top: auto; padding-top: 22px; border-bottom: 2px dashed #94a3b8; margin-bottom: 16px; }}
+                      .nc-ack {{ border: 2px solid #64748b; border-right: 6px solid #1e293b; background: #f8fafc; padding: 14px 18px; border-radius: 10px; }}
+                      .ack-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 8px; }}
+                      .ack-text {{ margin: 6px 0 10px 0; font-size: 12.5px; line-height: 1.7; color: #1e293b; }}
+                      .ack-notes {{ font-size: 12px; margin: 10px 0 14px 0; color: #334155; }}
+                      .ack-sigs {{ display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #0f172a; padding-top: 6px; }}
+                      @media print {{ @page {{ size: A4 portrait; margin: 7mm; }} body {{ padding: 0; }} .notice-page {{ margin: 0; min-height: 246mm; }} }}
                   </style></head><body>
                       {notices_cards_html}
                       <script>window.onload = function() {{ window.print(); }}</script>
