@@ -4437,79 +4437,132 @@ if st.session_state.role in ["teacher", "viewer"]:
                   )
 
                 # ---------------------------------------------------------
-                # ج) إشعارات أولياء الأمور الرسمية (نماذج للطباعة والتوقيع + إرسال واتساب)
+                # ج) إشعارات أولياء الأمور الرسمية (صفحة A4 مستقلة لكل طالب للخصوصية + إرسال واتساب)
                 # ---------------------------------------------------------
                 elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
                   notices_cards_html = ""
                   for i, (_, row) in enumerate(final_df.iterrows(), 1):
                     s_name = row["name"]
                     s_cls_item = row.get("class", "")
-                    sch_item = get_school_name_dynamic(s_cls_item).replace("<br>", " - ")
+                    sch_item = get_school_name_dynamic(s_cls_item)
                     vak_lbl = get_student_vak_label(row)
                     diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
 
                     notices_cards_html += f"""
-                    <div class="notice-card">
-                        <div class="nc-header">
-                            <div>المملكة العربية السعودية - وزارة التعليم<br>{sch_item}</div>
-                            <div class="nc-badge">إشعار متابعة مستوى دراسي لولي الأمر</div>
-                            <div>العام الدراسي: {curr_yr_str}<br>{rep_per} | التاريخ: {issue_date_str}</div>
-                        </div>
-                        <div class="nc-body">
-                            <p style="margin:4px 0;">المكرم ولي أمر الطالب: <b style="color:#991b1b; font-size:14px;">{s_name}</b> &nbsp;&nbsp;|&nbsp;&nbsp; الصف: <b>({s_cls_item})</b> &nbsp;&nbsp;&nbsp; وفقه الله</p>
-                            <p style="margin:4px 0; font-size:11.5px;">السلام عليكم ورحمة الله وبركاته، حرصاً من المدرسة على تعزيز الشراكة الأسرية والارتقاء بالمستوى التحصيلي لابنكم في مادة <b>(اللغة الإنجليزية)</b>، نفيدكم بتفاصيل أدائه الحالي وخطة الدعم المقترحة:</p>
-                            <table class="nc-table">
-                                <tr>
-                                    <th>درجة المشاركة والمهام (من {max_t_lvl})</th>
-                                    <th>درجة الاختبارات القصيرة (من {max_q_lvl})</th>
-                                    <th>المجموع الحالي (من {max_tot_lvl})</th>
-                                    <th>نمط التعلم المفضل</th>
-                                </tr>
-                                <tr>
-                                    <td><b>{row['p1_num']}</b> / {max_t_lvl}</td>
-                                    <td><b>{row['p2_num']}</b> / {max_q_lvl}</td>
-                                    <td style="color:#dc2626; font-weight:900; font-size:13.5px;">{row['perf_num']} / {max_tot_lvl}</td>
-                                    <td style="color:#1e40af; font-weight:800;">{vak_lbl}</td>
-                                </tr>
-                            </table>
-                            <div class="nc-diag">
-                                <div><b>🔍 تشخيص مكمن الاحتياج:</b> {diag_txt}.</div>
-                                <div><b>🛠️ الإجراء العلاجي بالمدرسة:</b> {strat_txt}.</div>
-                                <div><b>🏠 المطلوب من الأسرة:</b> متابعة حل أوراق العمل العلاجية والواجبات اليومية ومراجعة المفردات الأساسية بالمنزل.</div>
+                    <div class="notice-page">
+                        <div>
+                            <div class="nc-header">
+                                <div class="nc-hdr-side">المملكة العربية السعودية<br>وزارة التعليم<br>{sch_item}</div>
+                                <div style="text-align:center;">
+                                    <div class="nc-badge">إشعار متابعة مستوى دراسي وخطة دعم علاجية</div>
+                                    <div style="font-size:12px; color:#475569; margin-top:6px; font-weight:800;">سري وخاص بولي أمر الطالب — المادة: اللغة الإنجليزية</div>
+                                </div>
+                                <div class="nc-hdr-side">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>التاريخ: {issue_date_str}</div>
+                            </div>
+
+                            <div class="nc-body">
+                                <div class="student-banner">
+                                    <div>👤 اسم الطالب: <span style="color:#991b1b;">{s_name}</span></div>
+                                    <div>🏫 الصف: <span>{s_cls_item}</span></div>
+                                    <div>🧠 نمط التعلم المفضل: <span style="color:#1e40af;">{vak_lbl}</span></div>
+                                </div>
+
+                                <p class="greeting-p">
+                                    <b>المكرم ولي أمر الطالب / حفظه الله</b><br>
+                                    السلام عليكم ورحمة الله وبركاته،،،<br>
+                                    انطلاقاً من حرص المدرسة على تعزيز الشراكة التربوية مع الأسرة، ومتابعة التحصيل الدراسي لأبنائنا الطلاب أولاً بأول، نود إشعاركم بمستوى أداء ابنكم في مادة <b>(اللغة الإنجليزية)</b> خلال <b>({rep_per})</b>، مع بيان التشخيص التربوي وخطة الدعم العلاجية المعتمدة له:
+                                </p>
+
+                                <div class="section-lbl">📊 أولاً: بيان الدرجات والتقييم الحالي</div>
+                                <table class="nc-table">
+                                    <thead>
+                                        <tr>
+                                            <th>المشاركة والمهام الأدائية والواجبات (من {max_t_lvl})</th>
+                                            <th>الاختبارات القصيرة والتقويم (من {max_q_lvl})</th>
+                                            <th>المجموع الكلي الحالي (من {max_tot_lvl})</th>
+                                            <th>المستوى الحالي</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><b>{row['p1_num']}</b> / {max_t_lvl}</td>
+                                            <td><b>{row['p2_num']}</b> / {max_q_lvl}</td>
+                                            <td style="color:#dc2626; font-weight:900; font-size:16px; background:#fef2f2;">{row['perf_num']} / {max_tot_lvl}</td>
+                                            <td style="color:#dc2626; font-weight:800;">يحتاج إلى دعم ومتابعة علاجية</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="section-lbl">🛠️ ثانياً: التشخيص التربوي وخطة المعالجة المشتركة</div>
+                                <div class="nc-diag">
+                                    <div class="diag-row"><b>🔍 تشخيص مكمن الاحتياج:</b> {diag_txt}.</div>
+                                    <div class="diag-row"><b>🏫 الإجراءات العلاجية المتخذة بالمدرسة:</b> {strat_txt}، مع المتابعة الفردية المستمرة داخل الفصل وإعادة تقييم المهارات.</div>
+                                    <div class="diag-row"><b>🏠 دور الأسرة المأمول في المنزل:</b>
+                                        <ul style="margin:4px 0 0 0; padding-right:20px;">
+                                            <li>متابعة إنجاز الطالب لأوراق العمل العلاجية والواجبات المنزلية في وقتها المحدد.</li>
+                                            <li>تخصيص (15 دقيقة) يومياً لمراجعة المفردات والقواعد الأساسية للدرس.</li>
+                                            <li>تحفيز الطالب وتشجيعه على المشاركة الصفية وإحضار كتاب المادة وأدواته كاملة.</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="nc-footer">
-                            <div>معلم المادة: <b>أ. زياد المعمري</b></div>
-                            <div>الموجه الطلابي: .........................</div>
-                            <div>مدير المدرسة: <b>أ. عبدالمجيد الحربي</b></div>
-                        </div>
-                        <div class="nc-tear">
-                            ✂️ <b>قسيمة رد ولي الأمر:</b> أقر أنا ولي أمر الطالب (<b>{s_name}</b>) بالاطلاع على إشعار المستوى والخطة العلاجية، وأؤكد متابعته منزلياً. &nbsp;|&nbsp; التوقيع: ........................... &nbsp;|&nbsp; الجوال: ...........................
+
+                        <div>
+                            <div class="nc-footer">
+                                <div>معلم المادة<br><br><b>أ. زياد المعمري</b></div>
+                                <div>الموجه الطلابي<br><br>.....................................</div>
+                                <div>مدير المدرسة<br><br><b>أ. عبدالمجيد الحربي</b></div>
+                            </div>
+
+                            <div class="nc-tear">
+                                <div class="tear-title">✂️ قسيمة رد وتأكيد اطلاع ولي الأمر (تُعاد للمعلم أو الموجه الطلابي)</div>
+                                <p style="margin:6px 0; font-size:13px; line-height:1.6;">
+                                    أقر أنا ولي أمر الطالب / <b>{s_name}</b> بالصف (<b>{s_cls_item}</b>) باطلاعي على إشعار متابعة المستوى الدراسي والخطة العلاجية الخاصة بابني في مادة اللغة الإنجليزية، وأؤكد التعاون مع المدرسة في متابعته منزلياً.
+                                </p>
+                                <div class="tear-notes">📝 <b>ملاحظات أو مقترحات ولي الأمر (اختياري):</b> ..................................................................................................................................................</div>
+                                <div class="tear-sigs">
+                                    <div>اسم ولي الأمر: ...........................................</div>
+                                    <div>رقم الجوال: ...........................................</div>
+                                    <div>التوقيع: ...........................................</div>
+                                    <div>التاريخ: &nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp; / 144هـ</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     """
 
-                  parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية</title>
+                  parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية - A4</title>
                   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                   <style>
-                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 8px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                      .notice-card {{ border: 2px solid #1e293b; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; page-break-inside: avoid; height: 134mm; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }}
-                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; font-size: 11px; font-weight: 800; }}
-                      .nc-badge {{ background: #991b1b; color: white; padding: 4px 16px; border-radius: 99px; font-size: 13px; font-weight: 900; }}
-                      .nc-body {{ font-size: 12px; line-height: 1.45; }}
-                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 6px 0; font-size: 11.5px; }}
-                      .nc-table th, .nc-table td {{ border: 1px solid #cbd5e1; padding: 4px 6px; }}
-                      .nc-table th {{ background: #f8fafc; color: #1e293b; font-weight: 800; }}
-                      .nc-diag {{ background: #fef2f2; border: 1px solid #fecaca; border-right: 4px solid #dc2626; border-radius: 6px; padding: 6px 10px; font-size: 11px; line-height: 1.5; }}
-                      .nc-footer {{ display: flex; justify-content: space-between; font-size: 11.5px; padding-top: 4px; }}
-                      .nc-tear {{ border-top: 1.5px dashed #64748b; padding-top: 6px; font-size: 11px; background: #f8fafc; padding: 6px 8px; border-radius: 6px; }}
-                      @media print {{ @page {{ size: A4 portrait; margin: 8mm; }} body {{ padding: 0; }} }}
+                      * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 0; color: #0f172a; }}
+                      .notice-page {{ width: 100%; min-height: 274mm; border: 2.5px solid #1e293b; border-radius: 14px; padding: 16px 22px; margin: 0 auto 10mm auto; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; background: #ffffff; }}
+                      .notice-page:last-of-type {{ page-break-after: auto; margin-bottom: 0; }}
+                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1e293b; padding-bottom: 12px; margin-bottom: 14px; }}
+                      .nc-hdr-side {{ font-size: 12.5px; font-weight: 800; line-height: 1.5; text-align: center; color: #1e293b; }}
+                      .nc-badge {{ background: #991b1b; color: white; padding: 6px 24px; border-radius: 99px; font-size: 16px; font-weight: 900; display: inline-block; }}
+                      .student-banner {{ display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 900; margin-bottom: 12px; }}
+                      .greeting-p {{ font-size: 13.5px; line-height: 1.75; color: #1e293b; margin: 0 0 14px 0; text-align: justify; }}
+                      .section-lbl {{ font-size: 14px; font-weight: 900; color: #991b1b; margin: 10px 0 6px 0; border-right: 4px solid #991b1b; padding-right: 8px; }}
+                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 6px 0 14px 0; font-size: 13.5px; }}
+                      .nc-table th, .nc-table td {{ border: 1.5px solid #cbd5e1; padding: 9px 8px; }}
+                      .nc-table th {{ background: #f1f5f9; color: #0f172a; font-weight: 900; font-size: 13px; }}
+                      .nc-diag {{ background: #fef2f2; border: 1.5px solid #fecaca; border-right: 5px solid #dc2626; border-radius: 10px; padding: 12px 16px; font-size: 13px; line-height: 1.75; }}
+                      .diag-row {{ margin-bottom: 8px; }}
+                      .diag-row:last-child {{ margin-bottom: 0; }}
+                      .nc-footer {{ display: flex; justify-content: space-between; text-align: center; font-size: 13.5px; font-weight: 800; padding: 14px 20px; border-top: 1px solid #e2e8f0; margin-top: 10px; }}
+                      .nc-tear {{ border: 2px dashed #475569; background: #f8fafc; padding: 12px 16px; border-radius: 12px; margin-top: 8px; }}
+                      .tear-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 6px; }}
+                      .tear-notes {{ font-size: 12.5px; margin: 8px 0 12px 0; color: #334155; }}
+                      .tear-sigs {{ display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #0f172a; padding-top: 4px; }}
+                      @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} .notice-page {{ margin: 0; min-height: 274mm; }} }}
                   </style></head><body>
                       {notices_cards_html}
                       <script>window.onload = function() {{ window.print(); }}</script>
                   </body></html>"""
 
-                  st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي لولي الأمر (بطاقتان في كل ورقة A4 مع قسيمة توقيع ولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
+                  st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي مستقل (صفحة A4 كاملة ومستقلة لكل طالب حفاظاً على الخصوصية، مع قسيمة توقيع وملاحظات ولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
                   st.download_button(
                       label=f"🖨️ تحميل وطباعة إشعارات أولياء الأمور الرسمية ({len(final_df)} إشعار - جاهز للطباعة)",
                       data=parent_notices_html,
