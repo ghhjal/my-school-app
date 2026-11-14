@@ -513,10 +513,10 @@ def show_footer():
                 max-height: 38px !important;
                 padding: 4px 12px !important;
                 margin: 0 !important;
-                background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
-                background-color: #2563EB !important;
-                border: 1px solid #1D4ED8 !important;
-                border-bottom: 2px solid #1E3A8A !important;
+                background: {header_grad} !important;
+                background-color: {primary_color} !important;
+                border: 1px solid {primary_color} !important;
+                border-bottom: 2px solid {accent_color} !important;
                 border-radius: 10px !important;
                 color: #FFFFFF !important;
                 -webkit-text-fill-color: #FFFFFF !important;
@@ -524,7 +524,7 @@ def show_footer():
                 flex: 1 1 auto !important;
                 min-width: max-content !important;
                 line-height: 1.25 !important;
-                box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25) !important;
+                box-shadow: 0 3px 10px {primary_color}40 !important;
                 opacity: 1 !important;
             }}
             .stTabs [aria-selected="true"] *,
@@ -629,11 +629,11 @@ def show_footer():
                     tab.style.setProperty('border-radius', '10px', 'important');
                     var isSel = tab.getAttribute('aria-selected') === 'true';
                     if (isSel) {{
-                        tab.style.setProperty('background', 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)', 'important');
-                        tab.style.setProperty('background-color', '#2563EB', 'important');
-                        tab.style.setProperty('border', '1px solid #1D4ED8', 'important');
-                        tab.style.setProperty('border-bottom', '2px solid #1E3A8A', 'important');
-                        tab.style.setProperty('box-shadow', '0 3px 8px rgba(37, 99, 235, 0.25)', 'important');
+                        tab.style.setProperty('background', '{header_grad}', 'important');
+                        tab.style.setProperty('background-color', '{primary_color}', 'important');
+                        tab.style.setProperty('border', '1px solid {primary_color}', 'important');
+                        tab.style.setProperty('border-bottom', '2px solid {accent_color}', 'important');
+                        tab.style.setProperty('box-shadow', '0 3px 10px {primary_color}40', 'important');
                         tab.style.setProperty('color', '#FFFFFF', 'important');
                         tab.style.setProperty('-webkit-text-fill-color', '#FFFFFF', 'important');
                         tab.querySelectorAll('p, span, div').forEach(function(ch) {{
@@ -655,6 +655,20 @@ def show_footer():
                             ch.style.setProperty('-webkit-text-fill-color', '#1E293B', 'important');
                             ch.style.setProperty('white-space', 'nowrap', 'important');
                             ch.style.setProperty('line-height', '1.25', 'important');
+                        }});
+                    }}
+                }});
+                var tabHighlights = pDoc.querySelectorAll('[data-baseweb="tab-highlight"], [data-baseweb="tab-border"]');
+                tabHighlights.forEach(function(thEl) {{
+                    thEl.style.setProperty('display', 'none', 'important');
+                    thEl.style.setProperty('height', '0px', 'important');
+                    thEl.style.setProperty('opacity', '0', 'important');
+                    thEl.style.setProperty('background', 'transparent', 'important');
+                }});
+                tabLists.forEach(function(tl) {{
+                    if (tl.parentElement) {{
+                        tl.parentElement.querySelectorAll(':scope > button:not([role="tab"])').forEach(function(arrBtn) {{
+                            arrBtn.style.setProperty('display', 'none', 'important');
                         }});
                     }}
                 }});
@@ -1249,12 +1263,12 @@ div[data-baseweb="tag"] {{
 direction: rtl !important;
 margin-left: 5px !important;
 margin-right: 0px !important;
-background-color: #EFF6FF !important;
-background: #EFF6FF !important;
-border: 1px solid {accent_color} !important;
+background-color: {primary_color}18 !important;
+background: {primary_color}18 !important;
+border: 1px solid {primary_color} !important;
 border-radius: 8px !important;
-color: #1E3A8A !important;
--webkit-text-fill-color: #1E3A8A !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
 font-weight: 800 !important;
 }}
 
@@ -1263,9 +1277,9 @@ span[data-baseweb="tag"] *,
 div[data-baseweb="tag"] * {{
 background-color: transparent !important;
 background: transparent !important;
-color: #1E3A8A !important;
--webkit-text-fill-color: #1E3A8A !important;
-fill: #1E3A8A !important;
+color: {primary_color} !important;
+-webkit-text-fill-color: {primary_color} !important;
+fill: {primary_color} !important;
 font-weight: 800 !important;
 }}
 
@@ -1274,8 +1288,8 @@ div[data-testid="stAlert"],
 div[data-testid="stAlert"] > div,
 div[data-baseweb="notification"],
 div[role="alert"] {{
-background-color: #EFF6FF !important;
-background: #EFF6FF !important;
+background-color: {primary_color}12 !important;
+background: {primary_color}12 !important;
 color: #0F172A !important;
 -webkit-text-fill-color: #0F172A !important;
 border: 1.5px solid {primary_color} !important;
@@ -1363,7 +1377,7 @@ div[data-baseweb="popover"] li:hover,
 [data-testid="stSelectboxVirtualDropdown"] li:hover,
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {{
-background-color: #EFF6FF !important;
+background-color: {primary_color}15 !important;
 color: {primary_color} !important;
 -webkit-text-fill-color: {primary_color} !important;
 }}
@@ -1394,16 +1408,17 @@ vertical-align: -1px !important;
 [data-testid="baseButton-primary"],
 div.stButton > button:not([kind="secondary"]):not([role="tab"]),
 div.stDownloadButton > button:not([kind="secondary"]) {{
-background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+background: {header_grad} !important;
 background-color: {primary_color} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 1px solid #1D4ED8 !important;
+border: 1px solid {primary_color} !important;
+border-bottom: 2px solid {accent_color} !important;
 font-weight: 800 !important;
 font-size: 0.95rem !important;
 border-radius: 11px !important;
 padding: 6px 14px !important;
-box-shadow: 0 3px 8px rgba(37, 99, 235, 0.2) !important;
+box-shadow: 0 3px 10px {primary_color}38 !important;
 transition: all 0.2s ease !important;
 width: 100%;
 height: 42px !important;
@@ -1424,8 +1439,8 @@ div.stButton > button:not([kind="secondary"]):not([role="tab"]):hover,
 div.stDownloadButton > button:not([kind="secondary"]):hover {{
 background: {t_colors["btn_hover"]} !important;
 transform: translateY(-1px);
-box-shadow: 0 5px 12px rgba(37, 99, 235, 0.28) !important;
-border-color: #1E40AF !important;
+box-shadow: 0 5px 14px {primary_color}50 !important;
+border-color: {accent_color} !important;
 }}
 
 div.stButton > button[kind="secondary"],
@@ -1458,10 +1473,10 @@ color: #1E293B !important;
 div.stButton > button[kind="secondary"]:hover,
 div.stDownloadButton > button[kind="secondary"]:hover,
 [data-testid="stLinkButton"] a:hover {{
-border-color: #93C5FD !important;
-border-bottom-color: #3B82F6 !important;
-background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
-color: #1E40AF !important;
+border-color: {accent_color} !important;
+border-bottom-color: {primary_color} !important;
+background: linear-gradient(180deg, #FFFFFF 0%, {primary_color}18 100%) !important;
+color: {primary_color} !important;
 transform: translateY(-1px);
 }}
 
@@ -1524,10 +1539,10 @@ opacity: 1 !important;
 .stTabs [aria-selected="false"]:hover,
 [data-testid="stTabs"] [role="tab"]:not([aria-selected="true"]):hover,
 button[data-baseweb="tab"]:not([aria-selected="true"]):hover {{
-background: linear-gradient(180deg, #F8FAFC 0%, #DBEAFE 100%) !important;
-border-color: #93C5FD !important;
-border-bottom-color: #3B82F6 !important;
-color: #1E40AF !important;
+background: linear-gradient(180deg, #FFFFFF 0%, {primary_color}18 100%) !important;
+border-color: {accent_color} !important;
+border-bottom-color: {primary_color} !important;
+color: {primary_color} !important;
 transform: translateY(-1px);
 }}
 
@@ -1561,13 +1576,14 @@ min-height: 38px !important;
 max-height: 38px !important;
 margin: 0 !important;
 padding: 4px 12px !important;
-background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
-background-color: #2563EB !important;
+background: {header_grad} !important;
+background-color: {primary_color} !important;
 color: #FFFFFF !important;
 -webkit-text-fill-color: #FFFFFF !important;
-border: 1px solid #1D4ED8 !important;
+border: 1px solid {primary_color} !important;
+border-bottom: 2px solid {accent_color} !important;
 border-radius: 10px !important;
-box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22) !important;
+box-shadow: 0 3px 10px {primary_color}40 !important;
 font-family: 'Cairo', sans-serif !important;
 font-weight: 900 !important;
 font-size: 0.88rem !important;
@@ -4709,6 +4725,14 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       current_theme_val = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
       th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
       selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
+      if selected_theme != current_theme_val:
+        st.session_state.app_theme = selected_theme
+        try:
+          get_gspread_client().worksheet("settings").update(range_name="A8:B8", values=[["app_theme", selected_theme]])
+          get_cached_settings.clear()
+        except Exception:
+          pass
+        st.rerun()
 
       st.markdown("---")
       st.markdown("#### ⚙️ العام الدراسي والفترة النشطة")
