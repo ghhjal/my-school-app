@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 import base64
 import io
+import re
 import time
 
 # ==========================================
@@ -2104,28 +2105,48 @@ def render_pdf_download_button(full_html, file_stem, label_text, key_suffix):
         </html>
         """, height=52)
 
+def strip_pdf_emojis(text):
+    """إزالة الرموز التعبيرية ومحددات الجنس/الاختلاف التي تظهر كمربعات غريبة في محرك PDF"""
+    if not text:
+        return ""
+    cleaned = re.sub(
+        r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]",
+        "",
+        str(text),
+    )
+    return re.sub(r"\s{2,}", " ", cleaned).strip()
+
+def format_spaced_arabic_name(prefix_label, raw_name):
+    """ضبط المسافات بين كلمات الاسم والألقاب لضمان عدم التصاق الحروف والكلمات في ملف الـ PDF"""
+    words = [w.strip() for w in str(raw_name).split() if w.strip()]
+    spaced_name = " &nbsp; ".join(words)
+    if prefix_label:
+        return f"{prefix_label} &nbsp; {spaced_name}"
+    return spaced_name
+
 def generate_html_page(title, content, school_names_html):
     curr_user = st.session_state.get('current_user')
-    if curr_user and curr_user.get('role') != 'admin':
-        teacher_name_display = f"أ. {curr_user.get('name')}"
-    else:
-        teacher_name_display = "............................................."
+    raw_t_name = str(curr_user.get('name', '')).strip() if curr_user else ""
+    if not raw_t_name:
+        raw_t_name = "زياد حمود المعمري"
+    clean_t_name = re.sub(r"^(أ\.|أ/|الأستاذ/\s*|الاستاذ/\s*)", "", raw_t_name).strip()
+    teacher_name_formatted = format_spaced_arabic_name("أ.", clean_t_name)
+    principal_name_formatted = format_spaced_arabic_name("أ.", "عبدالمجيد الحربي")
+
+    clean_title = strip_pdf_emojis(title)
+    clean_content = strip_pdf_emojis(content)
 
     signature_html = f"""
     <table class="sig-table">
         <tr>
             <td class="sig-cell">
-                <div class="sig-title">معلم المادة / المختص</div>
-                <div class="sig-line">الاسم: {teacher_name_display}</div>
-                <div class="sig-line">التوقيع: .............................................</div>
+                <div class="sig-title">معلم &nbsp; المادة &nbsp; / &nbsp; المختص</div>
+                <div class="sig-name">{teacher_name_formatted}</div>
             </td>
-            <td class="sig-stamp-cell">
-                <div class="stamp-circle">الختم الرسمي</div>
-            </td>
+            <td class="sig-spacer"></td>
             <td class="sig-cell">
-                <div class="sig-title">يعتمد ،، مدير المدرسة</div>
-                <div class="sig-line">الاسم: أ. عبدالمجيد الحربي</div>
-                <div class="sig-line">التوقيع: .............................................</div>
+                <div class="sig-title">يعتمد &nbsp; ،، &nbsp; مدير &nbsp; المدرسة</div>
+                <div class="sig-name">{principal_name_formatted}</div>
             </td>
         </tr>
     </table>
@@ -2136,9 +2157,9 @@ def generate_html_page(title, content, school_names_html):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title}</title>
+<title>{clean_title}</title>
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css?family=Tajawal:400,500,700,800&display=swap');
     @page {{
         size: A4 portrait;
         margin: 12mm 14mm 12mm 14mm;
@@ -2149,7 +2170,7 @@ def generate_html_page(title, content, school_names_html):
         print-color-adjust: exact !important;
     }}
     html, body {{
-        font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', 'Amiri', 'DejaVu Sans', sans-serif;
+        font-family: 'Tajawal', 'Noto Sans Arabic', 'Amiri', 'DejaVu Sans', sans-serif;
         margin: 0 !important;
         padding: 0 !important;
         width: 100%;
@@ -2157,8 +2178,10 @@ def generate_html_page(title, content, school_names_html):
         color: #0f172a !important;
         direction: rtl !important;
         text-align: right !important;
-        font-size: 13px;
-        line-height: 1.5;
+        font-size: 13.5px;
+        line-height: 1.55;
+        word-spacing: 2.5px;
+        letter-spacing: 0px;
     }}
     .page-container {{
         width: 100%;
@@ -2181,26 +2204,27 @@ def generate_html_page(title, content, school_names_html):
         padding: 4px 2px 10px 2px !important;
         vertical-align: middle;
         font-weight: 700;
+        word-spacing: 2.5px;
     }}
     .header-right {{
         text-align: right !important;
         width: 36%;
-        font-size: 12.5px;
-        line-height: 1.55;
+        font-size: 13px;
+        line-height: 1.6;
         color: #0f172a;
     }}
     .header-center {{
         text-align: center !important;
         width: 28%;
-        font-size: 15.5px;
+        font-size: 16px;
         color: {cur_t['brand_navy']};
-        line-height: 1.35;
+        line-height: 1.4;
     }}
     .header-left {{
         text-align: left !important;
         width: 36%;
-        font-size: 12.5px;
-        line-height: 1.55;
+        font-size: 13px;
+        line-height: 1.6;
         color: #0f172a;
     }}
     .report-main-title {{
@@ -2213,6 +2237,7 @@ def generate_html_page(title, content, school_names_html):
         margin-bottom: 14px;
         font-size: 18px;
         font-weight: 800;
+        word-spacing: 3px;
     }}
     .summary-box {{
         border: 1px solid #cbd5e1;
@@ -2222,6 +2247,7 @@ def generate_html_page(title, content, school_names_html):
         background-color: #f8fafc;
         font-size: 14px;
         page-break-inside: avoid;
+        word-spacing: 2.5px;
     }}
     .stats-container {{
         display: flex;
@@ -2241,16 +2267,17 @@ def generate_html_page(title, content, school_names_html):
     .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }}
     .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }}
     .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }}
-    .stat-title {{ font-size: 13px; margin-bottom: 3px; font-weight: 700; text-align: center !important; }}
+    .stat-title {{ font-size: 14px; margin-bottom: 3px; font-weight: 800; text-align: center !important; }}
     .stat-value {{ font-size: 17px; font-weight: 800; text-align: center !important; }}
 
     table.table {{
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
-        font-size: 12.5px;
+        font-size: 13px;
         page-break-inside: auto;
         direction: rtl;
+        word-spacing: 2.5px;
     }}
     table.table thead {{
         display: table-header-group;
@@ -2263,6 +2290,7 @@ def generate_html_page(title, content, school_names_html):
         border: 1px solid #334155;
         padding: 6px 8px;
         text-align: center !important;
+        word-spacing: 2.5px;
     }}
     table.table th {{
         background-color: #e2e8f0;
@@ -2277,7 +2305,8 @@ def generate_html_page(title, content, school_names_html):
     table.table td:nth-child(3) {{
         text-align: right !important;
         font-weight: 700;
-        padding-right: 10px;
+        padding-right: 12px;
+        word-spacing: 3px;
     }}
     table.table tr:nth-child(even) td {{
         background-color: #f8fafc;
@@ -2300,50 +2329,38 @@ def generate_html_page(title, content, school_names_html):
         width: 100%;
         border-collapse: collapse;
         border: none;
-        border-top: 1.5px dashed #94a3b8;
-        margin-top: 26px;
-        padding-top: 12px;
+        margin-top: 30px;
         page-break-inside: avoid;
         direction: rtl;
     }}
     table.sig-table td {{
         border: none !important;
         background: transparent !important;
-        padding: 12px 4px 0 4px !important;
-        vertical-align: middle;
+        padding: 10px 12px 20px 12px !important;
+        vertical-align: top;
     }}
     .sig-cell {{
-        width: 40%;
+        width: 42%;
         text-align: center !important;
-        font-size: 13px;
-        line-height: 1.9;
     }}
-    .sig-stamp-cell {{
-        width: 20%;
-        text-align: center !important;
+    .sig-spacer {{
+        width: 16%;
     }}
     .sig-title {{
         font-weight: 800;
-        font-size: 14px;
+        font-size: 15px;
         color: {cur_t['brand_navy']};
-        margin-bottom: 4px;
+        margin-bottom: 10px;
         text-align: center !important;
+        word-spacing: 3.5px;
     }}
-    .sig-line {{
+    .sig-name {{
         font-weight: 700;
+        font-size: 14.5px;
+        color: #0f172a;
         text-align: center !important;
-    }}
-    .stamp-circle {{
-        width: 78px;
-        height: 78px;
-        margin: 0 auto;
-        border: 2px dashed #94a3b8;
-        border-radius: 50%;
-        text-align: center !important;
-        line-height: 74px;
-        color: #64748b;
-        font-size: 11.5px;
-        font-weight: 700;
+        line-height: 1.8;
+        word-spacing: 3.5px;
     }}
 </style>
 </head>
@@ -2356,8 +2373,8 @@ def generate_html_page(title, content, school_names_html):
             <td class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</td>
         </tr>
     </table>
-    <div class="report-main-title">{title}</div>
-    {content}
+    <div class="report-main-title">{clean_title}</div>
+    {clean_content}
     {signature_html}
 </div>
 </body>
