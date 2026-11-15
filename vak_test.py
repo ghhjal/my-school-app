@@ -128,7 +128,7 @@ def get_gsheets_conn():
     from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=600, max_entries=5, show_spinner=False)
+@st.cache_data(ttl=86400, max_entries=2, show_spinner=False)
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
@@ -145,7 +145,7 @@ def get_all_teachers():
     except:
         return pd.DataFrame(columns=['id', 'name', 'role', 'class_name', 'theme'])
 
-@st.cache_data(ttl=7200, max_entries=5, show_spinner=False)
+@st.cache_data(ttl=86400, max_entries=2, show_spinner=False)
 def get_all_students():
     conn = get_gsheets_conn()
     try:
@@ -173,6 +173,8 @@ def clear_all_caches():
     get_all_students.clear()
     get_all_teachers.clear()
     st.cache_data.clear()
+    get_all_teachers()
+    get_all_students()
 
 def get_platform_theme():
     """جلب القالب المحفوظ للمنصة من حساب مدير النظام في قاعدة البيانات ليتوحد لجميع الزوار والمعلمين"""
@@ -2040,25 +2042,23 @@ if st.session_state.current_user is None:
         st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
         if st.button("🚀 دخول للمنصة", use_container_width=True, key="btn_login_submit"):
             if teacher_id_input:
-                with st.spinner("جاري التحقق من الهوية..."):
-                    try:
-                        get_all_teachers.clear()
-                        df_teachers = get_all_teachers()
-                        norm_id = clean_id(teacher_id_input)
-                        t_row = df_teachers[df_teachers['id'] == str(norm_id)]
-                        if not t_row.empty:
-                            t_data = t_row.iloc[0]
-                            st.session_state.current_user = {
-                                "id": t_data['id'],
-                                "name": t_data['name'],
-                                "role": t_data['role'],
-                                "class_name": t_data.get('class_name', 'all')
-                            }
-                            st.rerun()
-                        else:
-                            st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
-                    except Exception as e:
-                        st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
+                try:
+                    df_teachers = get_all_teachers()
+                    norm_id = clean_id(teacher_id_input)
+                    t_row = df_teachers[df_teachers['id'] == str(norm_id)]
+                    if not t_row.empty:
+                        t_data = t_row.iloc[0]
+                        st.session_state.current_user = {
+                            "id": t_data['id'],
+                            "name": t_data['name'],
+                            "role": t_data['role'],
+                            "class_name": t_data.get('class_name', 'all')
+                        }
+                        st.rerun()
+                    else:
+                        st.error("رقم الهوية غير مسجل في قاعدة بيانات المعلمين. راجع إدارة المدرسة.")
+                except Exception as e:
+                    st.error("⚠️ خطأ: لم يتم العثور على ورقة 'teachers' في Google Sheets.")
             else:
                 st.warning("الرجاء إدخال رقم الهوية أولاً.")
 else:
@@ -2110,15 +2110,9 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        col_t_ref, col_t_logout = st.columns([2, 1.5])
-        with col_t_ref:
-            if st.button("🔄 تحديث البيانات", use_container_width=True, key="btn_refresh_teacher"):
-                clear_all_caches()
-                st.rerun()
-        with col_t_logout:
-            if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
-                st.session_state.current_user = None
-                st.rerun()
+        if st.button("تسجيل الخروج", type="primary", use_container_width=True, key="logout"):
+            st.session_state.current_user = None
+            st.rerun()
             
     df_all_raw = get_all_students()
     df_all = filter_df_for_user(df_all_raw, user)
