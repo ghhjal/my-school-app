@@ -3,6 +3,7 @@ import hashlib
 import io
 import json
 import math
+import os
 import re
 import urllib.parse
 from google.oauth2.service_account import Credentials
@@ -32,14 +33,25 @@ st.set_page_config(
 @st.cache_resource(ttl=3600, show_spinner=False)
 def get_gspread_client():
   try:
+    try:
+      if "gcp_service_account" in st.secrets:
+        creds_info = dict(st.secrets["gcp_service_account"])
+        sheet_id = st.secrets["SHEET_ID"]
+      else:
+        creds_info = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
+        sheet_id = os.environ["SHEET_ID"]
+    except Exception:
+      creds_info = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
+      sheet_id = os.environ["SHEET_ID"]
+
     creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
+        creds_info,
         scopes=[
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
         ],
     )
-    return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
+    return gspread.authorize(creds).open_by_key(sheet_id)
   except Exception as e:
     st.error(f"⚠️ خطأ اتصال بسيرفر جوجل: {e}")
     return None
@@ -63,7 +75,7 @@ def clean_phone_number(phone):
   return p
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=1200, show_spinner=False)
 def fetch_safe(worksheet_name):
   try:
     current_sh = get_gspread_client()
@@ -76,6 +88,7 @@ def fetch_safe(worksheet_name):
     df = pd.DataFrame(data[1:], columns=data[0])
     if not df.empty:
       df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+      df["clean_id"] = df.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
       if worksheet_name == "grades" and "period" in df.columns:
         df["period"] = (
             df["period"]
@@ -344,12 +357,6 @@ def show_footer():
 (function() {{
     try {{
         var pDoc = window.parent.document;
-        var topDoc = null;
-        try {{
-            if (window.top && window.top.document) {{
-                topDoc = window.top.document;
-            }}
-        }} catch (e) {{}}
 
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
@@ -680,22 +687,7 @@ def show_footer():
             }}
         `;
 
-        if (topDoc && topDoc !== pDoc && topDoc.head) {{
-            var topStyleId = 'ziyad-top-cloud-chrome-hide';
-            var topStyle = topDoc.getElementById(topStyleId);
-            if (!topStyle) {{
-                topStyle = topDoc.createElement('style');
-                topStyle.id = topStyleId;
-                topDoc.head.appendChild(topStyle);
-            }}
-            topStyle.innerHTML = chromeHideRules + `
-                html, body {{
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    background-color: #F8FAFC !important;
-                }}
-            `;
-        }}
+
 
         function hideElementCompletely(el) {{
             if (!el || !el.style) return;
@@ -764,20 +756,6 @@ def show_footer():
                     pDoc.head.appendChild(existingStyle);
                 }}
                 cleanDocumentChrome(pDoc);
-                if (topDoc && topDoc !== pDoc) {{
-                    cleanDocumentChrome(topDoc);
-                    var appFrame = window.parent.frameElement;
-                    if (appFrame && topDoc.body && topDoc.body.contains(appFrame)) {{
-                        topDoc.body.querySelectorAll('*').forEach(function(el) {{
-                            if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
-                                hideElementCompletely(el);
-                            }} else if (el.contains(appFrame)) {{
-                                el.style.setProperty('margin', '0px', 'important');
-                                el.style.setProperty('padding', '0px', 'important');
-                            }}
-                        }});
-                    }}
-                }}
 
                 var isMobileView = window.parent.innerWidth <= 768;
                 var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
@@ -964,16 +942,7 @@ def show_footer():
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
 
-        if (topDoc && topDoc !== pDoc && topDoc.body) {{
-            if (window.top.__ziyadTopCloudObserverObj) {{
-                try {{ window.top.__ziyadTopCloudObserverObj.disconnect(); }} catch (e) {{}}
-            }}
-            var topObs = new MutationObserver(function() {{
-                enforcePortalStyles();
-            }});
-            topObs.observe(topDoc.body, {{ childList: true, subtree: true }});
-            window.top.__ziyadTopCloudObserverObj = topObs;
-        }}
+
     }} catch (e) {{}}
 }})();
 </script>
@@ -2167,9 +2136,14 @@ if st.session_state.role is None:
 if "db_loaded" not in st.session_state:
   with st.spinner("⏳ جاري الاتصال بالمنصة وتحديث البيانات المركزية..."):
     try:
-      st.session_state.df_students = fetch_safe("students")
-      st.session_state.df_grades = fetch_safe("grades")
-      st.session_state.df_behavior = fetch_safe("behavior")
+      if st.session_state.role in ["teacher", "viewer"]:
+        st.session_state.df_students = fetch_safe("students")
+        st.session_state.df_grades = fetch_safe("grades")
+        st.session_state.df_behavior = fetch_safe("behavior")
+      else:
+        fetch_safe("students")
+        fetch_safe("grades")
+        fetch_safe("behavior")
       st.session_state.db_loaded = True
     except Exception as e:
       st.error(f"❌ حدث خطأ أثناء الاتصال: {e}")
@@ -2707,7 +2681,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                     lnk = get_professional_msg(s_nm, r.get("type"), r.get("note"), r.get("date"))
                     wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
-                    tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
+                    tg_url = f"https://t.me/share/url?url=https://zi-edu.onrender.com&text={lnk}"
 
                     st.markdown(
                         f"""
@@ -5332,7 +5306,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       st.divider()
       st.markdown("#### 📥 تنزيل نسخة احتياطية كاملة من البيانات (Backup)")
       b_col1, b_col2 = st.columns(2)
-      df_st_full = st.session_state.df_students.copy()
+      df_st_full = st.session_state.df_students.drop(columns=["clean_id"], errors="ignore").copy()
       if not df_st_full.empty:
         b_col1.download_button(
             label="📂 تنزيل بيانات الطلاب (Excel)",
@@ -5343,7 +5317,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             use_container_width=True,
         )
 
-      df_gr_full = st.session_state.df_grades.copy()
+      df_gr_full = st.session_state.df_grades.drop(columns=["clean_id"], errors="ignore").copy()
       if not df_gr_full.empty:
         b_col2.download_button(
             label="📊 تنزيل سجل الدرجات (Excel)",
@@ -5991,14 +5965,15 @@ if st.session_state.role in ["teacher", "viewer"]:
 # ==========================================
 if st.session_state.role == "student":
   sid = str(st.session_state.get("username", "")).strip()
-  df_st = st.session_state.df_students.copy()
-  df_gr = st.session_state.df_grades.copy()
-  df_beh = st.session_state.df_behavior.copy()
+  df_st = fetch_safe("students")
+  df_gr = fetch_safe("grades")
+  df_beh = fetch_safe("behavior")
   df_ann = fetch_safe("exams")
 
-  if not df_st.empty:
-    df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
+  if not df_st.empty and "clean_id" in df_st.columns:
     info = df_st[df_st["clean_id"] == sid]
+  elif not df_st.empty:
+    info = df_st[df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip() == sid]
   else:
     info = pd.DataFrame()
 
@@ -6328,25 +6303,32 @@ if st.session_state.role == "student":
 </body>
 </html>"""
 
-            try:
-              pdf_bytes = generate_pdf_bytes_cached(certificate_html)
+            st_c1, st_c2 = st.columns(2)
+            with st_c1:
               st.download_button(
-                  label="📥 تنزيل شهادة التفوق (PDF جاهز للطباعة)",
-                  data=pdf_bytes,
-                  file_name=f"Certificate_{sid}_{s_nm}.pdf",
-                  mime="application/pdf",
-                  type="primary",
-                  use_container_width=True,
-              )
-            except Exception:
-              st.download_button(
-                  label="📜 تنزيل شهادة التفوق (جاهزة للطباعة A4)",
+                  label="🖨️ فتح وطباعة شهادة التفوق فوراً (A4 - سريع)",
                   data=certificate_html,
                   file_name=f"Certificate_{sid}_{s_nm}.html",
                   mime="text/html",
                   type="primary",
                   use_container_width=True,
               )
+            with st_c2:
+              if st.button("⚙️ تجهيز ملف PDF للشهادة", type="secondary", use_container_width=True, key=f"st_pdf_btn_{sid}_{cp}"):
+                try:
+                  with st.spinner("⏳ جاري تجهيز ملف الـ PDF..."):
+                    st.session_state[f"st_cert_pdf_{sid}_{cp}"] = generate_pdf_bytes_cached(certificate_html)
+                except Exception:
+                  st.warning("⚠️ استخدم زر الطباعة الفوري (A4 - سريع) بجانب هذا الزر.")
+              if st.session_state.get(f"st_cert_pdf_{sid}_{cp}"):
+                st.download_button(
+                    label="📥 اضغط لتنزيل شهادة التفوق (PDF)",
+                    data=st.session_state[f"st_cert_pdf_{sid}_{cp}"],
+                    file_name=f"Certificate_{sid}_{s_nm}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
         else:
           st.info(f"لم يتم رصد درجات لك في ({cp}) حتى الآن.")
       else:
@@ -6355,8 +6337,8 @@ if st.session_state.role == "student":
     # --- تبويب 4: لوحة الشرف ---
     with tabs[3]:
       st.caption("لوحة الشرف (أفضل 10 طلاب في المنصة)")
-      df_st["p_num"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
-      active_students = df_st[df_st["p_num"] > 0]
+      df_st_h_view = df_st.assign(p_num=pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0))
+      active_students = df_st_h_view[df_st_h_view["p_num"] > 0]
 
       if not active_students.empty:
         for i, (_, r) in enumerate(active_students.sort_values("p_num", ascending=False).head(10).iterrows(), 1):
