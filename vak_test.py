@@ -1976,6 +1976,134 @@ def get_school_name(df_subset):
     elif "متوسط" in text_to_search: return "متوسطة عبدالرحمن الناصر"
     else: return "ابتدائية عبادة بن قيس الأنصاري"
 
+@st.cache_resource(show_spinner=False)
+def ensure_weasyprint_ready():
+    try:
+        import weasyprint  # noqa: F401
+        return True
+    except ImportError:
+        import subprocess
+        import sys
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "weasyprint", "-q"])
+            import weasyprint  # noqa: F401
+            return True
+        except Exception:
+            return False
+
+@st.cache_data(ttl=86400, max_entries=100, show_spinner=False)
+def generate_pdf_bytes_cached(html_str):
+    if ensure_weasyprint_ready():
+        from weasyprint import HTML
+        return HTML(string=html_str).write_pdf()
+    return None
+
+def render_pdf_download_button(full_html, file_stem, label_text, key_suffix):
+    """توليد وتحميل ملف PDF حقيقي بمقاس A4 وهوامش ثابتة 100% متوافقة مع الجوال والكمبيوتر"""
+    clean_stem = str(file_stem).replace(" ", "_")
+    pdf_bytes = None
+    try:
+        pdf_bytes = generate_pdf_bytes_cached(full_html)
+    except Exception:
+        pdf_bytes = None
+
+    if pdf_bytes:
+        st.download_button(
+            label=f"{label_text} (PDF - A4)",
+            data=pdf_bytes,
+            file_name=f"{clean_stem}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key=f"dl_pdf_{key_suffix}"
+        )
+    else:
+        b64_html = base64.b64encode(full_html.encode("utf-8")).decode("ascii")
+        components.html(f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+        <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <style>
+            * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }}
+            body {{ background: transparent; direction: rtl; overflow: hidden; }}
+            .pdf-btn {{
+                width: 100%;
+                min-height: 46px;
+                background: {cur_t['btn_grad']};
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                box-shadow: {cur_t['shadow_btn']};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+            }}
+            .pdf-btn:hover {{ filter: brightness(1.08); }}
+            .pdf-btn:disabled {{ opacity: 0.75; cursor: wait; }}
+        </style>
+        </head>
+        <body>
+            <button id="dlBtn" class="pdf-btn" onclick="downloadA4Pdf()">{label_text} (PDF - A4)</button>
+            <script>
+            function downloadA4Pdf() {{
+                var btn = document.getElementById('dlBtn');
+                var origText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = '⏳ جاري تجهيز ملف الـ PDF بمقاس A4...';
+                try {{
+                    var rawHtml = decodeURIComponent(escape(window.atob("{b64_html}")));
+                    var iframe = document.createElement('iframe');
+                    iframe.style.position = 'fixed';
+                    iframe.style.left = '-9999px';
+                    iframe.style.top = '0';
+                    iframe.style.width = '794px';
+                    iframe.style.height = '1123px';
+                    document.body.appendChild(iframe);
+                    var idoc = iframe.contentDocument || iframe.contentWindow.document;
+                    idoc.open();
+                    idoc.write(rawHtml);
+                    idoc.close();
+                    setTimeout(function() {{
+                        var targetEl = idoc.querySelector('.page-container') || idoc.body;
+                        targetEl.style.width = '700px';
+                        targetEl.style.margin = '0 auto';
+                        targetEl.style.padding = '10px';
+                        targetEl.style.background = '#ffffff';
+                        var opt = {{
+                            margin: [12, 12, 12, 12],
+                            filename: '{clean_stem}.pdf',
+                            image: {{ type: 'jpeg', quality: 0.98 }},
+                            html2canvas: {{ scale: 2, useCORS: true, logging: false, windowWidth: 794 }},
+                            jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
+                            pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }}
+                        }};
+                        html2pdf().set(opt).from(targetEl).save().then(function() {{
+                            document.body.removeChild(iframe);
+                            btn.disabled = false;
+                            btn.innerText = origText;
+                        }}).catch(function() {{
+                            document.body.removeChild(iframe);
+                            btn.disabled = false;
+                            btn.innerText = origText;
+                        }});
+                    }}, 500);
+                }} catch (e) {{
+                    btn.disabled = false;
+                    btn.innerText = origText;
+                }}
+            }}
+            </script>
+        </body>
+        </html>
+        """, height=52)
+
 def generate_html_page(title, content, school_names_html):
     curr_user = st.session_state.get('current_user')
     if curr_user and curr_user.get('role') != 'admin':
@@ -1984,29 +2112,256 @@ def generate_html_page(title, content, school_names_html):
         teacher_name_display = "............................................."
 
     signature_html = f"""
-    <div class="signature-section">
-        <div class="sig-box">
-            <div class="sig-title">معلم المادة / المختص</div>
-            <div class="sig-line">الاسم: {teacher_name_display}</div>
-            <div class="sig-line">التوقيع: .............................................</div>
-        </div>
-        <div class="sig-stamp">
-            <div class="stamp-circle">الختم الرسمي</div>
-        </div>
-        <div class="sig-box">
-            <div class="sig-title">يعتمد ،، مدير المدرسة</div>
-            <div class="sig-line">الاسم: أ. عبدالمجيد الحربي</div>
-            <div class="sig-line">التوقيع: .............................................</div>
-        </div>
-    </div>
+    <table class="sig-table">
+        <tr>
+            <td class="sig-cell">
+                <div class="sig-title">معلم المادة / المختص</div>
+                <div class="sig-line">الاسم: {teacher_name_display}</div>
+                <div class="sig-line">التوقيع: .............................................</div>
+            </td>
+            <td class="sig-stamp-cell">
+                <div class="stamp-circle">الختم الرسمي</div>
+            </td>
+            <td class="sig-cell">
+                <div class="sig-title">يعتمد ،، مدير المدرسة</div>
+                <div class="sig-line">الاسم: أ. عبدالمجيد الحربي</div>
+                <div class="sig-line">التوقيع: .............................................</div>
+            </td>
+        </tr>
+    </table>
     """
 
-    return f"""<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>{title}</title><style>@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap'); body {{ font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; direction: rtl; }} @page {{ margin: 15mm; }} thead {{ display: table-header-group; }} tfoot {{ display: table-footer-group; }} .official-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; }} .header-right {{ text-align: right; flex: 1; font-size: 13px; line-height: 1.5; }} .header-center {{ text-align: center; flex: 1; font-size: 16px; color: {cur_t['brand_navy']}; line-height: 1.3; }} .header-left {{ text-align: left; flex: 1; font-size: 13px; line-height: 1.5; }} .report-main-title {{ text-align: center; color: {cur_t['brand_navy']}; background-color: {cur_t['report_bg']}; border: 1px solid {cur_t['report_border']}; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-size: 20px; font-weight: bold; }} table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; page-break-inside: auto; direction: rtl; }} tr {{ page-break-inside: avoid; page-break-after: auto; }} th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }} th {{ background-color: #f2f2f2; font-weight: bold; }} td:first-child, th:first-child {{ width: 40px; font-weight: bold; background-color: #f4f6f7; }} tr:nth-child(even) {{ background-color: #f9f9f9; }} .summary-box {{ border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; font-size: 15px; }} .bar-bg {{ background-color: #e0e0e0; border-radius: 5px; width: 100%; height: 14px; margin-bottom: 8px; border: 1px solid #ccc; overflow: hidden; }} .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }} .stats-container {{ display: flex; justify-content: space-between; margin-top: 15px; gap: 10px; }} .stat-card {{ flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }} .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }} .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }} .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }} .stat-title {{ font-size: 14px; margin-bottom: 5px; font-weight: bold; }} .stat-value {{ font-size: 18px; font-weight: bold; }} .signature-section {{ display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 15px; border-top: 1px dashed #ccc; page-break-inside: avoid; }} .sig-box {{ flex: 1; text-align: center; font-size: 14px; line-height: 2; }} .sig-title {{ font-weight: bold; font-size: 15px; color: {cur_t['brand_navy']}; margin-bottom: 5px; }} .sig-line {{ font-weight: bold; }} .sig-stamp {{ flex: 0.6; display: flex; justify-content: center; align-items: center; }} .stamp-circle {{ width: 85px; height: 85px; border: 2px dashed #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; font-weight: bold; }} .no-print {{ text-align: center; margin-bottom: 15px; }} .print-btn {{ background: {cur_t['btn_grad']}; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: bold; }} @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} .stat-card {{ box-shadow: none; }} .official-header {{ border-bottom: 2px solid #000; }} .header-center {{ color: #000; }} }}</style></head><body>
-    <div class="no-print"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button></div>
-    <table style="width: 100%; border: none;"><thead style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; background: none;">
-    <div class="official-header"><div class="header-right">المملكة العربية السعودية<br>{school_names_html}</div><div class="header-center">وزارة التعليم<br><span style="font-size: 12px; font-weight: normal; color: #7f8c8d;">Ministry of Education</span></div><div class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</div></div>
-    </td></tr></thead><tbody style="border: none;"><tr style="border: none;"><td style="border: none; padding: 0; text-align: right; font-weight: normal; background: none;"><div class="report-main-title">{title}</div>{content}{signature_html}</td></tr></tbody></table>
-    </body></html>"""
+    return f"""<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+    @page {{
+        size: A4 portrait;
+        margin: 12mm 14mm 12mm 14mm;
+    }}
+    * {{
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }}
+    html, body {{
+        font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', 'Amiri', 'DejaVu Sans', sans-serif;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100%;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        direction: rtl !important;
+        text-align: right !important;
+        font-size: 13px;
+        line-height: 1.5;
+    }}
+    .page-container {{
+        width: 100%;
+        margin: 0 auto;
+        padding: 0;
+        direction: rtl;
+    }}
+    table.header-table {{
+        width: 100%;
+        border-collapse: collapse;
+        border: none;
+        border-bottom: 3px double #0f172a;
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        direction: rtl;
+    }}
+    table.header-table td {{
+        border: none !important;
+        background: transparent !important;
+        padding: 4px 2px 10px 2px !important;
+        vertical-align: middle;
+        font-weight: 700;
+    }}
+    .header-right {{
+        text-align: right !important;
+        width: 36%;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: #0f172a;
+    }}
+    .header-center {{
+        text-align: center !important;
+        width: 28%;
+        font-size: 15.5px;
+        color: {cur_t['brand_navy']};
+        line-height: 1.35;
+    }}
+    .header-left {{
+        text-align: left !important;
+        width: 36%;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: #0f172a;
+    }}
+    .report-main-title {{
+        text-align: center !important;
+        color: {cur_t['brand_navy']};
+        background-color: {cur_t['report_bg']};
+        border: 1.5px solid {cur_t['report_border']};
+        border-radius: 8px;
+        padding: 9px 12px;
+        margin-bottom: 14px;
+        font-size: 18px;
+        font-weight: 800;
+    }}
+    .summary-box {{
+        border: 1px solid #cbd5e1;
+        padding: 12px 14px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        background-color: #f8fafc;
+        font-size: 14px;
+        page-break-inside: avoid;
+    }}
+    .stats-container {{
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        gap: 10px;
+        width: 100%;
+    }}
+    .stat-card {{
+        flex: 1;
+        padding: 8px 6px;
+        border-radius: 6px;
+        text-align: center !important;
+        border: 1px solid #cbd5e1;
+        background-color: #ffffff;
+    }}
+    .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }}
+    .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }}
+    .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }}
+    .stat-title {{ font-size: 13px; margin-bottom: 3px; font-weight: 700; text-align: center !important; }}
+    .stat-value {{ font-size: 17px; font-weight: 800; text-align: center !important; }}
+
+    table.table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 12.5px;
+        page-break-inside: auto;
+        direction: rtl;
+    }}
+    table.table thead {{
+        display: table-header-group;
+    }}
+    table.table tr {{
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }}
+    table.table th, table.table td {{
+        border: 1px solid #334155;
+        padding: 6px 8px;
+        text-align: center !important;
+    }}
+    table.table th {{
+        background-color: #e2e8f0;
+        color: #0f172a;
+        font-weight: 800;
+    }}
+    table.table td:first-child, table.table th:first-child {{
+        width: 38px;
+        font-weight: 700;
+        background-color: #f1f5f9;
+    }}
+    table.table td:nth-child(3) {{
+        text-align: right !important;
+        font-weight: 700;
+        padding-right: 10px;
+    }}
+    table.table tr:nth-child(even) td {{
+        background-color: #f8fafc;
+    }}
+
+    .bar-bg {{
+        background-color: #e2e8f0;
+        border-radius: 5px;
+        width: 100%;
+        height: 14px;
+        margin-bottom: 10px;
+        border: 1px solid #cbd5e1;
+        overflow: hidden;
+    }}
+    .bar-v {{ background-color: #2563eb; height: 100%; border-radius: 5px 0 0 5px; }}
+    .bar-a {{ background-color: #d97706; height: 100%; border-radius: 5px 0 0 5px; }}
+    .bar-k {{ background-color: #059669; height: 100%; border-radius: 5px 0 0 5px; }}
+
+    table.sig-table {{
+        width: 100%;
+        border-collapse: collapse;
+        border: none;
+        border-top: 1.5px dashed #94a3b8;
+        margin-top: 26px;
+        padding-top: 12px;
+        page-break-inside: avoid;
+        direction: rtl;
+    }}
+    table.sig-table td {{
+        border: none !important;
+        background: transparent !important;
+        padding: 12px 4px 0 4px !important;
+        vertical-align: middle;
+    }}
+    .sig-cell {{
+        width: 40%;
+        text-align: center !important;
+        font-size: 13px;
+        line-height: 1.9;
+    }}
+    .sig-stamp-cell {{
+        width: 20%;
+        text-align: center !important;
+    }}
+    .sig-title {{
+        font-weight: 800;
+        font-size: 14px;
+        color: {cur_t['brand_navy']};
+        margin-bottom: 4px;
+        text-align: center !important;
+    }}
+    .sig-line {{
+        font-weight: 700;
+        text-align: center !important;
+    }}
+    .stamp-circle {{
+        width: 78px;
+        height: 78px;
+        margin: 0 auto;
+        border: 2px dashed #94a3b8;
+        border-radius: 50%;
+        text-align: center !important;
+        line-height: 74px;
+        color: #64748b;
+        font-size: 11.5px;
+        font-weight: 700;
+    }}
+</style>
+</head>
+<body>
+<div class="page-container">
+    <table class="header-table">
+        <tr>
+            <td class="header-right">المملكة العربية السعودية<br>وزارة التعليم<br>{school_names_html}</td>
+            <td class="header-center">وزارة التعليم<br><span style="font-size: 11px; font-weight: normal; color: #64748b;">Ministry of Education</span></td>
+            <td class="header-left">العام الدراسي: 1448 هـ<br>تاريخ الإصدار: {datetime.now().strftime('%Y-%m-%d')}</td>
+        </tr>
+    </table>
+    <div class="report-main-title">{title}</div>
+    {content}
+    {signature_html}
+</div>
+</body>
+</html>"""
 
 def create_excel_bytes(df):
     output = io.BytesIO()
@@ -2368,12 +2723,11 @@ else:
                     if style_filter != "جميع الأنماط":
                         base_title += f" (النمط ال{style_filter})"
                     full_html = generate_html_page(base_title, class_content, get_school_name(df_class_tested))
-                    st.download_button(
-                        label="📥 تحميل التقرير للطباعة (A4)",
-                        data=full_html.encode('utf-8'),
-                        file_name=f"Group_Report_{scope_label}_{style_filter}.html",
-                        mime="text/html",
-                        use_container_width=True
+                    render_pdf_download_button(
+                        full_html,
+                        f"Group_Report_{scope_label}_{style_filter}",
+                        "📥 تحميل التقرير جاهزاً للطباعة",
+                        f"comp_{scope_label}_{style_filter}"
                     )
                 else:
                     st.warning("لا يوجد طلاب مختبرين مطابقين لهذا الفلتر في النطاق المحدد.")
@@ -2414,12 +2768,11 @@ else:
                     
                     report_title = f"تقرير حصر طلاب النمط ال{chosen_style_key} ({chosen_style_label}) - {scope_label}"
                     full_html = generate_html_page(report_title, style_content, get_school_name(df_style_matched))
-                    st.download_button(
-                        label=f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة (A4)",
-                        data=full_html.encode('utf-8'),
-                        file_name=f"Style_Report_{chosen_style_key}_{scope_label}.html",
-                        mime="text/html",
-                        use_container_width=True
+                    render_pdf_download_button(
+                        full_html,
+                        f"Style_Report_{chosen_style_key}_{scope_label}",
+                        f"📥 تحميل تقرير النمط ال{chosen_style_key} للطباعة",
+                        f"style_{chosen_style_key}_{scope_label}"
                     )
                 else:
                     st.warning(f"لا يوجد طلاب مسجلين ضمن النمط ({chosen_style_label}) في هذا النطاق.")
@@ -2438,12 +2791,11 @@ else:
                     untested_content = f"""<div class="summary-box"><h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 16px;">إحصائية المتأخرين: <span style="font-weight: normal; font-size: 15px;">العدد الإجمالي: {len(df_untested)} طالب</span></h3></div><h3 style="margin-top: 20px; font-size: 16px;">قائمة بأسماء الطلاب المطالبين بإجراء الاختبار:</h3>{html_table}"""
                     report_title = f"تقرير حصر الطلاب غير المختبرين - {scope_label}"
                     full_html = generate_html_page(report_title, untested_content, get_school_name(df_untested))
-                    st.download_button(
-                        label="📥 تحميل تقرير غير المختبرين للطباعة (A4)",
-                        data=full_html.encode('utf-8'),
-                        file_name=f"Untested_Report_{scope_label}.html",
-                        mime="text/html",
-                        use_container_width=True
+                    render_pdf_download_button(
+                        full_html,
+                        f"Untested_Report_{scope_label}",
+                        "📥 تحميل تقرير غير المختبرين للطباعة",
+                        f"untested_{scope_label}"
                     )
                 else:
                     st.success("🎉 رائع! جميع الطلاب في هذا النطاق أتموا الاختبار.")
@@ -2503,12 +2855,11 @@ else:
                                 <h3 style="font-size: 16px;">مقترحات تعليمية للطالب:</h3><ul style="font-size: 15px; line-height: 1.6;">{recs}</ul>
                                 """
                                 full_html = generate_html_page("تقرير مقياس أنماط التعلم (VAK)", student_content, school_names_html)
-                                st.download_button(
-                                    label=f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة",
-                                    data=full_html.encode('utf-8'),
-                                    file_name=f"Student_{s['id']}_Report.html",
-                                    mime="text/html",
-                                    use_container_width=True
+                                render_pdf_download_button(
+                                    full_html,
+                                    f"Student_{s['id']}_Report",
+                                    f"📥 تحميل التقرير الفردي للطالب ({s['name']}) للطباعة",
+                                    f"indiv_{s['id']}"
                                 )
 
     if tab_data is not None:
