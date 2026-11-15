@@ -12,7 +12,13 @@ import time
 st.set_page_config(
     page_title="بوابة اختبار أنماط التعلم (VAK) | منصة زياد الذكية",
     page_icon="🎓",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": None,
+    },
 )
 
 # تعريف القوالب الديناميكية الأربعة للهوية البصرية
@@ -117,12 +123,12 @@ def clean_id(val):
     val = str(val).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
     return val.split('.')[0].strip()
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def get_gsheets_conn():
     from streamlit_gsheets import GSheetsConnection
     return st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=600, max_entries=5)
+@st.cache_data(ttl=600, max_entries=5, show_spinner=False)
 def get_all_teachers():
     conn = get_gsheets_conn()
     try:
@@ -139,7 +145,7 @@ def get_all_teachers():
     except:
         return pd.DataFrame(columns=['id', 'name', 'role', 'class_name', 'theme'])
 
-@st.cache_data(ttl=7200, max_entries=5)
+@st.cache_data(ttl=7200, max_entries=5, show_spinner=False)
 def get_all_students():
     conn = get_gsheets_conn()
     try:
@@ -279,9 +285,77 @@ st.markdown(f"""
         margin: 0 !important;
     }}
 
-    header[data-testid="stHeader"] {{ display: none !important; }}
-    #MainMenu {{ visibility: hidden; }}
-    footer {{ visibility: hidden; }}
+    /* إخفاء شامل لجميع أدوات Streamlit الإدارية والمطور والتذييل والشارات العائمة */
+    header,
+    header[data-testid="stHeader"],
+    [data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stToolbarActions"],
+    [data-testid="stToolbarActionButton"],
+    [data-testid="stDecoration"],
+    [data-testid="stStatusWidget"],
+    .stDeployButton,
+    [data-testid="stDeployButton"],
+    [data-testid="stAppDeployButton"],
+    #MainMenu,
+    [data-testid="MainMenu"],
+    footer,
+    [data-testid="stFooter"],
+    [data-testid="stBottom"],
+    [data-testid="stBottomBlockContainer"],
+    [data-testid="manage-app-button"],
+    [data-testid="appCreatorAvatar"],
+    [data-testid="stHeaderActionElements"],
+    [data-testid="InputInstructions"],
+    [data-testid="stElementToolbar"],
+    [data-testid="StyledFullScreenButton"],
+    button[title="View fullscreen"],
+    section[data-testid="stSidebar"],
+    [data-testid="stSidebar"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarNav"],
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK,
+    .styles_viewerBadge__1yB5_,
+    [class*="viewerBadge"],
+    [class*="_viewerBadge"],
+    [id*="viewerBadge"],
+    [class*="StatusWidget"],
+    [class*="stToolbar"],
+    [class*="profileContainer"],
+    [class*="_profileContainer"],
+    [class*="profilePreview"],
+    [class*="_profilePreview"],
+    [class*="profileImage"],
+    [class*="_profileImage"],
+    [class*="_terminalButton"],
+    [class*="terminalButton"],
+    [class*="_link_gzau3"],
+    [class*="_container_gzau3"],
+    a[href*="streamlit.io"],
+    a[href*="share.streamlit.io"],
+    img[src*="avatars.githubusercontent.com"] {{
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        max-height: 0px !important;
+        width: 0px !important;
+        min-width: 0px !important;
+        max-width: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
+        border: none !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+        position: fixed !important;
+        top: 0px !important;
+        left: 0px !important;
+        z-index: -9999 !important;
+    }}
 
     /* إخفاء أشرطة التمرير تماماً مع الحفاظ على سلاسة التمرير */
     *, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {{
@@ -301,17 +375,87 @@ st.markdown(f"""
         background: transparent !important;
     }}
 
-    .block-container {{
+    html, body {{
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-overflow-scrolling: touch !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }}
+
+    #root,
+    #root > div,
+    .stApp,
+    [data-testid="stApp"],
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewBlockContainer"],
+    [data-testid="stMain"],
+    .main {{
+        position: static !important;
+        inset: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        flex: none !important;
+        display: block !important;
+        overflow: visible !important;
+    }}
+
+    .block-container,
+    [data-testid="stMainBlockContainer"] {{
         max-width: 1020px !important;
         width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
         box-sizing: border-box !important;
-        overflow-x: clip !important;
-        overflow-y: visible !important;
-        padding-top: 1.4rem !important;
-        padding-bottom: 2.5rem !important;
+        display: block !important;
+        overflow: visible !important;
+        padding-top: 0.45rem !important;
+        padding-bottom: 4px !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         direction: rtl !important;
+    }}
+
+    div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+    div.element-container:has(iframe[height="0"]),
+    div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+    iframe[height="0"] {{
+        position: fixed !important;
+        top: 0px !important;
+        left: 0px !important;
+        width: 0px !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        max-height: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
+        border: none !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
     }}
 
     div[data-testid="stVerticalBlockBorderWrapper"],
@@ -1347,8 +1491,9 @@ st.markdown(f"""
        10. التذييل الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام)
        ======================================================== */
     .ziyad-footer-wrap {{
-        margin-top: 44px;
-        padding-top: 22px;
+        margin-top: 22px;
+        padding-top: 16px;
+        padding-bottom: 2px;
         border-top: 1.5px solid var(--border-color);
         text-align: center;
     }}
@@ -1405,11 +1550,14 @@ st.markdown(f"""
     }}
 
     @media (max-width: 768px) {{
-        .block-container {{
-            padding-top: 0.8rem !important;
+        .block-container,
+        [data-testid="stMainBlockContainer"] {{
+            padding-top: 0.35rem !important;
             padding-left: 0.7rem !important;
             padding-right: 0.7rem !important;
-            padding-bottom: 2rem !important;
+            padding-bottom: 4px !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
         }}
         div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
             width: calc(50% - 4px) !important;
@@ -2670,9 +2818,89 @@ components.html(f"""
 (function() {{
     try {{
         var pDoc = window.parent.document;
+        var topDoc = null;
+        try {{
+            if (window.top && window.top.document) {{
+                topDoc = window.top.document;
+            }}
+        }} catch (e) {{}}
+
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
         pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+
+        var chromeHideRules = `
+            header,
+            header[data-testid="stHeader"],
+            [data-testid="stHeader"],
+            [data-testid="stToolbar"],
+            [data-testid="stToolbarActions"],
+            [data-testid="stToolbarActionButton"],
+            [data-testid="stDecoration"],
+            [data-testid="stStatusWidget"],
+            .stDeployButton,
+            [data-testid="stDeployButton"],
+            [data-testid="stAppDeployButton"],
+            #MainMenu,
+            [data-testid="MainMenu"],
+            footer,
+            [data-testid="stFooter"],
+            [data-testid="stBottom"],
+            [data-testid="stBottomBlockContainer"],
+            [data-testid="manage-app-button"],
+            [data-testid="appCreatorAvatar"],
+            [data-testid="stHeaderActionElements"],
+            [data-testid="InputInstructions"],
+            [data-testid="stElementToolbar"],
+            [data-testid="StyledFullScreenButton"],
+            button[title="View fullscreen"],
+            section[data-testid="stSidebar"],
+            [data-testid="stSidebar"],
+            [data-testid="collapsedControl"],
+            [data-testid="stSidebarCollapsedControl"],
+            [data-testid="stSidebarNav"],
+            .viewerBadge_container__1QSob,
+            .viewerBadge_link__1S137,
+            .viewerBadge_text__1JaDK,
+            .styles_viewerBadge__1yB5_,
+            [class*="viewerBadge"],
+            [class*="_viewerBadge"],
+            [id*="viewerBadge"],
+            [class*="StatusWidget"],
+            [class*="stToolbar"],
+            [class*="profileContainer"],
+            [class*="_profileContainer"],
+            [class*="profilePreview"],
+            [class*="_profilePreview"],
+            [class*="profileImage"],
+            [class*="_profileImage"],
+            [class*="_terminalButton"],
+            [class*="terminalButton"],
+            [class*="_link_gzau3"],
+            [class*="_container_gzau3"],
+            a[href*="streamlit.io"],
+            a[href*="share.streamlit.io"],
+            img[src*="avatars.githubusercontent.com"] {{
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                width: 0px !important;
+                height: 0px !important;
+                min-width: 0px !important;
+                min-height: 0px !important;
+                max-width: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                pointer-events: none !important;
+                overflow: hidden !important;
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                z-index: -9999 !important;
+            }}
+        `;
 
         var styleId = 'ziyad-vak-global-portal-rtl';
         var existingStyle = pDoc.getElementById(styleId);
@@ -2681,7 +2909,7 @@ components.html(f"""
             existingStyle.id = styleId;
             pDoc.head.appendChild(existingStyle);
         }}
-        existingStyle.innerHTML = `
+        existingStyle.innerHTML = chromeHideRules + `
             :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
                 --text-color: #0f172a !important;
                 --background-color: {cur_t['bg_page']} !important;
@@ -2692,6 +2920,70 @@ components.html(f"""
                 color: #0f172a !important;
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }}
+            html, body {{
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+            }}
+            #root,
+            #root > div,
+            .stApp,
+            [data-testid="stApp"],
+            [data-testid="stAppViewContainer"],
+            [data-testid="stAppViewBlockContainer"],
+            [data-testid="stMain"],
+            .main,
+            [data-testid="stMainBlockContainer"],
+            .block-container {{
+                position: static !important;
+                inset: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+                flex: none !important;
+                display: block !important;
+                overflow: visible !important;
+            }}
+            .block-container,
+            [data-testid="stMainBlockContainer"] {{
+                padding-top: 0.45rem !important;
+                padding-bottom: 4px !important;
+            }}
+            div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+            div.element-container:has(iframe[height="0"]),
+            div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+            iframe[height="0"] {{
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                width: 0px !important;
+                height: 0px !important;
+                min-height: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+                border: none !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                z-index: -9999 !important;
             }}
             *, .block-container {{
                 scrollbar-width: none !important;
@@ -2786,6 +3078,62 @@ components.html(f"""
             }}
         `;
 
+        if (topDoc && topDoc !== pDoc && topDoc.head) {{
+            var topStyleId = 'ziyad-vak-top-cloud-chrome-hide';
+            var topStyle = topDoc.getElementById(topStyleId);
+            if (!topStyle) {{
+                topStyle = topDoc.createElement('style');
+                topStyle.id = topStyleId;
+                topDoc.head.appendChild(topStyle);
+            }}
+            topStyle.innerHTML = chromeHideRules + `
+                html, body {{
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background-color: {cur_t['bg_page']} !important;
+                }}
+            `;
+        }}
+
+        function hideElementCompletely(el) {{
+            if (!el || !el.style) return;
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.setProperty('width', '0px', 'important');
+            el.style.setProperty('height', '0px', 'important');
+            el.style.setProperty('min-width', '0px', 'important');
+            el.style.setProperty('min-height', '0px', 'important');
+            el.style.setProperty('max-width', '0px', 'important');
+            el.style.setProperty('max-height', '0px', 'important');
+            el.style.setProperty('margin', '0px', 'important');
+            el.style.setProperty('padding', '0px', 'important');
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('top', '0px', 'important');
+            el.style.setProperty('left', '0px', 'important');
+            el.style.setProperty('z-index', '-9999', 'important');
+        }}
+
+        function cleanDocumentChrome(doc) {{
+            if (!doc || !doc.body) return;
+            var sel = 'header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"], #MainMenu, footer, [data-testid="stFooter"], [data-testid="stBottom"], [data-testid="stBottomBlockContainer"], [data-testid="manage-app-button"], [data-testid="appCreatorAvatar"], [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"], [data-testid="stElementToolbar"], [data-testid="StyledFullScreenButton"], [class*="viewerBadge"], [class*="_viewerBadge"], [id*="viewerBadge"], [class*="profileContainer"], [class*="_profileContainer"], [class*="profilePreview"], [class*="_profilePreview"], [class*="profileImage"], [class*="_profileImage"], [class*="_terminalButton"], [class*="terminalButton"], [class*="_link_gzau3"], [class*="_container_gzau3"], a[href*="streamlit.io"], a[href*="share.streamlit.io"], img[src*="avatars.githubusercontent.com"]';
+            doc.querySelectorAll(sel).forEach(hideElementCompletely);
+            doc.querySelectorAll('*').forEach(function(node) {{
+                if (node.shadowRoot) {{
+                    var shStyle = node.shadowRoot.getElementById('ziyad-shadow-hide');
+                    if (!shStyle) {{
+                        shStyle = doc.createElement('style');
+                        shStyle.id = 'ziyad-shadow-hide';
+                        shStyle.innerHTML = chromeHideRules;
+                        node.shadowRoot.appendChild(shStyle);
+                    }}
+                    node.shadowRoot.querySelectorAll(sel).forEach(hideElementCompletely);
+                }}
+            }});
+        }}
+
         var isRunningVak = false;
         function enforceVakPortalStyles() {{
             if (isRunningVak) return;
@@ -2794,6 +3142,22 @@ components.html(f"""
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
+                cleanDocumentChrome(pDoc);
+                if (topDoc && topDoc !== pDoc) {{
+                    cleanDocumentChrome(topDoc);
+                    var appFrame = window.parent.frameElement;
+                    if (appFrame && topDoc.body && topDoc.body.contains(appFrame)) {{
+                        topDoc.body.querySelectorAll('*').forEach(function(el) {{
+                            if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
+                                hideElementCompletely(el);
+                            }} else if (el.contains(appFrame)) {{
+                                el.style.setProperty('margin', '0px', 'important');
+                                el.style.setProperty('padding', '0px', 'important');
+                            }}
+                        }});
+                    }}
+                }}
+
                 var tabLists = pDoc.querySelectorAll('.stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"], [data-testid="stTabs"] [role="tablist"]');
                 tabLists.forEach(function(tl) {{
                     tl.style.setProperty('display', 'grid', 'important');
@@ -2885,6 +3249,68 @@ components.html(f"""
                         s.style.setProperty('background', 'transparent', 'important');
                     }});
                 }});
+
+                var layoutContainers = pDoc.querySelectorAll('#root, #root > div, .stApp, [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stMain"], .main, [data-testid="stMainBlockContainer"], .block-container');
+                layoutContainers.forEach(function(c) {{
+                    c.style.setProperty('position', 'static', 'important');
+                    c.style.setProperty('inset', 'auto', 'important');
+                    c.style.setProperty('height', 'auto', 'important');
+                    c.style.setProperty('min-height', '0', 'important');
+                    c.style.setProperty('max-height', 'none', 'important');
+                    c.style.setProperty('margin-bottom', '0px', 'important');
+                    c.style.setProperty('padding-bottom', '0px', 'important');
+                    c.style.setProperty('flex', 'none', 'important');
+                    c.style.setProperty('display', 'block', 'important');
+                    c.style.setProperty('overflow', 'visible', 'important');
+                }});
+                pDoc.querySelectorAll('.block-container, [data-testid="stMainBlockContainer"]').forEach(function(bc) {{
+                    bc.style.setProperty('padding-bottom', '4px', 'important');
+                    bc.style.setProperty('margin-bottom', '0px', 'important');
+                }});
+
+                if (window.frameElement) {{
+                    hideElementCompletely(window.frameElement);
+                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
+                    if (feParent) {{
+                        hideElementCompletely(feParent);
+                    }}
+                    var feCustom = window.frameElement.closest('[data-testid="stCustomComponentV1"], .stCustomComponentV1');
+                    if (feCustom) {{
+                        hideElementCompletely(feCustom);
+                    }}
+                }}
+
+                pDoc.documentElement.style.setProperty('height', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('min-height', '0', 'important');
+                pDoc.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+                pDoc.body.style.setProperty('height', 'auto', 'important');
+                pDoc.body.style.setProperty('min-height', '0', 'important');
+                pDoc.body.style.setProperty('overflow-y', 'auto', 'important');
+                pDoc.body.style.setProperty('overflow-x', 'hidden', 'important');
+
+                var pWin = window.parent;
+                var blk = pDoc.querySelector('.block-container, [data-testid="stMainBlockContainer"]');
+                if (blk) {{
+                    if (pWin.frameElement) {{
+                        try {{
+                            pWin.frameElement.style.setProperty('min-height', '0px', 'important');
+                        }} catch (e) {{}}
+                    }}
+                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 2);
+                    if (pWin.frameElement) {{
+                        try {{
+                            pWin.frameElement.style.setProperty('height', exactH + 'px', 'important');
+                            pWin.frameElement.style.setProperty('min-height', exactH + 'px', 'important');
+                            pWin.frameElement.style.setProperty('margin-bottom', '0px', 'important');
+                            pWin.frameElement.style.setProperty('padding-bottom', '0px', 'important');
+                        }} catch (e) {{}}
+                    }}
+                    var maxScroll = Math.max(0, exactH - pWin.innerHeight);
+                    if (pWin.scrollY > maxScroll + 8) {{
+                        pWin.scrollTo(0, maxScroll);
+                    }}
+                }}
             }} finally {{
                 isRunningVak = false;
             }}
@@ -2897,8 +3323,19 @@ components.html(f"""
         var obs = new MutationObserver(function() {{
             enforceVakPortalStyles();
         }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadVakLightObserverObj = obs;
+
+        if (topDoc && topDoc !== pDoc && topDoc.body) {{
+            if (window.top.__ziyadVakTopCloudObserverObj) {{
+                try {{ window.top.__ziyadVakTopCloudObserverObj.disconnect(); }} catch (e) {{}}
+            }}
+            var topObs = new MutationObserver(function() {{
+                enforceVakPortalStyles();
+            }});
+            topObs.observe(topDoc.body, {{ childList: true, subtree: true }});
+            window.top.__ziyadVakTopCloudObserverObj = topObs;
+        }}
     }} catch (e) {{}}
 }})();
 </script>
