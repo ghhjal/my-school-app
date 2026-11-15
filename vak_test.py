@@ -285,7 +285,6 @@ st.markdown(f"""
         margin: 0 !important;
     }}
 
-    /* إخفاء شامل لجميع أدوات Streamlit الإدارية والمطور والتذييل والشارات العائمة */
     header,
     header[data-testid="stHeader"],
     [data-testid="stHeader"],
@@ -340,12 +339,12 @@ st.markdown(f"""
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
-        height: 0px !important;
-        min-height: 0px !important;
-        max-height: 0px !important;
         width: 0px !important;
+        height: 0px !important;
         min-width: 0px !important;
+        min-height: 0px !important;
         max-width: 0px !important;
+        max-height: 0px !important;
         margin: 0px !important;
         padding: 0px !important;
         border: none !important;
@@ -354,6 +353,26 @@ st.markdown(f"""
         position: fixed !important;
         top: 0px !important;
         left: 0px !important;
+        z-index: -9999 !important;
+    }}
+    div[data-testid="stElementContainer"]:has(iframe[height="0"]),
+    div.element-container:has(iframe[height="0"]),
+    div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
+    iframe[height="0"] {{
+        position: fixed !important;
+        top: 0px !important;
+        left: 0px !important;
+        width: 0px !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        max-height: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
+        border: none !important;
+        overflow: hidden !important;
+        line-height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
         z-index: -9999 !important;
     }}
 
@@ -375,87 +394,17 @@ st.markdown(f"""
         background: transparent !important;
     }}
 
-    html, body {{
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        overflow-x: hidden !important;
-        overflow-y: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        -webkit-overflow-scrolling: touch !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        text-rendering: optimizeLegibility !important;
-        -webkit-tap-highlight-color: transparent !important;
-    }}
-
-    #root,
-    #root > div,
-    .stApp,
-    [data-testid="stApp"],
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewBlockContainer"],
-    [data-testid="stMain"],
-    .main {{
-        position: static !important;
-        inset: auto !important;
-        top: auto !important;
-        bottom: auto !important;
-        left: auto !important;
-        right: auto !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        flex: none !important;
-        display: block !important;
-        overflow: visible !important;
-    }}
-
-    .block-container,
-    [data-testid="stMainBlockContainer"] {{
+    .block-container {{
         max-width: 1020px !important;
         width: 100% !important;
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
         box-sizing: border-box !important;
-        display: block !important;
-        overflow: visible !important;
-        padding-top: 0.45rem !important;
-        padding-bottom: 4px !important;
+        overflow-x: clip !important;
+        overflow-y: visible !important;
+        padding-top: 0.6rem !important;
+        padding-bottom: 0.4rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         direction: rtl !important;
-    }}
-
-    div[data-testid="stElementContainer"]:has(iframe[height="0"]),
-    div.element-container:has(iframe[height="0"]),
-    div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
-    iframe[height="0"] {{
-        position: fixed !important;
-        top: 0px !important;
-        left: 0px !important;
-        width: 0px !important;
-        height: 0px !important;
-        min-height: 0px !important;
-        max-height: 0px !important;
-        margin: 0px !important;
-        padding: 0px !important;
-        border: none !important;
-        overflow: hidden !important;
-        line-height: 0 !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        z-index: -9999 !important;
     }}
 
     div[data-testid="stVerticalBlockBorderWrapper"],
@@ -1491,9 +1440,9 @@ st.markdown(f"""
        10. التذييل الموحد وبطاقات التواصل المباشرة (بدون إظهار الأرقام)
        ======================================================== */
     .ziyad-footer-wrap {{
-        margin-top: 22px;
+        margin-top: 24px;
         padding-top: 16px;
-        padding-bottom: 2px;
+        padding-bottom: 4px;
         border-top: 1.5px solid var(--border-color);
         text-align: center;
     }}
@@ -1550,14 +1499,11 @@ st.markdown(f"""
     }}
 
     @media (max-width: 768px) {{
-        .block-container,
-        [data-testid="stMainBlockContainer"] {{
-            padding-top: 0.35rem !important;
+        .block-container {{
+            padding-top: 0.45rem !important;
             padding-left: 0.7rem !important;
             padding-right: 0.7rem !important;
-            padding-bottom: 4px !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
+            padding-bottom: 0.35rem !important;
         }}
         div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-thm_"]) > div {{
             width: calc(50% - 4px) !important;
@@ -2920,50 +2866,22 @@ components.html(f"""
                 color: #0f172a !important;
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
-                -webkit-font-smoothing: antialiased !important;
-                -moz-osx-font-smoothing: grayscale !important;
-                -webkit-tap-highlight-color: transparent !important;
             }}
-            html, body {{
-                height: auto !important;
-                min-height: 0 !important;
-                max-height: none !important;
-                overflow-x: hidden !important;
-                overflow-y: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                -webkit-overflow-scrolling: touch !important;
+            *, .block-container {{
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
             }}
-            #root,
-            #root > div,
-            .stApp,
-            [data-testid="stApp"],
-            [data-testid="stAppViewContainer"],
-            [data-testid="stAppViewBlockContainer"],
-            [data-testid="stMain"],
-            .main,
-            [data-testid="stMainBlockContainer"],
-            .block-container {{
-                position: static !important;
-                inset: auto !important;
-                top: auto !important;
-                bottom: auto !important;
-                left: auto !important;
-                right: auto !important;
-                height: auto !important;
-                min-height: 0 !important;
-                max-height: none !important;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
-                padding-bottom: 0 !important;
-                flex: none !important;
-                display: block !important;
-                overflow: visible !important;
-            }}
-            .block-container,
-            [data-testid="stMainBlockContainer"] {{
-                padding-top: 0.45rem !important;
-                padding-bottom: 4px !important;
+            *::-webkit-scrollbar,
+            html::-webkit-scrollbar,
+            body::-webkit-scrollbar,
+            .stApp::-webkit-scrollbar,
+            [data-testid="stAppViewContainer"]::-webkit-scrollbar,
+            [data-testid="stMain"]::-webkit-scrollbar,
+            .block-container::-webkit-scrollbar {{
+                display: none !important;
+                width: 0px !important;
+                height: 0px !important;
+                background: transparent !important;
             }}
             div[data-testid="stElementContainer"]:has(iframe[height="0"]),
             div.element-container:has(iframe[height="0"]),
@@ -2984,22 +2902,6 @@ components.html(f"""
                 opacity: 0 !important;
                 pointer-events: none !important;
                 z-index: -9999 !important;
-            }}
-            *, .block-container {{
-                scrollbar-width: none !important;
-                -ms-overflow-style: none !important;
-            }}
-            *::-webkit-scrollbar,
-            html::-webkit-scrollbar,
-            body::-webkit-scrollbar,
-            .stApp::-webkit-scrollbar,
-            [data-testid="stAppViewContainer"]::-webkit-scrollbar,
-            [data-testid="stMain"]::-webkit-scrollbar,
-            .block-container::-webkit-scrollbar {{
-                display: none !important;
-                width: 0px !important;
-                height: 0px !important;
-                background: transparent !important;
             }}
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
@@ -3086,13 +2988,7 @@ components.html(f"""
                 topStyle.id = topStyleId;
                 topDoc.head.appendChild(topStyle);
             }}
-            topStyle.innerHTML = chromeHideRules + `
-                html, body {{
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    background-color: {cur_t['bg_page']} !important;
-                }}
-            `;
+            topStyle.innerHTML = chromeHideRules;
         }}
 
         function hideElementCompletely(el) {{
@@ -3150,11 +3046,20 @@ components.html(f"""
                         topDoc.body.querySelectorAll('*').forEach(function(el) {{
                             if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
                                 hideElementCompletely(el);
-                            }} else if (el.contains(appFrame)) {{
-                                el.style.setProperty('margin', '0px', 'important');
-                                el.style.setProperty('padding', '0px', 'important');
                             }}
                         }});
+                    }}
+                }}
+
+                if (window.frameElement) {{
+                    hideElementCompletely(window.frameElement);
+                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
+                    if (feParent) {{
+                        hideElementCompletely(feParent);
+                    }}
+                    var feCustom = window.frameElement.closest('[data-testid="stCustomComponentV1"], .stCustomComponentV1');
+                    if (feCustom) {{
+                        hideElementCompletely(feCustom);
                     }}
                 }}
 
@@ -3249,68 +3154,6 @@ components.html(f"""
                         s.style.setProperty('background', 'transparent', 'important');
                     }});
                 }});
-
-                var layoutContainers = pDoc.querySelectorAll('#root, #root > div, .stApp, [data-testid="stApp"], [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stMain"], .main, [data-testid="stMainBlockContainer"], .block-container');
-                layoutContainers.forEach(function(c) {{
-                    c.style.setProperty('position', 'static', 'important');
-                    c.style.setProperty('inset', 'auto', 'important');
-                    c.style.setProperty('height', 'auto', 'important');
-                    c.style.setProperty('min-height', '0', 'important');
-                    c.style.setProperty('max-height', 'none', 'important');
-                    c.style.setProperty('margin-bottom', '0px', 'important');
-                    c.style.setProperty('padding-bottom', '0px', 'important');
-                    c.style.setProperty('flex', 'none', 'important');
-                    c.style.setProperty('display', 'block', 'important');
-                    c.style.setProperty('overflow', 'visible', 'important');
-                }});
-                pDoc.querySelectorAll('.block-container, [data-testid="stMainBlockContainer"]').forEach(function(bc) {{
-                    bc.style.setProperty('padding-bottom', '4px', 'important');
-                    bc.style.setProperty('margin-bottom', '0px', 'important');
-                }});
-
-                if (window.frameElement) {{
-                    hideElementCompletely(window.frameElement);
-                    var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
-                    if (feParent) {{
-                        hideElementCompletely(feParent);
-                    }}
-                    var feCustom = window.frameElement.closest('[data-testid="stCustomComponentV1"], .stCustomComponentV1');
-                    if (feCustom) {{
-                        hideElementCompletely(feCustom);
-                    }}
-                }}
-
-                pDoc.documentElement.style.setProperty('height', 'auto', 'important');
-                pDoc.documentElement.style.setProperty('min-height', '0', 'important');
-                pDoc.documentElement.style.setProperty('overflow-y', 'auto', 'important');
-                pDoc.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
-                pDoc.body.style.setProperty('height', 'auto', 'important');
-                pDoc.body.style.setProperty('min-height', '0', 'important');
-                pDoc.body.style.setProperty('overflow-y', 'auto', 'important');
-                pDoc.body.style.setProperty('overflow-x', 'hidden', 'important');
-
-                var pWin = window.parent;
-                var blk = pDoc.querySelector('.block-container, [data-testid="stMainBlockContainer"]');
-                if (blk) {{
-                    if (pWin.frameElement) {{
-                        try {{
-                            pWin.frameElement.style.setProperty('min-height', '0px', 'important');
-                        }} catch (e) {{}}
-                    }}
-                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 2);
-                    if (pWin.frameElement) {{
-                        try {{
-                            pWin.frameElement.style.setProperty('height', exactH + 'px', 'important');
-                            pWin.frameElement.style.setProperty('min-height', exactH + 'px', 'important');
-                            pWin.frameElement.style.setProperty('margin-bottom', '0px', 'important');
-                            pWin.frameElement.style.setProperty('padding-bottom', '0px', 'important');
-                        }} catch (e) {{}}
-                    }}
-                    var maxScroll = Math.max(0, exactH - pWin.innerHeight);
-                    if (pWin.scrollY > maxScroll + 8) {{
-                        pWin.scrollTo(0, maxScroll);
-                    }}
-                }}
             }} finally {{
                 isRunningVak = false;
             }}
@@ -3323,7 +3166,7 @@ components.html(f"""
         var obs = new MutationObserver(function() {{
             enforceVakPortalStyles();
         }});
-        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
+        obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] }});
         window.parent.__ziyadVakLightObserverObj = obs;
 
         if (topDoc && topDoc !== pDoc && topDoc.body) {{
