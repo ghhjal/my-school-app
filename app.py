@@ -30,6 +30,44 @@ st.set_page_config(
 )
 
 
+@st.cache_resource(show_spinner=False)
+def patch_streamlit_index_meta():
+  """تعديل ملف index.html الأساسي في سيرفر Render ليظهر اسم المنصة بدلاً من Streamlit عند مشاركة الرابط في واتساب وتليجرام."""
+  try:
+    index_path = os.path.join(os.path.dirname(st.__file__), "static", "index.html")
+    if os.path.exists(index_path):
+      with open(index_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+
+      custom_meta = (
+          "<title>بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية</title>\n"
+          '<meta name="title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
+          '<meta name="description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
+          '<meta property="og:type" content="website" />\n'
+          '<meta property="og:url" content="https://zi-edu.onrender.com/" />\n'
+          '<meta property="og:site_name" content="منصة زياد الذكية" />\n'
+          '<meta property="og:title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
+          '<meta property="og:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
+          '<meta name="twitter:card" content="summary" />\n'
+          '<meta name="twitter:title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
+          '<meta name="twitter:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />'
+      )
+
+      if "og:title" not in html_content:
+        if "<title>Streamlit</title>" in html_content:
+          new_html = html_content.replace("<title>Streamlit</title>", custom_meta)
+        else:
+          new_html = re.sub(r"<title>.*?</title>", custom_meta, html_content, count=1, flags=re.DOTALL)
+        with open(index_path, "w", encoding="utf-8") as f:
+          f.write(new_html)
+  except Exception:
+    pass
+  return True
+
+
+patch_streamlit_index_meta()
+
+
 @st.cache_resource(ttl=3600, show_spinner=False)
 def get_gspread_client():
   try:
