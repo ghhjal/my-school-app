@@ -21,10 +21,15 @@ st.set_page_config(
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": None,
+    },
 )
 
 
-@st.cache_resource(ttl=3600)
+@st.cache_resource(ttl=3600, show_spinner=False)
 def get_gspread_client():
   try:
     creds = Credentials.from_service_account_info(
@@ -58,7 +63,7 @@ def clean_phone_number(phone):
   return p
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, show_spinner=False)
 def fetch_safe(worksheet_name):
   try:
     current_sh = get_gspread_client()
@@ -105,7 +110,7 @@ def safe_append_row(worksheet_name, data_dict):
     return False
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_cached_settings():
   try:
     current_sh = get_gspread_client()
@@ -117,7 +122,7 @@ def get_cached_settings():
     return {}
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, show_spinner=False)
 def build_excel_bytes(df_to_export, sheet_name="Sheet1", include_index=False):
   b_io = io.BytesIO()
   with pd.ExcelWriter(b_io, engine="xlsxwriter") as writer:
@@ -125,7 +130,7 @@ def build_excel_bytes(df_to_export, sheet_name="Sheet1", include_index=False):
   return b_io.getvalue()
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def generate_pdf_bytes_cached(html_str):
   from weasyprint import HTML
   return HTML(string=html_str).write_pdf()
@@ -362,6 +367,62 @@ def show_footer():
                 color-scheme: light only !important;
                 background-color: #F8FAFC !important;
                 color: #0F172A !important;
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }}
+            header,
+            header[data-testid="stHeader"],
+            [data-testid="stHeader"],
+            [data-testid="stToolbar"],
+            [data-testid="stToolbarActions"],
+            [data-testid="stToolbarActionButton"],
+            [data-testid="stDecoration"],
+            [data-testid="stStatusWidget"],
+            .stDeployButton,
+            [data-testid="stDeployButton"],
+            [data-testid="stAppDeployButton"],
+            #MainMenu,
+            [data-testid="MainMenu"],
+            footer,
+            [data-testid="stFooter"],
+            [data-testid="stBottom"],
+            [data-testid="stBottomBlockContainer"],
+            [data-testid="manage-app-button"],
+            [data-testid="stHeaderActionElements"],
+            [data-testid="InputInstructions"],
+            [data-testid="stElementToolbar"],
+            [data-testid="StyledFullScreenButton"],
+            button[title="View fullscreen"],
+            section[data-testid="stSidebar"],
+            [data-testid="stSidebar"],
+            [data-testid="collapsedControl"],
+            [data-testid="stSidebarCollapsedControl"],
+            [data-testid="stSidebarNav"],
+            .viewerBadge_container__1QSob,
+            .viewerBadge_link__1S137,
+            .viewerBadge_text__1JaDK,
+            .styles_viewerBadge__1yB5_,
+            [class*="viewerBadge"],
+            [id*="viewerBadge"],
+            [class*="StatusWidget"],
+            [class*="stToolbar"],
+            [class*="profileContainer"],
+            [class*="profilePreview"],
+            a[href*="streamlit.io/cloud"],
+            a[href*="share.streamlit.io"] {{
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                max-height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                pointer-events: none !important;
+                overflow: hidden !important;
             }}
             html, body {{
                 height: auto !important;
@@ -598,6 +659,15 @@ def show_footer():
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
+                var stChromeSelectors = 'header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"], #MainMenu, footer, [data-testid="stFooter"], [data-testid="stBottom"], [data-testid="manage-app-button"], [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"], [data-testid="stElementToolbar"], [data-testid="StyledFullScreenButton"], [class*="viewerBadge"], [id*="viewerBadge"], [class*="profileContainer"], [class*="profilePreview"], a[href*="streamlit.io/cloud"], a[href*="share.streamlit.io"]';
+                pDoc.querySelectorAll(stChromeSelectors).forEach(function(el) {{
+                    el.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('visibility', 'hidden', 'important');
+                    el.style.setProperty('height', '0px', 'important');
+                    el.style.setProperty('width', '0px', 'important');
+                    el.style.setProperty('opacity', '0', 'important');
+                    el.style.setProperty('pointer-events', 'none', 'important');
+                }});
                 var isMobileView = window.parent.innerWidth <= 768;
                 var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
                 tabLists.forEach(function(tl) {{
@@ -799,14 +869,62 @@ st.markdown(
 color-scheme: light only !important;
 }}
 
-section[data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stHeaderActionElements"], [data-testid="InputInstructions"], #MainMenu, footer, [data-testid="stBottom"], [data-testid="stHeader"] {{
+/* إخفاء شامل لجميع أدوات Streamlit الإدارية والمطور والتذييل والشارات العائمة */
+header,
+header[data-testid="stHeader"],
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stToolbarActions"],
+[data-testid="stToolbarActionButton"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+.stDeployButton,
+[data-testid="stDeployButton"],
+[data-testid="stAppDeployButton"],
+#MainMenu,
+[data-testid="MainMenu"],
+footer,
+[data-testid="stFooter"],
+[data-testid="stBottom"],
+[data-testid="stBottomBlockContainer"],
+[data-testid="manage-app-button"],
+[data-testid="stHeaderActionElements"],
+[data-testid="InputInstructions"],
+[data-testid="stElementToolbar"],
+[data-testid="StyledFullScreenButton"],
+button[title="View fullscreen"],
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarNav"],
+.viewerBadge_container__1QSob,
+.viewerBadge_link__1S137,
+.viewerBadge_text__1JaDK,
+.styles_viewerBadge__1yB5_,
+[class*="viewerBadge"],
+[id*="viewerBadge"],
+[class*="StatusWidget"],
+[class*="stToolbar"],
+[class*="profileContainer"],
+[class*="profilePreview"],
+a[href*="streamlit.io/cloud"],
+a[href*="share.streamlit.io"] {{
 display: none !important;
+visibility: hidden !important;
+opacity: 0 !important;
 height: 0 !important;
+min-height: 0 !important;
+max-height: 0 !important;
+width: 0 !important;
 margin: 0 !important;
 padding: 0 !important;
+border: none !important;
+pointer-events: none !important;
+overflow: hidden !important;
 }}
 
-/* ✳️ 1. تمرير موحد وسلس للصفحة بالكامل حتى التذييل بدون فراغات أو انقطاع أو تمرير مزدوج */
+/* ✳️ 1. تمرير موحد وسلس ومظهر تطبيق ويب مستقل بدون هوامش Streamlit الافتراضية */
 html, body {{
 font-family: 'Cairo', sans-serif !important;
 background-color: #F8FAFC !important;
@@ -821,6 +939,25 @@ max-height: none !important;
 overflow-x: hidden !important;
 overflow-y: auto !important;
 -webkit-overflow-scrolling: touch !important;
+-webkit-font-smoothing: antialiased !important;
+-moz-osx-font-smoothing: grayscale !important;
+text-rendering: optimizeLegibility !important;
+-webkit-tap-highlight-color: transparent !important;
+}}
+
+::-webkit-scrollbar {{
+width: 6px;
+height: 6px;
+}}
+::-webkit-scrollbar-track {{
+background: #F1F5F9;
+}}
+::-webkit-scrollbar-thumb {{
+background: #CBD5E1;
+border-radius: 999px;
+}}
+::-webkit-scrollbar-thumb:hover {{
+background: #94A3B8;
 }}
 
 #root,
@@ -842,6 +979,8 @@ top: auto !important;
 bottom: auto !important;
 left: auto !important;
 right: auto !important;
+margin-top: 0 !important;
+padding-top: 0 !important;
 width: 100% !important;
 max-width: 100vw !important;
 height: auto !important;
@@ -854,8 +993,8 @@ overflow: visible !important;
 
 .block-container,
 [data-testid="stMainBlockContainer"] {{
-padding-top: 1rem !important;
-padding-bottom: 1.4rem !important;
+padding-top: 0.45rem !important;
+padding-bottom: 1.2rem !important;
 padding-left: 0.9rem !important;
 padding-right: 0.9rem !important;
 max-width: 1050px !important;
@@ -863,6 +1002,7 @@ width: 100% !important;
 height: auto !important;
 min-height: 0 !important;
 max-height: none !important;
+margin-top: 0 !important;
 margin-left: auto !important;
 margin-right: auto !important;
 box-sizing: border-box !important;
@@ -1710,7 +1850,7 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال */
 @media (max-width: 768px) {{
-.block-container {{ padding-top: 0.75rem !important; padding-bottom: 1.25rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }}
+.block-container, [data-testid="stMainBlockContainer"] {{ padding-top: 0.35rem !important; padding-bottom: 1.1rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; margin-top: 0 !important; }}
 .header-container {{ padding: 14px 12px 12px 12px !important; margin: 2px auto 10px auto !important; border-radius: 18px !important; }}
 .floating-cap-logo {{ width: 36px !important; height: 36px !important; }}
 .unified-main-title {{ font-size: 20px !important; }}
