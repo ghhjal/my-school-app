@@ -327,7 +327,7 @@ def get_school_name_dynamic(cls_name):
 def show_footer():
   st.markdown(
       f"""
-    <div id='ziyad-portal-footer' style='text-align: center; color: #0F172A; margin-top: 38px; padding: 20px 14px 10px 14px; border-top: 2px solid #E2E8F0; background: linear-gradient(180deg, rgba(241, 245, 249, 0.75) 0%, rgba(248, 250, 252, 0) 100%); border-radius: 18px 18px 0 0;'>
+    <div id='ziyad-portal-footer' style='text-align: center; color: #0F172A; margin-top: 20px; padding: 14px 14px 8px 14px; border-top: 2px solid #E2E8F0; background: linear-gradient(180deg, rgba(241, 245, 249, 0.75) 0%, rgba(248, 250, 252, 0) 100%); border-radius: 18px 18px 0 0;'>
         <p style='margin: 0 0 4px 0; font-size: 0.92rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
         <p style='margin: 0 0 6px 0; font-size: 0.8rem; font-weight: 700; color: #64748B !important;'>قنوات التواصل والروابط السريعة</p>
     </div>
@@ -344,33 +344,18 @@ def show_footer():
 (function() {{
     try {{
         var pDoc = window.parent.document;
+        var topDoc = null;
+        try {{
+            if (window.top && window.top.document) {{
+                topDoc = window.top.document;
+            }}
+        }} catch (e) {{}}
+
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
         pDoc.documentElement.style.setProperty('color-scheme', 'light only', 'important');
 
-        var styleId = 'ziyad-students-global-portal-rtl';
-        var existingStyle = pDoc.getElementById(styleId);
-        if (!existingStyle) {{
-            existingStyle = pDoc.createElement('style');
-            existingStyle.id = styleId;
-            pDoc.head.appendChild(existingStyle);
-        }}
-        existingStyle.innerHTML = `
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
-                --text-color: #0F172A !important;
-                --background-color: #F8FAFC !important;
-                --secondary-background-color: #FFFFFF !important;
-                --input-bg-color: #FFFFFF !important;
-                --sub-text-color: #475569 !important;
-                --border-color: #CBD5E1 !important;
-                --primary-color: {primary_color} !important;
-                color-scheme: light only !important;
-                background-color: #F8FAFC !important;
-                color: #0F172A !important;
-                -webkit-font-smoothing: antialiased !important;
-                -moz-osx-font-smoothing: grayscale !important;
-                -webkit-tap-highlight-color: transparent !important;
-            }}
+        var chromeHideRules = `
             header,
             header[data-testid="stHeader"],
             [data-testid="stHeader"],
@@ -389,6 +374,7 @@ def show_footer():
             [data-testid="stBottom"],
             [data-testid="stBottomBlockContainer"],
             [data-testid="manage-app-button"],
+            [data-testid="appCreatorAvatar"],
             [data-testid="stHeaderActionElements"],
             [data-testid="InputInstructions"],
             [data-testid="stElementToolbar"],
@@ -404,25 +390,66 @@ def show_footer():
             .viewerBadge_text__1JaDK,
             .styles_viewerBadge__1yB5_,
             [class*="viewerBadge"],
+            [class*="_viewerBadge"],
             [id*="viewerBadge"],
             [class*="StatusWidget"],
             [class*="stToolbar"],
             [class*="profileContainer"],
+            [class*="_profileContainer"],
             [class*="profilePreview"],
-            a[href*="streamlit.io/cloud"],
-            a[href*="share.streamlit.io"] {{
+            [class*="_profilePreview"],
+            [class*="profileImage"],
+            [class*="_profileImage"],
+            [class*="_terminalButton"],
+            [class*="terminalButton"],
+            [class*="_link_gzau3"],
+            [class*="_container_gzau3"],
+            a[href*="streamlit.io"],
+            a[href*="share.streamlit.io"],
+            img[src*="avatars.githubusercontent.com"] {{
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
-                height: 0 !important;
-                min-height: 0 !important;
-                max-height: 0 !important;
-                width: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                width: 0px !important;
+                height: 0px !important;
+                min-width: 0px !important;
+                min-height: 0px !important;
+                max-width: 0px !important;
+                max-height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
                 border: none !important;
                 pointer-events: none !important;
                 overflow: hidden !important;
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                z-index: -9999 !important;
+            }}
+        `;
+
+        var styleId = 'ziyad-students-global-portal-rtl';
+        var existingStyle = pDoc.getElementById(styleId);
+        if (!existingStyle) {{
+            existingStyle = pDoc.createElement('style');
+            existingStyle.id = styleId;
+            pDoc.head.appendChild(existingStyle);
+        }}
+        existingStyle.innerHTML = chromeHideRules + `
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                --text-color: #0F172A !important;
+                --background-color: #F8FAFC !important;
+                --secondary-background-color: #FFFFFF !important;
+                --input-bg-color: #FFFFFF !important;
+                --sub-text-color: #475569 !important;
+                --border-color: #CBD5E1 !important;
+                --primary-color: {primary_color} !important;
+                color-scheme: light only !important;
+                background-color: #F8FAFC !important;
+                color: #0F172A !important;
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+                -webkit-tap-highlight-color: transparent !important;
             }}
             html, body {{
                 height: auto !important;
@@ -453,9 +480,17 @@ def show_footer():
                 height: auto !important;
                 min-height: 0 !important;
                 max-height: none !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
                 flex: none !important;
                 display: block !important;
                 overflow: visible !important;
+            }}
+            .block-container,
+            [data-testid="stMainBlockContainer"] {{
+                padding-top: 0.4rem !important;
+                padding-bottom: 4px !important;
             }}
             [data-testid="stTabs"],
             .stTabs,
@@ -486,7 +521,12 @@ def show_footer():
             }}
             div[data-testid="stElementContainer"]:has(iframe[height="0"]),
             div.element-container:has(iframe[height="0"]),
+            div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
             iframe[height="0"] {{
+                position: fixed !important;
+                top: 0px !important;
+                left: 0px !important;
+                width: 0px !important;
                 height: 0px !important;
                 min-height: 0px !important;
                 max-height: 0px !important;
@@ -495,6 +535,9 @@ def show_footer():
                 border: none !important;
                 overflow: hidden !important;
                 line-height: 0 !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                z-index: -9999 !important;
             }}
             span[data-testid="stIconMaterial"],
             [data-testid="stExpanderToggleIcon"],
@@ -598,6 +641,11 @@ def show_footer():
                 opacity: 1 !important;
             }}
             @media (max-width: 768px) {{
+                .block-container,
+                [data-testid="stMainBlockContainer"] {{
+                    padding-top: 0.3rem !important;
+                    padding-bottom: 4px !important;
+                }}
                 [data-testid="stTabs"] [data-baseweb="tab-list"],
                 [data-testid="stTabs"] [role="tablist"],
                 .stTabs [data-baseweb="tab-list"],
@@ -632,6 +680,62 @@ def show_footer():
             }}
         `;
 
+        if (topDoc && topDoc !== pDoc && topDoc.head) {{
+            var topStyleId = 'ziyad-top-cloud-chrome-hide';
+            var topStyle = topDoc.getElementById(topStyleId);
+            if (!topStyle) {{
+                topStyle = topDoc.createElement('style');
+                topStyle.id = topStyleId;
+                topDoc.head.appendChild(topStyle);
+            }}
+            topStyle.innerHTML = chromeHideRules + `
+                html, body {{
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background-color: #F8FAFC !important;
+                }}
+            `;
+        }}
+
+        function hideElementCompletely(el) {{
+            if (!el || !el.style) return;
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.setProperty('width', '0px', 'important');
+            el.style.setProperty('height', '0px', 'important');
+            el.style.setProperty('min-width', '0px', 'important');
+            el.style.setProperty('min-height', '0px', 'important');
+            el.style.setProperty('max-width', '0px', 'important');
+            el.style.setProperty('max-height', '0px', 'important');
+            el.style.setProperty('margin', '0px', 'important');
+            el.style.setProperty('padding', '0px', 'important');
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('top', '0px', 'important');
+            el.style.setProperty('left', '0px', 'important');
+            el.style.setProperty('z-index', '-9999', 'important');
+        }}
+
+        function cleanDocumentChrome(doc) {{
+            if (!doc || !doc.body) return;
+            var sel = 'header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"], #MainMenu, footer, [data-testid="stFooter"], [data-testid="stBottom"], [data-testid="stBottomBlockContainer"], [data-testid="manage-app-button"], [data-testid="appCreatorAvatar"], [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"], [data-testid="stElementToolbar"], [data-testid="StyledFullScreenButton"], [class*="viewerBadge"], [class*="_viewerBadge"], [id*="viewerBadge"], [class*="profileContainer"], [class*="_profileContainer"], [class*="profilePreview"], [class*="_profilePreview"], [class*="profileImage"], [class*="_profileImage"], [class*="_terminalButton"], [class*="terminalButton"], [class*="_link_gzau3"], [class*="_container_gzau3"], a[href*="streamlit.io"], a[href*="share.streamlit.io"], img[src*="avatars.githubusercontent.com"]';
+            doc.querySelectorAll(sel).forEach(hideElementCompletely);
+            doc.querySelectorAll('*').forEach(function(node) {{
+                if (node.shadowRoot) {{
+                    var shStyle = node.shadowRoot.getElementById('ziyad-shadow-hide');
+                    if (!shStyle) {{
+                        shStyle = doc.createElement('style');
+                        shStyle.id = 'ziyad-shadow-hide';
+                        shStyle.innerHTML = chromeHideRules;
+                        node.shadowRoot.appendChild(shStyle);
+                    }}
+                    node.shadowRoot.querySelectorAll(sel).forEach(hideElementCompletely);
+                }}
+            }});
+        }}
+
         function scaleLeadingEmoji(el) {{
             if (!el || el.querySelector('.ziyad-btn-icon')) return;
             var p = el.querySelector('p') || el;
@@ -659,15 +763,22 @@ def show_footer():
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
-                var stChromeSelectors = 'header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"], #MainMenu, footer, [data-testid="stFooter"], [data-testid="stBottom"], [data-testid="manage-app-button"], [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"], [data-testid="stElementToolbar"], [data-testid="StyledFullScreenButton"], [class*="viewerBadge"], [id*="viewerBadge"], [class*="profileContainer"], [class*="profilePreview"], a[href*="streamlit.io/cloud"], a[href*="share.streamlit.io"]';
-                pDoc.querySelectorAll(stChromeSelectors).forEach(function(el) {{
-                    el.style.setProperty('display', 'none', 'important');
-                    el.style.setProperty('visibility', 'hidden', 'important');
-                    el.style.setProperty('height', '0px', 'important');
-                    el.style.setProperty('width', '0px', 'important');
-                    el.style.setProperty('opacity', '0', 'important');
-                    el.style.setProperty('pointer-events', 'none', 'important');
-                }});
+                cleanDocumentChrome(pDoc);
+                if (topDoc && topDoc !== pDoc) {{
+                    cleanDocumentChrome(topDoc);
+                    var appFrame = window.parent.frameElement;
+                    if (appFrame && topDoc.body && topDoc.body.contains(appFrame)) {{
+                        topDoc.body.querySelectorAll('*').forEach(function(el) {{
+                            if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
+                                hideElementCompletely(el);
+                            }} else if (el.contains(appFrame)) {{
+                                el.style.setProperty('margin', '0px', 'important');
+                                el.style.setProperty('padding', '0px', 'important');
+                            }}
+                        }});
+                    }}
+                }}
+
                 var isMobileView = window.parent.innerWidth <= 768;
                 var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
                 tabLists.forEach(function(tl) {{
@@ -775,9 +886,15 @@ def show_footer():
                     c.style.setProperty('height', 'auto', 'important');
                     c.style.setProperty('min-height', '0', 'important');
                     c.style.setProperty('max-height', 'none', 'important');
+                    c.style.setProperty('margin-bottom', '0px', 'important');
+                    c.style.setProperty('padding-bottom', '0px', 'important');
                     c.style.setProperty('flex', 'none', 'important');
                     c.style.setProperty('display', 'block', 'important');
                     c.style.setProperty('overflow', 'visible', 'important');
+                }});
+                pDoc.querySelectorAll('.block-container, [data-testid="stMainBlockContainer"]').forEach(function(bc) {{
+                    bc.style.setProperty('padding-bottom', '4px', 'important');
+                    bc.style.setProperty('margin-bottom', '0px', 'important');
                 }});
 
                 var tabPanels = pDoc.querySelectorAll('div[data-baseweb="tab-panel"], [data-testid="stTabs"] [role="tabpanel"]');
@@ -790,18 +907,14 @@ def show_footer():
                 }});
 
                 if (window.frameElement) {{
-                    window.frameElement.style.setProperty('height', '0px', 'important');
-                    window.frameElement.style.setProperty('min-height', '0px', 'important');
-                    window.frameElement.style.setProperty('margin', '0px', 'important');
-                    window.frameElement.style.setProperty('padding', '0px', 'important');
-                    window.frameElement.style.setProperty('border', 'none', 'important');
+                    hideElementCompletely(window.frameElement);
                     var feParent = window.frameElement.closest('[data-testid="stElementContainer"], .element-container');
                     if (feParent) {{
-                        feParent.style.setProperty('height', '0px', 'important');
-                        feParent.style.setProperty('min-height', '0px', 'important');
-                        feParent.style.setProperty('margin', '0px', 'important');
-                        feParent.style.setProperty('padding', '0px', 'important');
-                        feParent.style.setProperty('overflow', 'hidden', 'important');
+                        hideElementCompletely(feParent);
+                    }}
+                    var feCustom = window.frameElement.closest('[data-testid="stCustomComponentV1"], .stCustomComponentV1');
+                    if (feCustom) {{
+                        hideElementCompletely(feCustom);
                     }}
                 }}
 
@@ -817,15 +930,22 @@ def show_footer():
                 var pWin = window.parent;
                 var blk = pDoc.querySelector('.block-container, [data-testid="stMainBlockContainer"]');
                 if (blk) {{
-                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 12);
+                    if (pWin.frameElement) {{
+                        try {{
+                            pWin.frameElement.style.setProperty('min-height', '0px', 'important');
+                        }} catch (e) {{}}
+                    }}
+                    var exactH = Math.ceil(blk.getBoundingClientRect().height + blk.offsetTop + 2);
                     if (pWin.frameElement) {{
                         try {{
                             pWin.frameElement.style.setProperty('height', exactH + 'px', 'important');
                             pWin.frameElement.style.setProperty('min-height', exactH + 'px', 'important');
+                            pWin.frameElement.style.setProperty('margin-bottom', '0px', 'important');
+                            pWin.frameElement.style.setProperty('padding-bottom', '0px', 'important');
                         }} catch (e) {{}}
                     }}
                     var maxScroll = Math.max(0, exactH - pWin.innerHeight);
-                    if (pWin.scrollY > maxScroll + 24) {{
+                    if (pWin.scrollY > maxScroll + 8) {{
                         pWin.scrollTo(0, maxScroll);
                     }}
                 }}
@@ -843,6 +963,17 @@ def show_footer():
         }});
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
+
+        if (topDoc && topDoc !== pDoc && topDoc.body) {{
+            if (window.top.__ziyadTopCloudObserverObj) {{
+                try {{ window.top.__ziyadTopCloudObserverObj.disconnect(); }} catch (e) {{}}
+            }}
+            var topObs = new MutationObserver(function() {{
+                enforcePortalStyles();
+            }});
+            topObs.observe(topDoc.body, {{ childList: true, subtree: true }});
+            window.top.__ziyadTopCloudObserverObj = topObs;
+        }}
     }} catch (e) {{}}
 }})();
 </script>
@@ -888,6 +1019,7 @@ footer,
 [data-testid="stBottom"],
 [data-testid="stBottomBlockContainer"],
 [data-testid="manage-app-button"],
+[data-testid="appCreatorAvatar"],
 [data-testid="stHeaderActionElements"],
 [data-testid="InputInstructions"],
 [data-testid="stElementToolbar"],
@@ -903,28 +1035,44 @@ section[data-testid="stSidebar"],
 .viewerBadge_text__1JaDK,
 .styles_viewerBadge__1yB5_,
 [class*="viewerBadge"],
+[class*="_viewerBadge"],
 [id*="viewerBadge"],
 [class*="StatusWidget"],
 [class*="stToolbar"],
 [class*="profileContainer"],
+[class*="_profileContainer"],
 [class*="profilePreview"],
-a[href*="streamlit.io/cloud"],
-a[href*="share.streamlit.io"] {{
+[class*="_profilePreview"],
+[class*="profileImage"],
+[class*="_profileImage"],
+[class*="_terminalButton"],
+[class*="terminalButton"],
+[class*="_link_gzau3"],
+[class*="_container_gzau3"],
+a[href*="streamlit.io"],
+a[href*="share.streamlit.io"],
+img[src*="avatars.githubusercontent.com"] {{
 display: none !important;
 visibility: hidden !important;
 opacity: 0 !important;
-height: 0 !important;
-min-height: 0 !important;
-max-height: 0 !important;
-width: 0 !important;
-margin: 0 !important;
-padding: 0 !important;
+height: 0px !important;
+min-height: 0px !important;
+max-height: 0px !important;
+width: 0px !important;
+min-width: 0px !important;
+max-width: 0px !important;
+margin: 0px !important;
+padding: 0px !important;
 border: none !important;
 pointer-events: none !important;
 overflow: hidden !important;
+position: fixed !important;
+top: 0px !important;
+left: 0px !important;
+z-index: -9999 !important;
 }}
 
-/* ✳️ 1. تمرير موحد وسلس ومظهر تطبيق ويب مستقل بدون هوامش Streamlit الافتراضية */
+/* ✳️ 1. تمرير موحد وسلس للصفحة بالكامل حتى التذييل بدون فراغات سفلية أو تمرير مزدوج */
 html, body {{
 font-family: 'Cairo', sans-serif !important;
 background-color: #F8FAFC !important;
@@ -943,21 +1091,6 @@ overflow-y: auto !important;
 -moz-osx-font-smoothing: grayscale !important;
 text-rendering: optimizeLegibility !important;
 -webkit-tap-highlight-color: transparent !important;
-}}
-
-::-webkit-scrollbar {{
-width: 6px;
-height: 6px;
-}}
-::-webkit-scrollbar-track {{
-background: #F1F5F9;
-}}
-::-webkit-scrollbar-thumb {{
-background: #CBD5E1;
-border-radius: 999px;
-}}
-::-webkit-scrollbar-thumb:hover {{
-background: #94A3B8;
 }}
 
 #root,
@@ -980,7 +1113,9 @@ bottom: auto !important;
 left: auto !important;
 right: auto !important;
 margin-top: 0 !important;
+margin-bottom: 0 !important;
 padding-top: 0 !important;
+padding-bottom: 0 !important;
 width: 100% !important;
 max-width: 100vw !important;
 height: auto !important;
@@ -993,8 +1128,8 @@ overflow: visible !important;
 
 .block-container,
 [data-testid="stMainBlockContainer"] {{
-padding-top: 0.45rem !important;
-padding-bottom: 1.2rem !important;
+padding-top: 0.4rem !important;
+padding-bottom: 4px !important;
 padding-left: 0.9rem !important;
 padding-right: 0.9rem !important;
 max-width: 1050px !important;
@@ -1003,6 +1138,7 @@ height: auto !important;
 min-height: 0 !important;
 max-height: none !important;
 margin-top: 0 !important;
+margin-bottom: 0 !important;
 margin-left: auto !important;
 margin-right: auto !important;
 box-sizing: border-box !important;
@@ -1024,7 +1160,12 @@ padding-bottom: 0 !important;
 
 div[data-testid="stElementContainer"]:has(iframe[height="0"]),
 div.element-container:has(iframe[height="0"]),
+div[data-testid="stCustomComponentV1"]:has(iframe[height="0"]),
 iframe[height="0"] {{
+position: fixed !important;
+top: 0px !important;
+left: 0px !important;
+width: 0px !important;
 height: 0px !important;
 min-height: 0px !important;
 max-height: 0px !important;
@@ -1033,6 +1174,9 @@ padding: 0px !important;
 border: none !important;
 overflow: hidden !important;
 line-height: 0 !important;
+opacity: 0 !important;
+pointer-events: none !important;
+z-index: -9999 !important;
 }}
 
 [data-testid="stVerticalBlock"] {{
@@ -1850,7 +1994,7 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 
 /* ✳️ 8. ضبط شاشة الجوال */
 @media (max-width: 768px) {{
-.block-container, [data-testid="stMainBlockContainer"] {{ padding-top: 0.35rem !important; padding-bottom: 1.1rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; margin-top: 0 !important; }}
+.block-container, [data-testid="stMainBlockContainer"] {{ padding-top: 0.3rem !important; padding-bottom: 4px !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; margin-top: 0 !important; margin-bottom: 0 !important; }}
 .header-container {{ padding: 14px 12px 12px 12px !important; margin: 2px auto 10px auto !important; border-radius: 18px !important; }}
 .floating-cap-logo {{ width: 36px !important; height: 36px !important; }}
 .unified-main-title {{ font-size: 20px !important; }}
