@@ -2,427 +2,234 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# ==========================================
-# 1. إعدادات الصفحة
-# ==========================================
 NEW_URL = "https://zi-edu.onrender.com/"
-REDIRECT_SECONDS = 3
 
 st.set_page_config(
     page_title="بوابة الطلاب | منصة زياد الذكية",
     page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed",
-    menu_items={
-        "Get Help": None,
-        "Report a bug": None,
-        "About": None
-    }
 )
 
-# ==========================================
-# 2. التصميم الاحترافي
-# ==========================================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
-
-:root {
-    --primary: #1D4ED8;
-    --dark: #0F172A;
-    --muted: #64748B;
-    --bg: #F1F5F9;
-}
 
 header, footer, #MainMenu,
 [data-testid="stHeader"],
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"],
-[data-testid="stBottom"],
-[data-testid="manage-app-button"] {
+[data-testid="stBottom"] {
     display: none !important;
 }
 
-html, body, .stApp,
-[data-testid="stAppViewContainer"] {
+html, body, .stApp {
     direction: rtl !important;
     text-align: center !important;
     font-family: 'Cairo', sans-serif !important;
-    background: var(--bg) !important;
-    color: var(--dark) !important;
+    background: #F1F5F9 !important;
 }
 
 .block-container {
     max-width: 570px !important;
-    padding: 3rem 1rem 2rem !important;
+    padding: 2rem 1rem !important;
 }
 
-.portal-shell {
-    background: #FFFFFF;
+.portal {
+    background: white;
     border: 1px solid #E2E8F0;
-    border-radius: 26px;
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 18px 55px rgba(15,23,42,.09);
+    box-shadow: 0 15px 45px rgba(15,23,42,.09);
 }
 
-/* Header */
-.portal-header {
-    background: linear-gradient(135deg,#0F172A 0%,#1E40AF 60%,#2563EB 100%);
-    padding: 35px 20px 30px;
-    position: relative;
-    overflow: hidden;
+.header {
+    background: linear-gradient(135deg,#0F172A,#1E40AF,#2563EB);
+    padding: 32px 18px;
+    color: white;
 }
 
-.portal-header:before {
-    content: "";
-    position: absolute;
-    width: 190px;
-    height: 190px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 50%;
-    top: -100px;
-    right: -65px;
+.logo {
+    font-size: 42px;
+    margin-bottom: 10px;
 }
 
-.portal-header:after {
-    content: "";
-    position: absolute;
-    width: 150px;
-    height: 150px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 50%;
-    bottom: -100px;
-    left: -45px;
-}
-
-.logo-box {
-    width: 70px;
-    height: 70px;
-    background: rgba(255,255,255,.14);
-    border: 1px solid rgba(255,255,255,.30);
-    border-radius: 21px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto 15px;
-    font-size: 36px;
-    position: relative;
-    z-index: 1;
-}
-
-.portal-title {
-    color: #FFFFFF !important;
-    font-size: 25px !important;
+.heading {
+    color: white !important;
+    font-size: 24px !important;
     font-weight: 900 !important;
     margin: 0 0 8px !important;
-    position: relative;
-    z-index: 1;
 }
 
-.portal-subtitle {
-    color: #DBEAFE !important;
+.subtitle {
+    color: #DBEAFE;
     font-size: 13px;
     font-weight: 700;
-    margin: 0;
-    position: relative;
-    z-index: 1;
 }
 
-.brand-label {
+.brand {
     display: inline-block;
-    background: rgba(255,255,255,.13);
-    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.15);
+    color: #FDE68A;
     border-radius: 30px;
     padding: 5px 15px;
-    margin-top: 14px;
-    color: #FDE68A;
     font-size: 12px;
     font-weight: 800;
+    margin-top: 12px;
 }
 
-/* Body */
-.portal-body {
-    padding: 30px 25px 27px;
+.body {
+    padding: 30px 22px;
 }
 
 .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+    display: inline-block;
     background: #ECFDF5;
     color: #047857;
     border: 1px solid #A7F3D0;
+    padding: 7px 15px;
     border-radius: 30px;
-    padding: 6px 15px;
     font-size: 12px;
     font-weight: 800;
-    margin-bottom: 19px;
+    margin-bottom: 17px;
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background: #10B981;
-    border-radius: 50%;
-}
-
-.body-title {
+.body-heading {
+    color: #0F172A;
     font-size: 21px;
     font-weight: 900;
-    color: #0F172A;
-    line-height: 1.7;
-    margin: 0 0 10px;
+    margin-bottom: 12px;
 }
 
-.body-description {
+.description {
     color: #64748B;
     font-size: 14px;
     font-weight: 600;
     line-height: 2;
-    margin: 0 0 23px;
+    margin-bottom: 23px;
 }
 
-/* Redirect */
-.redirect-panel {
-    background: #EFF6FF;
-    border: 1px solid #BFDBFE;
-    border-radius: 16px;
-    padding: 17px 12px;
-    margin-bottom: 20px;
-}
-
-.redirect-text {
-    color: #1E40AF;
-    font-size: 13px;
-    font-weight: 800;
-    margin-bottom: 7px;
-}
-
-.countdown {
-    color: #1D4ED8;
-    font-size: 34px;
-    font-weight: 900;
-    direction: ltr;
-    line-height: 1.3;
-}
-
-.countdown-caption {
-    color: #64748B;
-    font-size: 11px;
-    font-weight: 700;
-    margin-top: 4px;
-}
-
-/* Button */
-.launch-btn {
+.launch {
     display: block;
-    width: 100%;
-    box-sizing: border-box;
     background: linear-gradient(135deg,#1E40AF,#2563EB);
-    color: #FFFFFF !important;
+    color: white !important;
     text-decoration: none !important;
-    padding: 16px 15px;
+    padding: 16px 12px;
     border-radius: 14px;
     font-size: 16px;
     font-weight: 900;
     box-shadow: 0 7px 18px rgba(37,99,235,.23);
-    transition: .2s ease;
 }
 
-.launch-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(37,99,235,.30);
-}
-
-.link-section {
-    margin-top: 19px;
+.url-box {
+    margin-top: 18px;
     background: #F8FAFC;
     border: 1px dashed #CBD5E1;
-    border-radius: 13px;
+    border-radius: 12px;
     padding: 13px;
 }
 
-.link-label {
-    font-size: 12px;
+.url-label {
     color: #64748B;
+    font-size: 12px;
     font-weight: 700;
     margin-bottom: 7px;
 }
 
-.new-url {
-    color: #1D4ED8;
+.url {
+    color: #2563EB !important;
+    direction: ltr;
     font-size: 12px;
     font-weight: 800;
-    direction: ltr;
-    word-break: break-all;
+    overflow-wrap: anywhere;
     text-decoration: none;
 }
 
-/* Footer */
-.portal-footer {
+.footer {
     background: #F8FAFC;
     border-top: 1px solid #E2E8F0;
-    padding: 17px 12px;
     color: #64748B;
+    padding: 16px 10px;
     font-size: 11px;
     font-weight: 700;
     line-height: 2;
 }
 
-.footer-services {
-    color: #475569;
-    margin-bottom: 5px;
-}
-
-/* Mobile */
-@media (max-width: 480px) {
+@media(max-width:480px) {
     .block-container {
-        padding: 1.3rem .7rem 1rem !important;
+        padding: 1rem .6rem !important;
     }
-
-    .portal-header {
-        padding: 28px 15px 25px;
+    .header {
+        padding: 27px 12px;
     }
-
-    .portal-title {
+    .heading {
         font-size: 21px !important;
     }
-
-    .portal-body {
-        padding: 24px 17px;
-    }
-
-    .body-title {
-        font-size: 19px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        transition: none !important;
-        animation: none !important;
+    .body {
+        padding: 24px 16px;
     }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 3. واجهة البوابة
-# ==========================================
 st.markdown(f"""
-<div class="portal-shell">
+<div class="portal">
 
-    <div class="portal-header">
-        <div class="logo-box">🎓</div>
-
-        <h1 class="portal-title">
-            بوابة إدارة ومتابعة الطلاب
-        </h1>
-
-        <p class="portal-subtitle">
-            منصة زياد الذكية
-        </p>
-
-        <div class="brand-label">
-            إشراف أ. زياد المعمري
-        </div>
+    <div class="header">
+        <div class="logo">🎓</div>
+        <h1 class="heading">بوابة إدارة ومتابعة الطلاب</h1>
+        <div class="subtitle">منصة زياد الذكية</div>
+        <div class="brand">إشراف أ. زياد المعمري</div>
     </div>
 
-    <div class="portal-body">
+    <div class="body">
 
-        <div class="status">
-            <span class="status-dot"></span>
-            المنصة الجديدة أصبحت جاهزة
-        </div>
+        <div class="status">● المنصة الجديدة أصبحت جاهزة</div>
 
-        <h2 class="body-title">
+        <div class="body-heading">
             نرحب بكم في بوابتنا الجديدة
-        </h2>
-
-        <p class="body-description">
-            تم تطوير المنصة ونقلها إلى استضافة جديدة
-            لتوفير تجربة استخدام أسرع وأكثر استقراراً.
-            <br>
-            يرجى استخدام الرابط الجديد للدخول ومتابعة
-            الدرجات والاختبارات والملاحظات.
-        </p>
-
-        <div class="redirect-panel">
-            <div class="redirect-text">
-                🚀 سيتم تحويلك تلقائياً إلى المنصة الجديدة
-            </div>
-
-            <div class="countdown" id="countdown">
-                03
-            </div>
-
-            <div class="countdown-caption">
-                ثانية حتى الانتقال
-            </div>
         </div>
 
-        <a href="{NEW_URL}" target="_top" class="launch-btn">
-            الدخول إلى بوابة الطلاب الجديدة ←
+        <div class="description">
+            تم نقل المنصة إلى استضافة جديدة لتوفير
+            تجربة استخدام أسرع وأكثر استقراراً.
+            <br>
+            يمكنكم الآن الدخول مباشرة عبر الرابط الجديد.
+        </div>
+
+        <a class="launch" href="{NEW_URL}" target="_top">
+            🚀 الدخول إلى بوابة الطلاب الجديدة
         </a>
 
-        <div class="link-section">
-            <div class="link-label">
-                📌 رابط المنصة الجديد - يرجى حفظه
+        <div class="url-box">
+            <div class="url-label">
+                📌 يرجى حفظ الرابط الجديد
             </div>
-
-            <a href="{NEW_URL}" target="_top" class="new-url">
+            <a class="url" href="{NEW_URL}" target="_top">
                 {NEW_URL}
             </a>
         </div>
 
     </div>
 
-    <div class="portal-footer">
-        <div class="footer-services">
-            الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر
-        </div>
+    <div class="footer">
+        الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر
+        <br>
         جميع الحقوق محفوظة © منصة زياد الذكية
     </div>
 
 </div>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 4. التحويل التلقائي والعد التنازلي
-# ==========================================
-components.html(f"""
-<script>
-(function() {{
-    const target = "{NEW_URL}";
-    let remaining = {REDIRECT_SECONDS};
-
-    const timer = setInterval(function() {{
-        remaining--;
-
-        try {{
-            const frame = window.frameElement;
-            if (frame && frame.parentElement) {{
-                const doc = window.parent.document;
-                const counter = doc.getElementById("countdown");
-                if (counter) {{
-                    counter.textContent = String(
-                        Math.max(remaining, 0)
-                    ).padStart(2, "0");
-                }}
-            }}
-        }} catch(e) {{}}
-
-        if (remaining <= 0) {{
-            clearInterval(timer);
-
-            try {{
-                window.top.location.replace(target);
-            }} catch(e) {{
-                window.location.replace(target);
-            }}
-        }}
-    }}, 1000);
-}})();
-</script>
-""", height=0)
+# التحويل التلقائي
+components.html(
+    f"""
+    <script>
+        setTimeout(function() {{
+            window.top.location.replace("{NEW_URL}");
+        }}, 3000);
+    </script>
+    """,
+    height=0,
+)
