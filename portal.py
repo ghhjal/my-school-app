@@ -30,17 +30,44 @@ st.set_page_config(
 )
 
 
+# إخفاء فوري لشريط الأدوات وزر Stop منذ اللحظة الأولى قبل تحميل أي بيانات
+st.markdown(
+    """
+    <style>
+    header, header[data-testid="stHeader"], [data-testid="stHeader"],
+    [data-testid="stToolbar"], [data-testid="stToolbarActions"],
+    [data-testid="stStatusWidget"], [data-testid="stDecoration"],
+    .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"],
+    #MainMenu, [data-testid="MainMenu"], footer, [data-testid="stFooter"],
+    [class*="StatusWidget"], [class*="stToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0px !important;
+        width: 0px !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 @st.cache_resource(show_spinner=False)
 def patch_streamlit_index_meta():
-  """تعديل ملف index.html الأساسي في سيرفر Render ليظهر اسم المنصة بدلاً من Streamlit عند مشاركة الرابط في واتساب وتليجرام."""
+  """تعديل ملف index.html الأصلي داخل مكتبة Streamlit على السيرفر لإزالة اسم وأيقونة التاج الخاصة بـ Streamlit نهائياً من تبويب المتصفح ومعاينة الروابط."""
   try:
     index_path = os.path.join(os.path.dirname(st.__file__), "static", "index.html")
     if os.path.exists(index_path):
       with open(index_path, "r", encoding="utf-8") as f:
         html_content = f.read()
 
-      custom_meta = (
+      favicon_uri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E40AF'/%3E%3Cpath d='M32 14L10 24L32 34L54 24L32 14Z' fill='%23FBBF24'/%3E%3Cpath d='M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z' fill='%23FFFFFF'/%3E%3Cpath d='M48 26V40' stroke='%23FBBF24' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"
+      custom_head_injection = (
           "<title>بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية</title>\n"
+          f'<link rel="icon" type="image/svg+xml" href="{favicon_uri}" />\n'
+          f'<link rel="shortcut icon" href="{favicon_uri}" />\n'
           '<meta name="title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
           '<meta name="description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
           '<meta property="og:type" content="website" />\n'
@@ -50,14 +77,32 @@ def patch_streamlit_index_meta():
           '<meta property="og:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
           '<meta name="twitter:card" content="summary" />\n'
           '<meta name="twitter:title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
-          '<meta name="twitter:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />'
+          '<meta name="twitter:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
+          '<style id="ziyad-preload-chrome-hide">'
+          'header, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stStatusWidget"], '
+          '[data-testid="stDecoration"], #MainMenu, footer, [data-testid="stFooter"] '
+          '{ display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; pointer-events: none !important; }'
+          '</style>\n'
+          "<script>"
+          "document.title = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';"
+          "new MutationObserver(function() {"
+          "  if (document.title === 'Streamlit' || document.title.indexOf('Streamlit') !== -1) {"
+          "    document.title = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';"
+          "  }"
+          "}).observe(document.documentElement, { subtree: true, childList: true });"
+          "</script>"
       )
 
-      if "og:title" not in html_content:
-        if "<title>Streamlit</title>" in html_content:
-          new_html = html_content.replace("<title>Streamlit</title>", custom_meta)
+      new_html = html_content
+      # إزالة رابط أيقونة التاج الافتراضية لـ Streamlit من ملف index.html
+      new_html = re.sub(r"<link[^>]*rel=[^>]*icon[^>]*>", "", new_html, flags=re.IGNORECASE)
+
+      if "ziyad-preload-chrome-hide" not in new_html:
+        if re.search(r"<title>.*?</title>", new_html, flags=re.DOTALL):
+          new_html = re.sub(r"<title>.*?</title>", custom_head_injection, new_html, count=1, flags=re.DOTALL)
         else:
-          new_html = re.sub(r"<title>.*?</title>", custom_meta, html_content, count=1, flags=re.DOTALL)
+          new_html = new_html.replace("<head>", "<head>\n" + custom_head_injection, 1)
+
         with open(index_path, "w", encoding="utf-8") as f:
           f.write(new_html)
   except Exception:
@@ -790,6 +835,26 @@ def show_footer():
             if (isRunning) return;
             isRunning = true;
             try {{
+                var desiredTitle = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';
+                if (pDoc.title !== desiredTitle) {{
+                    pDoc.title = desiredTitle;
+                }}
+                var favIconUri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E40AF'/%3E%3Cpath d='M32 14L10 24L32 34L54 24L32 14Z' fill='%23FBBF24'/%3E%3Cpath d='M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z' fill='%23FFFFFF'/%3E%3Cpath d='M48 26V40' stroke='%23FBBF24' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E";
+                var iconLinks = pDoc.querySelectorAll('link[rel*="icon"]');
+                if (iconLinks.length === 0) {{
+                    var newLink = pDoc.createElement('link');
+                    newLink.rel = 'icon';
+                    newLink.type = 'image/svg+xml';
+                    newLink.href = favIconUri;
+                    pDoc.head.appendChild(newLink);
+                }} else {{
+                    iconLinks.forEach(function(lnk) {{
+                        if (lnk.href && (lnk.href.indexOf('favicon.png') !== -1 || lnk.href.indexOf('streamlit') !== -1)) {{
+                            lnk.type = 'image/svg+xml';
+                            lnk.href = favIconUri;
+                        }}
+                    }});
+                }}
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
