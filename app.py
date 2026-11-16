@@ -1,214 +1,428 @@
+
 import streamlit as st
 import streamlit.components.v1 as components
 
+# ==========================================
+# 1. إعدادات الصفحة
+# ==========================================
+NEW_URL = "https://zi-edu.onrender.com/"
+REDIRECT_SECONDS = 3
+
 st.set_page_config(
-    page_title="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية",
+    page_title="بوابة الطلاب | منصة زياد الذكية",
     page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed",
-    menu_items={"Get Help": None, "Report a bug": None, "About": None},
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": None
+    }
 )
 
+# ==========================================
+# 2. التصميم الاحترافي
+# ==========================================
 st.markdown("""
 <style>
-@import url('https://googleapis.com');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
-header,
-header[data-testid="stHeader"],
+:root {
+    --primary: #1D4ED8;
+    --dark: #0F172A;
+    --muted: #64748B;
+    --bg: #F1F5F9;
+}
+
+header, footer, #MainMenu,
 [data-testid="stHeader"],
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"],
-#MainMenu,
-footer,
-[data-testid="stFooter"],
 [data-testid="stBottom"],
-[data-testid="manage-app-button"],
-[class*="viewerBadge"],
-a[href*="streamlit.io"] {
+[data-testid="manage-app-button"] {
     display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    height: 0 !important;
 }
 
-html, body, .stApp, [data-testid="stAppViewContainer"] {
-    font-family: 'Cairo', sans-serif !important;
-    background-color: #F8FAFC !important;
-    color: #0F172A !important;
+html, body, .stApp,
+[data-testid="stAppViewContainer"] {
     direction: rtl !important;
     text-align: center !important;
+    font-family: 'Cairo', sans-serif !important;
+    background: var(--bg) !important;
+    color: var(--dark) !important;
 }
 
 .block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 1.5rem !important;
-    max-width: 650px !important;
+    max-width: 570px !important;
+    padding: 3rem 1rem 2rem !important;
 }
 
 .portal-shell {
     background: #FFFFFF;
-    border-radius: 24px;
+    border: 1px solid #E2E8F0;
+    border-radius: 26px;
     overflow: hidden;
-    box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.14);
-    border: 1.5px solid #E2E8F0;
+    box-shadow: 0 18px 55px rgba(15,23,42,.09);
 }
 
-.portal-banner {
-    background: linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%);
-    padding: 28px 20px 24px 20px;
-    color: #FFFFFF;
+/* Header */
+.portal-header {
+    background: linear-gradient(135deg,#0F172A 0%,#1E40AF 60%,#2563EB 100%);
+    padding: 35px 20px 30px;
     position: relative;
+    overflow: hidden;
 }
 
-.cap-badge {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 12px auto;
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-radius: 18px;
+.portal-header:before {
+    content: "";
+    position: absolute;
+    width: 190px;
+    height: 190px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 50%;
+    top: -100px;
+    right: -65px;
+}
+
+.portal-header:after {
+    content: "";
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 50%;
+    bottom: -100px;
+    left: -45px;
+}
+
+.logo-box {
+    width: 70px;
+    height: 70px;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.30);
+    border-radius: 21px;
     display: flex;
-    align-items: center;
     justify-content: center;
-    font-size: 32px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    align-items: center;
+    margin: 0 auto 15px;
+    font-size: 36px;
+    position: relative;
+    z-index: 1;
 }
 
-.banner-title {
-    font-size: 24px;
-    font-weight: 900;
-    margin: 0 0 6px 0;
+.portal-title {
     color: #FFFFFF !important;
+    font-size: 25px !important;
+    font-weight: 900 !important;
+    margin: 0 0 8px !important;
+    position: relative;
+    z-index: 1;
 }
 
-.banner-pill {
-    display: inline-block;
-    background: rgba(15, 23, 42, 0.38);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    color: #FDE68A !important;
-    padding: 4px 16px;
-    border-radius: 999px;
-    font-size: 13.5px;
-    font-weight: 800;
-}
-
-.portal-body {
-    padding: 28px 24px 24px 24px;
-}
-
-.status-tag {
-    display: inline-block;
-    background: #ECFDF5;
-    color: #059669;
-    border: 1px solid #A7F3D0;
-    padding: 5px 14px;
-    border-radius: 999px;
+.portal-subtitle {
+    color: #DBEAFE !important;
     font-size: 13px;
-    font-weight: 800;
-    margin-bottom: 14px;
+    font-weight: 700;
+    margin: 0;
+    position: relative;
+    z-index: 1;
 }
 
-.body-heading {
+.brand-label {
+    display: inline-block;
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 30px;
+    padding: 5px 15px;
+    margin-top: 14px;
+    color: #FDE68A;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* Body */
+.portal-body {
+    padding: 30px 25px 27px;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #ECFDF5;
+    color: #047857;
+    border: 1px solid #A7F3D0;
+    border-radius: 30px;
+    padding: 6px 15px;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 19px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #10B981;
+    border-radius: 50%;
+}
+
+.body-title {
     font-size: 21px;
     font-weight: 900;
     color: #0F172A;
-    margin: 0 0 10px 0;
+    line-height: 1.7;
+    margin: 0 0 10px;
 }
 
-.body-desc {
-    font-size: 15px;
+.body-description {
+    color: #64748B;
+    font-size: 14px;
     font-weight: 600;
-    color: #475569;
-    line-height: 1.75;
-    margin: 0 0 22px 0;
+    line-height: 2;
+    margin: 0 0 23px;
 }
 
+/* Redirect */
+.redirect-panel {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 16px;
+    padding: 17px 12px;
+    margin-bottom: 20px;
+}
+
+.redirect-text {
+    color: #1E40AF;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 7px;
+}
+
+.countdown {
+    color: #1D4ED8;
+    font-size: 34px;
+    font-weight: 900;
+    direction: ltr;
+    line-height: 1.3;
+}
+
+.countdown-caption {
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* Button */
 .launch-btn {
     display: block;
     width: 100%;
-    background: linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%);
+    box-sizing: border-box;
+    background: linear-gradient(135deg,#1E40AF,#2563EB);
     color: #FFFFFF !important;
     text-decoration: none !important;
-    padding: 15px 20px;
+    padding: 16px 15px;
     border-radius: 14px;
-    font-size: 17px;
-    font-weight: 800;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
-    transition: all 0.2s ease;
-    box-sizing: border-box;
+    font-size: 16px;
+    font-weight: 900;
+    box-shadow: 0 7px 18px rgba(37,99,235,.23);
+    transition: .2s ease;
 }
 
 .launch-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.42);
+    box-shadow: 0 10px 24px rgba(37,99,235,.30);
 }
 
-.url-box {
-    margin-top: 18px;
-    background: #F1F5F9;
-    border: 1.5px dashed #CBD5E1;
-    border-radius: 12px;
-    padding: 10px 14px;
-    font-size: 13.5px;
+.link-section {
+    margin-top: 19px;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 13px;
+    padding: 13px;
+}
+
+.link-label {
+    font-size: 12px;
+    color: #64748B;
     font-weight: 700;
-    color: #334155;
+    margin-bottom: 7px;
 }
 
-.url-link {
-    display: block;
-    margin-top: 4px;
-    color: #2563EB !important;
+.new-url {
+    color: #1D4ED8;
+    font-size: 12px;
     font-weight: 800;
     direction: ltr;
-    text-decoration: none !important;
+    word-break: break-all;
+    text-decoration: none;
 }
 
+/* Footer */
 .portal-footer {
     background: #F8FAFC;
     border-top: 1px solid #E2E8F0;
-    padding: 14px 20px;
-    font-size: 12.5px;
-    font-weight: 700;
+    padding: 17px 12px;
     color: #64748B;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 2;
+}
+
+.footer-services {
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .block-container {
+        padding: 1.3rem .7rem 1rem !important;
+    }
+
+    .portal-header {
+        padding: 28px 15px 25px;
+    }
+
+    .portal-title {
+        font-size: 21px !important;
+    }
+
+    .portal-body {
+        padding: 24px 17px;
+    }
+
+    .body-title {
+        font-size: 19px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+    }
 }
 </style>
+""", unsafe_allow_html=True)
 
+# ==========================================
+# 3. واجهة البوابة
+# ==========================================
+st.markdown(f"""
 <div class="portal-shell">
-    <div class="portal-banner">
-        <div class="cap-badge">🎓</div>
-        <h1 class="banner-title">بوابة إدارة ومتابعة الطلاب</h1>
-        <span class="banner-pill">منصة زياد الذكية • إشراف أ. زياد المعمري</span>
-    </div>
-    <div class="portal-body">
-        <div class="status-tag">⚡ تحديث مهم للطلاب وأولياء الأمور</div>
-        <h2 class="body-heading">تمت ترقية المنصة ونقلها إلى رابطها الرسمي الجديد</h2>
-        <p class="body-desc">
-            حرصاً على سرعة التصفح واستقرار الخدمة دون توقف، تم نقل البوابة بالكامل.<br>
-            سيتم نقلك تلقائياً خلال ثوانٍ، أو يمكنك الدخول مباشرة عبر الزر أدناه:
+
+    <div class="portal-header">
+        <div class="logo-box">🎓</div>
+
+        <h1 class="portal-title">
+            بوابة إدارة ومتابعة الطلاب
+        </h1>
+
+        <p class="portal-subtitle">
+            منصة زياد الذكية
         </p>
-        <a href="https://zi-edu.onrender.com/" target="_top" class="launch-btn">
-            🚀 الدخول إلى بوابة الطلاب الجديدة الآن
-        </a>
-        <div class="url-box">
-            📌 يرجى حفظ الرابط الجديد في المفضلة لديكم:
-            <a href="https://zi-edu.onrender.com/" target="_top" class="url-link">https://zi-edu.onrender.com/</a>
+
+        <div class="brand-label">
+            إشراف أ. زياد المعمري
         </div>
     </div>
-    <div class="portal-footer">
-        الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر
+
+    <div class="portal-body">
+
+        <div class="status">
+            <span class="status-dot"></span>
+            المنصة الجديدة أصبحت جاهزة
+        </div>
+
+        <h2 class="body-title">
+            نرحب بكم في بوابتنا الجديدة
+        </h2>
+
+        <p class="body-description">
+            تم تطوير المنصة ونقلها إلى استضافة جديدة
+            لتوفير تجربة استخدام أسرع وأكثر استقراراً.
+            <br>
+            يرجى استخدام الرابط الجديد للدخول ومتابعة
+            الدرجات والاختبارات والملاحظات.
+        </p>
+
+        <div class="redirect-panel">
+            <div class="redirect-text">
+                🚀 سيتم تحويلك تلقائياً إلى المنصة الجديدة
+            </div>
+
+            <div class="countdown" id="countdown">
+                03
+            </div>
+
+            <div class="countdown-caption">
+                ثانية حتى الانتقال
+            </div>
+        </div>
+
+        <a href="{NEW_URL}" target="_top" class="launch-btn">
+            الدخول إلى بوابة الطلاب الجديدة ←
+        </a>
+
+        <div class="link-section">
+            <div class="link-label">
+                📌 رابط المنصة الجديد - يرجى حفظه
+            </div>
+
+            <a href="{NEW_URL}" target="_top" class="new-url">
+                {NEW_URL}
+            </a>
+        </div>
+
     </div>
+
+    <div class="portal-footer">
+        <div class="footer-services">
+            الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر
+        </div>
+        جميع الحقوق محفوظة © منصة زياد الذكية
+    </div>
+
 </div>
 """, unsafe_allow_html=True)
 
-components.html("""
+# ==========================================
+# 4. التحويل التلقائي والعد التنازلي
+# ==========================================
+components.html(f"""
 <script>
-setTimeout(function() {
-    try {
-        window.top.location.href = "https://zi-edu.onrender.com/";
-    } catch (e) {
-        window.location.href = "https://zi-edu.onrender.com/";
-    }
-}, 4000);
+(function() {{
+    const target = "{NEW_URL}";
+    let remaining = {REDIRECT_SECONDS};
+
+    const timer = setInterval(function() {{
+        remaining--;
+
+        try {{
+            const frame = window.frameElement;
+            if (frame && frame.parentElement) {{
+                const doc = window.parent.document;
+                const counter = doc.getElementById("countdown");
+                if (counter) {{
+                    counter.textContent = String(
+                        Math.max(remaining, 0)
+                    ).padStart(2, "0");
+                }}
+            }}
+        }} catch(e) {{}}
+
+        if (remaining <= 0) {{
+            clearInterval(timer);
+
+            try {{
+                window.top.location.replace(target);
+            }} catch(e) {{
+                window.location.replace(target);
+            }}
+        }}
+    }}, 1000);
+}})();
 </script>
 """, height=0)
