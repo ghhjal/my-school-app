@@ -1905,17 +1905,211 @@ opacity: 1 !important;
 display: none !important;
 }}
 
-/* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05); box-sizing: border-box; }}
-.metric-info {{ text-align: right; }}
-.metric-title {{ color: #475569; font-size: 12.5px; font-weight: 800; margin-bottom: 2px; }}
-.metric-val {{ color: #0F172A; font-size: 21px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 17px; flex-shrink: 0; }}
-.ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
-.ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
-.ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+/* ✳️ 7. البطاقات الإحصائية الاحترافية ولوحة توزيع أنماط التعلم (VAK) */
+.metric-container, .dashboard-stats-container {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 10px 0 16px 0;
+    direction: rtl !important;
+    width: 100%;
+    box-sizing: border-box;
+}}
+.metric-card, .dash-card {{
+    padding: 16px 14px;
+    border-radius: 14px;
+    text-align: center !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 8px 24px rgba(20, 27, 62, 0.05);
+    border: 1px solid #E2E8F0;
+    border-top: 4px solid {primary_color};
+    transition: transform 0.2s ease;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}}
+.metric-card:hover, .dash-card:hover {{ transform: translateY(-2px); }}
+.dash-card.total {{ border-top-color: {primary_color}; }}
+.dash-card.completed {{ border-top-color: #10B981; }}
+.dash-card.pending {{ border-top-color: #F59E0B; }}
+.dash-title, .metric-title {{
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
+    font-weight: 800;
+    text-align: center !important;
+}}
+.dash-value, .metric-val {{
+    font-size: 26px;
+    font-weight: 900;
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+    line-height: 1.15;
+    text-align: center !important;
+}}
+.metric-sub {{
+    color: #64748B !important;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-top: 4px;
+    text-align: center !important;
+}}
+
+/* لوحة توزيع أنماط التعلم الاحترافية (VAK) */
+.vak-summary-grid {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 14px 0 18px 0;
+    direction: rtl !important;
+}}
+.vak-stat-box {{
+    border-radius: 16px;
+    padding: 16px 14px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}}
+.vak-stat-box:hover {{ transform: translateY(-3px); }}
+.vak-stat-box.visual {{
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%);
+    border: 1.5px solid #bfdbfe;
+    border-right: 5px solid #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
+}}
+.vak-stat-box.kinesthetic {{
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%);
+    border: 1.5px solid #a7f3d0;
+    border-right: 5px solid #059669;
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.08);
+}}
+.vak-stat-box.auditory {{
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
+    border: 1.5px solid #fde68a;
+    border-right: 5px solid #d97706;
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.08);
+}}
+.vak-box-top {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    direction: rtl !important;
+}}
+.vak-box-label {{
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.vak-stat-box.visual .vak-box-label {{ color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; }}
+.vak-stat-box.kinesthetic .vak-box-label {{ color: #047857 !important; -webkit-text-fill-color: #047857 !important; }}
+.vak-stat-box.auditory .vak-box-label {{ color: #b45309 !important; -webkit-text-fill-color: #b45309 !important; }}
+.vak-pct-pill {{
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}}
+.vak-stat-box.visual .vak-pct-pill {{ background: linear-gradient(135deg, #3b82f6, #1d4ed8); }}
+.vak-stat-box.kinesthetic .vak-pct-pill {{ background: linear-gradient(135deg, #10b981, #047857); }}
+.vak-stat-box.auditory .vak-pct-pill {{ background: linear-gradient(135deg, #f59e0b, #b45309); }}
+.vak-box-number {{
+    font-size: 28px;
+    font-weight: 900;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    line-height: 1.1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    direction: rtl !important;
+}}
+.vak-box-unit {{
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+}}
+.vak-mini-track {{
+    width: 100%;
+    height: 8px;
+    background-color: rgba(148, 163, 184, 0.2);
+    border-radius: 999px;
+    overflow: hidden;
+}}
+.vak-mini-fill {{
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}}
+.vak-stat-box.visual .vak-mini-fill {{ background: linear-gradient(90deg, #60a5fa, #2563eb); }}
+.vak-stat-box.kinesthetic .vak-mini-fill {{ background: linear-gradient(90deg, #34d399, #059669); }}
+.vak-stat-box.auditory .vak-mini-fill {{ background: linear-gradient(90deg, #fbbf24, #d97706); }}
+
+.custom-chart-container {{
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 210px;
+    padding: 28px 16px 14px 16px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid #E2E8F0;
+    border-bottom: 2px solid #CBD5E1;
+    border-radius: 16px;
+    margin: 8px 0 16px 0;
+    position: relative;
+    direction: rtl !important;
+}}
+.chart-bar-wrapper {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    width: 28%;
+    max-width: 125px;
+}}
+.chart-value-badge {{
+    font-weight: 800;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    direction: ltr !important;
+}}
+.chart-value-badge.v-badge {{ background-color: #eff6ff; color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; border: 1px solid #bfdbfe; }}
+.chart-value-badge.k-badge {{ background-color: #ecfdf5; color: #047857 !important; -webkit-text-fill-color: #047857 !important; border: 1px solid #a7f3d0; }}
+.chart-value-badge.a-badge {{ background-color: #fffbeb; color: #b45309 !important; -webkit-text-fill-color: #b45309 !important; border: 1px solid #fde68a; }}
+.chart-bar {{
+    width: 100%;
+    border-radius: 12px 12px 4px 4px;
+    transition: height 0.55s ease;
+    min-height: 10px;
+}}
+.chart-bar.v-bar {{ background: linear-gradient(180deg, #60a5fa 0%, #2563eb 65%, #1d4ed8 100%); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28); }}
+.chart-bar.k-bar {{ background: linear-gradient(180deg, #34d399 0%, #059669 65%, #047857 100%); box-shadow: 0 6px 16px rgba(5, 150, 105, 0.28); }}
+.chart-bar.a-bar {{ background: linear-gradient(180deg, #fbbf24 0%, #d97706 65%, #b45309 100%); box-shadow: 0 6px 16px rgba(217, 119, 6, 0.28); }}
+.chart-label {{
+    margin-top: 10px;
+    font-weight: 800;
+    font-size: 14px;
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+    text-align: center !important;
+    white-space: nowrap;
+}}
 
 .app-card {{ background: #FFFFFF; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid #CBD5E1; margin-bottom: 15px; box-sizing: border-box; color: #0F172A; }}
 .mobile-list-item {{ background: #FFFFFF; border-radius: 14px; padding: 15px 16px; margin-bottom: 12px; border: 1.5px solid #CBD5E1; box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; color: #0F172A; direction: rtl; text-align: right; box-sizing: border-box; }}
@@ -2000,8 +2194,13 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 .unified-main-title {{ font-size: 20px !important; }}
 .unified-brand-pill {{ font-size: 12.5px !important; padding: 3px 12px !important; }}
 .unified-sub-desc {{ font-size: 11.5px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }}
-.metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+.metric-container, .dashboard-stats-container {{ grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }}
+.dash-card, .metric-card {{ padding: 10px 6px !important; border-radius: 10px !important; }}
+.dash-title, .metric-title {{ font-size: 11px !important; }}
+.dash-value, .metric-val {{ font-size: 20px !important; }}
+.vak-summary-grid {{ grid-template-columns: 1fr !important; gap: 10px !important; }}
+.vak-stat-box {{ padding: 12px 14px !important; }}
+.vak-box-number {{ font-size: 22px !important; }}
 [data-testid="stTabs"] [data-baseweb="tab-list"],
 [data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
@@ -2222,34 +2421,32 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     total_students = len(df_st)
     total_classes = len(df_st["class"].dropna().unique()) if "class" in df_st.columns and not df_st.empty else 0
-    avg_points = round(df_st["النقاط"].mean(), 1) if "النقاط" in df_st.columns and not df_st.empty else 0
+    tested_vak_cnt = 0
+    if not df_st.empty and "نمط التعلم" in df_st.columns:
+      tested_vak_cnt = len(
+          df_st[
+              df_st["نمط التعلم"].notna()
+              & (~df_st["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+          ]
+      )
 
     st.markdown(
         f"""
-        <div class="metric-container">
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">العدد الإجمالي</div>
-                    <div class="metric-val">{total_students}</div>
-                    <div class="metric-sub">طالب مسجل</div>
-                </div>
-                <div class="metric-icon ic-green">👥</div>
+        <div class="dashboard-stats-container">
+            <div class="dash-card total">
+                <div class="dash-title">👥 إجمالي الطلاب</div>
+                <div class="dash-value">{total_students}</div>
+                <div class="metric-sub">طالب مسجل في المنصة</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">الفصول الدراسية</div>
-                    <div class="metric-val">{total_classes}</div>
-                    <div class="metric-sub">فصل نشط</div>
-                </div>
-                <div class="metric-icon ic-blue">🏫</div>
+            <div class="dash-card completed">
+                <div class="dash-title">🏫 الفصول الدراسية</div>
+                <div class="dash-value">{total_classes}</div>
+                <div class="metric-sub">فصل دراسي نشط</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">متوسط النقاط</div>
-                    <div class="metric-val" dir="ltr">{avg_points}</div>
-                    <div class="metric-sub">نقطة تميز</div>
-                </div>
-                <div class="metric-icon ic-red">📈</div>
+            <div class="dash-card pending">
+                <div class="dash-title">🧠 المختبرون في الأنماط</div>
+                <div class="dash-value">{tested_vak_cnt}</div>
+                <div class="metric-sub">من أصل {total_students} طالب</div>
             </div>
         </div>
         """,
@@ -4975,11 +5172,11 @@ if st.session_state.role in ["teacher", "viewer"]:
                   )
 
     # ---------------------------------------------------------
-    # 6. تقرير حصر أنماط التعلم (VARK) - يدعم تحديد عدة فصول معاً + طباعة وExcel
+    # 6. تقرير ولوحة إحصائيات أنماط التعلم (VAK) - يدعم تحديد عدة فصول معاً + إحصائية تفاعلية + PDF وHTML وExcel
     # ---------------------------------------------------------
     with rep_tabs[5]:
-      st.markdown("#### 🧠 استخراج تقرير أنماط التعلم (للإدارة والتوثيق)")
-      st.info("💡 يمكنك تحديد عدة فصول معاً (مثلاً: الخامس/1، الخامس/2، الخامس/3، الخامس/4) أو اختيار 'الكل' لاستخراج تقرير واحد مجمع جاهز للطباعة أو التصدير لملف Excel.")
+      st.markdown("#### 🧠 لوحة إحصائيات واستخراج تقارير أنماط التعلم (VAK)")
+      st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً (أو الكل) لاستعراض الإحصائية التحليلية المباشرة لأنماط التعلم وتوليد التقرير الرسمي متضمناً الإحصائية للطباعة (PDF A4 / HTML / Excel).")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -5000,22 +5197,141 @@ if st.session_state.role in ["teacher", "viewer"]:
             "متعدد الأنماط 🌟",
             "لم يختبر ⏳",
         ]
-        sel_style = c2.selectbox("🎯 اختر النمط المستهدف:", style_opts, key="ls_style")
+        sel_style = c2.selectbox("🎯 اختر النمط المستهدف في جدول التقرير:", style_opts, key="ls_style")
 
-        if st.button("🖨️ توليد تقرير الأنماط للفصول المحددة", type="primary", use_container_width=True):
-          target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
-          if not target_ls_cls:
-            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
-          else:
-            df_filtered = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
+        target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
+        if not target_ls_cls:
+          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
+        else:
+          df_scope_ls = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
+          if "نمط التعلم" not in df_scope_ls.columns:
+            df_scope_ls["نمط التعلم"] = ""
 
-            if "نمط التعلم" not in df_filtered.columns:
-              df_filtered["نمط التعلم"] = ""
+          df_scope_tested = df_scope_ls[
+              df_scope_ls["نمط التعلم"].notna()
+              & (~df_scope_ls["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+          ].copy()
+
+          tot_scope_students = len(df_scope_ls)
+          tot_scope_tested = len(df_scope_tested)
+          tot_scope_untested = tot_scope_students - tot_scope_tested
+
+          v_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+          k_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+          a_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+          m_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("متعدد", na=False)])
+
+          v_pct = round((v_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          k_pct = round((k_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          a_pct = round((a_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          m_pct = round((m_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+
+          max_vka = max(v_cnt, k_cnt, a_cnt, 1)
+          h_v = max(int((v_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+          h_k = max(int((k_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+          h_a = max(int((a_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+
+          # --- 1) عرض البطاقات الإحصائية ولوحة التوزيع البصري على الشاشة مباشرة ---
+          st.markdown(
+              f"""
+              <div class="dashboard-stats-container">
+                  <div class="dash-card total"><div class="dash-title">👥 إجمالي الطلاب</div><div class="dash-value">{tot_scope_students}</div></div>
+                  <div class="dash-card completed"><div class="dash-title">✅ الاختبارات المكتملة</div><div class="dash-value">{tot_scope_tested}</div></div>
+                  <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{tot_scope_untested}</div></div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
+
+          with st.container(border=True):
+            st.markdown(
+                f"""
+                <div style="text-align: center; margin-bottom: 6px;">
+                    <div style="font-size: 19px; font-weight: 900; color: #0F172A; margin-bottom: 4px;">📊 توزيع أنماط التعلم — ({label_ls_cls})</div>
+                    <span style="display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 14px; font-size: 12.5px; font-weight: 800;">
+                        🏫 المختبرون: {tot_scope_tested} من أصل {tot_scope_students} طالب
+                    </span>
+                    <p style="font-size: 13px; color: #64748B; font-weight: 700; margin: 6px 0 0 0;">إحصائية تحليلية مقارنة لأعداد ونسب الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>
+                </div>
+                <div class="vak-summary-grid">
+                    <div class="vak-stat-box visual">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">👁️ النمط البصري</span>
+                            <span class="vak-pct-pill">{v_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{v_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {v_pct}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box kinesthetic">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">🏃‍♂️ النمط الحركي</span>
+                            <span class="vak-pct-pill">{k_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{k_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {k_pct}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box auditory">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">👂 النمط السمعي</span>
+                            <span class="vak-pct-pill">{a_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{a_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {a_pct}%;"></div></div>
+                    </div>
+                </div>
+                <div class="custom-chart-container">
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge v-badge">({v_pct}%) {v_cnt}</div>
+                        <div class="chart-bar v-bar" style="height: {h_v}%;"></div>
+                        <div class="chart-label">بصري 👁️</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge k-badge">({k_pct}%) {k_cnt}</div>
+                        <div class="chart-bar k-bar" style="height: {h_k}%;"></div>
+                        <div class="chart-label">حركي 🏃‍♂️</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge a-badge">({a_pct}%) {a_cnt}</div>
+                        <div class="chart-bar a-bar" style="height: {h_a}%;"></div>
+                        <div class="chart-label">سمعي 👂</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if len(target_ls_cls) > 1:
+              with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المحدد"):
+                cls_breakdown_rows = []
+                for c_nm in target_ls_cls:
+                  sub_c = df_scope_ls[df_scope_ls["class"] == c_nm]
+                  sub_t = sub_c[
+                      sub_c["نمط التعلم"].notna()
+                      & (~sub_c["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+                  ]
+                  t_cnt = len(sub_t)
+                  vc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+                  kc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+                  ac = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+                  cls_breakdown_rows.append({
+                      "الفصل": c_nm,
+                      "إجمالي الطلاب": len(sub_c),
+                      "المختبرون": t_cnt,
+                      "غير المختبرين": len(sub_c) - t_cnt,
+                      "بصري 👁️": f"{vc} ({round(vc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                      "حركي 🏃‍♂️": f"{kc} ({round(kc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                      "سمعي 👂": f"{ac} ({round(ac/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                  })
+                st.dataframe(pd.DataFrame(cls_breakdown_rows), use_container_width=True, hide_index=True)
+
+          # --- 2) زر توليد التقرير الرسمي للطباعة متضمناً بطاقات الإحصائية ---
+          if st.button("🖨️ توليد تقرير الأنماط مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
+            df_filtered = df_scope_ls.copy()
 
             if sel_style == "لم يختبر ⏳":
               df_filtered = df_filtered[
                   df_filtered["نمط التعلم"].isna()
-                  | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None"]))
+                  | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
               ]
             elif sel_style == "تم الاختبار ✅":
               df_filtered = df_filtered[
@@ -5030,7 +5346,8 @@ if st.session_state.role in ["teacher", "viewer"]:
               st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
             else:
               df_sorted = df_filtered.sort_values(by=["class", "name"])
-              rows_html = ""
+              rows_html_print = ""
+              rows_html_pdf = ""
               excel_ls_rows = []
 
               for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
@@ -5038,14 +5355,17 @@ if st.session_state.role in ["teacher", "viewer"]:
                 if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
                   s_val = "لم يختبر ⏳"
 
+                s_val_clean = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(s_val)).strip()
+
                 clr = (
-                    "#3B82F6" if "بصري" in s_val
-                    else "#10B981" if "سمعي" in s_val
-                    else "#F59E0B" if "حركي" in s_val
+                    "#2563EB" if "بصري" in s_val
+                    else "#059669" if "حركي" in s_val
+                    else "#D97706" if "سمعي" in s_val
                     else "#8B5CF6" if "متعدد" in s_val
-                    else "#94A3B8"
+                    else "#64748B"
                 )
-                rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                rows_html_print += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                rows_html_pdf += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val_clean}</td></tr>"
                 excel_ls_rows.append({
                     "م": i,
                     "الرقم الأكاديمي": r.get("clean_id", ""),
@@ -5054,73 +5374,161 @@ if st.session_state.role in ["teacher", "viewer"]:
                     "نمط التعلم": s_val,
                 })
 
-              ls_report_html = f"""
-              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-              <style>
-                  body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 10px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px; }}
-                  .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 10px; }}
-                  .header-text {{ text-align: center; font-weight: bold; font-size: 13px; line-height: 1.4; }}
-                  .title-container {{ text-align: center; margin-bottom: 15px; }}
-                  .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
-                  .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
-                  table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
-                  th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }}
-                  th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
-                  .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-              </style></head><body>
-                  <div class="header-box">
-                      <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                      <div class="header-text" style="align-self: center;">
-                          <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
-                          <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
-                      </div>
-                      <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
-                  </div>
-                  <div class="title-container">
-                      <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
-                      <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (حركي - سمعي - بصري)</div>
-                      <div style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed #3b82f6;">
-                          الفئة المستهدفة: (الفصول: {label_ls_cls}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
-                      </div>
-                  </div>
-                  <table>
-                      <tr>
-                          <th style="width: 5%;">م</th>
-                          <th style="width: 45%; text-align: right;">اسم الطالب</th>
-                          <th style="width: 25%;">الصف</th>
-                          <th style="width: 25%;">نمط التعلم</th>
-                      </tr>
-                      {rows_html}
-                  </table>
-                  <div class="footer-sigs">
-                      <div>الموجه الطلابي <br><br>........................</div>
-                      <div>معلم المادة <br><br>زياد المعمري</div>
-                      <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                  </div>
-                  <script>window.onload = function() {{ window.print(); }}</script>
-              </body></html>
-              """
-              st.success(f"✅ تم تجهيز التقرير لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
-              dl_ls1, dl_ls2 = st.columns(2)
-              dl_ls1.download_button(
-                  label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
-                  data=ls_report_html,
-                  file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
+              clean_sel_style_txt = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(sel_style)).strip()
+              multi_card_html = (
+                  f"""<div class="stat-card multi"><div class="stat-title">متعدد الأنماط</div><div class="stat-value">{m_pct}%</div><div class="stat-sub">{m_cnt} طالب</div></div>"""
+                  if m_cnt > 0 else ""
               )
-              df_ex_ls = pd.DataFrame(excel_ls_rows)
-              dl_ls2.download_button(
-                  label="📥 تصدير تقرير الأنماط (Excel)",
-                  data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
-                  file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
-                  mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                  type="secondary",
-                  use_container_width=True,
-              )
+
+              def build_ls_report_doc(rows_body, is_pdf=False):
+                return f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }}
+                    * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: {'0' if is_pdf else '10px'}; color: #0f172a; font-size: 13px; direction: rtl; }}
+                    table.hdr-table {{ width: 100%; border: 2px solid #1e293b; border-radius: 8px; border-collapse: separate; padding: 8px 12px; margin-bottom: 10px; }}
+                    table.hdr-table td {{ border: none !important; text-align: center; font-weight: 700; font-size: 12.5px; line-height: 1.45; vertical-align: middle; width: 33.33%; }}
+                    .title-container {{ text-align: center; margin-bottom: 12px; }}
+                    .main-title {{ font-size: 19px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 22px; border-radius: 20px; margin-bottom: 4px; }}
+                    .sub-title {{ font-size: 13px; color: #475569; font-weight: 700; }}
+                    .summary-box {{ border: 1px solid #cbd5e1; padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; background-color: #f8fafc; page-break-inside: avoid; }}
+                    .summary-head {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; font-size: 13.5px; font-weight: 800; color: #0f172a; }}
+                    .stats-container {{ display: flex; justify-content: space-between; gap: 10px; width: 100%; }}
+                    .stat-card {{ flex: 1; padding: 8px 6px; border-radius: 8px; text-align: center !important; border: 1.5px solid #cbd5e1; background-color: #ffffff; }}
+                    .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }}
+                    .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }}
+                    .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }}
+                    .stat-card.multi {{ border-color: #7c3aed; color: #6d28d9; background-color: #f5f3ff; }}
+                    .stat-title {{ font-size: 13px; margin-bottom: 2px; font-weight: 800; text-align: center !important; }}
+                    .stat-value {{ font-size: 17px; font-weight: 900; text-align: center !important; line-height: 1.2; }}
+                    .stat-sub {{ font-size: 11.5px; font-weight: 700; opacity: 0.9; text-align: center !important; }}
+                    table.data-tbl {{ width: 100%; border-collapse: collapse; margin-top: 8px; text-align: center; font-size: 12.5px; }}
+                    table.data-tbl thead {{ display: table-header-group; }}
+                    table.data-tbl tr {{ page-break-inside: avoid; }}
+                    table.data-tbl th, table.data-tbl td {{ border: 1px solid #94a3b8; padding: 5px 8px; }}
+                    table.data-tbl th {{ background-color: #e2e8f0; color: #0f172a; font-weight: 800; font-size: 13px; }}
+                    table.data-tbl tr:nth-child(even) td {{ background-color: #f8fafc; }}
+                    table.sig-tbl {{ width: 100%; border-collapse: collapse; margin-top: 26px; page-break-inside: avoid; }}
+                    table.sig-tbl td {{ border: none !important; text-align: center; font-weight: 800; font-size: 13.5px; width: 33.33%; vertical-align: top; padding: 6px; }}
+                </style></head><body>
+                    <table class="hdr-table">
+                        <tr>
+                            <td style="text-align: right;">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</td>
+                            <td>
+                                <div style="font-size:15.5px; font-weight:900; color:#1e293b;">إحصائية وتقرير أنماط تعلم الطلاب</div>
+                                <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                            </td>
+                            <td style="text-align: left;">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: أ. زياد المعمري</td>
+                        </tr>
+                    </table>
+                    <div class="title-container">
+                        <div class="main-title">تقرير حصر وإحصائية أنماط التعلم (VAK)</div>
+                        <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (بصري - حركي - سمعي)</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-head">
+                            <span>📊 الإحصائية التحليلية للفصول: ({label_ls_cls})</span>
+                            <span>إجمالي الطلاب: {tot_scope_students} | المختبرون: {tot_scope_tested} | غير المختبرين: {tot_scope_untested} | الفلتر: ({clean_sel_style_txt})</span>
+                        </div>
+                        <div class="stats-container">
+                            <div class="stat-card visual">
+                                <div class="stat-title">النمط البصري</div>
+                                <div class="stat-value">{v_pct}%</div>
+                                <div class="stat-sub">{v_cnt} طالب</div>
+                            </div>
+                            <div class="stat-card kinesthetic">
+                                <div class="stat-title">النمط الحركي</div>
+                                <div class="stat-value">{k_pct}%</div>
+                                <div class="stat-sub">{k_cnt} طالب</div>
+                            </div>
+                            <div class="stat-card auditory">
+                                <div class="stat-title">النمط السمعي</div>
+                                <div class="stat-value">{a_pct}%</div>
+                                <div class="stat-sub">{a_cnt} طالب</div>
+                            </div>
+                            {multi_card_html}
+                        </div>
+                    </div>
+                    <table class="data-tbl">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">م</th>
+                                <th style="width: 44%; text-align: right; padding-right: 10px;">اسم الطالب</th>
+                                <th style="width: 25%;">الصف</th>
+                                <th style="width: 25%;">نمط التعلم</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows_body}
+                        </tbody>
+                    </table>
+                    <table class="sig-tbl">
+                        <tr>
+                            <td>الموجه الطلابي<br><br>........................</td>
+                            <td>معلم المادة<br><br>أ. زياد المعمري</td>
+                            <td>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</td>
+                        </tr>
+                    </table>
+                    {'' if is_pdf else '<script>window.onload = function() { window.print(); }</script>'}
+                </body></html>"""
+
+              ls_report_html = build_ls_report_doc(rows_html_print, is_pdf=False)
+              ls_report_pdf_html = build_ls_report_doc(rows_html_pdf, is_pdf=True)
+
+              st.success(f"✅ تم تجهيز التقرير متضمناً الإحصائية لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
+              pdf_bytes_ls = None
+              try:
+                pdf_bytes_ls = generate_pdf_bytes_cached(ls_report_pdf_html)
+              except Exception:
+                pdf_bytes_ls = None
+
+              if pdf_bytes_ls:
+                dl_ls1, dl_ls2, dl_ls3 = st.columns(3)
+                dl_ls1.download_button(
+                    label="📥 تحميل التقرير (PDF - A4)",
+                    data=pdf_bytes_ls,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+                dl_ls2.download_button(
+                    label="🖨️ طباعة مباشرة (HTML)",
+                    data=ls_report_html,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="secondary",
+                    use_container_width=True,
+                )
+                df_ex_ls = pd.DataFrame(excel_ls_rows)
+                dl_ls3.download_button(
+                    label="📥 تصدير (Excel)",
+                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
+                )
+              else:
+                dl_ls1, dl_ls2 = st.columns(2)
+                dl_ls1.download_button(
+                    label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
+                    data=ls_report_html,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="primary",
+                    use_container_width=True,
+                )
+                df_ex_ls = pd.DataFrame(excel_ls_rows)
+                dl_ls2.download_button(
+                    label="📥 تصدير تقرير الأنماط (Excel)",
+                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
+                )
 
     # ---------------------------------------------------------
     # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
