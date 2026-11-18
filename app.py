@@ -57,6 +57,90 @@ def normalize_arabic(text):
   return text.strip()
 
 
+def verify_password_smart(raw_pwd, stored_hash):
+  import base64
+  if stored_hash is None:
+    return False
+  sh = str(stored_hash).strip()
+  if not sh:
+    return False
+
+  ar_to_en = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+  p_raw = str(raw_pwd)
+  p_str = p_raw.strip()
+  p_norm = p_str.translate(ar_to_en)
+  candidates = list(dict.fromkeys([p_raw, p_str, p_norm]))
+
+  for cand in candidates:
+    # 1) Plain text match
+    if cand == sh:
+      return True
+    # 2) Direct SHA-256 (64 hex chars)
+    if hashlib.sha256(cand.encode("utf-8")).hexdigest().lower() == sh.lower():
+      return True
+
+    # 3) PBKDF2-SHA256 formats (pbkdf2_sha256$... or pbkdf2:sha256:...)
+    if sh.lower().startswith("pbkdf2"):
+      # Normalize werkzeug prefix pbkdf2:sha256:260000$salt$hash -> pbkdf2_sha256$260000$salt$hash
+      norm_sh = sh
+      if norm_sh.lower().startswith("pbkdf2:sha256:"):
+        norm_sh = "pbkdf2_sha256$" + norm_sh[len("pbkdf2:sha256:"):]
+      elif norm_sh.lower().startswith("pbkdf2:sha256$"):
+        norm_sh = "pbkdf2_sha256$" + norm_sh[len("pbkdf2:sha256$"):]
+
+      parts = norm_sh.split("$") if "$" in norm_sh else norm_sh.split(":")
+      iters_to_try = []
+      salt_str = ""
+      target_digest = ""
+
+      if len(parts) >= 4:
+        try:
+          iters_to_try = [int(parts[1])]
+        except Exception:
+          iters_to_try = [100000, 150000, 200000, 260000, 310000, 600000]
+        salt_str = parts[2]
+        target_digest = parts[3]
+      elif len(parts) == 3:
+        iters_to_try = [
+            100000, 120000, 150000, 160000, 180000, 200000, 216000, 240000,
+            250000, 260000, 300000, 310000, 320000, 390000, 400000, 480000,
+            500000, 600000, 720000, 80000, 60000, 50000, 10000, 1000,
+        ]
+        salt_str = parts[1]
+        target_digest = parts[2]
+
+      if salt_str and target_digest:
+        # Quick salted SHA-256 / HMAC-SHA256 fallback checks
+        for salted_cand in [salt_str + cand, cand + salt_str, f"{salt_str}:{cand}", f"{cand}:{salt_str}"]:
+          if hashlib.sha256(salted_cand.encode("utf-8")).hexdigest().lower() == target_digest.lower():
+            return True
+
+        salt_bytes_list = [salt_str.encode("utf-8")]
+        try:
+          salt_bytes_list.append(bytes.fromhex(salt_str))
+        except Exception:
+          pass
+        try:
+          salt_bytes_list.append(base64.b64decode(salt_str))
+        except Exception:
+          pass
+
+        for it_cnt in iters_to_try:
+          for sb in salt_bytes_list:
+            try:
+              dk = hashlib.pbkdf2_hmac("sha256", cand.encode("utf-8"), sb, it_cnt)
+              if dk.hex().lower() == target_digest.lower():
+                return True
+              if base64.b64encode(dk).decode("ascii").strip() == target_digest.strip():
+                return True
+              if base64.urlsafe_b64encode(dk).decode("ascii").strip().rstrip("=") == target_digest.strip().rstrip("="):
+                return True
+            except Exception:
+              pass
+
+  return False
+
+
 def clean_phone_number(phone):
   p = str(phone).strip().replace(" ", "")
   if p.startswith("0"):
@@ -2337,17 +2421,29 @@ if st.session_state.role is None:
   with t2:
     with st.form("tr_login"):
       st.markdown("<div class='login-card-heading'>تسجيل دخول المعلم</div><div class='login-card-sub'>أدخل بيانات الحساب للوصول إلى لوحة إدارة ومتابعة الطلاب</div>", unsafe_allow_html=True)
-      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...")
+      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...").strip()
       p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
       if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
         df = fetch_safe("users")
-        if not df.empty and u in df["username"].values:
-          ud = df[df["username"] == u].iloc[0]
-          if hashlib.sha256(p.encode()).hexdigest() == ud["password_hash"]:
-            if ud.get("role", "teacher") in ["teacher", ""]:
+        if not df.empty and "username" in df.columns:
+          df["clean_user"] = df["username"].astype(str).str.strip()
+          u_matches = df[df["clean_user"].str.lower() == u.lower()]
+        else:
+          u_matches = pd.DataFrame()
+        if not u_matches.empty:
+          matched_row = None
+          matched_idx = None
+          for r_idx, r_cand in u_matches.iterrows():
+            if verify_password_smart(p, r_cand.get("password_hash", "")):
+              matched_row = r_cand
+              matched_idx = r_idx
+              break
+          if matched_row is not None:
+            u_role = str(matched_row.get("role", "teacher")).strip().lower()
+            if u_role in ["teacher", ""]:
               try:
                 ws_u = get_gspread_client().worksheet("users")
-                u_row_num = int(df[df["username"] == u].index[0]) + 2
+                u_row_num = int(matched_idx) + 2
                 now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
                 if "last_login" in df.columns:
                   idx_u = list(df.columns).index("last_login") + 1
@@ -2360,11 +2456,11 @@ if st.session_state.role is None:
                   ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
               except Exception:
                 pass
-              st.session_state.username = u
+              st.session_state.username = str(matched_row.get("username", u)).strip()
               st.session_state.role = "teacher"
               st.rerun()
             else:
-              st.error("❌ هذا الحساب لا يملك صلاحية المعلم.")
+              st.error("❌ هذا الحساب مخصص لبوابة الإدارة (مشاهد) وليس بوابة المعلم.")
           else:
             st.error("❌ كلمة المرور غير صحيحة.")
         else:
@@ -2373,17 +2469,29 @@ if st.session_state.role is None:
   with t3:
     with st.form("admin_login"):
       st.markdown("<div class='login-card-heading'>دخول الإدارة والإشراف التربوي</div><div class='login-card-sub'>بوابة مخصصة للإدارة والمشرف التربوي للاطلاع واستخراج التقارير</div>", unsafe_allow_html=True)
-      u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
+      u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...").strip()
       p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
       if st.form_submit_button("👁️ استعراض التقارير والبيانات", type="primary", use_container_width=True):
         df_u = fetch_safe("users")
-        if not df_u.empty and u_admin in df_u["username"].values:
-          ud = df_u[df_u["username"] == u_admin].iloc[0]
-          if hashlib.sha256(p_admin.encode()).hexdigest() == ud["password_hash"]:
-            if ud.get("role", "") == "viewer":
+        if not df_u.empty and "username" in df_u.columns:
+          df_u["clean_user"] = df_u["username"].astype(str).str.strip()
+          u_matches_adm = df_u[df_u["clean_user"].str.lower() == u_admin.lower()]
+        else:
+          u_matches_adm = pd.DataFrame()
+        if not u_matches_adm.empty:
+          matched_row_adm = None
+          matched_idx_adm = None
+          for r_idx, r_cand in u_matches_adm.iterrows():
+            if verify_password_smart(p_admin, r_cand.get("password_hash", "")):
+              matched_row_adm = r_cand
+              matched_idx_adm = r_idx
+              break
+          if matched_row_adm is not None:
+            u_role_adm = str(matched_row_adm.get("role", "")).strip().lower()
+            if u_role_adm == "viewer":
               try:
                 ws_u = get_gspread_client().worksheet("users")
-                u_row_num = int(df_u[df_u["username"] == u_admin].index[0]) + 2
+                u_row_num = int(matched_idx_adm) + 2
                 now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
                 if "last_login" in df_u.columns:
                   idx_u = list(df_u.columns).index("last_login") + 1
@@ -2396,7 +2504,7 @@ if st.session_state.role is None:
                   ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
               except Exception:
                 pass
-              st.session_state.username = u_admin
+              st.session_state.username = str(matched_row_adm.get("username", u_admin)).strip()
               st.session_state.role = "viewer"
               st.rerun()
             else:
