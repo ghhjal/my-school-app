@@ -4850,17 +4850,22 @@ if st.session_state.role in ["teacher", "viewer"]:
               curr_yr_str = st.session_state.get("current_year", "1448هـ")
 
               # صندوق الإحصائية التحليلية الموحد داخل تقارير فرز المستويات
+              crit_badge_txt = f"معيار التفوق: {threshold} من {max_tot_lvl} فأعلى" if is_top_cat else f"حد التدني: أقل من {threshold} من {max_tot_lvl}"
               lvl_summary_box_html = f"""
               <div class="summary-box">
                   <div class="summary-head">
-                      <span>الإحصائية التحليلية للفصول: ({label_lvl_cls}) — {rep_per}</span>
-                      <span>إجمالي المرصودين: {tot_graded_lvl} طالب | المشمولون بالتقرير: {tot_target_grp} طالب ({target_grp_pct}%) | متوسط درجات الفئة: {target_grp_avg} / {max_tot_lvl}</span>
+                      <span class="summary-head-title">الإحصائية التحليلية للفصول</span>
+                      <div class="meta-cards-row">
+                          <div class="meta-pill-card"><span class="meta-lbl">الفصول:</span> <span class="meta-val">{label_lvl_cls}</span></div>
+                          <div class="meta-pill-card"><span class="meta-lbl">إجمالي الطلاب:</span> <span class="meta-val">{tot_target_grp} طالب</span></div>
+                          <div class="meta-pill-card highlight"><span class="meta-val">{crit_badge_txt}</span></div>
+                      </div>
                   </div>
                   <div class="stats-container">
                       <div class="stat-card {'kinesthetic' if is_top_cat else 'auditory'}">
                           <div class="stat-title">{'نسبة التفوق العام' if is_top_cat else 'نسبة الاحتياج العلاجي'}</div>
                           <div class="stat-value">{target_grp_pct}%</div>
-                          <div class="stat-sub">{tot_target_grp} من {tot_graded_lvl} طالب</div>
+                          <div class="stat-sub">{tot_target_grp} طالب</div>
                       </div>
                       <div class="stat-card visual">
                           <div class="stat-title">النمط البصري (ضمن الفئة)</div>
@@ -4883,7 +4888,14 @@ if st.session_state.role in ["teacher", "viewer"]:
 
               summary_box_css = """
                   .summary-box { border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 9px; margin-bottom: 10px; background-color: #f8fafc; page-break-inside: avoid; }
-                  .summary-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #0f172a; }
+                  .summary-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 7px; margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #0f172a; }
+                  .summary-head-title { font-size: 13px; font-weight: 900; color: #0f172a; white-space: nowrap; }
+                  .meta-cards-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+                  .meta-pill-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 3px 12px; font-size: 11.5px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                  .meta-pill-card .meta-lbl { color: #475569; font-weight: 700; }
+                  .meta-pill-card .meta-val { color: #0f172a; font-weight: 900; }
+                  .meta-pill-card.highlight { background: #eff6ff; border-color: #93c5fd; }
+                  .meta-pill-card.highlight .meta-val { color: #1d4ed8; }
                   .stats-container { display: flex; justify-content: space-between; gap: 8px; width: 100%; }
                   .stat-card { flex: 1; padding: 6px 5px; border-radius: 8px; text-align: center !important; border: 1.5px solid #cbd5e1; background-color: #ffffff; }
                   .stat-card.visual { border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }
@@ -4956,9 +4968,6 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                     <div class="title-banner">
                         <div class="main-title">خطة البرامج الإثرائية ورعاية الطلاب المتفوقين (وفق أنماط التعلم VAK)</div>
-                        <div style="font-size:11.5px; font-weight:700; color:#475569; margin-top:3px;">
-                            الفصول: ({label_lvl_cls}) | معيار التفوق: ({threshold} من {max_tot_lvl} فأعلى) | إجمالي المتفوقين: ({len(final_df)} طالب)
-                        </div>
                     </div>
                     {lvl_summary_box_html}
                     <div class="goals-box">
@@ -5107,9 +5116,6 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                     <div class="title-banner">
                         <div class="main-title">الخطة العلاجية التشخيصية للطلاب متدني التحصيل (قياس قبلي وبعدي)</div>
-                        <div style="font-size:11.5px; font-weight:700; color:#475569; margin-top:3px;">
-                            الفصول: ({label_lvl_cls}) | حد التدني: (أقل من {threshold} من {max_tot_lvl}) | العدد المستهدف: ({len(final_df)} طالب)
-                        </div>
                     </div>
                     {lvl_summary_box_html}
                     <div class="plan-pillars">
@@ -5731,12 +5737,19 @@ if st.session_state.role in ["teacher", "viewer"]:
                     * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
                     body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: {'0' if is_pdf else '10px'}; color: #0f172a; font-size: 13px; direction: rtl; }}
                     table.hdr-table {{ width: 100%; border: 2px solid #1e293b; border-radius: 8px; border-collapse: separate; padding: 8px 12px; margin-bottom: 10px; }}
-                    table.hdr-table td {{ border: none !important; text-align: center; font-weight: 700; font-size: 12.5px; line-height: 1.45; vertical-align: middle; width: 33.33%; }}
+                    table.hdr-table td {{ border: none !important; text-align: center; font-weight: 700; font-size: 12px; line-height: 1.45; vertical-align: middle; width: 33.33%; white-space: nowrap; }}
                     .title-container {{ text-align: center; margin-bottom: 12px; }}
-                    .main-title {{ font-size: 19px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 22px; border-radius: 20px; margin-bottom: 4px; }}
-                    .sub-title {{ font-size: 13px; color: #475569; font-weight: 700; }}
-                    .summary-box {{ border: 1px solid #cbd5e1; padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; background-color: #f8fafc; page-break-inside: avoid; }}
-                    .summary-head {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; font-size: 13.5px; font-weight: 800; color: #0f172a; }}
+                    .main-title {{ font-size: 18px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 22px; border-radius: 20px; margin-bottom: 4px; }}
+                    .sub-title {{ font-size: 12.5px; color: #475569; font-weight: 700; }}
+                    .summary-box {{ border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; background-color: #f8fafc; page-break-inside: avoid; }}
+                    .summary-head {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; font-weight: 800; color: #0f172a; }}
+                    .summary-head-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; white-space: nowrap; }}
+                    .meta-cards-row {{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }}
+                    .meta-pill-card {{ background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 3px 12px; font-size: 12px; font-weight: 800; color: #0f172a; white-space: nowrap; }}
+                    .meta-pill-card .meta-lbl {{ color: #475569; font-weight: 700; }}
+                    .meta-pill-card .meta-val {{ color: #0f172a; font-weight: 900; }}
+                    .meta-pill-card.highlight {{ background: #eff6ff; border-color: #93c5fd; }}
+                    .meta-pill-card.highlight .meta-val {{ color: #1d4ed8; }}
                     .stats-container {{ display: flex; justify-content: space-between; gap: 10px; width: 100%; }}
                     .stat-card {{ flex: 1; padding: 8px 6px; border-radius: 8px; text-align: center !important; border: 1.5px solid #cbd5e1; background-color: #ffffff; }}
                     .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }}
@@ -5759,7 +5772,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                         <tr>
                             <td style="text-align: right;">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</td>
                             <td>
-                                <div style="font-size:15.5px; font-weight:900; color:#1e293b;">إحصائية وتقرير أنماط تعلم الطلاب</div>
+                                <div style="font-size:15px; font-weight:900; color:#0f172a;">تقرير أنماط التعلم</div>
                                 <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
                             </td>
                             <td style="text-align: left;">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: أ. زياد المعمري</td>
@@ -5771,8 +5784,12 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                     <div class="summary-box">
                         <div class="summary-head">
-                            <span>📊 الإحصائية التحليلية للفصول: ({label_ls_cls})</span>
-                            <span>إجمالي الطلاب: {tot_scope_students} | المختبرون: {tot_scope_tested} | غير المختبرين: {tot_scope_untested} | الفلتر: ({clean_sel_style_txt})</span>
+                            <span class="summary-head-title">الإحصائية التحليلية للفصول</span>
+                            <div class="meta-cards-row">
+                                <div class="meta-pill-card"><span class="meta-lbl">الفصول:</span> <span class="meta-val">{label_ls_cls}</span></div>
+                                <div class="meta-pill-card"><span class="meta-lbl">إجمالي الطلاب:</span> <span class="meta-val">{len(df_filtered)} طالب</span></div>
+                                <div class="meta-pill-card highlight"><span class="meta-val">{clean_sel_style_txt}</span></div>
+                            </div>
                         </div>
                         <div class="stats-container">
                             <div class="stat-card visual">
