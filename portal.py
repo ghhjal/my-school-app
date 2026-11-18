@@ -3,8 +3,10 @@ import hashlib
 import io
 import json
 import math
-import os
 import re
+import subprocess
+import sys
+import time
 import urllib.parse
 from google.oauth2.service_account import Credentials
 import gspread
@@ -30,111 +32,17 @@ st.set_page_config(
 )
 
 
-# إخفاء فوري لشريط الأدوات وزر Stop منذ اللحظة الأولى قبل تحميل أي بيانات
-st.markdown(
-    """
-    <style>
-    header, header[data-testid="stHeader"], [data-testid="stHeader"],
-    [data-testid="stToolbar"], [data-testid="stToolbarActions"],
-    [data-testid="stStatusWidget"], [data-testid="stDecoration"],
-    .stDeployButton, [data-testid="stDeployButton"], [data-testid="stAppDeployButton"],
-    #MainMenu, [data-testid="MainMenu"], footer, [data-testid="stFooter"],
-    [class*="StatusWidget"], [class*="stToolbar"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        height: 0px !important;
-        width: 0px !important;
-        overflow: hidden !important;
-        pointer-events: none !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-@st.cache_resource(show_spinner=False)
-def patch_streamlit_index_meta():
-  """تعديل ملف index.html الأصلي داخل مكتبة Streamlit على السيرفر لإزالة اسم وأيقونة التاج الخاصة بـ Streamlit نهائياً من تبويب المتصفح ومعاينة الروابط."""
-  try:
-    index_path = os.path.join(os.path.dirname(st.__file__), "static", "index.html")
-    if os.path.exists(index_path):
-      with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-
-      favicon_uri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E40AF'/%3E%3Cpath d='M32 14L10 24L32 34L54 24L32 14Z' fill='%23FBBF24'/%3E%3Cpath d='M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z' fill='%23FFFFFF'/%3E%3Cpath d='M48 26V40' stroke='%23FBBF24' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"
-      custom_head_injection = (
-          "<title>بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية</title>\n"
-          f'<link rel="icon" type="image/svg+xml" href="{favicon_uri}" />\n'
-          f'<link rel="shortcut icon" href="{favicon_uri}" />\n'
-          '<meta name="title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
-          '<meta name="description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
-          '<meta property="og:type" content="website" />\n'
-          '<meta property="og:url" content="https://zi-edu.onrender.com/" />\n'
-          '<meta property="og:site_name" content="منصة زياد الذكية" />\n'
-          '<meta property="og:title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
-          '<meta property="og:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
-          '<meta name="twitter:card" content="summary" />\n'
-          '<meta name="twitter:title" content="بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية" />\n'
-          '<meta name="twitter:description" content="الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر — إشراف أ. زياد المعمري" />\n'
-          '<style id="ziyad-preload-chrome-hide">'
-          'header, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stStatusWidget"], '
-          '[data-testid="stDecoration"], #MainMenu, footer, [data-testid="stFooter"] '
-          '{ display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; pointer-events: none !important; }'
-          '</style>\n'
-          "<script>"
-          "document.title = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';"
-          "new MutationObserver(function() {"
-          "  if (document.title === 'Streamlit' || document.title.indexOf('Streamlit') !== -1) {"
-          "    document.title = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';"
-          "  }"
-          "}).observe(document.documentElement, { subtree: true, childList: true });"
-          "</script>"
-      )
-
-      new_html = html_content
-      # إزالة رابط أيقونة التاج الافتراضية لـ Streamlit من ملف index.html
-      new_html = re.sub(r"<link[^>]*rel=[^>]*icon[^>]*>", "", new_html, flags=re.IGNORECASE)
-
-      if "ziyad-preload-chrome-hide" not in new_html:
-        if re.search(r"<title>.*?</title>", new_html, flags=re.DOTALL):
-          new_html = re.sub(r"<title>.*?</title>", custom_head_injection, new_html, count=1, flags=re.DOTALL)
-        else:
-          new_html = new_html.replace("<head>", "<head>\n" + custom_head_injection, 1)
-
-        with open(index_path, "w", encoding="utf-8") as f:
-          f.write(new_html)
-  except Exception:
-    pass
-  return True
-
-
-patch_streamlit_index_meta()
-
-
 @st.cache_resource(ttl=3600, show_spinner=False)
 def get_gspread_client():
   try:
-    try:
-      if "gcp_service_account" in st.secrets:
-        creds_info = dict(st.secrets["gcp_service_account"])
-        sheet_id = st.secrets["SHEET_ID"]
-      else:
-        creds_info = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
-        sheet_id = os.environ["SHEET_ID"]
-    except Exception:
-      creds_info = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
-      sheet_id = os.environ["SHEET_ID"]
-
     creds = Credentials.from_service_account_info(
-        creds_info,
+        st.secrets["gcp_service_account"],
         scopes=[
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
         ],
     )
-    return gspread.authorize(creds).open_by_key(sheet_id)
+    return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
   except Exception as e:
     st.error(f"⚠️ خطأ اتصال بسيرفر جوجل: {e}")
     return None
@@ -158,64 +66,89 @@ def clean_phone_number(phone):
   return p
 
 
-@st.cache_data(ttl=1200, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def fetch_safe(worksheet_name):
-  try:
-    current_sh = get_gspread_client()
-    if not current_sh:
-      return pd.DataFrame()
-    ws = current_sh.worksheet(worksheet_name)
-    data = ws.get_all_values()
-    if not data:
-      return pd.DataFrame()
-    df = pd.DataFrame(data[1:], columns=data[0])
-    if not df.empty:
-      df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
-      df["clean_id"] = df.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-      if worksheet_name == "grades" and "period" in df.columns:
-        df["period"] = (
-            df["period"]
-            .astype(str)
-            .str.strip()
-            .replace({
-                "": "الفصل الأول - فترة أولى",
-                "nan": "الفصل الأول - فترة أولى",
-                "None": "الفصل الأول - فترة أولى",
-                "الفترة الأولى": "الفصل الأول - فترة أولى",
-                "الفترة الثانية": "الفصل الأول - فترة ثانية",
-            })
-        )
-    return df
-  except Exception:
-    st.cache_resource.clear()
-    st.toast("⚠️ تم تحديث الاتصال مع السيرفر، حاول مجدداً.", icon="🔄")
-    return pd.DataFrame()
+  for attempt in range(2):
+    try:
+      current_sh = get_gspread_client()
+      if not current_sh:
+        return pd.DataFrame()
+      ws = current_sh.worksheet(worksheet_name)
+      data = ws.get_all_values()
+      if not data:
+        return pd.DataFrame()
+      df = pd.DataFrame(data[1:], columns=data[0])
+      if not df.empty:
+        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+        if worksheet_name == "grades" and "period" in df.columns:
+          df["period"] = (
+              df["period"]
+              .astype(str)
+              .str.strip()
+              .replace({
+                  "": "الفصل الأول - فترة أولى",
+                  "nan": "الفصل الأول - فترة أولى",
+                  "None": "الفصل الأول - فترة أولى",
+                  "الفترة الأولى": "الفصل الأول - فترة أولى",
+                  "الفترة الثانية": "الفصل الأول - فترة ثانية",
+              })
+          )
+      return df
+    except Exception:
+      if attempt == 0:
+        time.sleep(0.8)
+      else:
+        st.cache_resource.clear()
+        st.toast("⚠️ تم تحديث الاتصال مع السيرفر، حاول مجدداً.", icon="🔄")
+  return pd.DataFrame()
 
 
 def safe_append_row(worksheet_name, data_dict):
+  for attempt in range(2):
+    try:
+      current_sh = get_gspread_client()
+      ws = current_sh.worksheet(worksheet_name)
+      headers = ws.row_values(1)
+      row = [data_dict.get(h, "") for h in headers]
+      ws.append_row(row)
+      return True
+    except Exception:
+      if attempt == 0:
+        time.sleep(0.8)
+      else:
+        st.cache_resource.clear()
+        st.error("⚠️ حدث انقطاع، تم التحديث. يرجى الضغط مرة أخرى.")
+  return False
+
+
+def update_single_setting_safe(key_name, key_val):
   try:
-    current_sh = get_gspread_client()
-    ws = current_sh.worksheet(worksheet_name)
-    headers = ws.row_values(1)
-    row = [data_dict.get(h, "") for h in headers]
-    ws.append_row(row)
+    ws_s = get_gspread_client().worksheet("settings")
+    all_vals = ws_s.get_all_values()
+    if all_vals:
+      for idx, r in enumerate(all_vals[1:], start=2):
+        if len(r) > 0 and str(r[0]).strip() == key_name:
+          ws_s.update_cell(idx, 2, key_val)
+          return True
+    ws_s.append_row([key_name, key_val])
     return True
   except Exception:
-    st.cache_resource.clear()
-    st.error("⚠️ حدث انقطاع، تم التحديث. يرجى الضغط مرة أخرى.")
     return False
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_cached_settings():
-  try:
-    current_sh = get_gspread_client()
-    if not current_sh:
-      return {}
-    sett = current_sh.worksheet("settings").get_all_records()
-    return {row["key"]: row["value"] for row in sett}
-  except Exception:
-    return {}
+  for attempt in range(2):
+    try:
+      current_sh = get_gspread_client()
+      if not current_sh:
+        return {}
+      sett = current_sh.worksheet("settings").get_all_records()
+      return {row["key"]: row["value"] for row in sett if "key" in row}
+    except Exception:
+      if attempt == 0:
+        time.sleep(0.6)
+  return {}
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -226,10 +159,26 @@ def build_excel_bytes(df_to_export, sheet_name="Sheet1", include_index=False):
   return b_io.getvalue()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_resource(show_spinner=False)
+def ensure_weasyprint_ready():
+  try:
+    import weasyprint  # noqa: F401
+    return True
+  except ImportError:
+    try:
+      subprocess.check_call([sys.executable, "-m", "pip", "install", "weasyprint", "-q"])
+      import weasyprint  # noqa: F401
+      return True
+    except Exception:
+      return False
+
+
+@st.cache_data(ttl=3600, max_entries=100, show_spinner=False)
 def generate_pdf_bytes_cached(html_str):
-  from weasyprint import HTML
-  return HTML(string=html_str).write_pdf()
+  if ensure_weasyprint_ready():
+    from weasyprint import HTML
+    return HTML(string=html_str).write_pdf()
+  return None
 
 
 # --- تحميل الإعدادات وخريطة المراحل في الجلسة منذ لحظة التشغيل ---
@@ -440,6 +389,12 @@ def show_footer():
 (function() {{
     try {{
         var pDoc = window.parent.document;
+        var topDoc = null;
+        try {{
+            if (window.top && window.top.document) {{
+                topDoc = window.top.document;
+            }}
+        }} catch (e) {{}}
 
         pDoc.documentElement.setAttribute('dir', 'rtl');
         pDoc.body.setAttribute('dir', 'rtl');
@@ -770,7 +725,22 @@ def show_footer():
             }}
         `;
 
-
+        if (topDoc && topDoc !== pDoc && topDoc.head) {{
+            var topStyleId = 'ziyad-top-cloud-chrome-hide';
+            var topStyle = topDoc.getElementById(topStyleId);
+            if (!topStyle) {{
+                topStyle = topDoc.createElement('style');
+                topStyle.id = topStyleId;
+                topDoc.head.appendChild(topStyle);
+            }}
+            topStyle.innerHTML = chromeHideRules + `
+                html, body {{
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background-color: #F8FAFC !important;
+                }}
+            `;
+        }}
 
         function hideElementCompletely(el) {{
             if (!el || !el.style) return;
@@ -835,30 +805,24 @@ def show_footer():
             if (isRunning) return;
             isRunning = true;
             try {{
-                var desiredTitle = 'بوابة إدارة ومتابعة الطلاب | منصة زياد الذكية';
-                if (pDoc.title !== desiredTitle) {{
-                    pDoc.title = desiredTitle;
-                }}
-                var favIconUri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E40AF'/%3E%3Cpath d='M32 14L10 24L32 34L54 24L32 14Z' fill='%23FBBF24'/%3E%3Cpath d='M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z' fill='%23FFFFFF'/%3E%3Cpath d='M48 26V40' stroke='%23FBBF24' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E";
-                var iconLinks = pDoc.querySelectorAll('link[rel*="icon"]');
-                if (iconLinks.length === 0) {{
-                    var newLink = pDoc.createElement('link');
-                    newLink.rel = 'icon';
-                    newLink.type = 'image/svg+xml';
-                    newLink.href = favIconUri;
-                    pDoc.head.appendChild(newLink);
-                }} else {{
-                    iconLinks.forEach(function(lnk) {{
-                        if (lnk.href && (lnk.href.indexOf('favicon.png') !== -1 || lnk.href.indexOf('streamlit') !== -1)) {{
-                            lnk.type = 'image/svg+xml';
-                            lnk.href = favIconUri;
-                        }}
-                    }});
-                }}
                 if (pDoc.head.lastElementChild !== existingStyle) {{
                     pDoc.head.appendChild(existingStyle);
                 }}
                 cleanDocumentChrome(pDoc);
+                if (topDoc && topDoc !== pDoc) {{
+                    cleanDocumentChrome(topDoc);
+                    var appFrame = window.parent.frameElement;
+                    if (appFrame && topDoc.body && topDoc.body.contains(appFrame)) {{
+                        topDoc.body.querySelectorAll('*').forEach(function(el) {{
+                            if (el !== appFrame && !el.contains(appFrame) && !appFrame.contains(el)) {{
+                                hideElementCompletely(el);
+                            }} else if (el.contains(appFrame)) {{
+                                el.style.setProperty('margin', '0px', 'important');
+                                el.style.setProperty('padding', '0px', 'important');
+                            }}
+                        }});
+                    }}
+                }}
 
                 var isMobileView = window.parent.innerWidth <= 768;
                 var tabLists = pDoc.querySelectorAll('[data-testid="stTabs"] [data-baseweb="tab-list"], [data-testid="stTabs"] [role="tablist"], .stTabs [data-baseweb="tab-list"], div[data-baseweb="tab-list"]');
@@ -1045,7 +1009,16 @@ def show_footer():
         obs.observe(pDoc.body, {{ childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden', 'aria-hidden'] }});
         window.parent.__ziyadPortalLightObserverObj = obs;
 
-
+        if (topDoc && topDoc !== pDoc && topDoc.body) {{
+            if (window.top.__ziyadTopCloudObserverObj) {{
+                try {{ window.top.__ziyadTopCloudObserverObj.disconnect(); }} catch (e) {{}}
+            }}
+            var topObs = new MutationObserver(function() {{
+                enforcePortalStyles();
+            }});
+            topObs.observe(topDoc.body, {{ childList: true, subtree: true }});
+            window.top.__ziyadTopCloudObserverObj = topObs;
+        }}
     }} catch (e) {{}}
 }})();
 </script>
@@ -1977,17 +1950,211 @@ opacity: 1 !important;
 display: none !important;
 }}
 
-/* ✳️ 7. البطاقات الإحصائية وبطاقات السلوك */
-.metric-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; direction: rtl; width: 100%; box-sizing: border-box; }}
-.metric-card {{ background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05); box-sizing: border-box; }}
-.metric-info {{ text-align: right; }}
-.metric-title {{ color: #475569; font-size: 12.5px; font-weight: 800; margin-bottom: 2px; }}
-.metric-val {{ color: #0F172A; font-size: 21px; font-weight: 900; line-height: 1.1; }}
-.metric-sub {{ color: #64748B; font-size: 11.5px; font-weight: 700; margin-top: 2px; }}
-.metric-icon {{ width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 17px; flex-shrink: 0; }}
-.ic-green {{ background-color: rgba(16, 185, 129, 0.15); color: {success_color}; border: 1px solid rgba(16, 185, 129, 0.3); }}
-.ic-blue {{ background-color: rgba(59, 130, 246, 0.15); color: {accent_color}; border: 1px solid rgba(59, 130, 246, 0.3); }}
-.ic-red {{ background-color: rgba(245, 158, 11, 0.15); color: {warning_color}; border: 1px solid rgba(245, 158, 11, 0.3); }}
+/* ✳️ 7. البطاقات الإحصائية الاحترافية ولوحة توزيع أنماط التعلم (VAK) */
+.metric-container, .dashboard-stats-container {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 10px 0 16px 0;
+    direction: rtl !important;
+    width: 100%;
+    box-sizing: border-box;
+}}
+.metric-card, .dash-card {{
+    padding: 16px 14px;
+    border-radius: 14px;
+    text-align: center !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 8px 24px rgba(20, 27, 62, 0.05);
+    border: 1px solid #E2E8F0;
+    border-top: 4px solid {primary_color};
+    transition: transform 0.2s ease;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}}
+.metric-card:hover, .dash-card:hover {{ transform: translateY(-2px); }}
+.dash-card.total {{ border-top-color: {primary_color}; }}
+.dash-card.completed {{ border-top-color: #10B981; }}
+.dash-card.pending {{ border-top-color: #F59E0B; }}
+.dash-title, .metric-title {{
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
+    font-weight: 800;
+    text-align: center !important;
+}}
+.dash-value, .metric-val {{
+    font-size: 26px;
+    font-weight: 900;
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+    line-height: 1.15;
+    text-align: center !important;
+}}
+.metric-sub {{
+    color: #64748B !important;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-top: 4px;
+    text-align: center !important;
+}}
+
+/* لوحة توزيع أنماط التعلم الاحترافية (VAK) */
+.vak-summary-grid {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 14px 0 18px 0;
+    direction: rtl !important;
+}}
+.vak-stat-box {{
+    border-radius: 16px;
+    padding: 16px 14px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}}
+.vak-stat-box:hover {{ transform: translateY(-3px); }}
+.vak-stat-box.visual {{
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%);
+    border: 1.5px solid #bfdbfe;
+    border-right: 5px solid #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
+}}
+.vak-stat-box.kinesthetic {{
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%);
+    border: 1.5px solid #a7f3d0;
+    border-right: 5px solid #059669;
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.08);
+}}
+.vak-stat-box.auditory {{
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
+    border: 1.5px solid #fde68a;
+    border-right: 5px solid #d97706;
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.08);
+}}
+.vak-box-top {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    direction: rtl !important;
+}}
+.vak-box-label {{
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.vak-stat-box.visual .vak-box-label {{ color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; }}
+.vak-stat-box.kinesthetic .vak-box-label {{ color: #047857 !important; -webkit-text-fill-color: #047857 !important; }}
+.vak-stat-box.auditory .vak-box-label {{ color: #b45309 !important; -webkit-text-fill-color: #b45309 !important; }}
+.vak-pct-pill {{
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}}
+.vak-stat-box.visual .vak-pct-pill {{ background: linear-gradient(135deg, #3b82f6, #1d4ed8); }}
+.vak-stat-box.kinesthetic .vak-pct-pill {{ background: linear-gradient(135deg, #10b981, #047857); }}
+.vak-stat-box.auditory .vak-pct-pill {{ background: linear-gradient(135deg, #f59e0b, #b45309); }}
+.vak-box-number {{
+    font-size: 28px;
+    font-weight: 900;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    line-height: 1.1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    direction: rtl !important;
+}}
+.vak-box-unit {{
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+}}
+.vak-mini-track {{
+    width: 100%;
+    height: 8px;
+    background-color: rgba(148, 163, 184, 0.2);
+    border-radius: 999px;
+    overflow: hidden;
+}}
+.vak-mini-fill {{
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}}
+.vak-stat-box.visual .vak-mini-fill {{ background: linear-gradient(90deg, #60a5fa, #2563eb); }}
+.vak-stat-box.kinesthetic .vak-mini-fill {{ background: linear-gradient(90deg, #34d399, #059669); }}
+.vak-stat-box.auditory .vak-mini-fill {{ background: linear-gradient(90deg, #fbbf24, #d97706); }}
+
+.custom-chart-container {{
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 210px;
+    padding: 28px 16px 14px 16px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid #E2E8F0;
+    border-bottom: 2px solid #CBD5E1;
+    border-radius: 16px;
+    margin: 8px 0 16px 0;
+    position: relative;
+    direction: rtl !important;
+}}
+.chart-bar-wrapper {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    width: 28%;
+    max-width: 125px;
+}}
+.chart-value-badge {{
+    font-weight: 800;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    direction: ltr !important;
+}}
+.chart-value-badge.v-badge {{ background-color: #eff6ff; color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; border: 1px solid #bfdbfe; }}
+.chart-value-badge.k-badge {{ background-color: #ecfdf5; color: #047857 !important; -webkit-text-fill-color: #047857 !important; border: 1px solid #a7f3d0; }}
+.chart-value-badge.a-badge {{ background-color: #fffbeb; color: #b45309 !important; -webkit-text-fill-color: #b45309 !important; border: 1px solid #fde68a; }}
+.chart-bar {{
+    width: 100%;
+    border-radius: 12px 12px 4px 4px;
+    transition: height 0.55s ease;
+    min-height: 10px;
+}}
+.chart-bar.v-bar {{ background: linear-gradient(180deg, #60a5fa 0%, #2563eb 65%, #1d4ed8 100%); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28); }}
+.chart-bar.k-bar {{ background: linear-gradient(180deg, #34d399 0%, #059669 65%, #047857 100%); box-shadow: 0 6px 16px rgba(5, 150, 105, 0.28); }}
+.chart-bar.a-bar {{ background: linear-gradient(180deg, #fbbf24 0%, #d97706 65%, #b45309 100%); box-shadow: 0 6px 16px rgba(217, 119, 6, 0.28); }}
+.chart-label {{
+    margin-top: 10px;
+    font-weight: 800;
+    font-size: 14px;
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+    text-align: center !important;
+    white-space: nowrap;
+}}
 
 .app-card {{ background: #FFFFFF; padding: 20px; border-radius: 16px; box-shadow: {shadow_val}; border: 1.5px solid #CBD5E1; margin-bottom: 15px; box-sizing: border-box; color: #0F172A; }}
 .mobile-list-item {{ background: #FFFFFF; border-radius: 14px; padding: 15px 16px; margin-bottom: 12px; border: 1.5px solid #CBD5E1; box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; color: #0F172A; direction: rtl; text-align: right; box-sizing: border-box; }}
@@ -2072,8 +2239,13 @@ div[data-testid="stColumn"]:has(.btn-del-marker) div.stButton > button *, div[da
 .unified-main-title {{ font-size: 20px !important; }}
 .unified-brand-pill {{ font-size: 12.5px !important; padding: 3px 12px !important; }}
 .unified-sub-desc {{ font-size: 11.5px !important; }}
-.metric-container {{ grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }}
-.metric-container > .metric-card:last-child:nth-child(odd) {{ grid-column: span 2 !important; }}
+.metric-container, .dashboard-stats-container {{ grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }}
+.dash-card, .metric-card {{ padding: 10px 6px !important; border-radius: 10px !important; }}
+.dash-title, .metric-title {{ font-size: 11px !important; }}
+.dash-value, .metric-val {{ font-size: 20px !important; }}
+.vak-summary-grid {{ grid-template-columns: 1fr !important; gap: 10px !important; }}
+.vak-stat-box {{ padding: 12px 14px !important; }}
+.vak-box-number {{ font-size: 22px !important; }}
 [data-testid="stTabs"] [data-baseweb="tab-list"],
 [data-testid="stTabs"] [role="tablist"],
 .stTabs [data-baseweb="tab-list"],
@@ -2175,15 +2347,17 @@ if st.session_state.role is None:
             if ud.get("role", "teacher") in ["teacher", ""]:
               try:
                 ws_u = get_gspread_client().worksheet("users")
-                c_u = ws_u.find(u)
-                if c_u:
+                u_row_num = int(df[df["username"] == u].index[0]) + 2
+                now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
+                if "last_login" in df.columns:
+                  idx_u = list(df.columns).index("last_login") + 1
+                  ws_u.update_cell(u_row_num, idx_u, now_str)
+                else:
                   headers_u = ws_u.row_values(1)
                   if "last_login" not in headers_u:
                     ws_u.update_cell(1, len(headers_u) + 1, "last_login")
                     headers_u.append("last_login")
-                  idx_u = headers_u.index("last_login") + 1
-                  now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
-                  ws_u.update_cell(c_u.row, idx_u, now_str)
+                  ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
               except Exception:
                 pass
               st.session_state.username = u
@@ -2209,15 +2383,17 @@ if st.session_state.role is None:
             if ud.get("role", "") == "viewer":
               try:
                 ws_u = get_gspread_client().worksheet("users")
-                c_u = ws_u.find(u_admin)
-                if c_u:
+                u_row_num = int(df_u[df_u["username"] == u_admin].index[0]) + 2
+                now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
+                if "last_login" in df_u.columns:
+                  idx_u = list(df_u.columns).index("last_login") + 1
+                  ws_u.update_cell(u_row_num, idx_u, now_str)
+                else:
                   headers_u = ws_u.row_values(1)
                   if "last_login" not in headers_u:
                     ws_u.update_cell(1, len(headers_u) + 1, "last_login")
                     headers_u.append("last_login")
-                  idx_u = headers_u.index("last_login") + 1
-                  now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
-                  ws_u.update_cell(c_u.row, idx_u, now_str)
+                  ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
               except Exception:
                 pass
               st.session_state.username = u_admin
@@ -2239,14 +2415,9 @@ if st.session_state.role is None:
 if "db_loaded" not in st.session_state:
   with st.spinner("⏳ جاري الاتصال بالمنصة وتحديث البيانات المركزية..."):
     try:
-      if st.session_state.role in ["teacher", "viewer"]:
-        st.session_state.df_students = fetch_safe("students")
-        st.session_state.df_grades = fetch_safe("grades")
-        st.session_state.df_behavior = fetch_safe("behavior")
-      else:
-        fetch_safe("students")
-        fetch_safe("grades")
-        fetch_safe("behavior")
+      st.session_state.df_students = fetch_safe("students")
+      st.session_state.df_grades = fetch_safe("grades")
+      st.session_state.df_behavior = fetch_safe("behavior")
       st.session_state.db_loaded = True
     except Exception as e:
       st.error(f"❌ حدث خطأ أثناء الاتصال: {e}")
@@ -2299,34 +2470,32 @@ if st.session_state.role in ["teacher", "viewer"]:
 
     total_students = len(df_st)
     total_classes = len(df_st["class"].dropna().unique()) if "class" in df_st.columns and not df_st.empty else 0
-    avg_points = round(df_st["النقاط"].mean(), 1) if "النقاط" in df_st.columns and not df_st.empty else 0
+    tested_vak_cnt = 0
+    if not df_st.empty and "نمط التعلم" in df_st.columns:
+      tested_vak_cnt = len(
+          df_st[
+              df_st["نمط التعلم"].notna()
+              & (~df_st["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+          ]
+      )
 
     st.markdown(
         f"""
-        <div class="metric-container">
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">العدد الإجمالي</div>
-                    <div class="metric-val">{total_students}</div>
-                    <div class="metric-sub">طالب مسجل</div>
-                </div>
-                <div class="metric-icon ic-green">👥</div>
+        <div class="dashboard-stats-container">
+            <div class="dash-card total">
+                <div class="dash-title">👥 إجمالي الطلاب</div>
+                <div class="dash-value">{total_students}</div>
+                <div class="metric-sub">طالب مسجل في المنصة</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">الفصول الدراسية</div>
-                    <div class="metric-val">{total_classes}</div>
-                    <div class="metric-sub">فصل نشط</div>
-                </div>
-                <div class="metric-icon ic-blue">🏫</div>
+            <div class="dash-card completed">
+                <div class="dash-title">🏫 الفصول الدراسية</div>
+                <div class="dash-value">{total_classes}</div>
+                <div class="metric-sub">فصل دراسي نشط</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="metric-title">متوسط النقاط</div>
-                    <div class="metric-val" dir="ltr">{avg_points}</div>
-                    <div class="metric-sub">نقطة تميز</div>
-                </div>
-                <div class="metric-icon ic-red">📈</div>
+            <div class="dash-card pending">
+                <div class="dash-title">🧠 المختبرون في الأنماط</div>
+                <div class="dash-value">{tested_vak_cnt}</div>
+                <div class="metric-sub">من أصل {total_students} طالب</div>
             </div>
         </div>
         """,
@@ -2520,10 +2689,13 @@ if st.session_state.role in ["teacher", "viewer"]:
                 new_vals.append(str(val))
 
             if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
-              row_index = int(selected_idx) + 2
               try:
+                ws_st_edit = get_gspread_client().worksheet("students")
+                orig_sid = str(raw_df_st.loc[selected_idx, "id"]).strip().split(".")[0]
+                cell_st = ws_st_edit.find(orig_sid, in_column=1)
+                row_index = cell_st.row if cell_st else (int(selected_idx) + 2)
                 end_col_a1 = rowcol_to_a1(row_index, len(new_vals))
-                get_gspread_client().worksheet("students").update(range_name=f"A{row_index}:{end_col_a1}", values=[new_vals])
+                ws_st_edit.update(range_name=f"A{row_index}:{end_col_a1}", values=[new_vals])
                 st.session_state.toast_msg = f"🔄 تم تحديث بيانات '{new_vals[1] if len(new_vals) > 1 else ''}' بنجاح!"
                 if "db_loaded" in st.session_state:
                   del st.session_state["db_loaded"]
@@ -2548,14 +2720,21 @@ if st.session_state.role in ["teacher", "viewer"]:
               key="del_select",
           )
           student_to_delete = df_st.loc[del_idx, "name"]
+          del_sid_val = str(df_st.loc[del_idx, "id"]).strip().split(".")[0]
           st.error(f"⚠️ تحذير: سيتم حذف بيانات ({student_to_delete}) نهائياً من قاعدة البيانات.")
           if st.button(f"🚨 نعم، تأكيد حذف {student_to_delete}", type="primary", use_container_width=True):
-            get_gspread_client().worksheet("students").delete_rows(int(del_idx) + 2)
-            st.session_state.toast_msg = f"🗑️ تم حذف '{student_to_delete}' بشكل نهائي!"
-            if "db_loaded" in st.session_state:
-              del st.session_state["db_loaded"]
-            fetch_safe.clear()
-            st.rerun()
+            try:
+              ws_st_del = get_gspread_client().worksheet("students")
+              cell_del = ws_st_del.find(del_sid_val, in_column=1)
+              target_del_row = cell_del.row if cell_del else (int(del_idx) + 2)
+              ws_st_del.delete_rows(target_del_row)
+              st.session_state.toast_msg = f"🗑️ تم حذف '{student_to_delete}' بشكل نهائي!"
+              if "db_loaded" in st.session_state:
+                del st.session_state["db_loaded"]
+              fetch_safe.clear()
+              st.rerun()
+            except Exception as e:
+              st.error(f"❌ حدث خطأ أثناء الحذف: {e}")
         else:
           st.info("لا توجد بيانات للطلاب بعد.")
       else:
@@ -2674,7 +2853,17 @@ if st.session_state.role in ["teacher", "viewer"]:
 
               def delete_behavior_opt2(global_idx, b_type):
                 try:
-                  get_gspread_client().worksheet("behavior").delete_rows(int(global_idx) + 2)
+                  ws_b_del = get_gspread_client().worksheet("behavior")
+                  target_b_row = int(global_idx) + 2
+                  row_vals_b = ws_b_del.row_values(target_b_row)
+                  if not row_vals_b or str(row_vals_b[0]).strip().split(".")[0] != sid:
+                    all_b_vals = ws_b_del.get_all_values()
+                    target_date = str(df_b.loc[global_idx, "date"]).strip() if global_idx in df_b.index else ""
+                    for r_idx_b, r_b in enumerate(all_b_vals[1:], start=2):
+                      if len(r_b) >= 3 and str(r_b[0]).strip().split(".")[0] == sid and str(r_b[1]).strip() == target_date and str(r_b[2]).strip() == str(b_type).strip():
+                        target_b_row = r_idx_b
+                        break
+                  ws_b_del.delete_rows(target_b_row)
                   match = re.search(r"\(([\+\-]?\d+)\)", str(b_type))
                   chg = int(match.group(1)) if match else 0
                   if chg != 0:
@@ -2784,7 +2973,7 @@ if st.session_state.role in ["teacher", "viewer"]:
 
                     lnk = get_professional_msg(s_nm, r.get("type"), r.get("note"), r.get("date"))
                     wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
-                    tg_url = f"https://t.me/share/url?url=https://zi-edu.onrender.com&text={lnk}"
+                    tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
 
                     st.markdown(
                         f"""
@@ -4430,7 +4619,7 @@ if st.session_state.role in ["teacher", "viewer"]:
     # ---------------------------------------------------------
     with rep_tabs[4]:
       st.markdown("#### 📈 منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور")
-      st.info("💡 منظومة تشخيصية ذكية تربط درجات الطالب (المشاركة والاختبارات) بنمط تعلمه (VAK) لتوليد: **خطة إثرائية للمتفوقين**، و**خطة علاجية تشخيصية (قبلي/بعدي)**، و**إشعارات أولياء الأمور (ورقية + واتساب)** كشواهد أداء رسمية جاهزة للطباعة.")
+      st.info("💡 منظومة تشخيصية ذكية تربط درجات الطالب (المشاركة والاختبارات) بنمط تعلمه (VAK) لعرض **إحصائية تحليلية تفاعلية للمستويات** وتوليد: **خطة إثرائية للمتفوقين**، و**خطة علاجية تشخيصية (قبلي/بعدي)**، و**إشعارات أولياء الأمور (ورقية + واتساب)** كشواهد أداء رسمية جاهزة للطباعة (PDF / HTML / Excel).")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -4485,183 +4674,434 @@ if st.session_state.role in ["teacher", "viewer"]:
         default_thresh = default_high if is_top_cat else default_low
         threshold = c5.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}_{max_tot_lvl}")
 
-        if st.button("🖨️ توليد التقرير والنماذج للفصول المحددة", type="primary", use_container_width=True):
-          target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(rep_cls_list, avail_lvl_cls)
-          if not target_lvl_cls:
-            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
+        target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(rep_cls_list, avail_lvl_cls)
+        if not target_lvl_cls:
+          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
+        else:
+          df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
+          df_st_copy = df_s_rep[df_s_rep["class"].isin(target_lvl_cls)].copy()
+          tot_cls_students = len(df_st_copy)
+
+          if not df_g_all.empty:
+            df_g_all["clean_id"] = df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
+            if "period" not in df_g_all.columns:
+              df_g_all["period"] = "الفصل الأول - فترة أولى"
+            df_g_all["period"] = df_g_all["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+            df_g_filtered = df_g_all[df_g_all["period"] == rep_per].drop_duplicates(subset=["clean_id"], keep="last")
+            df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on="clean_id", how="inner")
           else:
-            df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
-            if df_g_all.empty:
-              st.warning("⚠️ لا توجد درجات مرصودة في قاعدة البيانات بعد.")
+            df_merged_lvl = pd.DataFrame()
+
+          if not df_merged_lvl.empty:
+            df_merged_lvl["p1_num"] = pd.to_numeric(df_merged_lvl.get("p1", 0), errors="coerce").fillna(0).astype(int)
+            df_merged_lvl["p2_num"] = pd.to_numeric(df_merged_lvl.get("p2", 0), errors="coerce").fillna(0).astype(int)
+            df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl.get("perf", 0), errors="coerce").fillna(0).astype(int)
+          else:
+            df_merged_lvl["p1_num"] = pd.Series(dtype=int)
+            df_merged_lvl["p2_num"] = pd.Series(dtype=int)
+            df_merged_lvl["perf_num"] = pd.Series(dtype=int)
+
+          tot_graded_lvl = len(df_merged_lvl)
+          high_cut_val = int(threshold) if is_top_cat else int(default_high)
+          low_cut_val = int(default_low) if is_top_cat else int(threshold)
+          if high_cut_val < low_cut_val:
+            high_cut_val = low_cut_val
+
+          if tot_graded_lvl > 0:
+            df_top_all = df_merged_lvl[df_merged_lvl["perf_num"] >= high_cut_val]
+            df_low_all = df_merged_lvl[df_merged_lvl["perf_num"] < low_cut_val]
+            df_mid_all = df_merged_lvl[(df_merged_lvl["perf_num"] >= low_cut_val) & (df_merged_lvl["perf_num"] < high_cut_val)]
+            avg_score_scope = round(float(df_merged_lvl["perf_num"].mean()), 1)
+          else:
+            df_top_all = pd.DataFrame()
+            df_low_all = pd.DataFrame()
+            df_mid_all = pd.DataFrame()
+            avg_score_scope = 0.0
+
+          top_cnt_lvl = len(df_top_all)
+          mid_cnt_lvl = len(df_mid_all)
+          low_cnt_lvl = len(df_low_all)
+
+          top_pct_lvl = round((top_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+          mid_pct_lvl = round((mid_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+          low_pct_lvl = round((low_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+
+          max_lvl_bar = max(top_cnt_lvl, mid_cnt_lvl, low_cnt_lvl, 1)
+          h_top_bar = max(int((top_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+          h_mid_bar = max(int((mid_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+          h_low_bar = max(int((low_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+
+          if tot_graded_lvl > 0:
+            if is_top_cat:
+              final_df = df_merged_lvl[df_merged_lvl["perf_num"] >= threshold].sort_values(by=["class", "perf_num"], ascending=[True, False])
             else:
-              df_st_copy = df_s_rep[df_s_rep["class"].isin(target_lvl_cls)].copy()
-              df_g_all["clean_id"] = df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
-              if "period" not in df_g_all.columns:
-                df_g_all["period"] = "الفصل الأول - فترة أولى"
-              df_g_all["period"] = df_g_all["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+              final_df = df_merged_lvl[df_merged_lvl["perf_num"] < threshold].sort_values(by=["class", "perf_num"], ascending=[True, True])
+          else:
+            final_df = pd.DataFrame()
 
-              df_g_filtered = df_g_all[df_g_all["period"] == rep_per].drop_duplicates(subset=["clean_id"], keep="last")
-              df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on="clean_id", how="inner")
-              df_merged_lvl["p1_num"] = pd.to_numeric(df_merged_lvl.get("p1", 0), errors="coerce").fillna(0).astype(int)
-              df_merged_lvl["p2_num"] = pd.to_numeric(df_merged_lvl.get("p2", 0), errors="coerce").fillna(0).astype(int)
-              df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl.get("perf", 0), errors="coerce").fillna(0).astype(int)
+          # إحصائية أنماط التعلم (VAK) للفئة المستهدفة حالياً (المتفوقين أو متدني المستوى)
+          tot_target_grp = len(final_df)
+          target_grp_pct = round((tot_target_grp / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+          target_grp_avg = round(float(final_df["perf_num"].mean()), 1) if tot_target_grp > 0 else 0.0
 
-              if is_top_cat:
-                final_df = df_merged_lvl[df_merged_lvl["perf_num"] >= threshold].sort_values(by=["class", "perf_num"], ascending=[True, False])
-              else:
-                final_df = df_merged_lvl[df_merged_lvl["perf_num"] < threshold].sort_values(by=["class", "perf_num"], ascending=[True, True])
+          if tot_target_grp > 0 and "نمط التعلم" in final_df.columns:
+            tv_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+            tk_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+            ta_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+          else:
+            tv_cnt, tk_cnt, ta_cnt = 0, 0, 0
 
-              if final_df.empty:
-                st.success(f"✅ لا يوجد طلاب يطابقون المعيار المحدد في ({label_lvl_cls}).")
-              else:
-                def get_student_vak_label(row_obj):
-                  raw_v = str(row_obj.get("نمط التعلم", "")).strip()
-                  if not raw_v or raw_v.lower() in ["nan", "none"]:
-                    return "متنوع 🌟"
-                  return raw_v
+          tv_pct = round((tv_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+          tk_pct = round((tk_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+          ta_pct = round((ta_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
 
-                def get_enrichment_plan_for_student(vak_str):
-                  if "بصري" in vak_str:
-                    return (
-                        "تصميم خريطة مفاهيم / عرض مرئي للمفردات والقواعد",
-                        "بطاقات تحدي إثرائية مصورة (Super Goal Challenge)",
-                        "تنمية مهارات التلخيص البصري والكتابة الإبداعية",
-                    )
-                  if "سمعي" in vak_str:
-                    return (
-                        "قيادة الحوار الصفي وتقديم فقرة إذاعية باللغة الإنجليزية",
-                        "تدريبات استماع ونطق متقدمة (Speaking & Fluency)",
-                        "تعزيز الطلاقة اللغوية والثقة في التحدث أمام الزملاء",
-                    )
-                  if "حركي" in vak_str:
-                    return (
-                        "قيادة مجموعات التعلم التعاوني (دور المعلم الصغير)",
-                        "تنفيذ مشروع تطبيقي ومسابقات تفاعلية صفية",
-                        "تنمية مهارات القيادة والتعلم بالمارسة والتطبيق",
-                    )
+          # --- 1) عرض البطاقات الإحصائية ولوحة فرز المستويات التفاعلية على الشاشة ---
+          st.markdown(
+              f"""
+              <div class="dashboard-stats-container">
+                  <div class="dash-card total"><div class="dash-title">👥 المرصودون ({rep_per})</div><div class="dash-value">{tot_graded_lvl} <span style="font-size:15px; font-weight:700; color:#64748B;">/ {tot_cls_students}</span></div></div>
+                  <div class="dash-card completed"><div class="dash-title">🌟 المتفوقون ({high_cut_val}+ درجة)</div><div class="dash-value">{top_cnt_lvl} <span style="font-size:15px; font-weight:800; color:#059669;">({top_pct_lvl}%)</span></div></div>
+                  <div class="dash-card pending"><div class="dash-title">📉 بحاجة لدعم (أقل من {low_cut_val})</div><div class="dash-value">{low_cnt_lvl} <span style="font-size:15px; font-weight:800; color:#D97706;">({low_pct_lvl}%)</span></div></div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
+
+          with st.container(border=True):
+            st.markdown(
+                f"""
+                <div style="text-align: center; margin-bottom: 6px;">
+                    <div style="font-size: 19px; font-weight: 900; color: #0F172A; margin-bottom: 4px;">📊 إحصائية توزيع المستويات التحصيلية — ({label_lvl_cls})</div>
+                    <span style="display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 14px; font-size: 12.5px; font-weight: 800;">
+                        📅 {rep_per} | متوسط الدرجات العام: {avg_score_scope} من {max_tot_lvl}
+                    </span>
+                    <p style="font-size: 13px; color: #64748B; font-weight: 700; margin: 6px 0 0 0;">تحليل مقارن لتوزيع الطلاب بين فئات (التفوق / المستوى المتوسط / الاحتياج للدعم العلاجي) مع ربطها بأنماط التعلم (VAK)</p>
+                </div>
+                <div class="vak-summary-grid">
+                    <div class="vak-stat-box kinesthetic">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">🌟 المتفوقون ({high_cut_val}+)</span>
+                            <span class="vak-pct-pill">{top_pct_lvl}%</span>
+                        </div>
+                        <div class="vak-box-number">{top_cnt_lvl} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {top_pct_lvl}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box visual">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">👍 المستوى المتوسط ({low_cut_val} - {max(high_cut_val - 1, low_cut_val)})</span>
+                            <span class="vak-pct-pill">{mid_pct_lvl}%</span>
+                        </div>
+                        <div class="vak-box-number">{mid_cnt_lvl} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {mid_pct_lvl}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box auditory">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">📉 بحاجة لدعم (أقل من {low_cut_val})</span>
+                            <span class="vak-pct-pill">{low_pct_lvl}%</span>
+                        </div>
+                        <div class="vak-box-number">{low_cnt_lvl} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {low_pct_lvl}%;"></div></div>
+                    </div>
+                </div>
+                <div class="custom-chart-container">
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge k-badge">({top_pct_lvl}%) {top_cnt_lvl}</div>
+                        <div class="chart-bar k-bar" style="height: {h_top_bar}%;"></div>
+                        <div class="chart-label">المتفوقون 🌟</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge v-badge">({mid_pct_lvl}%) {mid_cnt_lvl}</div>
+                        <div class="chart-bar v-bar" style="height: {h_mid_bar}%;"></div>
+                        <div class="chart-label">المتوسطون 👍</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge a-badge">({low_pct_lvl}%) {low_cnt_lvl}</div>
+                        <div class="chart-bar a-bar" style="height: {h_low_bar}%;"></div>
+                        <div class="chart-label">بحاجة لدعم 📉</div>
+                    </div>
+                </div>
+                <div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
+                    <div style="font-size: 13px; font-weight: 900; color: #0F172A;">
+                        🧠 توزيع أنماط التعلم (VAK) للفئة المستهدفة ({rep_type} — {tot_target_grp} طالب | متوسطهم: {target_grp_avg}/{max_tot_lvl}):
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <span style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 800;">👁️ بصري: {tv_cnt} ({tv_pct}%)</span>
+                        <span style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 800;">🏃‍♂️ حركي: {tk_cnt} ({tk_pct}%)</span>
+                        <span style="background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 800;">👂 سمعي: {ta_cnt} ({ta_pct}%)</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if len(target_lvl_cls) > 1 and tot_graded_lvl > 0:
+              with st.expander("📋 تفصيل إحصائية المستويات التحصيلية لكل فصل ضمن النطاق المحدد"):
+                lvl_cls_rows = []
+                for c_nm in target_lvl_cls:
+                  sub_st = df_st_copy[df_st_copy["class"] == c_nm]
+                  sub_gr = df_merged_lvl[df_merged_lvl["class"] == c_nm]
+                  g_cnt = len(sub_gr)
+                  tc = len(sub_gr[sub_gr["perf_num"] >= high_cut_val]) if g_cnt > 0 else 0
+                  mc = len(sub_gr[(sub_gr["perf_num"] >= low_cut_val) & (sub_gr["perf_num"] < high_cut_val)]) if g_cnt > 0 else 0
+                  lc = len(sub_gr[sub_gr["perf_num"] < low_cut_val]) if g_cnt > 0 else 0
+                  avg_c = round(float(sub_gr["perf_num"].mean()), 1) if g_cnt > 0 else 0.0
+                  lvl_cls_rows.append({
+                      "الفصل": c_nm,
+                      "إجمالي الطلاب": len(sub_st),
+                      "المرصودون": g_cnt,
+                      "متوسط الدرجات": f"{avg_c} / {max_tot_lvl}" if g_cnt > 0 else "-",
+                      "🌟 المتفوقون": f"{tc} ({round(tc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                      "👍 المتوسطون": f"{mc} ({round(mc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                      "📉 بحاجة لدعم": f"{lc} ({round(lc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                  })
+                st.dataframe(pd.DataFrame(lvl_cls_rows), use_container_width=True, hide_index=True)
+
+          # --- 2) زر توليد التقارير والنماذج الرسمية متضمنةً الإحصائية ---
+          if st.button("🖨️ توليد التقرير والنماذج مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
+            if tot_graded_lvl == 0:
+              st.warning("⚠️ لا توجد درجات مرصودة لهذه الفترة في قاعدة البيانات بعد.")
+            elif final_df.empty:
+              st.success(f"✅ لا يوجد طلاب يطابقون المعيار المحدد في ({label_lvl_cls}).")
+            else:
+              def get_student_vak_label(row_obj):
+                raw_v = str(row_obj.get("نمط التعلم", "")).strip()
+                if not raw_v or raw_v.lower() in ["nan", "none"]:
+                  return "متنوع 🌟"
+                return raw_v
+
+              def get_enrichment_plan_for_student(vak_str):
+                if "بصري" in vak_str:
                   return (
-                      "تكليف بمهام قيادية (المعلم الصغير) + أنشطة تفكير عليا",
-                      "أوراق عمل إثرائية متقدمة ومسابقات تحدي الأبطال",
-                      "استدامة التفوق وتحفيز الدافعية الذاتية والإبداع",
+                      "تصميم خريطة مفاهيم / عرض مرئي للمفردات والقواعد",
+                      "بطاقات تحدي إثرائية مصورة (Super Goal Challenge)",
+                      "تنمية مهارات التلخيص البصري والكتابة الإبداعية",
                   )
+                if "سمعي" in vak_str:
+                  return (
+                      "قيادة الحوار الصفي وتقديم فقرة إذاعية باللغة الإنجليزية",
+                      "تدريبات استماع ونطق متقدمة (Speaking & Fluency)",
+                      "تعزيز الطلاقة اللغوية والثقة في التحدث أمام الزملاء",
+                  )
+                if "حركي" in vak_str:
+                  return (
+                      "قيادة مجموعات التعلم التعاوني (دور المعلم الصغير)",
+                      "تنفيذ مشروع تطبيقي ومسابقات تفاعلية صفية",
+                      "تنمية مهارات القيادة والتعلم بالممارسة والتطبيق",
+                  )
+                return (
+                    "تكليف بمهام قيادية (المعلم الصغير) + أنشطة تفكير عليا",
+                    "أوراق عمل إثرائية متقدمة ومسابقات تحدي الأبطال",
+                    "استدامة التفوق وتحفيز الدافعية الذاتية والإبداع",
+                )
 
-                def get_remedial_diagnosis_and_plan(p1_v, p2_v, vak_str):
-                  p1_ratio = (p1_v / max_t_lvl) if max_t_lvl > 0 else 1.0
-                  p2_ratio = (p2_v / max_q_lvl) if max_q_lvl > 0 else 1.0
-                  if p1_ratio < 0.60 and p2_ratio < 0.60:
-                    diag = "ضعف في إتقان المهارات الأساسية + قصور في استكمال المهام والواجبات"
-                  elif p1_ratio < p2_ratio:
-                    diag = "قصور في أداء المهام الأدائية والواجبات والمشاركة الصفية"
-                  else:
-                    diag = "ضعف في مهارات الورقة الامتحانية (المفردات والقواعد والقراءة)"
+              def get_remedial_diagnosis_and_plan(p1_v, p2_v, vak_str):
+                p1_ratio = (p1_v / max_t_lvl) if max_t_lvl > 0 else 1.0
+                p2_ratio = (p2_v / max_q_lvl) if max_q_lvl > 0 else 1.0
+                if p1_ratio < 0.60 and p2_ratio < 0.60:
+                  diag = "ضعف في إتقان المهارات الأساسية + قصور في استكمال المهام والواجبات"
+                elif p1_ratio < p2_ratio:
+                  diag = "قصور في أداء المهام الأدائية والواجبات والمشاركة الصفية"
+                else:
+                  diag = "ضعف في مهارات الورقة الامتحانية (المفردات والقواعد والقراءة)"
 
-                  if "بصري" in vak_str:
-                    strategy = "ملخصات بصرية ملونة + بطاقات مفردات مصورة (Flashcards) + أوراق عمل علاجية"
-                  elif "سمعي" in vak_str:
-                    strategy = "شرح صوتي مباشر + تكرار النطق السمعي + متابعة فردية داخل الحصة"
-                  elif "حركي" in vak_str:
-                    strategy = "تعلم بالأقران (قرين متفوق) + تدريبات تطبيقية مجزأة قصيرة"
-                  else:
-                    strategy = "أوراق عمل علاجية مركزة + تعلم بالأقران + إعادة تقييم المهارات"
+                if "بصري" in vak_str:
+                  strategy = "ملخصات بصرية ملونة + بطاقات مفردات مصورة (Flashcards) + أوراق عمل علاجية"
+                elif "سمعي" in vak_str:
+                  strategy = "شرح صوتي مباشر + تكرار النطق السمعي + متابعة فردية داخل الحصة"
+                elif "حركي" in vak_str:
+                  strategy = "تعلم بالأقران (قرين متفوق) + تدريبات تطبيقية مجزأة قصيرة"
+                else:
+                  strategy = "أوراق عمل علاجية مركزة + تعلم بالأقران + إعادة تقييم المهارات"
 
-                  return diag, strategy
+                return diag, strategy
 
-                issue_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
-                curr_yr_str = st.session_state.get("current_year", "1448هـ")
+              issue_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+              curr_yr_str = st.session_state.get("current_year", "1448هـ")
 
-                # ---------------------------------------------------------
-                # أ) تقرير الخطة الإثرائية للمتفوقين
-                # ---------------------------------------------------------
-                if is_top_cat and "الإثرائية" in sub_rep_mode:
-                  rows_enrich_html = ""
-                  excel_enrich_rows = []
-                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                    vak_lbl = get_student_vak_label(row)
-                    prog_name, resource_name, impact_name = get_enrichment_plan_for_student(vak_lbl)
-                    pct_s = round((row["perf_num"] / max_tot_lvl) * 100, 1) if max_tot_lvl > 0 else 100
-                    rows_enrich_html += f"""
-                    <tr>
-                        <td>{i}</td>
-                        <td style="text-align:right; font-weight:800;">{row['name']}</td>
-                        <td>{row.get('class', '')}</td>
-                        <td style="font-weight:900; color:#059669;">{row['perf_num']} / {max_tot_lvl} ({pct_s}%)</td>
-                        <td style="font-weight:700; color:#1E40AF;">{vak_lbl}</td>
-                        <td style="text-align:right; font-weight:700;">{prog_name}</td>
-                        <td style="text-align:right; font-size:11px; color:#334155;">{resource_name}</td>
-                        <td style="font-size:11px; color:#059669; font-weight:700;">{impact_name}</td>
-                    </tr>
-                    """
-                    excel_enrich_rows.append({
-                        "م": i,
-                        "اسم الطالب": row["name"],
-                        "الصف": row.get("class", ""),
-                        "الدرجة": f"{row['perf_num']} / {max_tot_lvl}",
-                        "النسبة": f"{pct_s}%",
-                        "نمط التعلم": vak_lbl,
-                        "البرنامج الإثرائي المخصص": prog_name,
-                        "الأدوات والأنشطة الإثرائية": resource_name,
-                        "الأثر المتوقع": impact_name,
-                    })
-
-                  enrich_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة الإثرائية للمتفوقين</title>
-                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-                  <style>
-                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                      .header-box {{ border: 2px solid #065f46; background: #f0fdf4; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
-                      .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #064e3b; }}
-                      .title-banner {{ text-align: center; margin-bottom: 12px; }}
-                      .main-title {{ font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #065f46, #10b981); color: white; display: inline-block; padding: 5px 26px; border-radius: 99px; margin-bottom: 4px; }}
-                      .goals-box {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; }}
-                      table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11.5px; }}
-                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 6px; }}
-                      th {{ background-color: #065f46; color: #ffffff; font-weight: 800; }}
-                      tr:nth-child(even) {{ background-color: #f8fafc; }}
-                      .footer-sigs {{ margin-top: 28px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; }}
-                      @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-                  </style></head><body>
-                      <div class="header-box">
-                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                          <div class="header-text">
-                              <div style="font-size:15px; font-weight:900; color:#065f46;">شواهد الأداء الوظيفي — معيار تحسين نتائج المتعلمين</div>
-                              <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
-                          </div>
-                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
+              # صندوق الإحصائية التحليلية الموحد داخل تقارير فرز المستويات
+              crit_badge_txt = f"معيار التفوق: {threshold} من {max_tot_lvl} فأعلى" if is_top_cat else f"حد التدني: أقل من {threshold} من {max_tot_lvl}"
+              lvl_summary_box_html = f"""
+              <div class="summary-box">
+                  <div class="summary-head">
+                      <span class="summary-head-title">الإحصائية التحليلية للفصول</span>
+                      <div class="meta-cards-row">
+                          <div class="meta-pill-card"><span class="meta-lbl">الفصول:</span> <span class="meta-val">{label_lvl_cls}</span></div>
+                          <div class="meta-pill-card"><span class="meta-lbl">إجمالي الطلاب:</span> <span class="meta-val">{tot_target_grp} طالب</span></div>
+                          <div class="meta-pill-card highlight"><span class="meta-val">{crit_badge_txt}</span></div>
                       </div>
-                      <div class="title-banner">
-                          <div class="main-title">🌟 خطة البرامج الإثرائية ورعاية الطلاب المتفوقين (وفق أنماط التعلم VAK)</div>
-                          <div style="font-size:12px; font-weight:700; color:#475569; margin-top:3px;">
-                              الفصول: ({label_lvl_cls}) | معيار التفوق: ({threshold} من {max_tot_lvl} فأعلى) | إجمالي المتفوقين: ({len(final_df)} طالب)
-                          </div>
+                  </div>
+                  <div class="stats-container">
+                      <div class="stat-card {'kinesthetic' if is_top_cat else 'auditory'}">
+                          <div class="stat-title">{'نسبة التفوق العام' if is_top_cat else 'نسبة الاحتياج العلاجي'}</div>
+                          <div class="stat-value">{target_grp_pct}%</div>
+                          <div class="stat-sub">{tot_target_grp} طالب</div>
                       </div>
-                      <div class="goals-box">
-                          <div><b>🎯 الهدف العام:</b> استدامة تفوق الطلاب المتميزين وتنمية مهارات التفكير العليا والقيادة اللغوية.</div>
-                          <div><b>🧠 آلية التخصيص:</b> مواءمة النشاط الإثرائي مع نمط تعلم كل طالب (بصري / سمعي / حركي).</div>
-                          <div><b>🏆 نظام التحفيز:</b> لوحة الشرف الإلكترونية + شهادات التفوق + وسام المعلم الصغير.</div>
+                      <div class="stat-card visual">
+                          <div class="stat-title">النمط البصري (ضمن الفئة)</div>
+                          <div class="stat-value">{tv_pct}%</div>
+                          <div class="stat-sub">{tv_cnt} طالب</div>
                       </div>
-                      <table>
-                          <thead>
-                              <tr>
-                                  <th style="width:3%;">م</th>
-                                  <th style="width:20%; text-align:right;">اسم الطالب</th>
-                                  <th style="width:9%;">الصف</th>
-                                  <th style="width:11%;">الدرجة والنسبة</th>
-                                  <th style="width:9%;">نمط التعلم</th>
-                                  <th style="width:20%; text-align:right;">البرنامج الإثرائي المخصص</th>
-                                  <th style="width:15%; text-align:right;">الأدوات والمهام الإثرائية</th>
-                                  <th style="width:13%;">مؤشر الأثر</th>
-                              </tr>
-                          </thead>
-                          <tbody>{rows_enrich_html}</tbody>
-                      </table>
-                      <div class="footer-sigs">
-                          <div>الموجه الطلابي<br><br>.................................</div>
-                          <div>معلم المادة<br><br>أ. زياد المعمري</div>
-                          <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
+                      <div class="stat-card kinesthetic">
+                          <div class="stat-title">النمط الحركي (ضمن الفئة)</div>
+                          <div class="stat-value">{tk_pct}%</div>
+                          <div class="stat-sub">{tk_cnt} طالب</div>
                       </div>
-                      <script>window.onload = function() {{ window.print(); }}</script>
-                  </body></html>"""
+                      <div class="stat-card auditory">
+                          <div class="stat-title">النمط السمعي (ضمن الفئة)</div>
+                          <div class="stat-value">{ta_pct}%</div>
+                          <div class="stat-sub">{ta_cnt} طالب</div>
+                      </div>
+                  </div>
+              </div>
+              """
 
-                  st.success(f"✅ تم إعداد تقرير الخطة الإثرائية لعدد ({len(final_df)}) طالباً متفوقاً مخصصاً وفق أنماط تعلمهم.")
+              summary_box_css = """
+                  .summary-box { border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 9px; margin-bottom: 10px; background-color: #f8fafc; page-break-inside: avoid; }
+                  .summary-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 7px; margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #0f172a; }
+                  .summary-head-title { font-size: 13px; font-weight: 900; color: #0f172a; white-space: nowrap; }
+                  .meta-cards-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+                  .meta-pill-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 3px 12px; font-size: 11.5px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                  .meta-pill-card .meta-lbl { color: #475569; font-weight: 700; }
+                  .meta-pill-card .meta-val { color: #0f172a; font-weight: 900; }
+                  .meta-pill-card.highlight { background: #eff6ff; border-color: #93c5fd; }
+                  .meta-pill-card.highlight .meta-val { color: #1d4ed8; }
+                  .stats-container { display: flex; justify-content: space-between; gap: 8px; width: 100%; }
+                  .stat-card { flex: 1; padding: 6px 5px; border-radius: 8px; text-align: center !important; border: 1.5px solid #cbd5e1; background-color: #ffffff; }
+                  .stat-card.visual { border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }
+                  .stat-card.kinesthetic { border-color: #059669; color: #047857; background-color: #ecfdf5; }
+                  .stat-card.auditory { border-color: #d97706; color: #b45309; background-color: #fffbeb; }
+                  .stat-title { font-size: 11.5px; margin-bottom: 2px; font-weight: 800; text-align: center !important; }
+                  .stat-value { font-size: 15px; font-weight: 900; text-align: center !important; line-height: 1.2; }
+                  .stat-sub { font-size: 10.5px; font-weight: 700; opacity: 0.9; text-align: center !important; }
+              """
+
+              # ---------------------------------------------------------
+              # أ) تقرير الخطة الإثرائية للمتفوقين
+              # ---------------------------------------------------------
+              if is_top_cat and "الإثرائية" in sub_rep_mode:
+                rows_enrich_html = ""
+                excel_enrich_rows = []
+                for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                  vak_lbl = get_student_vak_label(row)
+                  prog_name, resource_name, impact_name = get_enrichment_plan_for_student(vak_lbl)
+                  pct_s = round((row["perf_num"] / max_tot_lvl) * 100, 1) if max_tot_lvl > 0 else 100
+                  rows_enrich_html += f"""
+                  <tr>
+                      <td>{i}</td>
+                      <td style="text-align:right; font-weight:800;">{row['name']}</td>
+                      <td>{row.get('class', '')}</td>
+                      <td style="font-weight:900; color:#059669;">{row['perf_num']} / {max_tot_lvl} ({pct_s}%)</td>
+                      <td style="font-weight:700; color:#1E40AF;">{vak_lbl}</td>
+                      <td style="text-align:right; font-weight:700;">{prog_name}</td>
+                      <td style="text-align:right; font-size:11px; color:#334155;">{resource_name}</td>
+                      <td style="font-size:11px; color:#059669; font-weight:700;">{impact_name}</td>
+                  </tr>
+                  """
+                  excel_enrich_rows.append({
+                      "م": i,
+                      "اسم الطالب": row["name"],
+                      "الصف": row.get("class", ""),
+                      "الدرجة": f"{row['perf_num']} / {max_tot_lvl}",
+                      "النسبة": f"{pct_s}%",
+                      "نمط التعلم": vak_lbl,
+                      "البرنامج الإثرائي المخصص": prog_name,
+                      "الأدوات والأنشطة الإثرائية": resource_name,
+                      "الأثر المتوقع": impact_name,
+                  })
+
+                enrich_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة الإثرائية للمتفوقين</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 landscape; margin: 8mm; }}
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .header-box {{ border: 2px solid #065f46; background: #f0fdf4; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
+                    .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #064e3b; }}
+                    .title-banner {{ text-align: center; margin-bottom: 10px; }}
+                    .main-title {{ font-size: 17px; font-weight: 900; background: linear-gradient(135deg, #065f46, #10b981); color: white; display: inline-block; padding: 4px 24px; border-radius: 99px; margin-bottom: 4px; }}
+                    .goals-box {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 12px; font-size: 11px; }}
+                    {summary_box_css}
+                    table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11.5px; }}
+                    th, td {{ border: 1px solid #cbd5e1; padding: 5px 6px; }}
+                    th {{ background-color: #065f46; color: #ffffff; font-weight: 800; }}
+                    tr:nth-child(even) {{ background-color: #f8fafc; }}
+                    .footer-sigs {{ margin-top: 24px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; page-break-inside: avoid; }}
+                    @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                </style></head><body>
+                    <div class="header-box">
+                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                        <div class="header-text">
+                            <div style="font-size:15px; font-weight:900; color:#065f46;">شواهد الأداء الوظيفي — معيار تحسين نتائج المتعلمين</div>
+                            <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
+                        </div>
+                        <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
+                    </div>
+                    <div class="title-banner">
+                        <div class="main-title">خطة البرامج الإثرائية ورعاية الطلاب المتفوقين (وفق أنماط التعلم VAK)</div>
+                    </div>
+                    {lvl_summary_box_html}
+                    <div class="goals-box">
+                        <div><b>الهدف العام:</b> استدامة تفوق الطلاب المتميزين وتنمية مهارات التفكير العليا والقيادة اللغوية.</div>
+                        <div><b>آلية التخصيص:</b> مواءمة النشاط الإثرائي مع نمط تعلم كل طالب (بصري / سمعي / حركي).</div>
+                        <div><b>نظام التحفيز:</b> لوحة الشرف الإلكترونية + شهادات التفوق + وسام المعلم الصغير.</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:3%;">م</th>
+                                <th style="width:20%; text-align:right;">اسم الطالب</th>
+                                <th style="width:9%;">الصف</th>
+                                <th style="width:11%;">الدرجة والنسبة</th>
+                                <th style="width:9%;">نمط التعلم</th>
+                                <th style="width:20%; text-align:right;">البرنامج الإثرائي المخصص</th>
+                                <th style="width:15%; text-align:right;">الأدوات والمهام الإثرائية</th>
+                                <th style="width:13%;">مؤشر الأثر</th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows_enrich_html}</tbody>
+                    </table>
+                    <div class="footer-sigs">
+                        <div>الموجه الطلابي<br><br>.................................</div>
+                        <div>معلم المادة<br><br>أ. زياد المعمري</div>
+                        <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
+                    </div>
+                    <script>window.onload = function() {{ window.print(); }}</script>
+                </body></html>"""
+
+                st.success(f"✅ تم إعداد تقرير الخطة الإثرائية متضمناً الإحصائية لعدد ({len(final_df)}) طالباً متفوقاً مخصصاً وفق أنماط تعلمهم.")
+                enrich_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", enrich_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
+                pdf_bytes_enr = None
+                try:
+                  pdf_bytes_enr = generate_pdf_bytes_cached(enrich_pdf_clean)
+                except Exception:
+                  pdf_bytes_enr = None
+
+                if pdf_bytes_enr:
+                  dl_e1, dl_e2, dl_e3 = st.columns(3)
+                  dl_e1.download_button(
+                      label="📄 تحميل الخطة الإثرائية (PDF A4)",
+                      data=pdf_bytes_enr,
+                      file_name=f"Enrichment_Plan_{datetime.date.today()}.pdf",
+                      mime="application/pdf",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_e2.download_button(
+                      label="🖨️ تحميل للطباعة (HTML)",
+                      data=enrich_html,
+                      file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                  dl_e3.download_button(
+                      label="📥 تصدير (Excel)",
+                      data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
+                      file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                else:
                   dl_e1, dl_e2 = st.columns(2)
                   dl_e1.download_button(
                       label="🖨️ تحميل وطباعة تقرير الخطة الإثرائية (A4 جاهز للطباعة)",
@@ -4680,105 +5120,139 @@ if st.session_state.role in ["teacher", "viewer"]:
                       use_container_width=True,
                   )
 
-                # ---------------------------------------------------------
-                # ب) تقرير الخطة العلاجية التشخيصية المقترحة (لمتدني المستوى)
-                # ---------------------------------------------------------
-                elif (not is_top_cat) and "العلاجية" in sub_rep_mode:
-                  rows_rem_html = ""
-                  excel_rem_rows = []
-                  target_pass_score = max(threshold, int(round(max_tot_lvl * 0.65)))
-                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                    vak_lbl = get_student_vak_label(row)
-                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
-                    rows_rem_html += f"""
-                    <tr>
-                        <td>{i}</td>
-                        <td style="text-align:right; font-weight:800;">{row['name']}</td>
-                        <td>{row.get('class', '')}</td>
-                        <td>{row['p1_num']}/{max_t_lvl}</td>
-                        <td>{row['p2_num']}/{max_q_lvl}</td>
-                        <td style="font-weight:900; color:#dc2626; background:#fef2f2;">{row['perf_num']}/{max_tot_lvl}</td>
-                        <td style="font-weight:700; color:#1e40af;">{vak_lbl}</td>
-                        <td style="text-align:right; font-size:11px; font-weight:700; color:#991b1b;">{diag_txt}</td>
-                        <td style="text-align:right; font-size:11px; color:#1e293b;">{strat_txt}</td>
-                        <td style="color:#059669; font-weight:800;">{target_pass_score}+ / ____</td>
-                    </tr>
-                    """
-                    excel_rem_rows.append({
-                        "م": i,
-                        "اسم الطالب": row["name"],
-                        "الصف": row.get("class", ""),
-                        f"المشاركة ({max_t_lvl})": row["p1_num"],
-                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
-                        f"القياس القبلي ({max_tot_lvl})": row["perf_num"],
-                        "نمط التعلم": vak_lbl,
-                        "تشخيص مكمن الضعف": diag_txt,
-                        "الإجراء العلاجي المخصص": strat_txt,
-                        "المستهدف / القياس البعدي": f"{target_pass_score}+",
-                    })
+              # ---------------------------------------------------------
+              # ب) تقرير الخطة العلاجية التشخيصية المقترحة (لمتدني المستوى)
+              # ---------------------------------------------------------
+              elif (not is_top_cat) and "العلاجية" in sub_rep_mode:
+                rows_rem_html = ""
+                excel_rem_rows = []
+                target_pass_score = max(threshold, int(round(max_tot_lvl * 0.65)))
+                for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                  vak_lbl = get_student_vak_label(row)
+                  diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+                  rows_rem_html += f"""
+                  <tr>
+                      <td>{i}</td>
+                      <td style="text-align:right; font-weight:800;">{row['name']}</td>
+                      <td>{row.get('class', '')}</td>
+                      <td>{row['p1_num']}/{max_t_lvl}</td>
+                      <td>{row['p2_num']}/{max_q_lvl}</td>
+                      <td style="font-weight:900; color:#dc2626; background:#fef2f2;">{row['perf_num']}/{max_tot_lvl}</td>
+                      <td style="font-weight:700; color:#1e40af;">{vak_lbl}</td>
+                      <td style="text-align:right; font-size:11px; font-weight:700; color:#991b1b;">{diag_txt}</td>
+                      <td style="text-align:right; font-size:11px; color:#1e293b;">{strat_txt}</td>
+                      <td style="color:#059669; font-weight:800;">{target_pass_score}+ / ____</td>
+                  </tr>
+                  """
+                  excel_rem_rows.append({
+                      "م": i,
+                      "اسم الطالب": row["name"],
+                      "الصف": row.get("class", ""),
+                      f"المشاركة ({max_t_lvl})": row["p1_num"],
+                      f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                      f"القياس القبلي ({max_tot_lvl})": row["perf_num"],
+                      "نمط التعلم": vak_lbl,
+                      "تشخيص مكمن الضعف": diag_txt,
+                      "الإجراء العلاجي المخصص": strat_txt,
+                      "المستهدف / القياس البعدي": f"{target_pass_score}+",
+                  })
 
-                  remedial_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة العلاجية المقترحة</title>
-                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-                  <style>
-                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                      .header-box {{ border: 2px solid #991b1b; background: #fef2f2; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
-                      .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #7f1d1d; }}
-                      .title-banner {{ text-align: center; margin-bottom: 12px; }}
-                      .main-title {{ font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #991b1b, #dc2626); color: white; display: inline-block; padding: 5px 26px; border-radius: 99px; margin-bottom: 4px; }}
-                      .plan-pillars {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 11px; }}
-                      table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }}
-                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 5px; }}
-                      th {{ background-color: #991b1b; color: #ffffff; font-weight: 800; }}
-                      tr:nth-child(even) {{ background-color: #f8fafc; }}
-                      .footer-sigs {{ margin-top: 26px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; }}
-                      @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-                  </style></head><body>
-                      <div class="header-box">
-                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                          <div class="header-text">
-                              <div style="font-size:15px; font-weight:900; color:#991b1b;">شواهد الأداء الوظيفي — الخطة العلاجية ورفع التحصيل الدراسي</div>
-                              <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
-                          </div>
-                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
-                      </div>
-                      <div class="title-banner">
-                          <div class="main-title">🛠️ الخطة العلاجية التشخيصية للطلاب متدني التحصيل (قياس قبلي وبعدي)</div>
-                          <div style="font-size:12px; font-weight:700; color:#475569; margin-top:3px;">
-                              الفصول: ({label_lvl_cls}) | حد التدني: (أقل من {threshold} من {max_tot_lvl}) | العدد المستهدف: ({len(final_df)} طالب)
-                          </div>
-                      </div>
-                      <div class="plan-pillars">
-                          <div><b>1️⃣ التشخيص الدقيق:</b> تحليل درجتي المشاركة ({max_t_lvl}) والاختبارات ({max_q_lvl}) لتحديد سبب التعثر.</div>
-                          <div><b>2️⃣ التمايز (VAK):</b> توظيف نمط تعلم الطالب (بصري/سمعي/حركي) في تقديم الدعم العلاجي.</div>
-                          <div><b>3️⃣ الشراكة الأسرية:</b> إشعار ولي الأمر بخطة العمل وتزويد الطالب بأوراق عمل علاجية مركزة.</div>
-                          <div><b>4️⃣ قياس الأثر:</b> رصد الدرجة القبلية ومقارنتها بالقياس البعدي بعد تطبيق الخطة.</div>
-                      </div>
-                      <table>
-                          <thead>
-                              <tr>
-                                  <th style="width:3%;">م</th>
-                                  <th style="width:18%; text-align:right;">اسم الطالب</th>
-                                  <th style="width:7%;">الصف</th>
-                                  <th style="width:6%;">مشاركة</th>
-                                  <th style="width:6%;">اختبار</th>
-                                  <th style="width:8%;">القياس القبلي</th>
-                                  <th style="width:8%;">نمط التعلم</th>
-                                  <th style="width:18%; text-align:right;">تشخيص مكمن الضعف</th>
-                                  <th style="width:18%; text-align:right;">الإجراء العلاجي المخصص</th>
-                                  <th style="width:8%;">القياس البعدي</th>
-                              </tr>
-                          </thead>
-                          <tbody>{rows_rem_html}</tbody>
-                      </table>
-                      <div class="footer-sigs">
-                          <div>الموجه الطلابي<br><br>.................................</div>
-                          <div>معلم المادة<br><br>أ. زياد المعمري</div>
-                          <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
-                      </div>
-                      <script>window.onload = function() {{ window.print(); }}</script>
-                  </body></html>"""
+                remedial_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة العلاجية المقترحة</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 landscape; margin: 8mm; }}
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 12px; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .header-box {{ border: 2px solid #991b1b; background: #fef2f2; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
+                    .header-text {{ text-align: center; font-weight: 800; font-size: 12px; line-height: 1.45; color: #7f1d1d; }}
+                    .title-banner {{ text-align: center; margin-bottom: 10px; }}
+                    .main-title {{ font-size: 17px; font-weight: 900; background: linear-gradient(135deg, #991b1b, #dc2626); color: white; display: inline-block; padding: 4px 24px; border-radius: 99px; margin-bottom: 4px; }}
+                    .plan-pillars {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 10.5px; }}
+                    {summary_box_css}
+                    table {{ width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }}
+                    th, td {{ border: 1px solid #cbd5e1; padding: 5px 5px; }}
+                    th {{ background-color: #991b1b; color: #ffffff; font-weight: 800; }}
+                    tr:nth-child(even) {{ background-color: #f8fafc; }}
+                    .footer-sigs {{ margin-top: 24px; display: flex; justify-content: space-between; font-weight: 800; text-align: center; font-size: 12.5px; page-break-inside: avoid; }}
+                    @media print {{ @page {{ size: A4 landscape; margin: 8mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                </style></head><body>
+                    <div class="header-box">
+                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                        <div class="header-text">
+                            <div style="font-size:15px; font-weight:900; color:#991b1b;">شواهد الأداء الوظيفي — الخطة العلاجية ورفع التحصيل الدراسي</div>
+                            <div style="font-size:11px; color:#475569;">تاريخ الإصدار: {issue_date_str} | المادة: اللغة الإنجليزية</div>
+                        </div>
+                        <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>معلم المادة: أ. زياد المعمري</div>
+                    </div>
+                    <div class="title-banner">
+                        <div class="main-title">الخطة العلاجية التشخيصية للطلاب متدني التحصيل (قياس قبلي وبعدي)</div>
+                    </div>
+                    {lvl_summary_box_html}
+                    <div class="plan-pillars">
+                        <div><b>1. التشخيص الدقيق:</b> تحليل درجتي المشاركة ({max_t_lvl}) والاختبارات ({max_q_lvl}) لتحديد سبب التعثر.</div>
+                        <div><b>2. التمايز (VAK):</b> توظيف نمط تعلم الطالب (بصري/سمعي/حركي) في تقديم الدعم العلاجي.</div>
+                        <div><b>3. الشراكة الأسرية:</b> إشعار ولي الأمر بخطة العمل وتزويد الطالب بأوراق عمل علاجية مركزة.</div>
+                        <div><b>4. قياس الأثر:</b> رصد الدرجة القبلية ومقارنتها بالقياس البعدي بعد تطبيق الخطة.</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:3%;">م</th>
+                                <th style="width:18%; text-align:right;">اسم الطالب</th>
+                                <th style="width:7%;">الصف</th>
+                                <th style="width:6%;">مشاركة</th>
+                                <th style="width:6%;">اختبار</th>
+                                <th style="width:8%;">القياس القبلي</th>
+                                <th style="width:8%;">نمط التعلم</th>
+                                <th style="width:18%; text-align:right;">تشخيص مكمن الضعف</th>
+                                <th style="width:18%; text-align:right;">الإجراء العلاجي المخصص</th>
+                                <th style="width:8%;">القياس البعدي</th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows_rem_html}</tbody>
+                    </table>
+                    <div class="footer-sigs">
+                        <div>الموجه الطلابي<br><br>.................................</div>
+                        <div>معلم المادة<br><br>أ. زياد المعمري</div>
+                        <div>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</div>
+                    </div>
+                    <script>window.onload = function() {{ window.print(); }}</script>
+                </body></html>"""
 
-                  st.success(f"✅ تم توليد الخطة العلاجية التشخيصية لعدد ({len(final_df)}) طالباً مع تحديد مكمن الضعف والإجراء المقترح تلقائياً.")
+                st.success(f"✅ تم توليد الخطة العلاجية التشخيصية متضمنةً الإحصائية لعدد ({len(final_df)}) طالباً مع تحديد مكمن الضعف والإجراء المقترح تلقائياً.")
+                rem_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", remedial_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
+                pdf_bytes_rem = None
+                try:
+                  pdf_bytes_rem = generate_pdf_bytes_cached(rem_pdf_clean)
+                except Exception:
+                  pdf_bytes_rem = None
+
+                if pdf_bytes_rem:
+                  dl_r1, dl_r2, dl_r3 = st.columns(3)
+                  dl_r1.download_button(
+                      label="📄 تحميل الخطة العلاجية (PDF A4)",
+                      data=pdf_bytes_rem,
+                      file_name=f"Remedial_Plan_{datetime.date.today()}.pdf",
+                      mime="application/pdf",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_r2.download_button(
+                      label="🖨️ تحميل للطباعة (HTML)",
+                      data=remedial_html,
+                      file_name=f"Remedial_Plan_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                  dl_r3.download_button(
+                      label="📥 تصدير (Excel)",
+                      data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
+                      file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                else:
                   dl_r1, dl_r2 = st.columns(2)
                   dl_r1.download_button(
                       label="🖨️ تحميل وطباعة الخطة العلاجية التشخيصية (A4 جاهز للطباعة)",
@@ -4797,131 +5271,158 @@ if st.session_state.role in ["teacher", "viewer"]:
                       use_container_width=True,
                   )
 
-                # ---------------------------------------------------------
-                # ج) إشعارات أولياء الأمور الرسمية (ورقة A4 واحدة مضبوطة لكل طالب بنسختين + إرسال واتساب)
-                # ---------------------------------------------------------
-                elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
-                  notices_cards_html = ""
-                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                    s_name = row["name"]
-                    s_cls_item = row.get("class", "")
-                    sch_item = get_school_name_dynamic(s_cls_item)
-                    vak_lbl = get_student_vak_label(row)
-                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+              # ---------------------------------------------------------
+              # ج) إشعارات أولياء الأمور الرسمية (ورقة A4 واحدة مضبوطة لكل طالب بنسختين + إرسال واتساب)
+              # ---------------------------------------------------------
+              elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
+                notices_cards_html = ""
+                for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                  s_name = row["name"]
+                  s_cls_item = row.get("class", "")
+                  sch_item = get_school_name_dynamic(s_cls_item)
+                  vak_lbl = get_student_vak_label(row)
+                  diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
 
-                    notices_cards_html += f"""
-                    <div class="notice-page">
-                        <div class="nc-header">
-                            <div class="nc-hdr-side">المملكة العربية السعودية<br>وزارة التعليم<br>{sch_item}</div>
-                            <div style="text-align:center;">
-                                <div class="nc-badge">إشعار متابعة مستوى دراسي وخطة دعم علاجية</div>
-                                <div style="font-size:11.5px; color:#475569; margin-top:4px; font-weight:800;">سري وخاص بولي أمر الطالب — المادة: اللغة الإنجليزية</div>
-                            </div>
-                            <div class="nc-hdr-side">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>التاريخ: {issue_date_str}</div>
-                        </div>
+                  notices_cards_html += f"""
+                  <div class="notice-page">
+                      <div class="nc-header">
+                          <div class="nc-hdr-side">المملكة العربية السعودية<br>وزارة التعليم<br>{sch_item}</div>
+                          <div style="text-align:center;">
+                              <div class="nc-badge">إشعار متابعة مستوى دراسي وخطة دعم علاجية</div>
+                              <div style="font-size:11.5px; color:#475569; margin-top:4px; font-weight:800;">سري وخاص بولي أمر الطالب — المادة: اللغة الإنجليزية</div>
+                          </div>
+                          <div class="nc-hdr-side">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>التاريخ: {issue_date_str}</div>
+                      </div>
 
-                        <div class="student-banner">
-                            <div>👤 اسم الطالب: <span style="color:#991b1b;">{s_name}</span></div>
-                            <div>🏫 الصف: <span>{s_cls_item}</span></div>
-                            <div>🧠 نمط التعلم المفضل: <span style="color:#1e40af;">{vak_lbl}</span></div>
-                        </div>
+                      <div class="student-banner">
+                          <div>اسم الطالب: <span style="color:#991b1b;">{s_name}</span></div>
+                          <div>الصف: <span>{s_cls_item}</span></div>
+                          <div>نمط التعلم المفضل: <span style="color:#1e40af;">{vak_lbl}</span></div>
+                      </div>
 
-                        <p class="greeting-p">
-                            <b>المكرم ولي أمر الطالب / حفظه الله</b> &nbsp;—&nbsp; السلام عليكم ورحمة الله وبركاته،،،<br>
-                            انطلاقاً من حرص المدرسة على تعزيز الشراكة التربوية مع الأسرة ومتابعة التحصيل الدراسي لأبنائنا الطلاب، نود إشعاركم بمستوى أداء ابنكم في مادة <b>(اللغة الإنجليزية)</b> خلال <b>({rep_per})</b>، مع بيان التشخيص التربوي وخطة الدعم العلاجية المعتمدة له:
-                        </p>
+                      <p class="greeting-p">
+                          <b>المكرم ولي أمر الطالب / حفظه الله</b> &nbsp;—&nbsp; السلام عليكم ورحمة الله وبركاته،،،<br>
+                          انطلاقاً من حرص المدرسة على تعزيز الشراكة التربوية مع الأسرة ومتابعة التحصيل الدراسي لأبنائنا الطلاب، نود إشعاركم بمستوى أداء ابنكم في مادة <b>(اللغة الإنجليزية)</b> خلال <b>({rep_per})</b>، مع بيان التشخيص التربوي وخطة الدعم العلاجية المعتمدة له:
+                      </p>
 
-                        <div class="section-lbl">📊 أولاً: بيان الدرجات والتقييم الحالي</div>
-                        <table class="nc-table">
-                            <thead>
-                                <tr>
-                                    <th>المشاركة والمهام الأدائية والواجبات (من {max_t_lvl})</th>
-                                    <th>الاختبارات القصيرة والتقويم (من {max_q_lvl})</th>
-                                    <th>المجموع الكلي الحالي (من {max_tot_lvl})</th>
-                                    <th>المستوى الحالي</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><b>{row['p1_num']}</b> من {max_t_lvl}</td>
-                                    <td><b>{row['p2_num']}</b> من {max_q_lvl}</td>
-                                    <td style="color:#dc2626; font-weight:900; font-size:15px; background:#fef2f2;"><b>{row['perf_num']}</b> من {max_tot_lvl}</td>
-                                    <td style="color:#dc2626; font-weight:800;">يحتاج إلى دعم ومتابعة علاجية</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                      <div class="section-lbl">أولاً: بيان الدرجات والتقييم الحالي</div>
+                      <table class="nc-table">
+                          <thead>
+                              <tr>
+                                  <th>المشاركة والمهام الأدائية والواجبات (من {max_t_lvl})</th>
+                                  <th>الاختبارات القصيرة والتقويم (من {max_q_lvl})</th>
+                                  <th>المجموع الكلي الحالي (من {max_tot_lvl})</th>
+                                  <th>المستوى الحالي</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td><b>{row['p1_num']}</b> من {max_t_lvl}</td>
+                                  <td><b>{row['p2_num']}</b> من {max_q_lvl}</td>
+                                  <td style="color:#dc2626; font-weight:900; font-size:15px; background:#fef2f2;"><b>{row['perf_num']}</b> من {max_tot_lvl}</td>
+                                  <td style="color:#dc2626; font-weight:800;">يحتاج إلى دعم ومتابعة علاجية</td>
+                              </tr>
+                          </tbody>
+                      </table>
 
-                        <div class="section-lbl">🛠️ ثانياً: التشخيص التربوي وخطة المعالجة المشتركة</div>
-                        <div class="nc-diag">
-                            <div class="diag-row"><b>🔍 تشخيص مكمن الاحتياج:</b> {diag_txt}.</div>
-                            <div class="diag-row"><b>🏫 الإجراءات العلاجية المتخذة بالمدرسة:</b> {strat_txt}، مع المتابعة الفردية المستمرة داخل الفصل وإعادة تقييم المهارات.</div>
-                            <div class="diag-row"><b>🏠 دور الأسرة المأمول في المنزل:</b>
-                                <ul style="margin:3px 0 0 0; padding-right:18px;">
-                                    <li>متابعة إنجاز الطالب لأوراق العمل العلاجية والواجبات المنزلية في وقتها المحدد.</li>
-                                    <li>تخصيص (15 دقيقة) يومياً لمراجعة المفردات والقواعد الأساسية للدرس.</li>
-                                    <li>تحفيز الطالب وتشجيعه على المشاركة الصفية وإحضار كتاب المادة وأدواته كاملة.</li>
-                                </ul>
-                            </div>
-                        </div>
+                      <div class="section-lbl">ثانياً: التشخيص التربوي وخطة المعالجة المشتركة</div>
+                      <div class="nc-diag">
+                          <div class="diag-row"><b>تشخيص مكمن الاحتياج:</b> {diag_txt}.</div>
+                          <div class="diag-row"><b>الإجراءات العلاجية المتخذة بالمدرسة:</b> {strat_txt}، مع المتابعة الفردية المستمرة داخل الفصل وإعادة تقييم المهارات.</div>
+                          <div class="diag-row"><b>دور الأسرة المأمول في المنزل:</b>
+                              <ul style="margin:3px 0 0 0; padding-right:18px;">
+                                  <li>متابعة إنجاز الطالب لأوراق العمل العلاجية والواجبات المنزلية في وقتها المحدد.</li>
+                                  <li>تخصيص (15 دقيقة) يومياً لمراجعة المفردات والقواعد الأساسية للدرس.</li>
+                                  <li>تحفيز الطالب وتشجيعه على المشاركة الصفية وإحضار كتاب المادة وأدواته كاملة.</li>
+                              </ul>
+                          </div>
+                      </div>
 
-                        <div class="nc-footer">
-                            <div>معلم المادة<br><span class="sig-space"></span><b>أ. زياد المعمري</b></div>
-                            <div>الموجه الطلابي<br><span class="sig-space"></span>.....................................</div>
-                            <div>مدير المدرسة<br><span class="sig-space"></span><b>أ. عبدالمجيد الحربي</b></div>
-                        </div>
+                      <div class="nc-footer">
+                          <div>معلم المادة<br><span class="sig-space"></span><b>أ. زياد المعمري</b></div>
+                          <div>الموجه الطلابي<br><span class="sig-space"></span>.....................................</div>
+                          <div>مدير المدرسة<br><span class="sig-space"></span><b>أ. عبدالمجيد الحربي</b></div>
+                      </div>
 
-                        <div class="ack-separator"></div>
+                      <div class="ack-separator"></div>
 
-                        <div class="nc-ack">
-                            <div class="ack-title">✍️ ثالثاً: إقرار اطلاع ومتابعة ولي الأمر <span style="font-size:11.5px; font-weight:700; color:#475569;">(نسخة لولي الأمر ونسخة تُحفظ في ملف المتابعة بالمدرسة)</span></div>
-                            <p class="ack-text">
-                                أقر أنا ولي أمر الطالب / <b>{s_name}</b> بالصف (<b>{s_cls_item}</b>) باطلاعي على إشعار متابعة المستوى الدراسي والخطة العلاجية المعتمدة لابني في مادة اللغة الإنجليزية، وأؤكد التعاون مع المدرسة في متابعته منزلياً.
-                            </p>
-                            <div class="ack-notes">📝 <b>ملاحظات ولي الأمر (اختياري):</b> .............................................................................................................................................</div>
-                            <div class="ack-sigs">
-                                <div>الاسم: .........................................</div>
-                                <div>التوقيع: .......................................</div>
-                                <div>رقم الجوال: ...................................</div>
-                                <div>التاريخ: &nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp; / 144هـ</div>
-                            </div>
-                        </div>
-                    </div>
-                    """
+                      <div class="nc-ack">
+                          <div class="ack-title">ثالثاً: إقرار اطلاع ومتابعة ولي الأمر <span style="font-size:11.5px; font-weight:700; color:#475569;">(نسخة لولي الأمر ونسخة تُحفظ في ملف المتابعة بالمدرسة)</span></div>
+                          <p class="ack-text">
+                              أقر أنا ولي أمر الطالب / <b>{s_name}</b> بالصف (<b>{s_cls_item}</b>) باطلاعي على إشعار متابعة المستوى الدراسي والخطة العلاجية المعتمدة لابني في مادة اللغة الإنجليزية، وأؤكد التعاون مع المدرسة في متابعته منزلياً.
+                          </p>
+                          <div class="ack-notes"><b>ملاحظات ولي الأمر (اختياري):</b> .............................................................................................................................................</div>
+                          <div class="ack-sigs">
+                              <div>الاسم: .........................................</div>
+                              <div>التوقيع: .......................................</div>
+                              <div>رقم الجوال: ...................................</div>
+                              <div>التاريخ: &nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp; / 144هـ</div>
+                          </div>
+                      </div>
+                  </div>
+                  """
 
-                  parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية - A4</title>
-                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-                  <style>
-                      * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-                      html, body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 0; color: #0f172a; }}
-                      .notice-page {{ width: 100%; min-height: 246mm; border: 2px solid #1e293b; border-radius: 12px; padding: 14px 20px; margin: 0 auto 8mm auto; page-break-after: always; page-break-inside: avoid; break-inside: avoid; background: #ffffff; display: flex; flex-direction: column; }}
-                      .notice-page:last-of-type {{ page-break-after: auto; margin-bottom: 0; }}
-                      .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 12px; }}
-                      .nc-hdr-side {{ font-size: 12px; font-weight: 800; line-height: 1.45; text-align: center; color: #1e293b; }}
-                      .nc-badge {{ background: #991b1b; color: white; padding: 5px 22px; border-radius: 99px; font-size: 15px; font-weight: 900; display: inline-block; }}
-                      .student-banner {{ display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 9px 16px; font-size: 13.5px; font-weight: 900; margin-bottom: 10px; }}
-                      .greeting-p {{ font-size: 13px; line-height: 1.65; color: #1e293b; margin: 0 0 10px 0; text-align: justify; }}
-                      .section-lbl {{ font-size: 13.5px; font-weight: 900; color: #991b1b; margin: 10px 0 6px 0; border-right: 4px solid #991b1b; padding-right: 8px; }}
-                      .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 4px 0 12px 0; font-size: 13px; }}
-                      .nc-table th, .nc-table td {{ border: 1.5px solid #cbd5e1; padding: 7px 6px; }}
-                      .nc-table th {{ background: #f1f5f9; color: #0f172a; font-weight: 900; font-size: 12.5px; }}
-                      .nc-diag {{ background: #fef2f2; border: 1.5px solid #fecaca; border-right: 5px solid #dc2626; border-radius: 9px; padding: 11px 16px; font-size: 12.5px; line-height: 1.65; }}
-                      .diag-row {{ margin-bottom: 6px; }}
-                      .diag-row:last-child {{ margin-bottom: 0; }}
-                      .nc-footer {{ display: flex; justify-content: space-between; text-align: center; font-size: 13px; font-weight: 800; padding: 12px 20px 6px 20px; border-top: 1px solid #e2e8f0; margin-top: 12px; }}
-                      .sig-space {{ display: block; height: 18px; }}
-                      .ack-separator {{ margin-top: auto; padding-top: 22px; border-bottom: 2px dashed #94a3b8; margin-bottom: 16px; }}
-                      .nc-ack {{ border: 2px solid #64748b; border-right: 6px solid #1e293b; background: #f8fafc; padding: 14px 18px; border-radius: 10px; }}
-                      .ack-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 8px; }}
-                      .ack-text {{ margin: 6px 0 10px 0; font-size: 12.5px; line-height: 1.7; color: #1e293b; }}
-                      .ack-notes {{ font-size: 12px; margin: 10px 0 14px 0; color: #334155; }}
-                      .ack-sigs {{ display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #0f172a; padding-top: 6px; }}
-                      @media print {{ @page {{ size: A4 portrait; margin: 7mm; }} body {{ padding: 0; }} .notice-page {{ margin: 0; min-height: 246mm; }} }}
-                  </style></head><body>
-                      {notices_cards_html}
-                      <script>window.onload = function() {{ window.print(); }}</script>
-                  </body></html>"""
+                parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية - A4</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 portrait; margin: 7mm; }}
+                    * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                    html, body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 0; color: #0f172a; }}
+                    .notice-page {{ width: 100%; min-height: 246mm; border: 2px solid #1e293b; border-radius: 12px; padding: 14px 20px; margin: 0 auto 8mm auto; page-break-after: always; page-break-inside: avoid; break-inside: avoid; background: #ffffff; display: flex; flex-direction: column; }}
+                    .notice-page:last-of-type {{ page-break-after: auto; margin-bottom: 0; }}
+                    .nc-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 12px; }}
+                    .nc-hdr-side {{ font-size: 12px; font-weight: 800; line-height: 1.45; text-align: center; color: #1e293b; }}
+                    .nc-badge {{ background: #991b1b; color: white; padding: 5px 22px; border-radius: 99px; font-size: 15px; font-weight: 900; display: inline-block; }}
+                    .student-banner {{ display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 9px 16px; font-size: 13.5px; font-weight: 900; margin-bottom: 10px; }}
+                    .greeting-p {{ font-size: 13px; line-height: 1.65; color: #1e293b; margin: 0 0 10px 0; text-align: justify; }}
+                    .section-lbl {{ font-size: 13.5px; font-weight: 900; color: #991b1b; margin: 10px 0 6px 0; border-right: 4px solid #991b1b; padding-right: 8px; }}
+                    .nc-table {{ width: 100%; border-collapse: collapse; text-align: center; margin: 4px 0 12px 0; font-size: 13px; }}
+                    .nc-table th, .nc-table td {{ border: 1.5px solid #cbd5e1; padding: 7px 6px; }}
+                    .nc-table th {{ background: #f1f5f9; color: #0f172a; font-weight: 900; font-size: 12.5px; }}
+                    .nc-diag {{ background: #fef2f2; border: 1.5px solid #fecaca; border-right: 5px solid #dc2626; border-radius: 9px; padding: 11px 16px; font-size: 12.5px; line-height: 1.65; }}
+                    .diag-row {{ margin-bottom: 6px; }}
+                    .diag-row:last-child {{ margin-bottom: 0; }}
+                    .nc-footer {{ display: flex; justify-content: space-between; text-align: center; font-size: 13px; font-weight: 800; padding: 12px 20px 6px 20px; border-top: 1px solid #e2e8f0; margin-top: 12px; }}
+                    .sig-space {{ display: block; height: 18px; }}
+                    .ack-separator {{ margin-top: auto; padding-top: 22px; border-bottom: 2px dashed #94a3b8; margin-bottom: 16px; }}
+                    .nc-ack {{ border: 2px solid #64748b; border-right: 6px solid #1e293b; background: #f8fafc; padding: 14px 18px; border-radius: 10px; }}
+                    .ack-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 8px; }}
+                    .ack-text {{ margin: 6px 0 10px 0; font-size: 12.5px; line-height: 1.7; color: #1e293b; }}
+                    .ack-notes {{ font-size: 12px; margin: 10px 0 14px 0; color: #334155; }}
+                    .ack-sigs {{ display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #0f172a; padding-top: 6px; }}
+                    @media print {{ @page {{ size: A4 portrait; margin: 7mm; }} body {{ padding: 0; }} .notice-page {{ margin: 0; min-height: 246mm; }} }}
+                </style></head><body>
+                    {notices_cards_html}
+                    <script>window.onload = function() {{ window.print(); }}</script>
+                </body></html>"""
 
-                  st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي (في صفحة A4 واحدة مضبوطة لكل طالب، مع إقرار اطلاع ولي الأمر لحفظ نسخة في الملف وتسليم نسخة لولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
+                st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي (في صفحة A4 واحدة مضبوطة لكل طالب، مع إقرار اطلاع ولي الأمر لحفظ نسخة في الملف وتسليم نسخة لولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
+                notices_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", parent_notices_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
+                pdf_bytes_not = None
+                try:
+                  pdf_bytes_not = generate_pdf_bytes_cached(notices_pdf_clean)
+                except Exception:
+                  pdf_bytes_not = None
+
+                if pdf_bytes_not:
+                  dl_n1, dl_n2 = st.columns(2)
+                  dl_n1.download_button(
+                      label=f"📄 تحميل إشعارات أولياء الأمور ({len(final_df)} إشعار - PDF A4)",
+                      data=pdf_bytes_not,
+                      file_name=f"Parent_Notices_{datetime.date.today()}.pdf",
+                      mime="application/pdf",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_n2.download_button(
+                      label=f"🖨️ تحميل للطباعة المباشرة ({len(final_df)} إشعار - HTML)",
+                      data=parent_notices_html,
+                      file_name=f"Parent_Notices_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                else:
                   st.download_button(
                       label=f"🖨️ تحميل وطباعة إشعارات أولياء الأمور الرسمية ({len(final_df)} إشعار - جاهز للطباعة)",
                       data=parent_notices_html,
@@ -4931,107 +5432,145 @@ if st.session_state.role in ["teacher", "viewer"]:
                       use_container_width=True,
                   )
 
-                  with st.expander("📲 إرسال إشعار المستوى والخطة العلاجية لأولياء الأمور عبر واتساب فوراً", expanded=True):
-                    for _, s_row in final_df.iterrows():
-                      s_n = s_row.get("name", "")
-                      s_p = clean_phone_number(s_row.get("الجوال", ""))
-                      vak_w = get_student_vak_label(s_row)
-                      diag_w, strat_w = get_remedial_diagnosis_and_plan(s_row["p1_num"], s_row["p2_num"], vak_w)
-                      wa_notice_msg = urllib.parse.quote(
-                          f"🔔 *إشعار متابعة مستوى دراسي وخطة دعم علاجية*\n"
-                          f"المكرم ولي أمر الطالب: *{s_n}* ({s_row.get('class', '')})\n"
-                          f"السلام عليكم ورحمة الله وبركاته،\n"
-                          f"حرصاً منا على الارتقاء بالمستوى التحصيلي لابنكم في مادة اللغة الإنجليزية ({rep_per})، نفيدكم بدرجاته الحالية:\n"
-                          f"📝 المشاركة والمهام: {s_row['p1_num']} من {max_t_lvl}\n"
-                          f"✍️ الاختبارات القصيرة: {s_row['p2_num']} من {max_q_lvl}\n"
-                          f"📊 المجموع الحالي: {s_row['perf_num']} من {max_tot_lvl}\n\n"
-                          f"🔍 *التشخيص:* {diag_w}\n"
-                          f"🛠️ *خطة الدعم بالمدرسة:* {strat_w}\n"
-                          f"🏠 *نأمل منكم:* متابعة استكمال المهام وأوراق العمل العلاجية بالمنزل، شاكرين لكم تعاونكم الدائم.\n"
-                          f"معلم المادة: أ. زياد المعمري"
-                      )
-                      cw1, cw2 = st.columns([2.6, 1.2])
-                      cw1.markdown(f"<div style='padding-top:8px; font-weight:800;'>👤 {s_n} — ({s_row.get('class', '')}) | الدرجة: <span style='color:#dc2626;'>{s_row['perf_num']}/{max_tot_lvl}</span></div>", unsafe_allow_html=True)
-                      cw2.link_button("📲 إرسال الإشعار واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={wa_notice_msg}", use_container_width=True)
+                with st.expander("📲 إرسال إشعار المستوى والخطة العلاجية لأولياء الأمور عبر واتساب فوراً", expanded=True):
+                  for _, s_row in final_df.iterrows():
+                    s_n = s_row.get("name", "")
+                    s_p = clean_phone_number(s_row.get("الجوال", ""))
+                    vak_w = get_student_vak_label(s_row)
+                    diag_w, strat_w = get_remedial_diagnosis_and_plan(s_row["p1_num"], s_row["p2_num"], vak_w)
+                    wa_notice_msg = urllib.parse.quote(
+                        f"🔔 *إشعار متابعة مستوى دراسي وخطة دعم علاجية*\n"
+                        f"المكرم ولي أمر الطالب: *{s_n}* ({s_row.get('class', '')})\n"
+                        f"السلام عليكم ورحمة الله وبركاته،\n"
+                        f"حرصاً منا على الارتقاء بالمستوى التحصيلي لابنكم في مادة اللغة الإنجليزية ({rep_per})، نفيدكم بدرجاته الحالية:\n"
+                        f"📝 المشاركة والمهام: {s_row['p1_num']} من {max_t_lvl}\n"
+                        f"✍️ الاختبارات القصيرة: {s_row['p2_num']} من {max_q_lvl}\n"
+                        f"📊 المجموع الحالي: {s_row['perf_num']} من {max_tot_lvl}\n\n"
+                        f"🔍 *التشخيص:* {diag_w}\n"
+                        f"🛠️ *خطة الدعم بالمدرسة:* {strat_w}\n"
+                        f"🏠 *نأمل منكم:* متابعة استكمال المهام وأوراق العمل العلاجية بالمنزل، شاكرين لكم تعاونكم الدائم.\n"
+                        f"معلم المادة: أ. زياد المعمري"
+                    )
+                    cw1, cw2 = st.columns([2.6, 1.2])
+                    cw1.markdown(f"<div style='padding-top:8px; font-weight:800;'>👤 {s_n} — ({s_row.get('class', '')}) | الدرجة: <span style='color:#dc2626;'>{s_row['perf_num']}/{max_tot_lvl}</span></div>", unsafe_allow_html=True)
+                    cw2.link_button("📲 إرسال الإشعار واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={wa_notice_msg}", use_container_width=True)
 
-                # ---------------------------------------------------------
-                # د) كشف الحصر العام (للمتفوقين أو متدني المستوى)
-                # ---------------------------------------------------------
+              # ---------------------------------------------------------
+              # د) كشف الحصر العام (للمتفوقين أو متدني المستوى)
+              # ---------------------------------------------------------
+              else:
+                if is_top_cat:
+                  report_title = "حصر الطلاب المتفوقين"
+                  action_text = "تكريم في لوحة الشرف / إدراج في الخطة الإثرائية"
+                  color_theme = "#10B981"
                 else:
-                  if is_top_cat:
-                    report_title = "حصر الطلاب المتفوقين"
-                    action_text = "تكريم في لوحة الشرف / إدراج في الخطة الإثرائية"
-                    color_theme = "#10B981"
-                  else:
-                    report_title = "حصر الطلاب متدني المستوى"
-                    action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
-                    color_theme = "#EF4444"
+                  report_title = "حصر الطلاب متدني المستوى"
+                  action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
+                  color_theme = "#EF4444"
 
-                  rows_lvl = ""
-                  excel_lvl_rows = []
-                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                    rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td>{row['p1_num']}</td><td>{row['p2_num']}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
-                    excel_lvl_rows.append({
-                        "م": i,
-                        "اسم الطالب": row["name"],
-                        "الصف": row.get("class", ""),
-                        f"المشاركة ({max_t_lvl})": row["p1_num"],
-                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
-                        f"المجموع ({rep_per})": row["perf_num"],
-                        "الإجراء المقترح": action_text,
-                    })
+                rows_lvl = ""
+                excel_lvl_rows = []
+                for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                  vak_lbl = get_student_vak_label(row)
+                  rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:700; color:#1E40AF;'>{vak_lbl}</td><td>{row['p1_num']}</td><td>{row['p2_num']}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+                  excel_lvl_rows.append({
+                      "م": i,
+                      "اسم الطالب": row["name"],
+                      "الصف": row.get("class", ""),
+                      "نمط التعلم": vak_lbl,
+                      f"المشاركة ({max_t_lvl})": row["p1_num"],
+                      f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                      f"المجموع ({rep_per})": row["perf_num"],
+                      "الإجراء المقترح": action_text,
+                  })
 
-                  lvl_report_html = f"""
-                  <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
-                  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-                  <style>
-                      body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                      .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }}
-                      .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
-                      .title-container {{ text-align: center; margin-bottom: 15px; }}
-                      .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
-                      .sub-title {{ font-size: 13px; color: #475569; font-weight: bold; }}
-                      table {{ width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 12px; }}
-                      th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
-                      th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
-                      .footer-sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                      @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-                  </style></head><body>
-                      <div class="header-box">
-                          <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                          <div class="header-text" style="align-self: center;">
-                              <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
-                              <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {issue_date_str}</div>
-                          </div>
-                          <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>المعلم: زياد المعمري</div>
-                      </div>
-                      <div class="title-container">
-                          <div class="main-title">{report_title}</div>
-                          <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
-                          <div style="margin-top: 8px; font-size: 12px; font-weight: bold; color: {color_theme}; background:#f8fafc; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed {color_theme};">
-                              (الفصول: {label_lvl_cls}) | (معيار الفرز: {threshold} درجة) | (العدد: {len(final_df)} طالب)
-                          </div>
-                      </div>
-                      <table>
-                          <tr>
-                              <th style="width: 5%;">م</th>
-                              <th style="width: 31%; text-align: right;">اسم الطالب</th>
-                              <th style="width: 12%;">الصف</th>
-                              <th style="width: 10%;">المشاركة</th>
-                              <th style="width: 10%;">الاختبارات</th>
-                              <th style="width: 12%;">المجموع</th>
-                              <th style="width: 20%;">الإجراء المتخذ</th>
-                          </tr>
-                          {rows_lvl}
-                      </table>
-                      <div class="footer-sigs">
-                          <div>الموجه الطلابي <br><br>........................</div>
-                          <div>معلم المادة <br><br>زياد المعمري</div>
-                          <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                      </div>
-                      <script>window.onload = function() {{ window.print(); }}</script>
-                  </body></html>
-                  """
+                lvl_report_html = f"""
+                <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 portrait; margin: 10mm; }}
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 10px; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 12px; }}
+                    .header-text {{ text-align: center; font-weight: bold; font-size: 12px; line-height: 1.4; }}
+                    .title-container {{ text-align: center; margin-bottom: 12px; }}
+                    .main-title {{ font-size: 18px; font-weight: 900; background: {color_theme}; color: white; display: inline-block; padding: 5px 25px; border-radius: 20px; margin-bottom: 5px; }}
+                    .sub-title {{ font-size: 12.5px; color: #475569; font-weight: bold; }}
+                    {summary_box_css}
+                    table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 12px; }}
+                    th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; height: 22px; }}
+                    th {{ background-color: #f8fafc; font-weight: 900; color: #1e293b; }}
+                    .footer-sigs {{ margin-top: 32px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; page-break-inside: avoid; }}
+                    @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
+                </style></head><body>
+                    <div class="header-box">
+                        <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
+                        <div class="header-text" style="align-self: center;">
+                            <div class="sub-title" style="font-size:15px; color:#1e293b;">تقرير تحليل نتائج الطلاب</div>
+                            <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {issue_date_str}</div>
+                        </div>
+                        <div class="header-text">العام الدراسي: {curr_yr_str}<br>{rep_per}<br>المعلم: أ. زياد المعمري</div>
+                    </div>
+                    <div class="title-container">
+                        <div class="main-title">{report_title}</div>
+                        <div class="sub-title">مبني على الدرجات المرصودة في المنصة واستخراج آلي لدعم خطط الرعاية والتعزيز</div>
+                    </div>
+                    {lvl_summary_box_html}
+                    <table>
+                        <tr>
+                            <th style="width: 5%;">م</th>
+                            <th style="width: 27%; text-align: right;">اسم الطالب</th>
+                            <th style="width: 11%;">الصف</th>
+                            <th style="width: 11%;">نمط التعلم</th>
+                            <th style="width: 9%;">المشاركة</th>
+                            <th style="width: 9%;">الاختبارات</th>
+                            <th style="width: 10%;">المجموع</th>
+                            <th style="width: 18%;">الإجراء المتخذ</th>
+                        </tr>
+                        {rows_lvl}
+                    </table>
+                    <div class="footer-sigs">
+                        <div>الموجه الطلابي <br><br>........................</div>
+                        <div>معلم المادة <br><br>أ. زياد المعمري</div>
+                        <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
+                    </div>
+                    <script>window.onload = function() {{ window.print(); }}</script>
+                </body></html>
+                """
+                lvl_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", lvl_report_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
+                pdf_bytes_lvl = None
+                try:
+                  pdf_bytes_lvl = generate_pdf_bytes_cached(lvl_pdf_clean)
+                except Exception:
+                  pdf_bytes_lvl = None
+
+                df_ex_lvl = pd.DataFrame(excel_lvl_rows)
+                if pdf_bytes_lvl:
+                  dl_l1, dl_l2, dl_l3 = st.columns(3)
+                  dl_l1.download_button(
+                      label="📄 تحميل كشف الحصر (PDF A4)",
+                      data=pdf_bytes_lvl,
+                      file_name=f"Performance_Report_{datetime.date.today()}.pdf",
+                      mime="application/pdf",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_l2.download_button(
+                      label="🖨️ تحميل للطباعة (HTML)",
+                      data=lvl_report_html,
+                      file_name=f"Performance_Report_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                  dl_l3.download_button(
+                      label="📥 تصدير (Excel)",
+                      data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
+                      file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                else:
                   dl_l1, dl_l2 = st.columns(2)
                   dl_l1.download_button(
                       label="🖨️ تحميل كشف الحصر للطباعة المباشرة",
@@ -5041,7 +5580,6 @@ if st.session_state.role in ["teacher", "viewer"]:
                       type="primary",
                       use_container_width=True,
                   )
-                  df_ex_lvl = pd.DataFrame(excel_lvl_rows)
                   dl_l2.download_button(
                       label="📥 تصدير كشف الحصر (Excel)",
                       data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
@@ -5052,11 +5590,11 @@ if st.session_state.role in ["teacher", "viewer"]:
                   )
 
     # ---------------------------------------------------------
-    # 6. تقرير حصر أنماط التعلم (VARK) - يدعم تحديد عدة فصول معاً + طباعة وExcel
+    # 6. تقرير ولوحة إحصائيات أنماط التعلم (VAK) - يدعم تحديد عدة فصول معاً + إحصائية تفاعلية + PDF وHTML وExcel
     # ---------------------------------------------------------
     with rep_tabs[5]:
-      st.markdown("#### 🧠 استخراج تقرير أنماط التعلم (للإدارة والتوثيق)")
-      st.info("💡 يمكنك تحديد عدة فصول معاً (مثلاً: الخامس/1، الخامس/2، الخامس/3، الخامس/4) أو اختيار 'الكل' لاستخراج تقرير واحد مجمع جاهز للطباعة أو التصدير لملف Excel.")
+      st.markdown("#### 🧠 لوحة إحصائيات واستخراج تقارير أنماط التعلم (VAK)")
+      st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً (أو الكل) لاستعراض الإحصائية التحليلية المباشرة لأنماط التعلم وتوليد التقرير الرسمي متضمناً الإحصائية للطباعة (PDF A4 / HTML / Excel).")
 
       if not df_s_rep.empty:
         c1, c2 = st.columns([2.2, 1.3])
@@ -5077,22 +5615,141 @@ if st.session_state.role in ["teacher", "viewer"]:
             "متعدد الأنماط 🌟",
             "لم يختبر ⏳",
         ]
-        sel_style = c2.selectbox("🎯 اختر النمط المستهدف:", style_opts, key="ls_style")
+        sel_style = c2.selectbox("🎯 اختر النمط المستهدف في جدول التقرير:", style_opts, key="ls_style")
 
-        if st.button("🖨️ توليد تقرير الأنماط للفصول المحددة", type="primary", use_container_width=True):
-          target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
-          if not target_ls_cls:
-            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
-          else:
-            df_filtered = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
+        target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
+        if not target_ls_cls:
+          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
+        else:
+          df_scope_ls = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
+          if "نمط التعلم" not in df_scope_ls.columns:
+            df_scope_ls["نمط التعلم"] = ""
 
-            if "نمط التعلم" not in df_filtered.columns:
-              df_filtered["نمط التعلم"] = ""
+          df_scope_tested = df_scope_ls[
+              df_scope_ls["نمط التعلم"].notna()
+              & (~df_scope_ls["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+          ].copy()
+
+          tot_scope_students = len(df_scope_ls)
+          tot_scope_tested = len(df_scope_tested)
+          tot_scope_untested = tot_scope_students - tot_scope_tested
+
+          v_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+          k_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+          a_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+          m_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("متعدد", na=False)])
+
+          v_pct = round((v_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          k_pct = round((k_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          a_pct = round((a_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+          m_pct = round((m_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+
+          max_vka = max(v_cnt, k_cnt, a_cnt, 1)
+          h_v = max(int((v_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+          h_k = max(int((k_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+          h_a = max(int((a_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+
+          # --- 1) عرض البطاقات الإحصائية ولوحة التوزيع البصري على الشاشة مباشرة ---
+          st.markdown(
+              f"""
+              <div class="dashboard-stats-container">
+                  <div class="dash-card total"><div class="dash-title">👥 إجمالي الطلاب</div><div class="dash-value">{tot_scope_students}</div></div>
+                  <div class="dash-card completed"><div class="dash-title">✅ الاختبارات المكتملة</div><div class="dash-value">{tot_scope_tested}</div></div>
+                  <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{tot_scope_untested}</div></div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
+
+          with st.container(border=True):
+            st.markdown(
+                f"""
+                <div style="text-align: center; margin-bottom: 6px;">
+                    <div style="font-size: 19px; font-weight: 900; color: #0F172A; margin-bottom: 4px;">📊 توزيع أنماط التعلم — ({label_ls_cls})</div>
+                    <span style="display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 14px; font-size: 12.5px; font-weight: 800;">
+                        🏫 المختبرون: {tot_scope_tested} من أصل {tot_scope_students} طالب
+                    </span>
+                    <p style="font-size: 13px; color: #64748B; font-weight: 700; margin: 6px 0 0 0;">إحصائية تحليلية مقارنة لأعداد ونسب الطلاب وفق النمط الغالب (بصري / حركي / سمعي)</p>
+                </div>
+                <div class="vak-summary-grid">
+                    <div class="vak-stat-box visual">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">👁️ النمط البصري</span>
+                            <span class="vak-pct-pill">{v_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{v_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {v_pct}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box kinesthetic">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">🏃‍♂️ النمط الحركي</span>
+                            <span class="vak-pct-pill">{k_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{k_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {k_pct}%;"></div></div>
+                    </div>
+                    <div class="vak-stat-box auditory">
+                        <div class="vak-box-top">
+                            <span class="vak-box-label">👂 النمط السمعي</span>
+                            <span class="vak-pct-pill">{a_pct}%</span>
+                        </div>
+                        <div class="vak-box-number">{a_cnt} <span class="vak-box-unit">طالب</span></div>
+                        <div class="vak-mini-track"><div class="vak-mini-fill" style="width: {a_pct}%;"></div></div>
+                    </div>
+                </div>
+                <div class="custom-chart-container">
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge v-badge">({v_pct}%) {v_cnt}</div>
+                        <div class="chart-bar v-bar" style="height: {h_v}%;"></div>
+                        <div class="chart-label">بصري 👁️</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge k-badge">({k_pct}%) {k_cnt}</div>
+                        <div class="chart-bar k-bar" style="height: {h_k}%;"></div>
+                        <div class="chart-label">حركي 🏃‍♂️</div>
+                    </div>
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-value-badge a-badge">({a_pct}%) {a_cnt}</div>
+                        <div class="chart-bar a-bar" style="height: {h_a}%;"></div>
+                        <div class="chart-label">سمعي 👂</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if len(target_ls_cls) > 1:
+              with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المحدد"):
+                cls_breakdown_rows = []
+                for c_nm in target_ls_cls:
+                  sub_c = df_scope_ls[df_scope_ls["class"] == c_nm]
+                  sub_t = sub_c[
+                      sub_c["نمط التعلم"].notna()
+                      & (~sub_c["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+                  ]
+                  t_cnt = len(sub_t)
+                  vc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+                  kc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+                  ac = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+                  cls_breakdown_rows.append({
+                      "الفصل": c_nm,
+                      "إجمالي الطلاب": len(sub_c),
+                      "المختبرون": t_cnt,
+                      "غير المختبرين": len(sub_c) - t_cnt,
+                      "بصري 👁️": f"{vc} ({round(vc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                      "حركي 🏃‍♂️": f"{kc} ({round(kc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                      "سمعي 👂": f"{ac} ({round(ac/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                  })
+                st.dataframe(pd.DataFrame(cls_breakdown_rows), use_container_width=True, hide_index=True)
+
+          # --- 2) زر توليد التقرير الرسمي للطباعة متضمناً بطاقات الإحصائية ---
+          if st.button("🖨️ توليد تقرير الأنماط مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
+            df_filtered = df_scope_ls.copy()
 
             if sel_style == "لم يختبر ⏳":
               df_filtered = df_filtered[
                   df_filtered["نمط التعلم"].isna()
-                  | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None"]))
+                  | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
               ]
             elif sel_style == "تم الاختبار ✅":
               df_filtered = df_filtered[
@@ -5107,7 +5764,8 @@ if st.session_state.role in ["teacher", "viewer"]:
               st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
             else:
               df_sorted = df_filtered.sort_values(by=["class", "name"])
-              rows_html = ""
+              rows_html_print = ""
+              rows_html_pdf = ""
               excel_ls_rows = []
 
               for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
@@ -5115,14 +5773,17 @@ if st.session_state.role in ["teacher", "viewer"]:
                 if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
                   s_val = "لم يختبر ⏳"
 
+                s_val_clean = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(s_val)).strip()
+
                 clr = (
-                    "#3B82F6" if "بصري" in s_val
-                    else "#10B981" if "سمعي" in s_val
-                    else "#F59E0B" if "حركي" in s_val
+                    "#2563EB" if "بصري" in s_val
+                    else "#059669" if "حركي" in s_val
+                    else "#D97706" if "سمعي" in s_val
                     else "#8B5CF6" if "متعدد" in s_val
-                    else "#94A3B8"
+                    else "#64748B"
                 )
-                rows_html += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                rows_html_print += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                rows_html_pdf += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val_clean}</td></tr>"
                 excel_ls_rows.append({
                     "م": i,
                     "الرقم الأكاديمي": r.get("clean_id", ""),
@@ -5131,73 +5792,172 @@ if st.session_state.role in ["teacher", "viewer"]:
                     "نمط التعلم": s_val,
                 })
 
-              ls_report_html = f"""
-              <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
-              <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-              <style>
-                  body {{ font-family: 'Cairo', sans-serif; background: #fff; padding: 10px; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px; }}
-                  .header-box {{ border: 2px solid #1e293b; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 10px; }}
-                  .header-text {{ text-align: center; font-weight: bold; font-size: 13px; line-height: 1.4; }}
-                  .title-container {{ text-align: center; margin-bottom: 15px; }}
-                  .main-title {{ font-size: 20px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px; margin-bottom: 5px; }}
-                  .sub-title {{ font-size: 14px; color: #475569; font-weight: bold; }}
-                  table {{ width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; font-size: 13px; }}
-                  th, td {{ border: 1px solid #cbd5e1; padding: 5px 8px; }}
-                  th {{ background-color: #f1f5f9; font-weight: 900; font-size: 13px; }}
-                  .footer-sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; text-align: center; font-size: 13px; }}
-                  @media print {{ @page {{ size: A4 portrait; margin: 10mm; }} body {{ padding: 0; }} tr {{ page-break-inside: avoid; }} }}
-              </style></head><body>
-                  <div class="header-box">
-                      <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
-                      <div class="header-text" style="align-self: center;">
-                          <div class="sub-title" style="font-size:16px; color:#1e293b;">إحصائية أنماط تعلم الطلاب</div>
-                          <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
-                      </div>
-                      <div class="header-text">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: زياد المعمري</div>
-                  </div>
-                  <div class="title-container">
-                      <div class="main-title">تقرير حصر أنماط التعلم (VARK)</div>
-                      <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (حركي - سمعي - بصري)</div>
-                      <div style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #3b82f6; background:#eff6ff; display:inline-block; padding:4px 15px; border-radius:8px; border:1px dashed #3b82f6;">
-                          الفئة المستهدفة: (الفصول: {label_ls_cls}) | (النمط: {sel_style}) | (العدد: {len(df_filtered)} طالب)
-                      </div>
-                  </div>
-                  <table>
-                      <tr>
-                          <th style="width: 5%;">م</th>
-                          <th style="width: 45%; text-align: right;">اسم الطالب</th>
-                          <th style="width: 25%;">الصف</th>
-                          <th style="width: 25%;">نمط التعلم</th>
-                      </tr>
-                      {rows_html}
-                  </table>
-                  <div class="footer-sigs">
-                      <div>الموجه الطلابي <br><br>........................</div>
-                      <div>معلم المادة <br><br>زياد المعمري</div>
-                      <div>مدير المدرسة <br><br>أ. عبدالمجيد الحربي</div>
-                  </div>
-                  <script>window.onload = function() {{ window.print(); }}</script>
-              </body></html>
-              """
-              st.success(f"✅ تم تجهيز التقرير لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
-              dl_ls1, dl_ls2 = st.columns(2)
-              dl_ls1.download_button(
-                  label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
-                  data=ls_report_html,
-                  file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
+              clean_sel_style_txt = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(sel_style)).strip()
+              multi_card_html = (
+                  f"""<div class="stat-card multi"><div class="stat-title">متعدد الأنماط</div><div class="stat-value">{m_pct}%</div><div class="stat-sub">{m_cnt} طالب</div></div>"""
+                  if m_cnt > 0 else ""
               )
-              df_ex_ls = pd.DataFrame(excel_ls_rows)
-              dl_ls2.download_button(
-                  label="📥 تصدير تقرير الأنماط (Excel)",
-                  data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
-                  file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
-                  mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                  type="secondary",
-                  use_container_width=True,
-              )
+
+              def build_ls_report_doc(rows_body, is_pdf=False):
+                return f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    @page {{ size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }}
+                    * {{ box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                    body {{ font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: {'0' if is_pdf else '10px'}; color: #0f172a; font-size: 13px; direction: rtl; }}
+                    table.hdr-table {{ width: 100%; border: 2px solid #1e293b; border-radius: 8px; border-collapse: separate; padding: 8px 12px; margin-bottom: 10px; }}
+                    table.hdr-table td {{ border: none !important; text-align: center; font-weight: 700; font-size: 12px; line-height: 1.45; vertical-align: middle; width: 33.33%; white-space: nowrap; }}
+                    .title-container {{ text-align: center; margin-bottom: 12px; }}
+                    .main-title {{ font-size: 18px; font-weight: 900; background: #1e293b; color: white; display: inline-block; padding: 5px 22px; border-radius: 20px; margin-bottom: 4px; }}
+                    .sub-title {{ font-size: 12.5px; color: #475569; font-weight: 700; }}
+                    .summary-box {{ border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; background-color: #f8fafc; page-break-inside: avoid; }}
+                    .summary-head {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; font-size: 13px; font-weight: 800; color: #0f172a; }}
+                    .summary-head-title {{ font-size: 13.5px; font-weight: 900; color: #0f172a; white-space: nowrap; }}
+                    .meta-cards-row {{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }}
+                    .meta-pill-card {{ background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 3px 12px; font-size: 12px; font-weight: 800; color: #0f172a; white-space: nowrap; }}
+                    .meta-pill-card .meta-lbl {{ color: #475569; font-weight: 700; }}
+                    .meta-pill-card .meta-val {{ color: #0f172a; font-weight: 900; }}
+                    .meta-pill-card.highlight {{ background: #eff6ff; border-color: #93c5fd; }}
+                    .meta-pill-card.highlight .meta-val {{ color: #1d4ed8; }}
+                    .stats-container {{ display: flex; justify-content: space-between; gap: 10px; width: 100%; }}
+                    .stat-card {{ flex: 1; padding: 8px 6px; border-radius: 8px; text-align: center !important; border: 1.5px solid #cbd5e1; background-color: #ffffff; }}
+                    .stat-card.visual {{ border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }}
+                    .stat-card.kinesthetic {{ border-color: #059669; color: #047857; background-color: #ecfdf5; }}
+                    .stat-card.auditory {{ border-color: #d97706; color: #b45309; background-color: #fffbeb; }}
+                    .stat-card.multi {{ border-color: #7c3aed; color: #6d28d9; background-color: #f5f3ff; }}
+                    .stat-title {{ font-size: 13px; margin-bottom: 2px; font-weight: 800; text-align: center !important; }}
+                    .stat-value {{ font-size: 17px; font-weight: 900; text-align: center !important; line-height: 1.2; }}
+                    .stat-sub {{ font-size: 11.5px; font-weight: 700; opacity: 0.9; text-align: center !important; }}
+                    table.data-tbl {{ width: 100%; border-collapse: collapse; margin-top: 8px; text-align: center; font-size: 12.5px; }}
+                    table.data-tbl thead {{ display: table-header-group; }}
+                    table.data-tbl tr {{ page-break-inside: avoid; }}
+                    table.data-tbl th, table.data-tbl td {{ border: 1px solid #94a3b8; padding: 5px 8px; }}
+                    table.data-tbl th {{ background-color: #e2e8f0; color: #0f172a; font-weight: 800; font-size: 13px; }}
+                    table.data-tbl tr:nth-child(even) td {{ background-color: #f8fafc; }}
+                    table.sig-tbl {{ width: 100%; border-collapse: collapse; margin-top: 26px; page-break-inside: avoid; }}
+                    table.sig-tbl td {{ border: none !important; text-align: center; font-weight: 800; font-size: 13.5px; width: 33.33%; vertical-align: top; padding: 6px; }}
+                </style></head><body>
+                    <table class="hdr-table">
+                        <tr>
+                            <td style="text-align: right;">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</td>
+                            <td>
+                                <div style="font-size:15px; font-weight:900; color:#0f172a;">تقرير أنماط التعلم</div>
+                                <div style="font-size: 11px; color: #64748B; margin-top:3px;">تاريخ الإصدار: {pd.Timestamp.now().strftime('%Y-%m-%d')}</div>
+                            </td>
+                            <td style="text-align: left;">الفصل الدراسي: {st.session_state.get('current_period', '')}<br>العام الدراسي: {st.session_state.get('current_year', '')}<br>المعلم: أ. زياد المعمري</td>
+                        </tr>
+                    </table>
+                    <div class="title-container">
+                        <div class="main-title">تقرير حصر وإحصائية أنماط التعلم (VAK)</div>
+                        <div class="sub-title">تقرير تطبيق استراتيجية "التعليم المتمايز" ومراعاة الفروق الفردية للطلاب (بصري - حركي - سمعي)</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-head">
+                            <span class="summary-head-title">الإحصائية التحليلية للفصول</span>
+                            <div class="meta-cards-row">
+                                <div class="meta-pill-card"><span class="meta-lbl">الفصول:</span> <span class="meta-val">{label_ls_cls}</span></div>
+                                <div class="meta-pill-card"><span class="meta-lbl">إجمالي الطلاب:</span> <span class="meta-val">{len(df_filtered)} طالب</span></div>
+                                <div class="meta-pill-card highlight"><span class="meta-val">{clean_sel_style_txt}</span></div>
+                            </div>
+                        </div>
+                        <div class="stats-container">
+                            <div class="stat-card visual">
+                                <div class="stat-title">النمط البصري</div>
+                                <div class="stat-value">{v_pct}%</div>
+                                <div class="stat-sub">{v_cnt} طالب</div>
+                            </div>
+                            <div class="stat-card kinesthetic">
+                                <div class="stat-title">النمط الحركي</div>
+                                <div class="stat-value">{k_pct}%</div>
+                                <div class="stat-sub">{k_cnt} طالب</div>
+                            </div>
+                            <div class="stat-card auditory">
+                                <div class="stat-title">النمط السمعي</div>
+                                <div class="stat-value">{a_pct}%</div>
+                                <div class="stat-sub">{a_cnt} طالب</div>
+                            </div>
+                            {multi_card_html}
+                        </div>
+                    </div>
+                    <table class="data-tbl">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">م</th>
+                                <th style="width: 44%; text-align: right; padding-right: 10px;">اسم الطالب</th>
+                                <th style="width: 25%;">الصف</th>
+                                <th style="width: 25%;">نمط التعلم</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows_body}
+                        </tbody>
+                    </table>
+                    <table class="sig-tbl">
+                        <tr>
+                            <td>الموجه الطلابي<br><br>........................</td>
+                            <td>معلم المادة<br><br>أ. زياد المعمري</td>
+                            <td>مدير المدرسة<br><br>أ. عبدالمجيد الحربي</td>
+                        </tr>
+                    </table>
+                    {'' if is_pdf else '<script>window.onload = function() { window.print(); }</script>'}
+                </body></html>"""
+
+              ls_report_html = build_ls_report_doc(rows_html_print, is_pdf=False)
+              ls_report_pdf_html = build_ls_report_doc(rows_html_pdf, is_pdf=True)
+
+              st.success(f"✅ تم تجهيز التقرير متضمناً الإحصائية لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
+              pdf_bytes_ls = None
+              try:
+                pdf_bytes_ls = generate_pdf_bytes_cached(ls_report_pdf_html)
+              except Exception:
+                pdf_bytes_ls = None
+
+              if pdf_bytes_ls:
+                dl_ls1, dl_ls2, dl_ls3 = st.columns(3)
+                dl_ls1.download_button(
+                    label="📥 تحميل التقرير (PDF - A4)",
+                    data=pdf_bytes_ls,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+                dl_ls2.download_button(
+                    label="🖨️ طباعة مباشرة (HTML)",
+                    data=ls_report_html,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="secondary",
+                    use_container_width=True,
+                )
+                df_ex_ls = pd.DataFrame(excel_ls_rows)
+                dl_ls3.download_button(
+                    label="📥 تصدير (Excel)",
+                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
+                )
+              else:
+                dl_ls1, dl_ls2 = st.columns(2)
+                dl_ls1.download_button(
+                    label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
+                    data=ls_report_html,
+                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="primary",
+                    use_container_width=True,
+                )
+                df_ex_ls = pd.DataFrame(excel_ls_rows)
+                dl_ls2.download_button(
+                    label="📥 تصدير تقرير الأنماط (Excel)",
+                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                    use_container_width=True,
+                )
 
     # ---------------------------------------------------------
     # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
@@ -5409,7 +6169,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       st.divider()
       st.markdown("#### 📥 تنزيل نسخة احتياطية كاملة من البيانات (Backup)")
       b_col1, b_col2 = st.columns(2)
-      df_st_full = st.session_state.df_students.drop(columns=["clean_id"], errors="ignore").copy()
+      df_st_full = st.session_state.df_students.copy()
       if not df_st_full.empty:
         b_col1.download_button(
             label="📂 تنزيل بيانات الطلاب (Excel)",
@@ -5420,7 +6180,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             use_container_width=True,
         )
 
-      df_gr_full = st.session_state.df_grades.drop(columns=["clean_id"], errors="ignore").copy()
+      df_gr_full = st.session_state.df_grades.copy()
       if not df_gr_full.empty:
         b_col2.download_button(
             label="📊 تنزيل سجل الدرجات (Excel)",
@@ -5533,24 +6293,39 @@ if st.session_state.role == "teacher" and tab_settings is not None:
         cs_json_str = json.dumps(cs_map_dict, ensure_ascii=False)
 
         ws_s = get_gspread_client().worksheet("settings")
-        ws_s.batch_update([
-            {"range": "A2:B2", "values": [["max_tasks", max_t]]},
-            {"range": "A3:B3", "values": [["max_quiz", max_q]]},
-            {"range": "A4:B4", "values": [["current_year", target_year]]},
-            {"range": "A5:B5", "values": [["class_list", cls_str]]},
-            {"range": "A6:B6", "values": [["stage_list", stg_str]]},
-            {"range": "A7:B7", "values": [["current_period", target_period]]},
-            {"range": "A8:B8", "values": [["app_theme", target_theme]]},
-        ])
+        all_s_vals = ws_s.get_all_values()
+        keys_row_map = {
+            str(r[0]).strip(): idx + 2
+            for idx, r in enumerate(all_s_vals[1:])
+            if len(r) > 0 and str(r[0]).strip()
+        } if all_s_vals else {}
 
-        all_s_recs = ws_s.get_all_records()
-        keys_row_map = {str(r.get("key", "")).strip(): idx + 2 for idx, r in enumerate(all_s_recs)}
+        desired_settings = [
+            ("max_tasks", max_t),
+            ("max_quiz", max_q),
+            ("current_year", target_year),
+            ("class_list", cls_str),
+            ("stage_list", stg_str),
+            ("current_period", target_period),
+            ("app_theme", target_theme),
+            ("years_list", yrs_str),
+            ("year_classes_map", yc_json_str),
+            ("class_stage_map", cs_json_str),
+        ]
 
-        for k_name, k_val in [("years_list", yrs_str), ("year_classes_map", yc_json_str), ("class_stage_map", cs_json_str)]:
+        batch_s_updates = []
+        new_s_rows = []
+        for k_name, k_val in desired_settings:
           if k_name in keys_row_map:
-            ws_s.update_cell(keys_row_map[k_name], 2, k_val)
+            r_num = keys_row_map[k_name]
+            batch_s_updates.append({"range": f"A{r_num}:B{r_num}", "values": [[k_name, k_val]]})
           else:
-            ws_s.append_row([k_name, k_val])
+            new_s_rows.append([k_name, k_val])
+
+        if batch_s_updates:
+          ws_s.batch_update(batch_s_updates)
+        if new_s_rows:
+          ws_s.append_rows(new_s_rows)
 
         st.session_state.max_tasks = max_t
         st.session_state.max_quiz = max_q
@@ -5570,7 +6345,7 @@ if st.session_state.role == "teacher" and tab_settings is not None:
       if selected_theme != current_theme_val:
         st.session_state.app_theme = selected_theme
         try:
-          get_gspread_client().worksheet("settings").update(range_name="A8:B8", values=[["app_theme", selected_theme]])
+          update_single_setting_safe("app_theme", selected_theme)
           get_cached_settings.clear()
         except Exception:
           pass
@@ -6008,8 +6783,10 @@ if st.session_state.role == "teacher" and tab_settings is not None:
             npwd = st.text_input("كلمة المرور الجديدة", type="password")
             if st.form_submit_button("تحديث كلمة المرور", type="primary", use_container_width=True):
               if npwd:
-                idx = df_u_edit[df_u_edit["username"] == target_u].index[0] + 2
-                get_gspread_client().worksheet("users").update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
+                ws_u_ed = get_gspread_client().worksheet("users")
+                c_u_ed = ws_u_ed.find(target_u, in_column=1)
+                idx = c_u_ed.row if c_u_ed else (int(df_u_edit[df_u_edit["username"] == target_u].index[0]) + 2)
+                ws_u_ed.update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
                 st.success(f"✅ تم تحديث كلمة المرور لـ ({target_u}).")
                 fetch_safe.clear()
               else:
@@ -6026,8 +6803,10 @@ if st.session_state.role == "teacher" and tab_settings is not None:
               if del_u == st.session_state.username:
                 st.error("⚠️ لا يمكنك حذف حسابك الحالي!")
               else:
-                idx = df_u_del[df_u_del["username"] == del_u].index[0] + 2
-                get_gspread_client().worksheet("users").delete_rows(int(idx))
+                ws_u_dl = get_gspread_client().worksheet("users")
+                c_u_dl = ws_u_dl.find(del_u, in_column=1)
+                idx = c_u_dl.row if c_u_dl else (int(df_u_del[df_u_del["username"] == del_u].index[0]) + 2)
+                ws_u_dl.delete_rows(int(idx))
                 st.success(f"✅ تم حذف المستخدم ({del_u}).")
                 fetch_safe.clear()
                 st.rerun()
@@ -6068,15 +6847,14 @@ if st.session_state.role in ["teacher", "viewer"]:
 # ==========================================
 if st.session_state.role == "student":
   sid = str(st.session_state.get("username", "")).strip()
-  df_st = fetch_safe("students")
-  df_gr = fetch_safe("grades")
-  df_beh = fetch_safe("behavior")
+  df_st = st.session_state.df_students.copy()
+  df_gr = st.session_state.df_grades.copy()
+  df_beh = st.session_state.df_behavior.copy()
   df_ann = fetch_safe("exams")
 
-  if not df_st.empty and "clean_id" in df_st.columns:
+  if not df_st.empty:
+    df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
     info = df_st[df_st["clean_id"] == sid]
-  elif not df_st.empty:
-    info = df_st[df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip() == sid]
   else:
     info = pd.DataFrame()
 
@@ -6406,32 +7184,25 @@ if st.session_state.role == "student":
 </body>
 </html>"""
 
-            st_c1, st_c2 = st.columns(2)
-            with st_c1:
+            try:
+              pdf_bytes = generate_pdf_bytes_cached(certificate_html)
               st.download_button(
-                  label="🖨️ فتح وطباعة شهادة التفوق فوراً (A4 - سريع)",
+                  label="📥 تنزيل شهادة التفوق (PDF جاهز للطباعة)",
+                  data=pdf_bytes,
+                  file_name=f"Certificate_{sid}_{s_nm}.pdf",
+                  mime="application/pdf",
+                  type="primary",
+                  use_container_width=True,
+              )
+            except Exception:
+              st.download_button(
+                  label="📜 تنزيل شهادة التفوق (جاهزة للطباعة A4)",
                   data=certificate_html,
                   file_name=f"Certificate_{sid}_{s_nm}.html",
                   mime="text/html",
                   type="primary",
                   use_container_width=True,
               )
-            with st_c2:
-              if st.button("⚙️ تجهيز ملف PDF للشهادة", type="secondary", use_container_width=True, key=f"st_pdf_btn_{sid}_{cp}"):
-                try:
-                  with st.spinner("⏳ جاري تجهيز ملف الـ PDF..."):
-                    st.session_state[f"st_cert_pdf_{sid}_{cp}"] = generate_pdf_bytes_cached(certificate_html)
-                except Exception:
-                  st.warning("⚠️ استخدم زر الطباعة الفوري (A4 - سريع) بجانب هذا الزر.")
-              if st.session_state.get(f"st_cert_pdf_{sid}_{cp}"):
-                st.download_button(
-                    label="📥 اضغط لتنزيل شهادة التفوق (PDF)",
-                    data=st.session_state[f"st_cert_pdf_{sid}_{cp}"],
-                    file_name=f"Certificate_{sid}_{s_nm}.pdf",
-                    mime="application/pdf",
-                    type="primary",
-                    use_container_width=True,
-                )
         else:
           st.info(f"لم يتم رصد درجات لك في ({cp}) حتى الآن.")
       else:
@@ -6440,8 +7211,8 @@ if st.session_state.role == "student":
     # --- تبويب 4: لوحة الشرف ---
     with tabs[3]:
       st.caption("لوحة الشرف (أفضل 10 طلاب في المنصة)")
-      df_st_h_view = df_st.assign(p_num=pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0))
-      active_students = df_st_h_view[df_st_h_view["p_num"] > 0]
+      df_st["p_num"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
+      active_students = df_st[df_st["p_num"] > 0]
 
       if not active_students.empty:
         for i, (_, r) in enumerate(active_students.sort_values("p_num", ascending=False).head(10).iterrows(), 1):
