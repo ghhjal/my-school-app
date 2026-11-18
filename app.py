@@ -4,14 +4,15 @@ import io
 import json
 import math
 import re
-import subprocess
-import sys
+import hmac
+import logging
+import secrets
+import threading
+import uuid
 import time
 import urllib.parse
 from google.oauth2.service_account import Credentials
 import gspread
-from gspread import Cell
-from gspread.utils import rowcol_to_a1
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -42,10 +43,12 @@ def get_gspread_client():
             "https://www.googleapis.com/auth/drive",
         ],
     )
-    return gspread.authorize(creds).open_by_key(st.secrets["SHEET_ID"])
-  except Exception as e:
-    st.error(f"⚠️ خطأ اتصال بسيرفر جوجل: {e}")
-    return None
+    client = gspread.authorize(creds)
+    if hasattr(client, "set_timeout"):
+      client.set_timeout((5, 20))
+    return client.open_by_key(st.secrets["SHEET_ID"])
+  except Exception as exc:
+    raise RuntimeError("تعذر الاتصال بمصنف المدرسة. تحقق من الاتصال وإعدادات الخدمة.") from exc
 
 
 def normalize_arabic(text):
@@ -57,104 +60,676 @@ def normalize_arabic(text):
   return text.strip()
 
 
+DEFAULT_PERIOD = "الفصل الأول - فترة أولى"
+AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+BASE_COLUMNS = {
+    "students": ("id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط"),
+    "grades": ("student_id", "p1", "p2", "perf", "date"),
+    "behavior": ("student_id", "date", "type", "note"),
+    "users": ("username", "password_hash", "role"),
+    "exams": ("الصف", "عاجل", "العنوان", "التاريخ", "الرابط"),
+    "settings": ("key", "value"),
+}
+
+
+@st.cache_resource(show_spinner=False)
+def shared_state():
+  return {"lock": threading.RLock(), "revision": 0}
+
+
+def student_id(value):
+  return re.sub(r"^([0-9]+)\.0+$", r"\1", str(value).strip().translate(AR_DIGITS))
+
+
+def period_name(value):
+  value = str(value or "").strip()
+  return {"": DEFAULT_PERIOD, "nan": DEFAULT_PERIOD, "None": DEFAULT_PERIOD,
+          "الفترة الأولى": DEFAULT_PERIOD, "الفترة الثانية": "الفصل الأول - فترة ثانية"}.get(value, value)
+
+
+def number(value, default=0):
+  parsed = pd.to_numeric(value, errors="coerce")
+  return int(parsed) if pd.notna(parsed) and math.isfinite(parsed) else default
+
+
+def whole(value, label, maximum=None):
+  parsed = pd.to_numeric(str(value).translate(AR_DIGITS), errors="coerce")
+  if pd.isna(parsed) or not math.isfinite(parsed) or parsed != int(parsed):
+    raise ValueError(f"أدخل عدداً صحيحاً في {label}.")
+  result = int(parsed)
+  if maximum is not None and not 0 <= result <= maximum:
+    raise ValueError(f"{label} يجب أن يكون بين 0 و{maximum}.")
+  return result
+
+
 def clean_phone_number(phone):
-  p = str(phone).strip().replace(" ", "")
-  if p.startswith("0"):
-    p = p[1:]
-  if not p.startswith("966") and p != "":
-    p = "966" + p
+  p = re.sub(r"[\s()-]", "", str(phone or "").strip().translate(AR_DIGITS))
+  if p.startswith("+966"):
+    return p[1:]
+  if p.startswith("00966"):
+    return p[2:]
+  if p.startswith("05"):
+    return "966" + p[1:]
+  if p.startswith("5") and len(p) == 9:
+    return "966" + p
   return p
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+def contact_values(phone, email):
+  p, e = clean_phone_number(phone), str(email or "").strip()
+  if p and not re.fullmatch(r"9665[0-9]{8}", p):
+    raise ValueError("أدخل جوالاً سعودياً صالحاً مثل 05xxxxxxxx أو +9665xxxxxxxx.")
+  if e and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", e):
+    raise ValueError("تحقق من صيغة البريد الإلكتروني.")
+  return {"الجوال": p, "الإيميل": e}
+
+
+def teacher_only():
+  if st.session_state.get("role") != "teacher":
+    raise ValueError("هذه العملية متاحة للمعلم فقط.")
+
+
+def fingerprint(data):
+  return hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def cell_data(value):
+  if value is None or value == "":
+    return {}
+  kind = "numberValue" if isinstance(value, (float, int)) else "stringValue"
+  return {"userEnteredValue": {kind: value}}
+
+
+class Sheet:
+  """One fresh, header-addressed snapshot, including physical Google Sheets row numbers."""
+  def __init__(self, book, name):
+    self.ws = book.worksheet(name)
+    self.name = name
+    values = self.ws.get_all_values()
+    self.headers = [str(v).strip() for v in values[0]] if values else []
+    self.ensure = []
+    if not self.headers:
+      # A worksheet with no header cannot safely accept academic writes.
+      raise ValueError(f"ورقة {name} فارغة بلا رؤوس أعمدة. راجع إعداد المصنف.")
+    # Older versions sometimes used id in the first column of these sheets.
+    if name in ("grades", "behavior") and "student_id" not in self.headers and "id" in self.headers:
+      self.headers[self.headers.index("id")] = "student_id"
+    names = [h for h in self.headers if h]
+    if len(names) != len(set(names)):
+      raise ValueError(f"ورقة {name} تحتوي أسماء أعمدة مكررة.")
+    missing = set(BASE_COLUMNS[name]) - set(names)
+    if missing:
+      raise ValueError(f"تنقص ورقة {name} الأعمدة: {', '.join(sorted(missing))}")
+    self.rows = {}
+    for index, row in enumerate(values[1:], 2):
+      if any(str(v).strip() for v in row):
+        self.rows[index] = {h: str(row[i]).strip() if i < len(row) else ""
+                            for i, h in enumerate(self.headers) if h}
+
+  def add_column(self, key):
+    if key not in self.headers:
+      self.headers.append(key)
+      col = len(self.headers)
+      if col > self.ws.col_count:
+        self.ensure.append({"appendDimension": {"sheetId": self.ws.id, "dimension": "COLUMNS", "length": 1}})
+      self.ensure.append(self.set(1, key, key))
+
+  def set(self, row, key, value):
+    start = {"sheetId": self.ws.id, "rowIndex": row - 1, "columnIndex": self.headers.index(key)}
+    return {"updateCells": {"start": start, "rows": [{"values": [cell_data(value)]}],
+                            "fields": "userEnteredValue"}}
+
+  def append(self, records):
+    rows = [{"values": [cell_data(r.get(h, "")) for h in self.headers]} for r in records]
+    return {"appendCells": {"sheetId": self.ws.id, "rows": rows, "fields": "userEnteredValue"}}
+
+  def delete(self, row):
+    return {"deleteDimension": {"range": {"sheetId": self.ws.id, "dimension": "ROWS",
+                                         "startIndex": row - 1, "endIndex": row}}}
+
+  def one(self, key, value, normalize=str):
+    matches = [(n, r) for n, r in self.rows.items() if normalize(r.get(key, "")) == normalize(value)]
+    if len(matches) != 1:
+      raise ValueError(f"تعذر تحديد سجل واحد في {self.name}. حدّث البيانات وراجع الرقم أو التكرار.")
+    return matches[0]
+
+  def frame(self):
+    cols = list(BASE_COLUMNS[self.name]) + [h for h in self.headers if h and h not in BASE_COLUMNS[self.name]]
+    df = pd.DataFrame(list(self.rows.values()), columns=cols).fillna("")
+    if self.name in ("grades", "students", "behavior"):
+      df[cols[0]] = df[cols[0]].map(student_id)
+    if self.name == "grades":
+      df["period"] = df.get("period", pd.Series("", index=df.index)).map(period_name)
+    return df
+
+
+def invalidate():
+  fetch_safe.clear()
+  get_cached_settings.clear()
+  shared_state()["revision"] += 1
+  st.session_state.pop("db_loaded", None)
+  st.session_state.pop("full_backup", None)
+
+
+def commit(book, requests):
+  if requests:
+    try:
+      book.batch_update({"requests": requests})
+    finally:
+      invalidate()
+
+
+def active_row(table, sid):
+  n, record = table.one("id", sid, student_id)
+  if record.get("archived") == "1":
+    raise ValueError("هذا السجل مؤرشف.")
+  return n, record
+
+
+@st.cache_data(ttl=60, show_spinner=False)
 def fetch_safe(worksheet_name):
   for attempt in range(2):
     try:
-      current_sh = get_gspread_client()
-      if not current_sh:
-        return pd.DataFrame()
-      ws = current_sh.worksheet(worksheet_name)
-      data = ws.get_all_values()
-      if not data:
-        return pd.DataFrame()
-      df = pd.DataFrame(data[1:], columns=data[0])
-      if not df.empty:
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
-        if worksheet_name == "grades" and "period" in df.columns:
-          df["period"] = (
-              df["period"]
-              .astype(str)
-              .str.strip()
-              .replace({
-                  "": "الفصل الأول - فترة أولى",
-                  "nan": "الفصل الأول - فترة أولى",
-                  "None": "الفصل الأول - فترة أولى",
-                  "الفترة الأولى": "الفصل الأول - فترة أولى",
-                  "الفترة الثانية": "الفصل الأول - فترة ثانية",
-              })
-          )
-      return df
+      return Sheet(get_gspread_client(), worksheet_name).frame()
+    except ValueError:
+      raise
     except Exception:
-      if attempt == 0:
-        time.sleep(0.8)
-      else:
-        st.cache_resource.clear()
-        st.toast("⚠️ تم تحديث الاتصال مع السيرفر، حاول مجدداً.", icon="🔄")
-  return pd.DataFrame()
+      if attempt:
+        raise RuntimeError(f"تعذرت قراءة ورقة {worksheet_name}. أعد المحاولة بعد عودة الاتصال.") from None
+      time.sleep(0.35)
 
 
-def safe_append_row(worksheet_name, data_dict):
-  for attempt in range(2):
-    try:
-      current_sh = get_gspread_client()
-      ws = current_sh.worksheet(worksheet_name)
-      headers = ws.row_values(1)
-      row = [data_dict.get(h, "") for h in headers]
-      ws.append_row(row)
-      return True
-    except Exception:
-      if attempt == 0:
-        time.sleep(0.8)
-      else:
-        st.cache_resource.clear()
-        st.error("⚠️ حدث انقطاع، تم التحديث. يرجى الضغط مرة أخرى.")
-  return False
-
-
-def update_single_setting_safe(key_name, key_val):
-  try:
-    ws_s = get_gspread_client().worksheet("settings")
-    all_vals = ws_s.get_all_values()
-    if all_vals:
-      for idx, r in enumerate(all_vals[1:], start=2):
-        if len(r) > 0 and str(r[0]).strip() == key_name:
-          ws_s.update_cell(idx, 2, key_val)
-          return True
-    ws_s.append_row([key_name, key_val])
-    return True
-  except Exception:
-    return False
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def get_cached_settings():
-  for attempt in range(2):
+  df = fetch_safe("settings")
+  if df["key"].duplicated().any():
+    raise ValueError("توجد مفاتيح مكررة في الإعدادات.")
+  return dict(zip(df["key"], df["value"]))
+
+
+def fresh_append(name, record):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, name)
+    if name in ("students", "users"):
+      key = "id" if name == "students" else "username"
+      norm = student_id if name == "students" else str
+      if any(norm(r[key]) == norm(record[key]) for r in table.rows.values()):
+        raise ValueError("الرقم أو اسم المستخدم مسجل مسبقاً، بما في ذلك السجلات المؤرشفة.")
+    if name == "exams":
+      tag = pending_tag("announcement", record)
+      table.add_column("operation_id")
+      if any(r.get("operation_id") == tag for r in table.rows.values()):
+        st.session_state.pop("pending_announcement", None)
+        invalidate()
+        return
+      record = dict(record, operation_id=tag)
+    for key in record:
+      table.add_column(key)
+    commit(book, table.ensure + [table.append([record])])
+    if name == "exams":
+      st.session_state.pop("pending_announcement", None)
+
+
+def pending_tag(kind, data):
+  key = "pending_" + kind
+  sig = fingerprint(data)
+  old = st.session_state.get(key)
+  if not old or old[0] != sig:
+    st.session_state[key] = (sig, uuid.uuid4().hex)
+  return st.session_state[key][1]
+
+
+def same_fields(actual, expected, fields):
+  return all(str(actual.get(k, "")).strip() == str(expected.get(k, "")).strip() for k in fields)
+
+
+def update_student(sid, changes, original, *, quiz=False):
+  role = st.session_state.get("role")
+  if role == "student":
+    allowed = {"نمط التعلم"} if quiz else {"الجوال", "الإيميل"}
+    if student_id(st.session_state.get("username")) != sid or set(changes) - allowed:
+      raise ValueError("تعذر التحقق من سجل الطالب.")
+  else:
+    teacher_only()
+  if set(changes) & {"id", "archived", "quiz_completed"}:
+    raise ValueError("لا يمكن تغيير معرّف السجل.")
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "students")
+    n, row = active_row(table, sid)
+    requests = []
+    if quiz:
+      if style_done(row):
+        invalidate()
+        return False
+      # A named range name is unique within a spreadsheet. If a second instance
+      # races this transaction, Google rejects its entire batch.
+      marker = "quiz_" + hashlib.sha256(sid.encode()).hexdigest()
+      requests.append({"addNamedRange": {"namedRange": {"name": marker, "range": {
+          "sheetId": table.ws.id, "startRowIndex": n-1, "endRowIndex": n,
+          "startColumnIndex": table.headers.index("id"), "endColumnIndex": table.headers.index("id")+1}}}})
+      changes = dict(changes, quiz_completed="1")
+    elif not same_fields(row, original, changes):
+      raise ValueError("تغيرت هذه البيانات منذ فتح النموذج. حدّث الصفحة قبل الحفظ.")
+    if role == "teacher" and "نمط التعلم" in changes and style_done(row):
+      if not style_done({"نمط التعلم": changes["نمط التعلم"]}):
+        raise ValueError("لا يمكن مسح نتيجة نمط تعلم مسجلة. يمكن للمعلم تصحيحها.")
+      changes = dict(changes, quiz_completed="1")
+    for key, value in changes.items():
+      table.add_column(key)
+      requests.append(table.set(n, key, value))
+    commit(book, table.ensure + requests)
+    return True
+
+
+def style_done(record):
+  return record.get("quiz_completed") == "1" or str(record.get("نمط التعلم", "")).strip() not in (
+      "", "nan", "None", "لم يختبر ⏳", "لم يختبر")
+
+
+def archive_student(sid):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "students")
+    n, _ = active_row(table, sid)
+    table.add_column("archived")
+    commit(book, table.ensure + [table.set(n, "archived", "1")])
+
+
+def setting_write(values):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "settings")
+    by_key = {r["key"]: n for n, r in table.rows.items()}
+    if len(by_key) != len(table.rows):
+      raise ValueError("يوجد مفتاح إعداد مكرر.")
+    changes, additions = [], []
+    for k, v in values.items():
+      if k in by_key:
+        changes.append(table.set(by_key[k], "value", v))
+      else:
+        additions.append({"key": k, "value": v})
+    if additions:
+      changes.append(table.append(additions))
+    commit(book, changes)
+
+
+def hash_password(password):
+  salt = secrets.token_bytes(16)
+  digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 600000)
+  return f"pbkdf2_sha256$600000${salt.hex()}${digest.hex()}"
+
+
+def matches_password(password, encoded):
+  if encoded.startswith("pbkdf2_sha256$"):
     try:
-      current_sh = get_gspread_client()
-      if not current_sh:
-        return {}
-      sett = current_sh.worksheet("settings").get_all_records()
-      return {row["key"]: row["value"] for row in sett if "key" in row}
-    except Exception:
-      if attempt == 0:
-        time.sleep(0.6)
-  return {}
+      _, steps, salt, digest = encoded.split("$")
+      if int(steps) != 600000:
+        return False
+      actual = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(steps))
+      return hmac.compare_digest(actual, bytes.fromhex(digest))
+    except ValueError:
+      return False
+  return hmac.compare_digest(hashlib.sha256(password.encode()).hexdigest(), encoded)
+
+
+def staff_login(username, password, role):
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "users")
+    n, user = table.one("username", username.strip())
+    if user["role"] != role or not matches_password(password, user["password_hash"]):
+      raise ValueError("بيانات الدخول أو صلاحية الحساب غير صحيحة.")
+    if role == "teacher":
+      teachers = [r["username"] for r in table.rows.values() if r["role"] == "teacher"]
+      owner = str(st.secrets.get("TEACHER_USERNAME", "")).strip()
+      if (owner and owner != user["username"]) or (not owner and len(teachers) != 1):
+        raise ValueError("حدّد حساب المعلم الوحيد في ورقة المستخدمين أو في إعداد TEACHER_USERNAME.")
+    table.add_column("last_login")
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
+    requests = [table.set(n, "last_login", now.strftime("%Y-%m-%d %I:%M %p"))]
+    if not user["password_hash"].startswith("pbkdf2_sha256$"):
+      requests.append(table.set(n, "password_hash", hash_password(password)))
+    commit(book, table.ensure + requests)
+    st.session_state.username = user["username"]
+    st.session_state.role = role
+
+
+def notify_error(exc):
+  if isinstance(exc, ValueError):
+    st.error(str(exc))
+  else:
+    st.error("تعذّر تأكيد العملية. حدّث البيانات وتحقق من السجل قبل إعادة المحاولة.")
+
+
+def grade_pair(record):
+  if record is None:
+    return None
+  return tuple(str(record.get(k, "")).strip() for k in ("p1", "p2"))
+
+
+def grade_request(book, changes, *, importing=False):
+  """Validate the entire submission before constructing one Sheets transaction."""
+  teacher_only()
+  table = Sheet(book, "grades")
+  students = Sheet(book, "students")
+  by_student = {}
+  for r in students.rows.values():
+    by_student.setdefault(student_id(r["id"]), []).append(r)
+  settings = Sheet(book, "settings")
+  cfg = {r["key"]: r["value"] for r in settings.rows.values()}
+  year = str(cfg.get("current_year", "1448هـ"))
+  active_period = period_name(cfg.get("current_period", ""))
+  if (year, active_period) != (st.session_state.current_year, st.session_state.current_period):
+    raise ValueError("تغير العام أو الفترة. حدّث الصفحة قبل الحفظ.")
+  for key in ("year", "period"):
+    table.add_column(key)
+  indexed, legacy = {}, set()
+  for n, r in table.rows.items():
+    key = (student_id(r["student_id"]), r.get("year", ""), period_name(r.get("period")))
+    indexed.setdefault(key, []).append((n, r))
+    if not key[1]:
+      legacy.add((key[0], key[2]))
+  additions, updates, seen = [], [], set()
+  for item in changes:
+    sid, per = student_id(item["student_id"]), period_name(item.get("period", active_period))
+    entry_year = str(item.get("year") or year).strip()
+    if not re.fullmatch(r"[0-9]+", sid) or len(by_student.get(sid, [])) != 1 or by_student[sid][0].get("archived") == "1":
+      raise ValueError(f"رقم غير مسجل أو مكرر أو مؤرشف: {sid}")
+    key = (sid, entry_year, per)
+    if (sid, per) in legacy:
+      raise ValueError(f"حدّد عام الدرجات القديمة للطالب {sid} من الإعدادات أولاً.")
+    if key in seen or len(indexed.get(key, [])) > 1:
+      raise ValueError(f"يوجد تكرار للطالب {sid} في العام والفترة نفسيهما. راجع الصفوف.")
+    seen.add(key)
+    if importing and (entry_year != year or per not in PERIODS):
+      raise ValueError("استورد درجات العام النشط وحدد فترة صحيحة لكل سجل.")
+    p1 = whole(item["p1"], "المشاركة", whole(cfg.get("max_tasks", 60), "الدرجة العظمى", 100))
+    p2 = whole(item["p2"], "الاختبار", whole(cfg.get("max_quiz", 40), "الدرجة العظمى", 100))
+    payload = {"student_id": sid, "year": entry_year, "period": per, "p1": p1, "p2": p2,
+               "perf": p1 + p2, "date": str(datetime.date.today())}
+    if key in indexed:
+      n, record = indexed[key][0]
+      current = grade_pair(record)
+      if current == (str(p1), str(p2)) and str(record["perf"]) == str(p1+p2):
+        continue
+      if importing or current != item["expected"]:
+        raise ValueError(f"الدرجات الحالية للطالب {sid} مختلفة. راجع السجل قبل التعديل.")
+      updates.extend(table.set(n, k, v) for k, v in payload.items() if k in ("p1","p2","perf","date"))
+    else:
+      if not importing and item["expected"] is not None:
+        raise ValueError("تغير سجل الطالب منذ فتح النموذج.")
+      additions.append(payload)
+  if additions:
+    updates.append(table.append(additions))
+  return table.ensure + updates if updates else []
+
+
+PERIODS = (DEFAULT_PERIOD, "الفصل الأول - فترة ثانية", "الفصل الثاني - فترة أولى", "الفصل الثاني - فترة ثانية")
+
+
+def save_grades(changes, *, importing=False):
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    requests = grade_request(book, changes, importing=importing)
+    commit(book, requests)
+
+
+def split_grades(frame, year):
+  df = frame.copy()
+  if "year" not in df:
+    df["year"] = ""
+  legacy = df[df["year"] == ""].copy()
+  current = df[df["year"] == str(year)].copy()
+  duplicates = current.duplicated(["student_id", "period"], keep=False)
+  scores = current[["p1", "p2", "perf"]].apply(pd.to_numeric, errors="coerce")
+  valid = scores.notna().all(axis=1) & scores.ge(0).all(axis=1) & scores.mod(1).eq(0).all(axis=1)
+  valid &= scores["p1"] + scores["p2"] == scores["perf"]
+  return current.loc[~duplicates & valid], legacy, int(duplicates.sum()), int((~valid).sum())
+
+
+def migrate_grades(selected, year):
+  teacher_only()
+  if not str(year).strip() or not selected:
+    raise ValueError("اختر السجلات والعام الدراسي الصحيح.")
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "grades")
+    used = {(student_id(r["student_id"]), period_name(r.get("period"))) for r in table.rows.values()
+            if r.get("year") == year}
+    table.add_column("year")
+    writes = []
+    for expected in selected:
+      key = (student_id(expected["student_id"]), period_name(expected.get("period")))
+      hits = [n for n, r in table.rows.items() if not r.get("year") and
+              (student_id(r["student_id"]), period_name(r.get("period"))) == key and
+              same_fields(r, expected, ("p1", "p2", "date", "perf"))]
+      if len(hits) != 1 or key in used:
+        raise ValueError("توجد مطابقة ملتبسة أو درجة مسجلة في العام المختار. راجع الصفوف المحددة.")
+      used.add(key)
+      writes.append(table.set(hits[0], "year", year))
+    commit(book, table.ensure + writes)
+
+
+def score_delta(behavior):
+  match = re.search(r"\(([+-]?\d+)\)", behavior)
+  if not match:
+    raise ValueError(f"قيمة النقاط غير محددة للسلوك: {behavior}")
+  return int(match.group(1))
+
+
+def behavior_write(records, *, expected=None, delete=False):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    students, log = Sheet(book, "students"), Sheet(book, "behavior")
+    requests, additions = [], []
+    if expected is None:
+      tag = pending_tag("behavior", records)
+      log.add_column("operation_id")
+      if any(r.get("operation_id") == tag for r in log.rows.values()):
+        st.session_state.pop("pending_behavior", None)
+        invalidate()
+        return
+    for record in records:
+      sid = student_id(record["student_id"])
+      n, current = active_row(students, sid)
+      delta = 0 if delete else score_delta(record["type"])
+      if expected is not None:
+        key = expected.get("operation_id")
+        matches = [(i, r) for i, r in log.rows.items() if student_id(r["student_id"]) == sid and
+                   (not key or key == r.get("operation_id")) and same_fields(r, expected, ("type","note","date"))]
+        if len(matches) != 1:
+          raise ValueError("تغيرت الملاحظة أو يوجد سجل مطابق لها. راجع السجل قبل التعديل.")
+        old_n, old = matches[0]
+        delta -= score_delta(old["type"])
+        if delete:
+          requests.append(log.delete(old_n))
+        else:
+          requests.extend(log.set(old_n, k, record[k]) for k in ("type","note"))
+      else:
+        additions.append(dict(record, operation_id=tag))
+      if delta:
+        requests.append(students.set(n, "النقاط", whole(current["النقاط"] or 0,"رصيد النقاط") + delta))
+    if additions:
+      requests.append(log.append(additions))
+    commit(book, log.ensure + requests)
+    if expected is None:
+      st.session_state.pop("pending_behavior", None)
+
+
+def point_changes(apply_signature=None, *, reset=False):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    students = Sheet(book, "students")
+    scores = {}
+    if not reset:
+      for r in Sheet(book, "behavior").rows.values():
+        sid = student_id(r["student_id"])
+        if not sid:
+          raise ValueError("يوجد سجل سلوكي بلا رقم أكاديمي.")
+        scores[sid] = scores.get(sid, 0) + score_delta(r["type"])
+    changes, requests, seen = [], [], set()
+    for n, r in students.rows.items():
+      sid = student_id(r["id"])
+      if not sid or sid in seen:
+        raise ValueError("رقم طالب فارغ أو مكرر. لم تُعدّل النقاط.")
+      seen.add(sid)
+      old = whole(r["النقاط"] or 0, "النقاط")
+      new = scores.get(sid, 0)
+      if old != new:
+        changes.append((sid, old, new))
+        requests.append(students.set(n, "النقاط", new))
+    if scores.keys() - seen:
+      raise ValueError("توجد ملاحظات لرقم غير موجود في ورقة الطلاب. راجع السجلات أولاً.")
+    signature = fingerprint(changes)
+    if reset or apply_signature is not None:
+      if not reset and signature != apply_signature:
+        raise ValueError("تغيرت الأرصدة منذ المعاينة. أعد حساب المعاينة.")
+      commit(book, requests)
+    return changes, signature
+
+
+def workbook_backup():
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    out = io.BytesIO()
+    used = set()
+    with pd.ExcelWriter(out, engine="xlsxwriter", engine_kwargs={"options":{
+        "strings_to_formulas":False, "strings_to_urls":False}}) as writer:
+      for ws in book.worksheets():
+        name = re.sub(r"[\[\]:*?/\\]", "_", ws.title).strip("'")[:31] or "Sheet"
+        base, counter = name, 1
+        while name.lower() in used:
+          counter += 1
+          name = base[:26]+f"_{counter}"
+        used.add(name.lower())
+        pd.DataFrame(ws.get_all_values()).to_excel(writer, sheet_name=name, index=False, header=False)
+    return out.getvalue()
+
+
+def import_students(records):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "students")
+    existing = {student_id(r["id"]) for r in table.rows.values()}
+    seen, additions = set(), []
+    for r in records:
+      sid = student_id(r.get("id", ""))
+      if not re.fullmatch(r"[0-9]+", sid) or sid in seen:
+        raise ValueError(f"رقم فارغ أو غير صالح أو مكرر في الملف: {sid}")
+      seen.add(sid)
+      if sid in existing:
+        continue
+      if not str(r.get("name", "")).strip() or not str(r.get("class", "")).strip():
+        raise ValueError(f"اسم الطالب أو الصف مفقود للرقم {sid}.")
+      rec = {k:r.get(k,"") for k in BASE_COLUMNS["students"]}
+      rec.update(contact_values(r.get("الجوال", ""), r.get("الإيميل", "")))
+      rec.update(id=sid, year=r.get("year") or st.session_state.current_year)
+      rec["النقاط"] = whole(r.get("النقاط") or 0, "النقاط")
+      if r.get("نمط التعلم"):
+        table.add_column("نمط التعلم")
+        rec["نمط التعلم"] = r["نمط التعلم"]
+      additions.append(rec)
+    if additions:
+      commit(book, table.ensure + [table.append(additions)])
+    return len(additions)
+
+
+def change_staff(username, password=None):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "users")
+    n, user = table.one("username", username)
+    if password is None and (username == st.session_state.username or user["role"] == "teacher"):
+      raise ValueError("لا يمكن حذف حساب المعلم.")
+    request = table.delete(n) if password is None else table.set(n, "password_hash", hash_password(password))
+    commit(book, [request])
+
+
+def bulk_grade_changes(editor, baseline, summary):
+  changes = []
+  for row in editor.to_dict("records"):
+    sid = str(row["الرقم الأكاديمي"])
+    values = [row["المشاركة والمهام"], row["الاختبارات"]]
+    pair = tuple(None if pd.isna(v) else str(whole(v, "الدرجة")) for v in values)
+    if pair == baseline[sid] or pair == (None, None) and baseline[sid] is None:
+      continue
+    if None in pair:
+      raise ValueError(f"أكمل درجتي الطالب {sid} أو اترك الصف الجديد فارغاً.")
+    changes.append({"student_id":sid,"p1":pair[0],"p2":pair[1],"expected":summary.get(sid)})
+  return changes
+
+
+def import_styles(frame):
+  teacher_only()
+  id_key = next((c for c in frame.columns if str(c).strip().lower() in
+                 ("id","student_id","الرقم الأكاديمي","رقم الهوية","السجل المدني")), None)
+  name_key = next((c for c in frame.columns if "اسم" in str(c) or str(c).lower()=="name"), None)
+  style_key = next((c for c in frame.columns if "نمط" in str(c) or "style" in str(c).lower()), None)
+  if not (id_key or name_key) or not style_key:
+    raise ValueError("يجب تحديد أعمدة الرقم أو الاسم ونمط التعلم في الملف.")
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "students")
+    table.add_column("نمط التعلم")
+    writes, seen = [], set()
+    for r in frame.to_dict("records"):
+      style = str(r.get(style_key, "")).strip()
+      if not style:
+        continue
+      if id_key and str(r.get(id_key,"")).strip():
+        n, old = active_row(table, student_id(r[id_key]))
+      elif name_key and str(r.get(name_key,"")).strip():
+        n, old = table.one("name", r[name_key], normalize_arabic)
+        if old.get("archived") == "1":
+          raise ValueError("السجل مؤرشف.")
+      else:
+        raise ValueError("ينقص أحد السجلات رقم الطالب أو اسمه.")
+      if n in seen:
+        raise ValueError("يوجد طالب مكرر في ملف الأنماط.")
+      seen.add(n)
+      choices = ("بصري 👀","سمعي 👂","حركي ✋","متعدد الأنماط 🌟")
+      badge = next((v for v in choices if v.split()[0] in style), None)
+      if badge is None:
+        raise ValueError(f"نمط غير معروف: {style}")
+      writes.append(table.set(n, "نمط التعلم", badge))
+    if writes:
+      commit(book, table.ensure + writes)
+    return len(writes)
+
+
+def visible_students(frame):
+  ids = frame["id"]
+  frame = frame.loc[ids.str.fullmatch(r"[0-9]+") & ~ids.duplicated(keep=False)]
+  if "archived" in frame:
+    frame = frame.loc[frame["archived"] != "1"]
+  return frame.drop(columns=["archived"], errors="ignore").reset_index(drop=True)
+
+
+def remove_announcement(expected):
+  teacher_only()
+  with shared_state()["lock"]:
+    book = get_gspread_client()
+    table = Sheet(book, "exams")
+    hits = [n for n, r in table.rows.items() if same_fields(r, expected, table.headers)]
+    if len(hits) != 1:
+      raise ValueError("تغير الإعلان أو يوجد إعلان مطابق. راجع السجل.")
+    commit(book, [table.delete(hits[0])])
 
 
 @st.cache_data(ttl=600, show_spinner=False)
 def build_excel_bytes(df_to_export, sheet_name="Sheet1", include_index=False):
   b_io = io.BytesIO()
-  with pd.ExcelWriter(b_io, engine="xlsxwriter") as writer:
+  with pd.ExcelWriter(b_io, engine="xlsxwriter", engine_kwargs={"options": {"strings_to_formulas": False, "strings_to_urls": False}}) as writer:
     df_to_export.to_excel(writer, index=include_index, sheet_name=sheet_name)
   return b_io.getvalue()
 
@@ -164,227 +739,238 @@ def ensure_weasyprint_ready():
   try:
     import weasyprint  # noqa: F401
     return True
-  except ImportError:
-    try:
-      subprocess.check_call([sys.executable, "-m", "pip", "install", "weasyprint", "-q"])
-      import weasyprint  # noqa: F401
-      return True
-    except Exception:
-      return False
+  except (ImportError, OSError):
+    return False
 
 
 @st.cache_data(ttl=3600, max_entries=100, show_spinner=False)
 def generate_pdf_bytes_cached(html_str):
-  if ensure_weasyprint_ready():
-    from weasyprint import HTML
-    return HTML(string=html_str).write_pdf()
-  return None
+  if not ensure_weasyprint_ready():
+    return None
+  from weasyprint import HTML
+  try:
+    from weasyprint.urls import URLFetcher
+    loader = URLFetcher(timeout=3, allowed_protocols=("https", "data"))
+  except ImportError:
+    from weasyprint import default_url_fetcher
+    def loader(url):
+      if urllib.parse.urlsplit(url).scheme not in ("https", "data"):
+        raise ValueError("مورد غير مدعوم في الطباعة.")
+      return default_url_fetcher(url, timeout=3)
+  return HTML(string=html_str, url_fetcher=loader).write_pdf()
 
 
-# --- تحميل الإعدادات وخريطة المراحل في الجلسة منذ لحظة التشغيل ---
-if "class_options" not in st.session_state:
+def render_app():
+  # --- تحميل الإعدادات وخريطة المراحل في الجلسة منذ لحظة التشغيل ---
   s_map = get_cached_settings()
-  if s_map:
-    st.session_state.max_tasks = int(s_map.get("max_tasks", 60))
-    st.session_state.max_quiz = int(s_map.get("max_quiz", 40))
-    st.session_state.current_year = str(s_map.get("current_year", "1448هـ")).strip()
-    raw_per = str(s_map.get("current_period", "الفصل الأول - فترة أولى")).strip()
-    if raw_per == "الفترة الأولى":
-      raw_per = "الفصل الأول - فترة أولى"
-    elif raw_per == "الفترة الثانية":
-      raw_per = "الفصل الأول - فترة ثانية"
-    st.session_state.current_period = raw_per
-    st.session_state.app_theme = str(s_map.get("app_theme", "الرئيسي (الافتراضي)")).strip()
-    st.session_state.class_options = [
-        x.strip() for x in str(s_map.get("class_list", "الأول")).split(",") if x.strip()
-    ]
-    st.session_state.stage_options = [
-        x.strip() for x in str(s_map.get("stage_list", "ابتدائي")).split(",") if x.strip()
-    ]
-    raw_cs = s_map.get("class_stage_map", "")
-    loaded_cs = {}
-    if raw_cs:
-      try:
-        loaded_cs = json.loads(raw_cs)
-      except Exception:
-        loaded_cs = {}
-    for c_it in st.session_state.class_options:
-      if c_it not in loaded_cs:
-        loaded_cs[c_it] = "متوسط" if "متوسط" in str(c_it) else "ابتدائي"
-    st.session_state.class_stage_map = loaded_cs
-  else:
-    st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
-    st.session_state.current_year = "1448هـ"
-    st.session_state.current_period = "الفصل الأول - فترة أولى"
-    st.session_state.app_theme = "الرئيسي (الافتراضي)"
-    st.session_state.class_options = ["الأول"]
-    st.session_state.stage_options = ["ابتدائي"]
-    st.session_state.class_stage_map = {"الأول": "ابتدائي"}
+  config_stamp = fingerprint(s_map)
+  if st.session_state.get("config_stamp") != config_stamp or "class_options" not in st.session_state:
+    st.session_state.config_stamp = config_stamp
+    for field in ("years_list", "year_classes_map", "cert_phrases_config"):
+      st.session_state.pop(field, None)
+    if s_map:
+      st.session_state.max_tasks = whole(s_map.get("max_tasks",60), "الحد الأعلى للمشاركة", 100)
+      st.session_state.max_quiz = whole(s_map.get("max_quiz",40), "الحد الأعلى للاختبار", 100)
+      st.session_state.current_year = str(s_map.get("current_year", "1448هـ")).strip()
+      raw_per = str(s_map.get("current_period", "الفصل الأول - فترة أولى")).strip()
+      if raw_per == "الفترة الأولى":
+        raw_per = "الفصل الأول - فترة أولى"
+      elif raw_per == "الفترة الثانية":
+        raw_per = "الفصل الأول - فترة ثانية"
+      st.session_state.current_period = raw_per
+      st.session_state.app_theme = str(s_map.get("app_theme", "الرئيسي (الافتراضي)")).strip()
+      st.session_state.class_options = [
+          x.strip() for x in str(s_map.get("class_list", "الأول")).split(",") if x.strip()
+      ] or ["الأول"]
+      st.session_state.stage_options = [
+          x.strip() for x in str(s_map.get("stage_list", "ابتدائي")).split(",") if x.strip()
+      ] or ["ابتدائي"]
+      raw_cs = s_map.get("class_stage_map", "")
+      loaded_cs = {}
+      if raw_cs:
+        try:
+          loaded_cs = json.loads(raw_cs)
+          if not isinstance(loaded_cs, dict):
+            loaded_cs = {}
+        except Exception:
+          loaded_cs = {}
+      for c_it in st.session_state.class_options:
+        if c_it not in loaded_cs:
+          loaded_cs[c_it] = "متوسط" if "متوسط" in str(c_it) else "ابتدائي"
+      st.session_state.class_stage_map = loaded_cs
+    else:
+      st.session_state.max_tasks, st.session_state.max_quiz = 60, 40
+      st.session_state.current_year = "1448هـ"
+      st.session_state.current_period = "الفصل الأول - فترة أولى"
+      st.session_state.app_theme = "الرئيسي (الافتراضي)"
+      st.session_state.class_options = ["الأول"]
+      st.session_state.stage_options = ["ابتدائي"]
+      st.session_state.class_stage_map = {"الأول": "ابتدائي"}
 
-if "role" not in st.session_state:
-  st.session_state.role = None
-if "username" not in st.session_state:
-  st.session_state.username = None
+  if "role" not in st.session_state:
+    st.session_state.role = None
+  if "username" not in st.session_state:
+    st.session_state.username = None
 
-# --- 🎨 نظام القوالب الديناميكية للمناسبات والتجديد ---
-active_theme_name = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
+  # --- 🎨 نظام القوالب الديناميكية للمناسبات والتجديد ---
+  active_theme_name = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
 
-themes = {
-    "الرئيسي (الافتراضي)": {
-        "primary": "#2563EB",
-        "accent": "#3B82F6",
-        "header_grad": "linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%)",
-        "title_color": "#ffffff",
-        "sub_color": "#DBEAFE",
-        "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
-        "icon": "🎓",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")",
-    },
-    "الابتكار والمستقبل 🚀": {
-        "primary": "#4F46E5",
-        "accent": "#8B5CF6",
-        "header_grad": "linear-gradient(135deg, #1E1B4B 0%, #4338CA 50%, #7C3AED 100%)",
-        "title_color": "#FFFFFF",
-        "sub_color": "#E0E7FF",
-        "btn_hover": "linear-gradient(135deg, #312E81 0%, #5B21B6 100%)",
-        "icon": "🚀",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='2'/%3E%3C/svg%3E\")",
-    },
-    "الزمرد الفاخر 💎": {
-        "primary": "#0F766E",
-        "accent": "#14B8A6",
-        "header_grad": "linear-gradient(135deg, #042F2E 0%, #0F766E 55%, #0D9488 100%)",
-        "title_color": "#FFFFFF",
-        "sub_color": "#CCFBF1",
-        "btn_hover": "linear-gradient(135deg, #115E59 0%, #0F766E 100%)",
-        "icon": "💎",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3Ccircle cx='22' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E\")",
-    },
-    "الأفق الرقمي ✨": {
-        "primary": "#0284C7",
-        "accent": "#06B6D4",
-        "header_grad": "linear-gradient(135deg, #090D16 0%, #0C4A6E 50%, #0284C7 100%)",
-        "title_color": "#FFFFFF",
-        "sub_color": "#BAE6FD",
-        "btn_hover": "linear-gradient(135deg, #075985 0%, #0369A1 100%)",
-        "icon": "✨",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='0.12' stroke-width='1.5'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='10'/%3E%3C/g%3E%3C/svg%3E\")",
-    },
-    "اليوم الوطني 🇸🇦": {
-        "primary": "#006C5B",
-        "accent": "#10B981",
-        "header_grad": "linear-gradient(135deg, #004D40 0%, #006C5B 100%)",
-        "title_color": "#ffffff",
-        "sub_color": "#D4AF37",
-        "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
-        "icon": "🇸🇦",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية • اليوم الوطني 🇸🇦",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-    },
-    "يوم التأسيس 🏛️": {
-        "primary": "#8B4513",
-        "accent": "#D97706",
-        "header_grad": "linear-gradient(135deg, #5C4033 0%, #8B4513 100%)",
-        "title_color": "#F5DEB3",
-        "sub_color": "#FAEBD7",
-        "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
-        "icon": "🐎",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية • يوم التأسيس 🏛️",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
-    },
-    "رمضان المبارك 🌙": {
-        "primary": "#1E3A8A",
-        "accent": "#D4AF37",
-        "header_grad": "linear-gradient(135deg, #060D23 0%, #1E3A8A 100%)",
-        "title_color": "#D4AF37",
-        "sub_color": "#E2E8F0",
-        "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
-        "icon": "🌙",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية • رمضان المبارك 🌙",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
-    },
-    "التفوق والنجاح 🏆": {
-        "primary": "#B45309",
-        "accent": "#F59E0B",
-        "header_grad": "linear-gradient(135deg, #92400E 0%, #D97706 100%)",
-        "title_color": "#ffffff",
-        "sub_color": "#FEF3C7",
-        "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
-        "icon": "🏆",
-        "title": "بوابة إدارة ومتابعة الطلاب",
-        "brand": "منصة زياد الذكية • حصاد التفوق 🏆",
-        "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
-        "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-    },
-}
+  themes = {
+      "الرئيسي (الافتراضي)": {
+          "primary": "#2563EB",
+          "accent": "#3B82F6",
+          "header_grad": "linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%)",
+          "title_color": "#ffffff",
+          "sub_color": "#DBEAFE",
+          "btn_hover": "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
+          "icon": "🎓",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='3'/%3E%3C/g%3E%3C/svg%3E\")",
+      },
+      "الابتكار والمستقبل 🚀": {
+          "primary": "#4F46E5",
+          "accent": "#8B5CF6",
+          "header_grad": "linear-gradient(135deg, #1E1B4B 0%, #4338CA 50%, #7C3AED 100%)",
+          "title_color": "#FFFFFF",
+          "sub_color": "#E0E7FF",
+          "btn_hover": "linear-gradient(135deg, #312E81 0%, #5B21B6 100%)",
+          "icon": "🚀",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='56' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='2'/%3E%3C/svg%3E\")",
+      },
+      "الزمرد الفاخر 💎": {
+          "primary": "#0F766E",
+          "accent": "#14B8A6",
+          "header_grad": "linear-gradient(135deg, #042F2E 0%, #0F766E 55%, #0D9488 100%)",
+          "title_color": "#FFFFFF",
+          "sub_color": "#CCFBF1",
+          "btn_hover": "linear-gradient(135deg, #115E59 0%, #0F766E 100%)",
+          "icon": "💎",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M22 0L44 22L22 44L0 22Z'/%3E%3Ccircle cx='22' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E\")",
+      },
+      "الأفق الرقمي ✨": {
+          "primary": "#0284C7",
+          "accent": "#06B6D4",
+          "header_grad": "linear-gradient(135deg, #090D16 0%, #0C4A6E 50%, #0284C7 100%)",
+          "title_color": "#FFFFFF",
+          "sub_color": "#BAE6FD",
+          "btn_hover": "linear-gradient(135deg, #075985 0%, #0369A1 100%)",
+          "icon": "✨",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='0.12' stroke-width='1.5'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='10'/%3E%3C/g%3E%3C/svg%3E\")",
+      },
+      "اليوم الوطني 🇸🇦": {
+          "primary": "#006C5B",
+          "accent": "#10B981",
+          "header_grad": "linear-gradient(135deg, #004D40 0%, #006C5B 100%)",
+          "title_color": "#ffffff",
+          "sub_color": "#D4AF37",
+          "btn_hover": "linear-gradient(135deg, #00332a 0%, #004D40 100%)",
+          "icon": "🇸🇦",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية • اليوم الوطني 🇸🇦",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+      },
+      "يوم التأسيس 🏛️": {
+          "primary": "#8B4513",
+          "accent": "#D97706",
+          "header_grad": "linear-gradient(135deg, #5C4033 0%, #8B4513 100%)",
+          "title_color": "#F5DEB3",
+          "sub_color": "#FAEBD7",
+          "btn_hover": "linear-gradient(135deg, #3e2723 0%, #5d4037 100%)",
+          "icon": "🐎",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية • يوم التأسيس 🏛️",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 20-20 20L0 20z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
+      },
+      "رمضان المبارك 🌙": {
+          "primary": "#1E3A8A",
+          "accent": "#D4AF37",
+          "header_grad": "linear-gradient(135deg, #060D23 0%, #1E3A8A 100%)",
+          "title_color": "#D4AF37",
+          "sub_color": "#E2E8F0",
+          "btn_hover": "linear-gradient(135deg, #0F172A 0%, #1E40AF 100%)",
+          "icon": "🌙",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية • رمضان المبارك 🌙",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='2' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E\")",
+      },
+      "التفوق والنجاح 🏆": {
+          "primary": "#B45309",
+          "accent": "#F59E0B",
+          "header_grad": "linear-gradient(135deg, #92400E 0%, #D97706 100%)",
+          "title_color": "#ffffff",
+          "sub_color": "#FEF3C7",
+          "btn_hover": "linear-gradient(135deg, #78350F 0%, #B45309 100%)",
+          "icon": "🏆",
+          "title": "بوابة إدارة ومتابعة الطلاب",
+          "brand": "منصة زياد الذكية • حصاد التفوق 🏆",
+          "subtitle": "الدرجات • الاختبارات • الملاحظات • التواصل مع ولي الأمر",
+          "bg_pattern": "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M10.1 23l4.6-4.6-3.2-3.2-4.6 4.6 3.2 3.2zm14.2 0l-4.6-4.6 3.2-3.2 4.6 4.6-3.2 3.2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+      },
+  }
 
-t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
+  t_colors = themes.get(active_theme_name, themes["الرئيسي (الافتراضي)"])
 
-text_color = "#0F172A"
-sub_text = "#94A3B8"
-border_color = "rgba(148, 163, 184, 0.28)"
-success_color = "#10B981"
-warning_color = "#F59E0B"
-danger_color = "#EF4444"
-shadow_val = "0 4px 12px rgba(0, 0, 0, 0.12)"
+  text_color = "#0F172A"
+  sub_text = "#94A3B8"
+  border_color = "rgba(148, 163, 184, 0.28)"
+  success_color = "#10B981"
+  warning_color = "#F59E0B"
+  danger_color = "#EF4444"
+  shadow_val = "0 4px 12px rgba(0, 0, 0, 0.12)"
 
-primary_color = t_colors["primary"]
-accent_color = t_colors["accent"]
-header_grad = t_colors["header_grad"]
+  primary_color = t_colors["primary"]
+  accent_color = t_colors["accent"]
+  header_grad = t_colors["header_grad"]
 
 
-def get_professional_msg(name, b_type, b_desc, date):
-  msg = (
-      f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:*"
+  def get_professional_msg(name, b_type, b_desc, date):
+    msg = (
+        f"🔔 *إشعار من منصة الأستاذ زياد*\n👤 *الطالب:* {name}\n📍 *الملاحظة:*"
       f" {b_type}\n📝 *التفاصيل:* {b_desc if b_desc else 'متابعة'}\n📅"
       f" *التاريخ:* {date}"
-  )
-  return urllib.parse.quote(msg)
+    )
+    return urllib.parse.quote(msg)
 
 
-def get_school_name_dynamic(cls_name):
-  if cls_name == "الكل":
-    return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
-  stage_mapped = st.session_state.get("class_stage_map", {}).get(str(cls_name).strip(), "")
-  if stage_mapped == "متوسط" or "متوسط" in str(cls_name):
-    return "متوسطة عبدالرحمن الناصر"
-  return "ابتدائية عبادة بن قيس الأنصاري"
+  def get_school_name_dynamic(cls_name):
+    if cls_name == "الكل":
+      return "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
+    stage_mapped = st.session_state.get("class_stage_map", {}).get(str(cls_name).strip(), "")
+    if stage_mapped == "متوسط" or "متوسط" in str(cls_name):
+      return "متوسطة عبدالرحمن الناصر"
+    return "ابتدائية عبادة بن قيس الأنصاري"
 
 
-def show_footer():
-  st.markdown(
-      f"""
+  def show_footer():
+    st.markdown(
+        f"""
     <div id='ziyad-portal-footer' style='text-align: center; color: #0F172A; margin-top: 20px; padding: 14px 14px 8px 14px; border-top: 2px solid #E2E8F0; background: linear-gradient(180deg, rgba(241, 245, 249, 0.75) 0%, rgba(248, 250, 252, 0) 100%); border-radius: 18px 18px 0 0;'>
         <p style='margin: 0 0 4px 0; font-size: 0.92rem; font-weight: 800; color: #0F172A !important;'>جميع الحقوق محفوظة لمنصة الأستاذ زياد الذكية © {datetime.date.today().year}</p>
         <p style='margin: 0 0 6px 0; font-size: 0.8rem; font-weight: 700; color: #64748B !important;'>قنوات التواصل والروابط السريعة</p>
     </div>
     """,
-      unsafe_allow_html=True,
-  )
-  c1, c2, c3, c4 = st.columns(4)
-  c1.link_button("🧠 منصة أنماط التعلم", "https://zi-style.streamlit.app", use_container_width=True)
-  c2.link_button("📢 تليجرام الإدارة", "https://t.me/ZiyadAlmoamri", use_container_width=True)
-  c3.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
-  c4.link_button("📧 البريد الإلكتروني", "mailto:ziyadalamri30@gmail.com", use_container_width=True)
-  components.html(f"""
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3, c4 = st.columns(4)
+    c1.link_button("🧠 منصة أنماط التعلم", "https://zi-style.streamlit.app", use_container_width=True)
+    c2.link_button("📢 تليجرام الإدارة", "https://t.me/ZiyadAlmoamri", use_container_width=True)
+    c3.link_button("💬 واتساب المعلم", "https://wa.me/966534900049", use_container_width=True)
+    c4.link_button("📧 البريد الإلكتروني", "mailto:ziyadalamri30@gmail.com", use_container_width=True)
+    components.html(f"""
 <script>
 (function() {{
     try {{
@@ -1024,11 +1610,11 @@ def show_footer():
 </script>
 """, height=0)
 
-# ==========================================
-# 🎨 2. التصميم الاحترافي الموحد (متوافق 100% مع الجوال والوضع الداكن والفاتح)
-# ==========================================
-st.markdown(
-    f"""
+  # ==========================================
+  # 🎨 2. التصميم الاحترافي الموحد (متوافق 100% مع الجوال والوضع الداكن والفاتح)
+  # ==========================================
+  st.markdown(
+      f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
@@ -2292,11 +2878,11 @@ white-space: nowrap !important;
 }}
 </style>
 """,
-    unsafe_allow_html=True,
-)
+      unsafe_allow_html=True,
+  )
 
-st.markdown(
-    f"""
+  st.markdown(
+      f"""
 <div class="header-container" dir="rtl" style="font-family: 'Cairo', sans-serif !important;">
 <div class="unified-title-row">
 <svg class="floating-cap-logo" width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; animation: float 3.5s ease-in-out infinite;"><rect width="64" height="64" rx="18" fill="white" fill-opacity="0.16"/><rect x="1.5" y="1.5" width="61" height="61" rx="16.5" stroke="white" stroke-opacity="0.38" stroke-width="2"/><path d="M32 14L12 24L32 34L52 24L32 14Z" fill="#FBBF24"/><path d="M20 29V41C20 44.5 25.5 48 32 48C38.5 48 44 44.5 44 41V29L32 35L20 29Z" fill="white"/><path d="M48 26V40" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/></svg>
@@ -2308,179 +2894,139 @@ st.markdown(
 <div class="unified-sub-desc" style="font-family: 'Cairo', sans-serif !important; color: {t_colors['sub_color']} !important; -webkit-text-fill-color: {t_colors['sub_color']} !important;">{t_colors["subtitle"]}</div>
 </div>
 """,
-    unsafe_allow_html=True,
-)
+      unsafe_allow_html=True,
+  )
 
-# ==========================================
-# 🔐 3. نظام تسجيل الدخول
-# ==========================================
-if st.session_state.role is None:
-  t1, t2, t3 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم", "🏫 بوابة الإدارة (مشاهد)"])
+  # ==========================================
+  # 🔐 3. نظام تسجيل الدخول
+  # ==========================================
+  if st.session_state.role is None:
+    t1, t2, t3 = st.tabs(["🎓 بوابة الطلاب", "👨‍💼 بوابة المعلم", "🏫 بوابة الإدارة (مشاهد)"])
 
-  with t1:
-    with st.form("st_login"):
-      st.markdown("<div class='login-card-heading'>تسجيل دخول الطالب</div><div class='login-card-sub'>أدخل رقم الهوية أو الرقم الأكاديمي للاطلاع على الدرجات والاختبارات والملاحظات</div>", unsafe_allow_html=True)
-      sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
-      if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
-        arabic_to_english = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
-        sid = sid.translate(arabic_to_english)
-        df = fetch_safe("students")
-        if not df.empty:
-          df["clean_id"] = df.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-          if sid.split(".")[0] in df["clean_id"].values:
-            st.session_state.username = sid.split(".")[0]
+    with t1:
+      with st.form("st_login"):
+        st.markdown("<div class='login-card-heading'>تسجيل دخول الطالب</div><div class='login-card-sub'>أدخل رقم الهوية أو الرقم الأكاديمي للاطلاع على الدرجات والاختبارات والملاحظات</div>", unsafe_allow_html=True)
+        sid = st.text_input("رقم الهوية / الرقم الأكاديمي", placeholder="أدخل الرقم هنا...").strip()
+        if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
+          sid = student_id(sid)
+          df = visible_students(fetch_safe("students"))
+          matches = df[df["id"] == sid]
+          if re.fullmatch(r"[0-9]+", sid) and len(matches) == 1:
+            st.session_state.username = sid
             st.session_state.role = "student"
             st.rerun()
           else:
-            st.error("⚠️ الرقم غير مسجل في النظام")
+            st.error("تعذر تحديد سجل طالب واحد بهذا الرقم. تحقق من الرقم أو راجع المعلم.")
 
-  with t2:
-    with st.form("tr_login"):
-      st.markdown("<div class='login-card-heading'>تسجيل دخول المعلم</div><div class='login-card-sub'>أدخل بيانات الحساب للوصول إلى لوحة إدارة ومتابعة الطلاب</div>", unsafe_allow_html=True)
-      u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...")
-      p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-      if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
-        df = fetch_safe("users")
-        if not df.empty and u in df["username"].values:
-          ud = df[df["username"] == u].iloc[0]
-          if hashlib.sha256(p.encode()).hexdigest() == ud["password_hash"]:
-            if ud.get("role", "teacher") in ["teacher", ""]:
-              try:
-                ws_u = get_gspread_client().worksheet("users")
-                u_row_num = int(df[df["username"] == u].index[0]) + 2
-                now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
-                if "last_login" in df.columns:
-                  idx_u = list(df.columns).index("last_login") + 1
-                  ws_u.update_cell(u_row_num, idx_u, now_str)
-                else:
-                  headers_u = ws_u.row_values(1)
-                  if "last_login" not in headers_u:
-                    ws_u.update_cell(1, len(headers_u) + 1, "last_login")
-                    headers_u.append("last_login")
-                  ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
-              except Exception:
-                pass
-              st.session_state.username = u
-              st.session_state.role = "teacher"
-              st.rerun()
-            else:
-              st.error("❌ هذا الحساب لا يملك صلاحية المعلم.")
-          else:
-            st.error("❌ كلمة المرور غير صحيحة.")
-        else:
-          st.error("❌ اسم المستخدم غير موجود.")
+    with t2:
+      with st.form("tr_login"):
+        st.markdown("<div class='login-card-heading'>تسجيل دخول المعلم</div><div class='login-card-sub'>أدخل بيانات الحساب للوصول إلى لوحة إدارة ومتابعة الطلاب</div>", unsafe_allow_html=True)
+        u = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم هنا...")
+        p = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+        if st.form_submit_button("🚀 دخول للمنصة", type="primary", use_container_width=True):
+          try:
+            staff_login(u, p, "teacher")
+            st.rerun()
+          except Exception as exc:
+            notify_error(exc)
 
-  with t3:
-    with st.form("admin_login"):
-      st.markdown("<div class='login-card-heading'>دخول الإدارة والإشراف التربوي</div><div class='login-card-sub'>بوابة مخصصة للإدارة والمشرف التربوي للاطلاع واستخراج التقارير</div>", unsafe_allow_html=True)
-      u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
-      p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
-      if st.form_submit_button("👁️ استعراض التقارير والبيانات", type="primary", use_container_width=True):
-        df_u = fetch_safe("users")
-        if not df_u.empty and u_admin in df_u["username"].values:
-          ud = df_u[df_u["username"] == u_admin].iloc[0]
-          if hashlib.sha256(p_admin.encode()).hexdigest() == ud["password_hash"]:
-            if ud.get("role", "") == "viewer":
-              try:
-                ws_u = get_gspread_client().worksheet("users")
-                u_row_num = int(df_u[df_u["username"] == u_admin].index[0]) + 2
-                now_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d %I:%M %p")
-                if "last_login" in df_u.columns:
-                  idx_u = list(df_u.columns).index("last_login") + 1
-                  ws_u.update_cell(u_row_num, idx_u, now_str)
-                else:
-                  headers_u = ws_u.row_values(1)
-                  if "last_login" not in headers_u:
-                    ws_u.update_cell(1, len(headers_u) + 1, "last_login")
-                    headers_u.append("last_login")
-                  ws_u.update_cell(u_row_num, headers_u.index("last_login") + 1, now_str)
-              except Exception:
-                pass
-              st.session_state.username = u_admin
-              st.session_state.role = "viewer"
-              st.rerun()
-            else:
-              st.error("❌ هذا الحساب لا يملك صلاحية الإدارة (قراءة فقط).")
-          else:
-            st.error("❌ كلمة المرور غير صحيحة.")
-        else:
-          st.error("❌ بيانات الدخول غير صحيحة.")
+    with t3:
+      with st.form("admin_login"):
+        st.markdown("<div class='login-card-heading'>دخول الإدارة والإشراف التربوي</div><div class='login-card-sub'>بوابة مخصصة للإدارة والمشرف التربوي للاطلاع واستخراج التقارير</div>", unsafe_allow_html=True)
+        u_admin = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم للإدارة...")
+        p_admin = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور...")
+        if st.form_submit_button("👁️ استعراض التقارير والبيانات", type="primary", use_container_width=True):
+          try:
+            staff_login(u_admin, p_admin, "viewer")
+            st.rerun()
+          except Exception as exc:
+            notify_error(exc)
 
-  show_footer()
-  st.stop()
+    show_footer()
+    st.stop()
 
-# ==========================================
-# 🔄 4. تحميل البيانات المركزية وتجهيز التبويبات الرئيسية
-# ==========================================
-if "db_loaded" not in st.session_state:
-  with st.spinner("⏳ جاري الاتصال بالمنصة وتحديث البيانات المركزية..."):
-    try:
-      st.session_state.df_students = fetch_safe("students")
-      st.session_state.df_grades = fetch_safe("grades")
-      st.session_state.df_behavior = fetch_safe("behavior")
-      st.session_state.db_loaded = True
-    except Exception as e:
-      st.error(f"❌ حدث خطأ أثناء الاتصال: {e}")
-      st.stop()
+  # ==========================================
+  # 🔄 4. تحميل البيانات المركزية وتجهيز التبويبات الرئيسية
+  # ==========================================
+  is_submission = any(str(k).startswith("FormSubmitter:") and v is True for k, v in st.session_state.items())
+  need_refresh = (st.session_state.get("data_revision") != shared_state()["revision"] or
+                  time.monotonic() - st.session_state.get("snapshot_time", 0) >= 60)
+  if ("db_loaded" not in st.session_state or st.session_state.get("snapshot_year") != st.session_state.current_year
+      or (need_refresh and not is_submission)):
+    with st.spinner("⏳ جاري الاتصال بالمنصة وتحديث البيانات المركزية..."):
+      with shared_state()["lock"]:
+        all_students = fetch_safe("students")
+        students = visible_students(all_students)
+        bad_ids = (~all_students["id"].str.fullmatch(r"[0-9]+") | all_students["id"].duplicated(keep=False)).sum()
+        grade_frame, legacy, count, invalid = split_grades(fetch_safe("grades"), st.session_state.current_year)
+        behavior_frame = fetch_safe("behavior")
+        st.session_state.update(df_students=students, df_grades=grade_frame, df_behavior=behavior_frame,
+                                db_loaded=True, legacy_grades=legacy, duplicate_grades=count, invalid_scores=invalid, bad_ids=int(bad_ids),
+                                data_revision=shared_state()["revision"], snapshot_time=time.monotonic(),
+                                snapshot_year=st.session_state.current_year)
+  if st.session_state.role in ("teacher","viewer") and (st.session_state.bad_ids or st.session_state.invalid_scores):
+    st.warning(f"تحتاج ورقة الطلاب مراجعة {st.session_state.bad_ids} سجل برقم غير صالح أو مكرر، وورقة الدرجات {st.session_state.invalid_scores} سجل بدرجات غير مكتملة أو مجموع غير مطابق. هذه السجلات مستبعدة من العرض.")
+  if st.session_state.role in ("teacher","viewer") and (st.session_state.duplicate_grades or not st.session_state.legacy_grades.empty):
+    st.warning(f"استُبعد من تقارير العام {len(st.session_state.legacy_grades)} سجل بلا عام و{st.session_state.duplicate_grades} سجل مكرر. يستطيع المعلم تحديد عام السجلات القديمة من الإعدادات ومراجعة التكرار في ورقة grades.")
 
-if st.session_state.get("show_refresh_success"):
-  st.toast("✅ تم تحديث البيانات ومزامنتها بنجاح!", icon="🔄")
-  st.session_state["show_refresh_success"] = False
+  if st.session_state.get("show_refresh_success"):
+    st.toast("✅ تم تحديث البيانات ومزامنتها بنجاح!", icon="🔄")
+    st.session_state["show_refresh_success"] = False
 
-if st.session_state.role in ["teacher", "viewer"]:
-  if st.session_state.role == "teacher":
-    tab_students, tab_eval, tab_honor, tab_reports, tab_alerts, tab_settings, tab_logout = st.tabs([
-        "👥 إدارة الطلاب",
-        "📊 الرصد والتقييم",
-        "🏆 الشرف والشهادات",
-        "🖨️ مركز التقارير",
-        "📢 التنبيهات",
-        "⚙️ الإعدادات والبيانات",
-        "🛑 خروج",
-    ])
-  else:
-    tab_students, tab_eval, tab_honor, tab_reports, tab_alerts, tab_logout = st.tabs([
-        "👥 إدارة الطلاب",
-        "📊 الرصد والتقييم",
-        "🏆 الشرف والشهادات",
-        "🖨️ مركز التقارير",
-        "📢 التنبيهات",
-        "🛑 خروج",
-    ])
-    tab_settings = None
-
-# ==========================================
-# 👥 5. التبويب الأول: إدارة الطلاب (عرض، إضافة، تعديل، حذف)
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_students:
-    st.subheader("👥 إدارة بيانات الطلاب")
-    df_st = st.session_state.df_students.copy()
-
-    if "toast_msg" in st.session_state:
-      st.toast(st.session_state.toast_msg, icon="🔔")
-      del st.session_state["toast_msg"]
-
-    if not df_st.empty:
-      df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-      df_st["النقاط"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
+  if st.session_state.role in ["teacher", "viewer"]:
+    if st.session_state.role == "teacher":
+      tab_students, tab_eval, tab_honor, tab_reports, tab_alerts, tab_settings, tab_logout = st.tabs([
+          "👥 إدارة الطلاب",
+          "📊 الرصد والتقييم",
+          "🏆 الشرف والشهادات",
+          "🖨️ مركز التقارير",
+          "📢 التنبيهات",
+          "⚙️ الإعدادات والبيانات",
+          "🛑 خروج",
+      ])
     else:
-      df_st["clean_id"] = []
-      df_st["النقاط"] = []
+      tab_students, tab_eval, tab_honor, tab_reports, tab_alerts, tab_logout = st.tabs([
+          "👥 إدارة الطلاب",
+          "📊 الرصد والتقييم",
+          "🏆 الشرف والشهادات",
+          "🖨️ مركز التقارير",
+          "📢 التنبيهات",
+          "🛑 خروج",
+      ])
+      tab_settings = None
 
-    total_students = len(df_st)
-    total_classes = len(df_st["class"].dropna().unique()) if "class" in df_st.columns and not df_st.empty else 0
-    tested_vak_cnt = 0
-    if not df_st.empty and "نمط التعلم" in df_st.columns:
-      tested_vak_cnt = len(
-          df_st[
-              df_st["نمط التعلم"].notna()
-              & (~df_st["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
-          ]
-      )
+  # ==========================================
+  # 👥 5. التبويب الأول: إدارة الطلاب (عرض، إضافة، تعديل، حذف)
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_students:
+      st.subheader("👥 إدارة بيانات الطلاب")
+      df_st = st.session_state.df_students.copy()
 
-    st.markdown(
-        f"""
+      if "toast_msg" in st.session_state:
+        st.toast(st.session_state.toast_msg, icon="🔔")
+        del st.session_state["toast_msg"]
+
+      if not df_st.empty:
+        df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.strip()
+        df_st["النقاط"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
+      else:
+        df_st["clean_id"] = []
+        df_st["النقاط"] = []
+
+      total_students = len(df_st)
+      total_classes = len(df_st["class"].dropna().unique()) if "class" in df_st.columns and not df_st.empty else 0
+      tested_vak_cnt = 0
+      if not df_st.empty and "نمط التعلم" in df_st.columns:
+        tested_vak_cnt = len(
+            df_st[
+                df_st["نمط التعلم"].notna()
+                & (~df_st["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+            ]
+        )
+
+      st.markdown(
+          f"""
         <div class="dashboard-stats-container">
             <div class="dash-card total">
                 <div class="dash-title">👥 إجمالي الطلاب</div>
@@ -2499,467 +3045,396 @@ if st.session_state.role in ["teacher", "viewer"]:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
-    )
+          unsafe_allow_html=True,
+      )
 
-    action_tabs = st.tabs([
-        "🔍 عرض وبحث الطلاب",
-        "➕ إضافة طالب جديد",
-        "✏️ تعديل بيانات طالب",
-        "🗑️ حذف طالب",
-    ])
+      action_tabs = st.tabs([
+          "🔍 عرض وبحث الطلاب",
+          "➕ إضافة طالب جديد",
+          "✏️ تعديل بيانات طالب",
+          "🗑️ حذف طالب",
+      ])
 
-    # 1. عرض وبحث الطلاب (يدعم اختيار عدة فصول معاً)
-    with action_tabs[0]:
-      if not df_st.empty:
-        if "current_page" not in st.session_state:
-          st.session_state.current_page = 1
+      # 1. عرض وبحث الطلاب (يدعم اختيار عدة فصول معاً)
+      with action_tabs[0]:
+        if not df_st.empty:
+          if "current_page" not in st.session_state:
+            st.session_state.current_page = 1
 
-        col_search, col_cls_f, col_rows = st.columns([2, 2, 0.8])
-        with col_search:
-          sq = st.text_input("🔍 بحث:", placeholder="ابحث بالاسم أو الرقم الأكاديمي...", label_visibility="collapsed")
-        with col_cls_f:
-          avail_st_classes = list(df_st["class"].dropna().unique())
-          cls_filter_list = st.multiselect(
-              "🏫 الفصول:",
-              options=["كل الفصول"] + avail_st_classes,
-              default=["كل الفصول"],
-              placeholder="اختر فصلاً أو أكثر...",
-              label_visibility="collapsed",
-              key="st_view_multi_cls",
-          )
-        with col_rows:
-          rows_per_page = st.selectbox("الصفوف:", [10, 20, 50, 100], index=0, label_visibility="collapsed")
+          col_search, col_cls_f, col_rows = st.columns([2, 2, 0.8])
+          with col_search:
+            sq = st.text_input("🔍 بحث:", placeholder="ابحث بالاسم أو الرقم الأكاديمي...", label_visibility="collapsed")
+          with col_cls_f:
+            avail_st_classes = list(df_st["class"].dropna().unique())
+            cls_filter_list = st.multiselect(
+                "🏫 الفصول:",
+                options=["كل الفصول"] + avail_st_classes,
+                default=["كل الفصول"],
+                placeholder="اختر فصلاً أو أكثر...",
+                label_visibility="collapsed",
+                key="st_view_multi_cls",
+            )
+          with col_rows:
+            rows_per_page = st.selectbox("الصفوف:", [10, 20, 50, 100], index=0, label_visibility="collapsed")
 
-        display_df = df_st.copy()
-        if cls_filter_list and "كل الفصول" not in cls_filter_list:
-          display_df = display_df[display_df["class"].isin(cls_filter_list)]
-        elif not cls_filter_list:
-          display_df = display_df.iloc[0:0]
+          display_df = df_st.copy()
+          if cls_filter_list and "كل الفصول" not in cls_filter_list:
+            display_df = display_df[display_df["class"].isin(cls_filter_list)]
+          elif not cls_filter_list:
+            display_df = display_df.iloc[0:0]
 
-        if "clean_id" in display_df.columns:
-          display_df = display_df.drop(columns=["clean_id"])
+          if "clean_id" in display_df.columns:
+            display_df = display_df.drop(columns=["clean_id","quiz_completed"], errors="ignore")
 
-        rename_dict = {
-            "id": "الرقم الأكاديمي",
-            "name": "الاسم",
-            "class": "الصف",
-            "year": "العام",
-            "sem": "المرحلة",
-            "subject": "المادة",
-        }
-        display_df = display_df.rename(columns=rename_dict)
-        display_df = display_df[display_df.columns[::-1]]
+          rename_dict = {
+              "id": "الرقم الأكاديمي",
+              "name": "الاسم",
+              "class": "الصف",
+              "year": "العام",
+              "sem": "المرحلة",
+              "subject": "المادة",
+          }
+          display_df = display_df.rename(columns=rename_dict)
+          display_df = display_df[display_df.columns[::-1]]
 
-        if sq and not display_df.empty:
-          norm_sq = normalize_arabic(sq)
-          mask = display_df["الرقم الأكاديمي"].astype(str).str.contains(norm_sq) | display_df["الاسم"].astype(str).apply(normalize_arabic).str.contains(norm_sq)
-          display_df = display_df[mask]
-          st.session_state.current_page = 1
+          if sq and not display_df.empty:
+            norm_sq = normalize_arabic(sq)
+            mask = display_df["الرقم الأكاديمي"].astype(str).str.contains(norm_sq, regex=False) | display_df["الاسم"].astype(str).apply(normalize_arabic).str.contains(norm_sq, regex=False)
+            display_df = display_df[mask]
+            st.session_state.current_page = 1
 
-        total_rows = len(display_df)
-        total_pages = max(1, math.ceil(total_rows / rows_per_page))
-        if st.session_state.current_page > total_pages:
-          st.session_state.current_page = total_pages
+          total_rows = len(display_df)
+          total_pages = max(1, math.ceil(total_rows / rows_per_page))
+          if st.session_state.current_page > total_pages:
+            st.session_state.current_page = total_pages
 
-        start_idx = (st.session_state.current_page - 1) * rows_per_page
-        end_idx = start_idx + rows_per_page
+          start_idx = (st.session_state.current_page - 1) * rows_per_page
+          end_idx = start_idx + rows_per_page
 
-        st.dataframe(display_df.iloc[start_idx:end_idx], use_container_width=True, hide_index=True)
+          st.dataframe(display_df.iloc[start_idx:end_idx], use_container_width=True, hide_index=True)
 
-        pc1, pc2, pc3 = st.columns([1, 2, 1])
-        with pc1:
-          if st.button("▶ التالي", disabled=(st.session_state.current_page >= total_pages), use_container_width=True):
-            st.session_state.current_page += 1
-            st.rerun()
-        with pc2:
-          st.markdown(
-              f"<div style='text-align: center; font-weight: bold; padding-top: 8px; color: #94A3B8;'>صفحة {st.session_state.current_page} من {total_pages}<br><small>(إجمالي النتائج: {total_rows} طالب)</small></div>",
-              unsafe_allow_html=True,
-          )
-        with pc3:
-          if st.button("السابق ◀", disabled=(st.session_state.current_page <= 1), use_container_width=True):
-            st.session_state.current_page -= 1
-            st.rerun()
-      else:
-        st.info("لا توجد بيانات طلاب مسجلة حالياً.")
+          pc1, pc2, pc3 = st.columns([1, 2, 1])
+          with pc1:
+            if st.button("▶ التالي", disabled=(st.session_state.current_page >= total_pages), use_container_width=True):
+              st.session_state.current_page += 1
+              st.rerun()
+          with pc2:
+            st.markdown(
+                f"<div style='text-align: center; font-weight: bold; padding-top: 8px; color: #94A3B8;'>صفحة {st.session_state.current_page} من {total_pages}<br><small>(إجمالي النتائج: {total_rows} طالب)</small></div>",
+                unsafe_allow_html=True,
+            )
+          with pc3:
+            if st.button("السابق ◀", disabled=(st.session_state.current_page <= 1), use_container_width=True):
+              st.session_state.current_page -= 1
+              st.rerun()
+        else:
+          st.info("لا توجد بيانات طلاب مسجلة حالياً.")
 
-    # 2. إضافة طالب جديد
-    with action_tabs[1]:
-      if st.session_state.role == "teacher":
-        with st.form("add_st_v26", clear_on_submit=True):
-          st.markdown("#### 👤 بيانات الطالب الأساسية")
-          c1, c2 = st.columns(2)
-          f_name = c1.text_input("الاسم الكامل", placeholder="أدخل الاسم الرباعي")
-          f_id = c2.text_input("الرقم الأكاديمي / الهوية", placeholder="أدخل الرقم الأكاديمي")
+      # 2. إضافة طالب جديد
+      with action_tabs[1]:
+        if st.session_state.role == "teacher":
+          with st.form("add_st_v26", clear_on_submit=True):
+            st.markdown("#### 👤 بيانات الطالب الأساسية")
+            c1, c2 = st.columns(2)
+            f_name = c1.text_input("الاسم الكامل", placeholder="أدخل الاسم الرباعي")
+            f_id = c2.text_input("الرقم الأكاديمي / الهوية", placeholder="أدخل الرقم الأكاديمي")
 
-          c3, c4, c5 = st.columns(3)
-          f_class = c3.selectbox("الصف", st.session_state.class_options)
-          auto_stage = st.session_state.get("class_stage_map", {}).get(
-              f_class, "متوسط" if "متوسط" in str(f_class) else "ابتدائي"
-          )
-          stg_opts = list(st.session_state.stage_options)
-          if auto_stage not in stg_opts:
-            stg_opts.insert(0, auto_stage)
-          f_stage = c4.selectbox("المرحلة (تتحدد تلقائياً)", stg_opts, index=stg_opts.index(auto_stage))
-          f_year = c5.text_input("العام الدراسي", st.session_state.current_year)
+            c3, c4, c5 = st.columns(3)
+            f_class = c3.selectbox("الصف", st.session_state.class_options)
+            auto_stage = st.session_state.get("class_stage_map", {}).get(
+                f_class, "متوسط" if "متوسط" in str(f_class) else "ابتدائي"
+            )
+            stg_opts = list(st.session_state.stage_options)
+            if auto_stage not in stg_opts:
+              stg_opts.insert(0, auto_stage)
+            f_stage = c4.selectbox("المرحلة (تتحدد تلقائياً)", stg_opts, index=stg_opts.index(auto_stage))
+            f_year = c5.text_input("العام الدراسي", st.session_state.current_year)
 
-          st.markdown("#### 📞 معلومات التواصل ونمط التعلم")
-          c6, c7, c8 = st.columns(3)
-          f_phone = c6.text_input("رقم الجوال", placeholder="05xxxxxxxx")
-          f_mail = c7.text_input("البريد الإلكتروني", placeholder="example@mail.com")
-          f_style = c8.selectbox("نمط التعلم (اختياري)", ["", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"])
+            st.markdown("#### 📞 معلومات التواصل ونمط التعلم")
+            c6, c7, c8 = st.columns(3)
+            f_phone = c6.text_input("رقم الجوال", placeholder="05xxxxxxxx")
+            f_mail = c7.text_input("البريد الإلكتروني", placeholder="example@mail.com")
+            f_style = c8.selectbox("نمط التعلم (اختياري)", ["", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"])
 
-          if st.form_submit_button("✅ حفظ الطالب في المنصة", type="primary", use_container_width=True):
-            if f_id and f_name:
-              clean_new_id = f_id.strip().split(".")[0]
-              if not df_st.empty and clean_new_id in df_st["clean_id"].values:
-                st.error(f"⚠️ الرقم {clean_new_id} مسجل مسبقاً!")
-              else:
-                cl_p = clean_phone_number(f_phone) if f_phone else ""
-                st_map = {
-                    "id": clean_new_id,
-                    "name": f_name.strip(),
-                    "class": f_class,
-                    "year": f_year,
-                    "sem": f_stage,
-                    "الجوال": cl_p,
-                    "الإيميل": f_mail.strip(),
-                    "النقاط": "0",
-                    "نمط التعلم": f_style,
-                }
-                if safe_append_row("students", st_map):
+            if st.form_submit_button("✅ حفظ الطالب في المنصة", type="primary", use_container_width=True):
+              if f_id and f_name:
+                clean_new_id = student_id(f_id)
+                if not re.fullmatch(r"[0-9]+", clean_new_id) or not f_name.strip():
+                  raise ValueError("أدخل اسماً ورقماً أكاديمياً صحيحين.")
+                if not df_st.empty and clean_new_id in df_st["clean_id"].values:
+                  st.error(f"⚠️ الرقم {clean_new_id} مسجل مسبقاً!")
+                else:
+                  contacts = contact_values(f_phone, f_mail)
+                  st_map = {
+                      "id": clean_new_id,
+                      "name": f_name.strip(),
+                      "class": f_class,
+                      "year": f_year,
+                      "sem": f_stage,
+                      **contacts,
+                      "النقاط": "0",
+                      "نمط التعلم": f_style,
+                  }
+                  fresh_append("students", st_map)
                   st.session_state.toast_msg = f"✅ تم إضافة الطالب '{f_name}' بنجاح!"
                   if "db_loaded" in st.session_state:
                     del st.session_state["db_loaded"]
                   fetch_safe.clear()
                   st.rerun()
-            else:
-              st.warning("الرجاء إكمال البيانات الأساسية (الاسم والرقم)!")
-      else:
-        st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لإضافة طلاب.")
+              else:
+                st.warning("الرجاء إكمال البيانات الأساسية (الاسم والرقم)!")
+        else:
+          st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لإضافة طلاب.")
 
-    # 3. تعديل بيانات طالب
-    with action_tabs[2]:
-      if st.session_state.role == "teacher":
-        if not df_st.empty:
-          raw_df_st = st.session_state.df_students
-          edit_options = raw_df_st.index.tolist()
-          selected_idx = st.selectbox(
-              "✏️ اختر الطالب المطلوب تعديل بياناته (يمكنك البحث بالكتابة):",
-              edit_options,
-              format_func=lambda x: f"{raw_df_st.loc[x, 'name']} - ({raw_df_st.loc[x, 'class']}) - الرقم: {raw_df_st.loc[x, 'id']}",
-              key="edit_select",
-          )
+      # 3. تعديل بيانات طالب
+      with action_tabs[2]:
+        if st.session_state.role == "teacher":
+          if not df_st.empty:
+            raw_df_st = st.session_state.df_students
+            edit_options = raw_df_st.index.tolist()
+            selected_idx = st.selectbox(
+                "✏️ اختر الطالب المطلوب تعديل بياناته (يمكنك البحث بالكتابة):",
+                edit_options,
+                format_func=lambda x: f"{raw_df_st.loc[x, 'name']} - ({raw_df_st.loc[x, 'class']}) - الرقم: {raw_df_st.loc[x, 'id']}",
+                key="edit_select",
+            )
+            edit_key = fingerprint(raw_df_st.loc[selected_idx].to_dict())
 
-          with st.form("edit_form_single"):
-            st.markdown(f"**📝 تعديل بيانات: <span style='color:{accent_color};'>{raw_df_st.loc[selected_idx, 'name']}</span>**", unsafe_allow_html=True)
-            cols = st.columns(3)
-            new_vals = []
+            with st.form(f"edit_form_single_{edit_key}"):
+              st.markdown(f"**📝 تعديل بيانات: <span style='color:{accent_color};'>{raw_df_st.loc[selected_idx, 'name']}</span>**", unsafe_allow_html=True)
+              cols = st.columns(3)
+              new_vals = []
 
-            valid_columns = [
-                c for c in raw_df_st.columns
-                if c not in ["clean_id"] and not str(c).startswith("Unnamed") and str(c).strip() != ""
-            ]
+              valid_columns = [
+                  c for c in raw_df_st.columns
+                  if c not in ["clean_id", "archived", "quiz_completed"] and not str(c).startswith("Unnamed") and str(c).strip() != ""
+              ]
 
-            for col_idx, col_name in enumerate(valid_columns):
-              with cols[col_idx % 3]:
-                current_val = "" if pd.isna(raw_df_st.loc[selected_idx, col_name]) else str(raw_df_st.loc[selected_idx, col_name]).strip()
+              for col_idx, col_name in enumerate(valid_columns):
+                with cols[col_idx % 3]:
+                  current_val = "" if pd.isna(raw_df_st.loc[selected_idx, col_name]) else str(raw_df_st.loc[selected_idx, col_name]).strip()
 
-                if col_name == "class":
-                  c_opts = list(st.session_state.get("class_options", []))
-                  if current_val not in c_opts and current_val != "":
-                    c_opts.insert(0, current_val)
-                  c_idx = c_opts.index(current_val) if current_val in c_opts else 0
-                  val = st.selectbox(col_name, c_opts, index=c_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
-                elif col_name == "sem":
-                  s_opts = list(st.session_state.get("stage_options", []))
-                  if current_val not in s_opts and current_val != "":
-                    s_opts.insert(0, current_val)
-                  s_idx = s_opts.index(current_val) if current_val in s_opts else 0
-                  val = st.selectbox(col_name, s_opts, index=s_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
-                elif col_name == "نمط التعلم":
-                  ls_opts = ["", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"]
-                  if current_val not in ls_opts and current_val != "":
-                    ls_opts.insert(0, current_val)
-                  ls_idx = ls_opts.index(current_val) if current_val in ls_opts else 0
-                  val = st.selectbox(col_name, ls_opts, index=ls_idx, key=f"inp_edit_{selected_idx}_{col_idx}")
-                else:
-                  val = st.text_input(col_name, current_val, key=f"inp_edit_{selected_idx}_{col_idx}")
-                new_vals.append(str(val))
+                  if col_name == "class":
+                    c_opts = list(st.session_state.get("class_options", []))
+                    if current_val not in c_opts and current_val != "":
+                      c_opts.insert(0, current_val)
+                    c_idx = c_opts.index(current_val) if current_val in c_opts else 0
+                    val = st.selectbox(col_name, c_opts, index=c_idx, key=f"inp_edit_{edit_key}_{col_idx}")
+                  elif col_name == "sem":
+                    s_opts = list(st.session_state.get("stage_options", []))
+                    if current_val not in s_opts and current_val != "":
+                      s_opts.insert(0, current_val)
+                    s_idx = s_opts.index(current_val) if current_val in s_opts else 0
+                    val = st.selectbox(col_name, s_opts, index=s_idx, key=f"inp_edit_{edit_key}_{col_idx}")
+                  elif col_name == "نمط التعلم":
+                    ls_opts = ["", "بصري 👀", "سمعي 👂", "حركي ✋", "متعدد الأنماط 🌟"]
+                    if current_val not in ls_opts and current_val != "":
+                      ls_opts.insert(0, current_val)
+                    ls_idx = ls_opts.index(current_val) if current_val in ls_opts else 0
+                    val = st.selectbox(col_name, ls_opts, index=ls_idx, key=f"inp_edit_{edit_key}_{col_idx}")
+                  elif col_name == "id":
+                    val = st.text_input(col_name, current_val, disabled=True, key=f"inp_edit_{edit_key}_{col_idx}")
+                  else:
+                    val = st.text_input(col_name, current_val, key=f"inp_edit_{edit_key}_{col_idx}")
+                  new_vals.append(str(val))
 
-            if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
+              if st.form_submit_button("💾 حفظ التعديلات", type="primary", use_container_width=True):
+                try:
+                  original = raw_df_st.loc[selected_idx].to_dict()
+                  changes = {k:v for k,v in zip(valid_columns, new_vals) if k != "id" and str(original.get(k,"")) != v}
+                  if {"الجوال","الإيميل"} & changes.keys():
+                    clean = contact_values(changes.get("الجوال",""), changes.get("الإيميل",""))
+                    changes.update({k:clean[k] for k in changes if k in clean})
+                  if "النقاط" in changes:
+                    changes["النقاط"] = whole(changes["النقاط"], "النقاط")
+                  if "name" in changes and not changes["name"].strip():
+                    raise ValueError("أدخل اسم الطالب.")
+                  update_student(student_id(original["id"]), changes, original)
+                  st.session_state.toast_msg = "تم حفظ تعديلات الطالب."
+                  st.rerun()
+                except Exception as e:
+                  st.error(f"❌ حدث خطأ أثناء التعديل: {e}")
+          else:
+            st.info("لا توجد بيانات للطلاب بعد.")
+        else:
+          st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لتعديل البيانات.")
+
+      # 4. حذف طالب
+      with action_tabs[3]:
+        if st.session_state.role == "teacher":
+          if not df_st.empty:
+            del_options = df_st.index.tolist()
+            del_idx = st.selectbox(
+                "🗃️ اختر الطالب المطلوب أرشفته:",
+                del_options,
+                format_func=lambda x: f"{df_st.loc[x, 'name']} - (الرقم: {df_st.loc[x, 'id']})",
+                key="del_select",
+            )
+            student_to_delete = df_st.loc[del_idx, "name"]
+            del_sid_val = student_id(df_st.loc[del_idx, "id"])
+            st.warning(f"ستتم أرشفة ({student_to_delete}) وإيقاف دخوله، مع حفظ سجلاته.")
+            if st.button(f"تأكيد أرشفة {student_to_delete}", type="primary", use_container_width=True):
               try:
-                ws_st_edit = get_gspread_client().worksheet("students")
-                orig_sid = str(raw_df_st.loc[selected_idx, "id"]).strip().split(".")[0]
-                cell_st = ws_st_edit.find(orig_sid, in_column=1)
-                row_index = cell_st.row if cell_st else (int(selected_idx) + 2)
-                end_col_a1 = rowcol_to_a1(row_index, len(new_vals))
-                ws_st_edit.update(range_name=f"A{row_index}:{end_col_a1}", values=[new_vals])
-                st.session_state.toast_msg = f"🔄 تم تحديث بيانات '{new_vals[1] if len(new_vals) > 1 else ''}' بنجاح!"
-                if "db_loaded" in st.session_state:
-                  del st.session_state["db_loaded"]
-                fetch_safe.clear()
+                archive_student(del_sid_val)
+                st.session_state.toast_msg = "تمت أرشفة الطالب."
                 st.rerun()
               except Exception as e:
-                st.error(f"❌ حدث خطأ أثناء التعديل: {e}")
+                st.error(f"❌ حدث خطأ أثناء الحذف: {e}")
+          else:
+            st.info("لا توجد بيانات للطلاب بعد.")
         else:
-          st.info("لا توجد بيانات للطلاب بعد.")
-      else:
-        st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لتعديل البيانات.")
+          st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لحذف الطلاب.")
 
-    # 4. حذف طالب
-    with action_tabs[3]:
-      if st.session_state.role == "teacher":
-        if not df_st.empty:
-          del_options = df_st.index.tolist()
-          del_idx = st.selectbox(
-              "🗑️ اختر الطالب المطلوب حذفه نهائياً:",
-              del_options,
-              format_func=lambda x: f"{df_st.loc[x, 'name']} - (الرقم: {df_st.loc[x, 'id']})",
-              key="del_select",
-          )
-          student_to_delete = df_st.loc[del_idx, "name"]
-          del_sid_val = str(df_st.loc[del_idx, "id"]).strip().split(".")[0]
-          st.error(f"⚠️ تحذير: سيتم حذف بيانات ({student_to_delete}) نهائياً من قاعدة البيانات.")
-          if st.button(f"🚨 نعم، تأكيد حذف {student_to_delete}", type="primary", use_container_width=True):
-            try:
-              ws_st_del = get_gspread_client().worksheet("students")
-              cell_del = ws_st_del.find(del_sid_val, in_column=1)
-              target_del_row = cell_del.row if cell_del else (int(del_idx) + 2)
-              ws_st_del.delete_rows(target_del_row)
-              st.session_state.toast_msg = f"🗑️ تم حذف '{student_to_delete}' بشكل نهائي!"
-              if "db_loaded" in st.session_state:
-                del st.session_state["db_loaded"]
-              fetch_safe.clear()
-              st.rerun()
-            except Exception as e:
-              st.error(f"❌ حدث خطأ أثناء الحذف: {e}")
-        else:
-          st.info("لا توجد بيانات للطلاب بعد.")
-      else:
-        st.info("💡 وضع القراءة فقط: ليس لديك صلاحية لحذف الطلاب.")
+  # ==========================================
+  # 📊 6. التبويب الثاني: الرصد والتقييم (مطور وسريع الاستجابة)
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_eval:
+      st.subheader("📊 الرصد والتقييم الأكاديمي والسلوكي")
 
-# ==========================================
-# 📊 6. التبويب الثاني: الرصد والتقييم (مطور وسريع الاستجابة)
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_eval:
-    st.subheader("📊 الرصد والتقييم الأكاديمي والسلوكي")
+      BEHAVIOR_OPTIONS = [
+          "🌟 متميز (+10)",
+          "🎯 أداء المهمة (+15)",
+          "📂 ملف الإنجاز (+10)",
+          "✅ إيجابي (+5)",
+          "📝 حل الواجب (+5)",
+          "⚠️ تنبيه (0)",
+          "🪑 غائب (0)",
+          "🖊️ نقص أدوات الكتابة (-2)",
+          "📚 نقص كتاب (-3)",
+          "🏃 تأخر عن الحصة (-3)",
+          "💤 النوم داخل الفصل (-5)",
+          "✍️ نقص واجب (-5)",
+          "⏳ عدم أداء المهمة (-10)",
+          "❌ عدم إحضار ملف الإنجاز (-10)",
+          "🚫 سلبي (-10)",
+      ]
 
-    BEHAVIOR_OPTIONS = [
-        "🌟 متميز (+10)",
-        "🎯 أداء المهمة (+15)",
-        "📂 ملف الإنجاز (+10)",
-        "✅ إيجابي (+5)",
-        "📝 حل الواجب (+5)",
-        "⚠️ تنبيه (0)",
-        "🪑 غائب (0)",
-        "🖊️ نقص أدوات الكتابة (-2)",
-        "📚 نقص كتاب (-3)",
-        "🏃 تأخر عن الحصة (-3)",
-        "💤 النوم داخل الفصل (-5)",
-        "✍️ نقص واجب (-5)",
-        "⏳ عدم أداء المهمة (-10)",
-        "❌ عدم إحضار ملف الإنجاز (-10)",
-        "🚫 سلبي (-10)",
-    ]
+      eval_tabs = st.tabs([
+          "🎭 السلوك اليومي",
+          "👥 السلوك الجماعي",
+          "📝 رصد الدرجات",
+          "🔍 مدقق النواقص",
+      ])
 
-    eval_tabs = st.tabs([
-        "🎭 السلوك اليومي",
-        "👥 السلوك الجماعي",
-        "📝 رصد الدرجات",
-        "🔍 مدقق النواقص",
-    ])
+      # ---------------------------------------------------------
+      # 1. السلوك اليومي (فردي سريع + أزرار تعديل وحذف وواتساب وتليجرام هادئة)
+      # ---------------------------------------------------------
+      with eval_tabs[0]:
+        df_ev = st.session_state.df_students
+        if not df_ev.empty:
+          col_f_cls, col_f_st = st.columns([1, 2.5])
+          cls_list_ev = ["الكل"] + list(df_ev["class"].dropna().unique())
+          sel_cls_ev = col_f_cls.selectbox("🏫 تصفية بالصف:", cls_list_ev, key="eval_cls_filter_2")
 
-    # ---------------------------------------------------------
-    # 1. السلوك اليومي (فردي سريع + أزرار تعديل وحذف وواتساب وتليجرام هادئة)
-    # ---------------------------------------------------------
-    with eval_tabs[0]:
-      df_ev = st.session_state.df_students
-      if not df_ev.empty:
-        col_f_cls, col_f_st = st.columns([1, 2.5])
-        cls_list_ev = ["الكل"] + list(df_ev["class"].dropna().unique())
-        sel_cls_ev = col_f_cls.selectbox("🏫 تصفية بالصف:", cls_list_ev, key="eval_cls_filter_2")
+          df_ev_filtered = df_ev if sel_cls_ev == "الكل" else df_ev[df_ev["class"] == sel_cls_ev]
+          st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev_filtered.iterrows()}
+          sel = col_f_st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()), key="single_eval_sel_2")
 
-        df_ev_filtered = df_ev if sel_cls_ev == "الكل" else df_ev[df_ev["class"] == sel_cls_ev]
-        st_dict = {f"{r.iloc[1]} ({r.iloc[0]})": r.iloc[0] for _, r in df_ev_filtered.iterrows()}
-        sel = col_f_st.selectbox("🎯 اختر الطالب من القائمة:", [""] + list(st_dict.keys()), key="single_eval_sel_2")
+          if sel:
+            sid = student_id(st_dict[sel])
+            student_idx = df_ev[df_ev.iloc[:, 0].astype(str) == sid].index[0]
+            s_inf = df_ev.loc[student_idx]
 
-        if sel:
-          sid = str(st_dict[sel]).strip().split(".")[0]
-          student_idx = df_ev[df_ev.iloc[:, 0].astype(str).str.split(".").str[0] == sid].index[0]
-          s_inf = df_ev.loc[student_idx]
+            s_nm = s_inf["name"]
+            clp = clean_phone_number(s_inf.get("الجوال", ""))
+            current_points = number(s_inf.get("النقاط", 0))
 
-          s_nm = s_inf["name"]
-          clp = clean_phone_number(s_inf.get("الجوال", ""))
-          current_points = int(pd.to_numeric(s_inf.get("النقاط", 0), errors="coerce") or 0)
+            with st.container(border=True):
+              st.markdown(
+                  f"##### 🎭 السلوك والملاحظات اليومية لـ: <span style='color:{accent_color};'>{s_nm}</span> (الرصيد: <span style='color:{warning_color}; font-weight:900;'>{current_points}</span> نقطة)",
+                  unsafe_allow_html=True,
+              )
+              if st.session_state.role == "teacher":
+                with st.form("beh_add_opt2", clear_on_submit=True):
+                  b_col1, b_col2 = st.columns([1.3, 2])
+                  bt = b_col1.selectbox("نوع السلوك", BEHAVIOR_OPTIONS)
+                  bn = b_col2.text_input("تفاصيل الملاحظة (اختياري)", placeholder="اكتب ملاحظة سريعة...")
 
-          with st.container(border=True):
-            st.markdown(
-                f"##### 🎭 السلوك والملاحظات اليومية لـ: <span style='color:{accent_color};'>{s_nm}</span> (الرصيد: <span style='color:{warning_color}; font-weight:900;'>{current_points}</span> نقطة)",
-                unsafe_allow_html=True,
-            )
-            if st.session_state.role == "teacher":
-              with st.form("beh_add_opt2", clear_on_submit=True):
-                b_col1, b_col2 = st.columns([1.3, 2])
-                bt = b_col1.selectbox("نوع السلوك", BEHAVIOR_OPTIONS)
-                bn = b_col2.text_input("تفاصيل الملاحظة (اختياري)", placeholder="اكتب ملاحظة سريعة...")
-
-                if st.form_submit_button("💾 تسجيل السلوك فوراً", type="primary", use_container_width=True):
-                  today_str = str(datetime.date.today())
-                  new_b_row = {
-                      "student_id": sid,
-                      "date": today_str,
-                      "type": bt,
-                      "note": bn,
-                  }
-                  if safe_append_row("behavior", new_b_row):
-                    match = re.search(r"\(([\+\-]?\d+)\)", bt)
-                    chg = int(match.group(1)) if match else 0
-                    if chg != 0:
-                      try:
-                        ws = get_gspread_client().worksheet("students")
-                        c = ws.find(sid)
-                        if c:
-                          h = ws.row_values(1)
-                          if "النقاط" in h:
-                            idx = h.index("النقاط") + 1
-                            new_val = current_points + chg
-                            ws.update_cell(c.row, idx, str(new_val))
-                            st.session_state.df_students.loc[student_idx, "النقاط"] = str(new_val)
-                      except Exception as e:
-                        st.error(f"خطأ: {e}")
-
-                    fetch_safe.clear()
-                    st.session_state.df_behavior = fetch_safe("behavior")
-                    st.toast(f"✅ تم تسجيل الملاحظة للطالب {s_nm} فوراً!", icon="🎉")
+                  if st.form_submit_button("💾 تسجيل السلوك فوراً", type="primary", use_container_width=True):
+                    today_str = str(datetime.date.today())
+                    new_b_row = {
+                        "student_id": sid,
+                        "date": today_str,
+                        "type": bt,
+                        "note": bn,
+                    }
+                    behavior_write([new_b_row])
+                    st.session_state.toast_msg = f"تم تسجيل الملاحظة للطالب {s_nm}."
                     st.rerun()
-            else:
-              st.info("💡 وضع القراءة فقط.")
+              else:
+                st.info("💡 وضع القراءة فقط.")
 
-          # --- سجل السلوك السفلي للطالب ---
-          st.markdown("#### 📜 سجل السلوك الأخير للطالب")
-          df_b = st.session_state.df_behavior.copy()
-          if not df_b.empty:
-            cid = "student_id" if "student_id" in df_b.columns else df_b.columns[0]
-            df_b["clean_cid"] = df_b[cid].astype(str).str.strip().str.split(".").str[0]
-            my_b = df_b[df_b["clean_cid"] == sid].copy()
+            # --- سجل السلوك السفلي للطالب ---
+            st.markdown("#### 📜 سجل السلوك الأخير للطالب")
+            df_b = st.session_state.df_behavior.copy()
+            if not df_b.empty:
+              cid = "student_id" if "student_id" in df_b.columns else df_b.columns[0]
+              df_b["clean_cid"] = df_b[cid].astype(str).str.strip()
+              my_b = df_b[df_b["clean_cid"] == sid].copy()
 
-            if not my_b.empty:
-              my_b = my_b.iloc[::-1]
-              my_b["date_parsed"] = pd.to_datetime(my_b["date"], errors="coerce")
-              my_b = my_b.sort_values(by="date_parsed", ascending=False, kind="mergesort")
+              if not my_b.empty:
+                my_b = my_b.iloc[::-1]
+                my_b["date_parsed"] = pd.to_datetime(my_b["date"], errors="coerce")
+                my_b = my_b.sort_values(by="date_parsed", ascending=False, kind="mergesort")
 
-              def delete_behavior_opt2(global_idx, b_type):
-                try:
-                  ws_b_del = get_gspread_client().worksheet("behavior")
-                  target_b_row = int(global_idx) + 2
-                  row_vals_b = ws_b_del.row_values(target_b_row)
-                  if not row_vals_b or str(row_vals_b[0]).strip().split(".")[0] != sid:
-                    all_b_vals = ws_b_del.get_all_values()
-                    target_date = str(df_b.loc[global_idx, "date"]).strip() if global_idx in df_b.index else ""
-                    for r_idx_b, r_b in enumerate(all_b_vals[1:], start=2):
-                      if len(r_b) >= 3 and str(r_b[0]).strip().split(".")[0] == sid and str(r_b[1]).strip() == target_date and str(r_b[2]).strip() == str(b_type).strip():
-                        target_b_row = r_idx_b
-                        break
-                  ws_b_del.delete_rows(target_b_row)
-                  match = re.search(r"\(([\+\-]?\d+)\)", str(b_type))
-                  chg = int(match.group(1)) if match else 0
-                  if chg != 0:
-                    ws_st = get_gspread_client().worksheet("students")
-                    c = ws_st.find(sid)
-                    if c:
-                      h = ws_st.row_values(1)
-                      if "النقاط" in h:
-                        idx = h.index("النقاط") + 1
-                        curr = int(pd.to_numeric(ws_st.cell(c.row, idx).value, errors="coerce") or 0)
-                        new_pts_v = curr - chg
-                        ws_st.update_cell(c.row, idx, str(new_pts_v))
-                        st.session_state.df_students.loc[student_idx, "النقاط"] = str(new_pts_v)
-                  fetch_safe.clear()
-                  st.session_state.df_behavior = fetch_safe("behavior")
-                except Exception:
-                  pass
+                def delete_behavior_opt2(expected):
+                  try:
+                    behavior_write([expected], expected=expected, delete=True)
+                    st.session_state.toast_msg = "تم حذف الملاحظة وتحديث الرصيد."
+                  except Exception as exc:
+                    notify_error(exc)
 
-              if "edit_beh_idx_2" not in st.session_state:
-                st.session_state.edit_beh_idx_2 = None
+                if "edit_beh_idx_2" not in st.session_state:
+                  st.session_state.edit_beh_idx_2 = None
 
-              for global_idx, r in my_b.iterrows():
-                with st.container():
-                  if st.session_state.edit_beh_idx_2 == global_idx:
-                    st.markdown(
-                        f"<div style='background: var(--secondary-background-color); padding: 15px; border-radius: 12px; border: 2px dashed {accent_color}; margin-bottom: 10px;'>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown("###### ✏️ تعديل الملاحظة السلوكية")
+                for global_idx, r in my_b.iterrows():
+                  with st.container():
+                    if st.session_state.role == "teacher" and st.session_state.edit_beh_idx_2 == (sid, fingerprint(r[["type","note","date"]].to_dict())):
+                      st.markdown(
+                          f"<div style='background: var(--secondary-background-color); padding: 15px; border-radius: 12px; border: 2px dashed {accent_color}; margin-bottom: 10px;'>",
+                          unsafe_allow_html=True,
+                      )
+                      st.markdown("###### ✏️ تعديل الملاحظة السلوكية")
 
-                    current_type = str(r.get("type"))
-                    edit_opts = list(BEHAVIOR_OPTIONS)
-                    if current_type not in edit_opts and current_type:
-                      edit_opts.insert(0, current_type)
-                    type_idx = edit_opts.index(current_type) if current_type in edit_opts else 0
+                      current_type = str(r.get("type"))
+                      edit_opts = list(BEHAVIOR_OPTIONS)
+                      if current_type not in edit_opts and current_type:
+                        edit_opts.insert(0, current_type)
+                      type_idx = edit_opts.index(current_type) if current_type in edit_opts else 0
 
-                    new_type = st.selectbox("نوع السلوك", edit_opts, index=type_idx, key=f"edit_type_opt2_{global_idx}", label_visibility="collapsed")
-                    new_note = st.text_input("التفاصيل", value=str(r.get("note", "")), key=f"edit_note_opt2_{global_idx}", label_visibility="collapsed")
+                      new_type = st.selectbox("نوع السلوك", edit_opts, index=type_idx, key=f"edit_type_opt2_{global_idx}", label_visibility="collapsed")
+                      new_note = st.text_input("التفاصيل", value=str(r.get("note", "")), key=f"edit_note_opt2_{global_idx}", label_visibility="collapsed")
 
-                    c_save, c_cancel = st.columns(2)
-                    if c_save.button("💾 حفظ التعديل", type="primary", key=f"save_opt2_{global_idx}", use_container_width=True):
-                      try:
-                        with st.spinner("جاري التحديث..."):
-                          ws_beh = get_gspread_client().worksheet("behavior")
-                          headers_beh = ws_beh.row_values(1)
-                          idx_type = headers_beh.index("type") + 1 if "type" in headers_beh else 3
-                          idx_note = headers_beh.index("note") + 1 if "note" in headers_beh else 4
+                      c_save, c_cancel = st.columns(2)
+                      if c_save.button("💾 حفظ التعديل", type="primary", key=f"save_opt2_{global_idx}", use_container_width=True):
+                        try:
+                          with st.spinner("جاري التحديث..."):
+                            original = r.to_dict()
+                            behavior_write([dict(original, type=new_type, note=new_note)], expected=original)
+                            st.session_state.edit_beh_idx_2 = None
+                            st.rerun()
+                        except Exception as e:
+                          st.error(f"خطأ في التعديل: {e}")
 
-                          ws_beh.update_cell(global_idx + 2, idx_type, new_type)
-                          ws_beh.update_cell(global_idx + 2, idx_note, new_note)
-
-                          old_match = re.search(r"\(([\+\-]?\d+)\)", current_type)
-                          old_pts = int(old_match.group(1)) if old_match else 0
-
-                          new_match = re.search(r"\(([\+\-]?\d+)\)", new_type)
-                          new_pts = int(new_match.group(1)) if new_match else 0
-
-                          diff = new_pts - old_pts
-                          if diff != 0:
-                            ws_st = get_gspread_client().worksheet("students")
-                            c = ws_st.find(sid)
-                            if c:
-                              h = ws_st.row_values(1)
-                              if "النقاط" in h:
-                                idx_pts = h.index("النقاط") + 1
-                                curr = int(pd.to_numeric(ws_st.cell(c.row, idx_pts).value, errors="coerce") or 0)
-                                ws_st.update_cell(c.row, idx_pts, str(curr + diff))
-                                st.session_state.df_students.loc[student_idx, "النقاط"] = str(curr + diff)
-
-                          st.session_state.df_behavior.loc[global_idx, "type"] = new_type
-                          st.session_state.df_behavior.loc[global_idx, "note"] = new_note
-                          st.session_state.edit_beh_idx_2 = None
-                          fetch_safe.clear()
-                          st.toast("✅ تم التعديل بنجاح!", icon="✏️")
-                          st.rerun()
-                      except Exception as e:
-                        st.error(f"خطأ في التعديل: {e}")
-
-                    if c_cancel.button("❌ إلغاء", key=f"cancel_opt2_{global_idx}", type="secondary", use_container_width=True):
-                      st.session_state.edit_beh_idx_2 = None
-                      st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
-                  else:
-                    b_str = str(r.get("type", ""))
-                    if "-" in b_str or "سلبي" in b_str:
-                      color = danger_color
-                    elif "(0)" in b_str or "غائب" in b_str or "تنبيه" in b_str:
-                      color = warning_color
+                      if c_cancel.button("❌ إلغاء", key=f"cancel_opt2_{global_idx}", type="secondary", use_container_width=True):
+                        st.session_state.edit_beh_idx_2 = None
+                        st.rerun()
+                      st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                      color = success_color
+                      b_str = str(r.get("type", ""))
+                      if "-" in b_str or "سلبي" in b_str:
+                        color = danger_color
+                      elif "(0)" in b_str or "غائب" in b_str or "تنبيه" in b_str:
+                        color = warning_color
+                      else:
+                        color = success_color
 
-                    note_txt = str(r.get("note", "")).strip()
-                    note_html = f"<div class='student-card-body' style='color:#94A3B8; font-weight:700;'>📝 {note_txt}</div>" if note_txt else ""
+                      note_txt = str(r.get("note", "")).strip()
+                      note_html = f"<div class='student-card-body' style='color:#94A3B8; font-weight:700;'>📝 {note_txt}</div>" if note_txt else ""
 
-                    st.markdown(
-                        f"""
+                      st.markdown(
+                          f"""
                         <div class="student-list-card" style="border-right: 5px solid {color}; margin-bottom: 6px;">
                             <div class="student-card-header">
                                 <div class="student-card-title" style="color: {color};">{b_str}</div>
@@ -2968,182 +3443,152 @@ if st.session_state.role in ["teacher", "viewer"]:
                             {note_html}
                         </div>
                         """,
-                        unsafe_allow_html=True,
-                    )
+                          unsafe_allow_html=True,
+                      )
 
-                    lnk = get_professional_msg(s_nm, r.get("type"), r.get("note"), r.get("date"))
-                    wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
-                    tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
+                      lnk = get_professional_msg(s_nm, r.get("type"), r.get("note"), r.get("date"))
+                      wa_url = f"https://api.whatsapp.com/send?phone={clp}&text={lnk}"
+                      tg_url = f"https://t.me/share/url?url=https://zi-edu.streamlit.app&text={lnk}"
 
-                    st.markdown(
-                        f"""
+                      st.markdown(
+                          f"""
                         <div class="action-bar-grid">
                             <a href="{wa_url}" target="_blank" class="soft-link-btn btn-whatsapp">💬 واتساب</a>
                             <a href="{tg_url}" target="_blank" class="soft-link-btn btn-telegram">✈️ تليجرام</a>
                         </div>
                         """,
-                        unsafe_allow_html=True,
-                    )
+                          unsafe_allow_html=True,
+                      )
 
-                    if st.session_state.role == "teacher":
-                      c_ed, c_dl = st.columns(2)
-                      with c_ed:
-                        st.markdown('<span class="btn-edit-marker"></span>', unsafe_allow_html=True)
-                        if st.button("✏️ تعديل", key=f"ed_beh_opt2_{global_idx}", type="secondary", use_container_width=True):
-                          st.session_state.edit_beh_idx_2 = global_idx
-                          st.rerun()
-                      with c_dl:
-                        st.markdown('<span class="btn-del-marker"></span>', unsafe_allow_html=True)
-                        st.button(
-                            "🗑️ حذف",
-                            key=f"dl_beh_opt2_{global_idx}",
-                            type="secondary",
-                            on_click=delete_behavior_opt2,
-                            args=(global_idx, r.get("type")),
-                            use_container_width=True,
-                        )
-            else:
-              st.success("✨ سجل الطالب نظيف ولا توجد ملاحظات مسجلة.")
-      else:
-        st.info("لا توجد بيانات طلاب.")
+                      if st.session_state.role == "teacher":
+                        c_ed, c_dl = st.columns(2)
+                        with c_ed:
+                          st.markdown('<span class="btn-edit-marker"></span>', unsafe_allow_html=True)
+                          if st.button("✏️ تعديل", key=f"ed_beh_opt2_{global_idx}", type="secondary", use_container_width=True):
+                            st.session_state.edit_beh_idx_2 = (sid, fingerprint(r[["type","note","date"]].to_dict()))
+                            st.rerun()
+                        with c_dl:
+                          st.markdown('<span class="btn-del-marker"></span>', unsafe_allow_html=True)
+                          st.button(
+                              "🗑️ حذف",
+                              key=f"dl_beh_opt2_{global_idx}",
+                              type="secondary",
+                              on_click=delete_behavior_opt2,
+                              args=(r.to_dict(),),
+                              use_container_width=True,
+                          )
+              else:
+                st.success("✨ سجل الطالب نظيف ولا توجد ملاحظات مسجلة.")
+        else:
+          st.info("لا توجد بيانات طلاب.")
 
-    # ---------------------------------------------------------
-    # 2. السلوك الجماعي (الرصد السريع للفصل)
-    # ---------------------------------------------------------
-    with eval_tabs[1]:
-      if st.session_state.role == "teacher":
-        st.markdown("#### 👥 رصد السلوك الجماعي السريع للفصل")
-        st.info("💡 اختر الصف، وحدد السلوك أو الغياب للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة.")
+      # ---------------------------------------------------------
+      # 2. السلوك الجماعي (الرصد السريع للفصل)
+      # ---------------------------------------------------------
+      with eval_tabs[1]:
+        if st.session_state.role == "teacher":
+          st.markdown("#### 👥 رصد السلوك الجماعي السريع للفصل")
+          st.info("💡 اختر الصف، وحدد السلوك أو الغياب للطلاب المعنيين فقط، ثم اضغط حفظ بالأسفل لترصد للجميع دفعة واحدة.")
 
-        bulk_class = st.selectbox("🎯 اختر الصف للسلوك الجماعي:", st.session_state.class_options, key="bulk_class_sel")
-        df_st_bulk = st.session_state.df_students.copy()
+          bulk_class = st.selectbox("🎯 اختر الصف للسلوك الجماعي:", st.session_state.class_options, key="bulk_class_sel")
+          df_st_bulk = st.session_state.df_students.copy()
 
-        if not df_st_bulk.empty:
-          df_st_bulk["clean_class"] = df_st_bulk.iloc[:, 2].astype(str).str.strip()
-          class_students = df_st_bulk[df_st_bulk["clean_class"] == bulk_class.strip()]
+          if not df_st_bulk.empty:
+            df_st_bulk["clean_class"] = df_st_bulk.iloc[:, 2].astype(str).str.strip()
+            class_students = df_st_bulk[df_st_bulk["clean_class"] == bulk_class.strip()]
 
-          if not class_students.empty:
-            class_students = class_students.sort_values("name")
+            if not class_students.empty:
+              class_students = class_students.sort_values("name")
 
-            with st.form("bulk_behavior_form", clear_on_submit=True):
-              beh_options = ["--- بدون ملاحظة ---"] + BEHAVIOR_OPTIONS
-              bulk_data = {}
+              with st.form("bulk_behavior_form", clear_on_submit=True):
+                beh_options = ["--- بدون ملاحظة ---"] + BEHAVIOR_OPTIONS
+                bulk_data = {}
 
-              col_n, col_b, col_t = st.columns([1.5, 2, 2])
-              col_n.markdown("**👤 اسم الطالب**")
-              col_b.markdown("**🎭 السلوك**")
-              col_t.markdown("**📝 ملاحظة (اختياري)**")
-              st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
+                col_n, col_b, col_t = st.columns([1.5, 2, 2])
+                col_n.markdown("**👤 اسم الطالب**")
+                col_b.markdown("**🎭 السلوك**")
+                col_t.markdown("**📝 ملاحظة (اختياري)**")
+                st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
 
-              for _, row in class_students.iterrows():
-                sid_b = str(row.iloc[0]).split(".")[0].strip()
-                sname_b = row.iloc[1]
+                for _, row in class_students.iterrows():
+                  sid_b = student_id(row.iloc[0])
+                  sname_b = row.iloc[1]
 
-                c1, c2, c3 = st.columns([1.5, 2, 2])
-                c1.markdown(f"<div style='padding-top:12px; font-weight:700;'>{sname_b}</div>", unsafe_allow_html=True)
-                b_type = c2.selectbox("السلوك", beh_options, key=f"b_type_{sid_b}", label_visibility="collapsed")
-                b_note = c3.text_input("تفاصيل", key=f"b_note_{sid_b}", label_visibility="collapsed", placeholder="أضف تفاصيل...")
+                  c1, c2, c3 = st.columns([1.5, 2, 2])
+                  c1.markdown(f"<div style='padding-top:12px; font-weight:700;'>{sname_b}</div>", unsafe_allow_html=True)
+                  b_type = c2.selectbox("السلوك", beh_options, key=f"b_type_{sid_b}", label_visibility="collapsed")
+                  b_note = c3.text_input("تفاصيل", key=f"b_note_{sid_b}", label_visibility="collapsed", placeholder="أضف تفاصيل...")
 
-                bulk_data[sid_b] = {"type": b_type, "note": b_note}
-                st.markdown("<div style='border-bottom: 1px dashed rgba(148,163,184,0.25); margin: 4px 0;'></div>", unsafe_allow_html=True)
+                  bulk_data[sid_b] = {"type": b_type, "note": b_note}
+                  st.markdown("<div style='border-bottom: 1px dashed rgba(148,163,184,0.25); margin: 4px 0;'></div>", unsafe_allow_html=True)
 
-              if st.form_submit_button("🚀 حفظ السلوك الجماعي للفصل", type="primary", use_container_width=True):
-                behavior_rows_to_add = []
-                point_updates = {}
-
-                for sid_key, data in bulk_data.items():
-                  if data["type"] != "--- بدون ملاحظة ---":
-                    behavior_rows_to_add.append([sid_key, str(datetime.date.today()), data["type"], data["note"]])
-                    match = re.search(r"\(([\+\-]?\d+)\)", data["type"])
-                    if match:
-                      pts_val = int(match.group(1))
-                      if pts_val != 0:
-                        point_updates[sid_key] = pts_val
-
-                if behavior_rows_to_add:
-                  try:
-                    with st.spinner("جاري حفظ السلوك الجماعي وتحديث النقاط..."):
-                      get_gspread_client().worksheet("behavior").append_rows(behavior_rows_to_add)
-                      if point_updates:
-                        ws_st = get_gspread_client().worksheet("students")
-                        all_st = ws_st.get_all_records()
-                        headers = ws_st.row_values(1)
-
-                        if "النقاط" in headers:
-                          p_idx = headers.index("النقاط") + 1
-                          cells_to_update = []
-                          for i, r in enumerate(all_st):
-                            st_id = str(r.get("id", "")).split(".")[0].strip()
-                            if st_id in point_updates:
-                              cur_p = int(pd.to_numeric(r.get("النقاط", 0), errors="coerce") or 0)
-                              new_p = cur_p + point_updates[st_id]
-                              cells_to_update.append(Cell(row=i + 2, col=p_idx, value=str(new_p)))
-                          if cells_to_update:
-                            ws_st.update_cells(cells_to_update)
-
-                      st.success(f"✅ تمت المهمة بنجاح! تم رصد ({len(behavior_rows_to_add)}) ملاحظة.")
-                      if "db_loaded" in st.session_state:
-                        del st.session_state["db_loaded"]
-                      fetch_safe.clear()
+                if st.form_submit_button("🚀 حفظ السلوك الجماعي للفصل", type="primary", use_container_width=True):
+                  records = [dict(data, student_id=sid_key, date=str(datetime.date.today())) for sid_key, data in bulk_data.items()
+                             if data["type"] != "--- بدون ملاحظة ---"]
+                  if records:
+                    try:
+                      behavior_write(records)
+                      st.session_state.toast_msg = f"تم رصد {len(records)} ملاحظة."
                       st.rerun()
-                  except Exception as e:
-                    st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
-                else:
-                  st.warning("⚠️ لم تقم باختيار أي سلوك لأي طالب ليتم حفظه.")
-          else:
-            st.info("لا يوجد طلاب مسجلين في هذا الصف.")
-      else:
-        st.info("💡 وضع القراءة فقط.")
+                    except Exception as exc:
+                      notify_error(exc)
+                  else:
+                    st.warning("⚠️ لم تقم باختيار أي سلوك لأي طالب ليتم حفظه.")
+            else:
+              st.info("لا يوجد طلاب مسجلين في هذا الصف.")
+        else:
+          st.info("💡 وضع القراءة فقط.")
 
-    # ---------------------------------------------------------
-    # 3. رصد الدرجات (رصد فردي مع المجموع + قائمة سفلية محمية بنموذج للرصد الجماعي)
-    # ---------------------------------------------------------
-    with eval_tabs[2]:
-      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      max_t_val = st.session_state.get("max_tasks", 60)
-      max_q_val = st.session_state.get("max_quiz", 40)
-      max_total_val = max_t_val + max_q_val
+      # ---------------------------------------------------------
+      # 3. رصد الدرجات (رصد فردي مع المجموع + قائمة سفلية محمية بنموذج للرصد الجماعي)
+      # ---------------------------------------------------------
+      with eval_tabs[2]:
+        cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+        max_t_val = st.session_state.get("max_tasks", 60)
+        max_q_val = st.session_state.get("max_quiz", 40)
+        max_total_val = max_t_val + max_q_val
 
-      st.markdown(f"#### 📝 رصد وتعديل الدرجات الأكاديمية ({cp})")
-      df_ev_g = st.session_state.df_students.copy()
+        st.markdown(f"#### 📝 رصد وتعديل الدرجات الأكاديمية ({cp})")
+        df_ev_g = st.session_state.df_students.copy()
 
-      if not df_ev_g.empty:
-        df_ev_g["clean_id"] = df_ev_g.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
+        if not df_ev_g.empty:
+          df_ev_g["clean_id"] = df_ev_g.iloc[:, 0].astype(str).str.strip()
 
-        col_g_cls, col_g_st = st.columns([1, 2.5])
-        cls_list_g = ["الكل"] + list(df_ev_g["class"].dropna().unique())
-        sel_cls_g = col_g_cls.selectbox("🏫 تصفية بالصف:", cls_list_g, key="grades_cls_filter")
+          col_g_cls, col_g_st = st.columns([1, 2.5])
+          cls_list_g = ["الكل"] + list(df_ev_g["class"].dropna().unique())
+          sel_cls_g = col_g_cls.selectbox("🏫 تصفية بالصف:", cls_list_g, key="grades_cls_filter")
 
-        df_ev_g_filtered = df_ev_g if sel_cls_g == "الكل" else df_ev_g[df_ev_g["class"] == sel_cls_g]
-        st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r["clean_id"] for _, r in df_ev_g_filtered.iterrows()}
-        sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد أو تعديل درجاته فردياً:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
+          df_ev_g_filtered = df_ev_g if sel_cls_g == "الكل" else df_ev_g[df_ev_g["class"] == sel_cls_g]
+          st_dict_g = {f"{r.iloc[1]} ({r.iloc[0]})": r["clean_id"] for _, r in df_ev_g_filtered.iterrows()}
+          sel_g_st = col_g_st.selectbox("🎯 اختر الطالب لرصد أو تعديل درجاته فردياً:", [""] + list(st_dict_g.keys()), key="grades_st_sel")
 
-        df_g = st.session_state.df_grades.copy()
-        if not df_g.empty:
-          df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-          if "period" not in df_g.columns:
-            df_g["period"] = "الفصل الأول - فترة أولى"
-          df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-
-        if sel_g_st:
-          sid_g = st_dict_g[sel_g_st]
-          s_inf_g = df_ev_g[df_ev_g["clean_id"] == sid_g].iloc[0]
-          s_nm_g = s_inf_g["name"]
-
-          cur_p1, cur_p2 = 0, 0
+          df_g = st.session_state.df_grades.copy()
           if not df_g.empty:
-            gr_match = df_g[(df_g["clean_id"] == sid_g) & (df_g["period"] == cp)]
-            if not gr_match.empty:
-              cur_p1 = int(pd.to_numeric(gr_match.iloc[-1]["p1"], errors="coerce") or 0)
-              cur_p2 = int(pd.to_numeric(gr_match.iloc[-1]["p2"], errors="coerce") or 0)
+            df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.strip()
+            if "period" not in df_g.columns:
+              df_g["period"] = "الفصل الأول - فترة أولى"
+            df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
 
-          cur_total = cur_p1 + cur_p2
-          pct_val = round((cur_total / max_total_val) * 100, 1) if max_total_val > 0 else 0
-          tot_color = success_color if pct_val >= 90 else accent_color if pct_val >= 60 else danger_color
+          if sel_g_st:
+            sid_g = st_dict_g[sel_g_st]
+            s_inf_g = df_ev_g[df_ev_g["clean_id"] == sid_g].iloc[0]
+            s_nm_g = s_inf_g["name"]
 
-          with st.container(border=True):
-            st.markdown(
-                f"""
+            cur_p1, cur_p2, expected_grade = 0, 0, None
+            if not df_g.empty:
+              gr_match = df_g[(df_g["clean_id"] == sid_g) & (df_g["period"] == cp)]
+              if not gr_match.empty:
+                expected_grade = grade_pair(gr_match.iloc[-1])
+                cur_p1 = number(gr_match.iloc[-1]["p1"])
+                cur_p2 = number(gr_match.iloc[-1]["p2"])
+
+            cur_total = cur_p1 + cur_p2
+            pct_val = round((cur_total / max_total_val) * 100, 1) if max_total_val > 0 else 0
+            tot_color = success_color if pct_val >= 90 else accent_color if pct_val >= 60 else danger_color
+
+            with st.container(border=True):
+              st.markdown(
+                  f"""
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding-bottom:12px; border-bottom:1px dashed rgba(148,163,184,0.3);">
                     <div>
                         <span style="font-size:1.1rem; font-weight:900; color:var(--text-color);">👤 الطالب: <span style="color:{accent_color};">{s_nm_g}</span></span>
@@ -3159,245 +3604,169 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
+                  unsafe_allow_html=True,
+              )
 
-            if st.session_state.role == "teacher":
-              with st.form("gr_upd_opt2", clear_on_submit=False):
-                g_col1, g_col2 = st.columns(2)
-                v1 = g_col1.number_input(f"📝 درجة المشاركة والمهام (من {max_t_val})", 0, max_t_val, cur_p1)
-                v2 = g_col2.number_input(f"✍️ درجة الاختبارات القصيرة (من {max_q_val})", 0, max_q_val, cur_p2)
+              if st.session_state.role == "teacher":
+                with st.form(f"gr_upd_{sid_g}_{cp}_{st.session_state.current_year}_{fingerprint(expected_grade)}", clear_on_submit=False):
+                  g_col1, g_col2 = st.columns(2)
+                  v1 = g_col1.number_input(f"📝 درجة المشاركة والمهام (من {max_t_val})", 0, max_t_val, max(0, min(max_t_val, cur_p1)))
+                  v2 = g_col2.number_input(f"✍️ درجة الاختبارات القصيرة (من {max_q_val})", 0, max_q_val, max(0, min(max_q_val, cur_p2)))
 
-                if st.form_submit_button("💾 حفظ درجات الطالب وتحديث المجموع", type="primary", use_container_width=True):
-                  tot = v1 + v2
-                  today_s = str(datetime.date.today())
-                  ws_g = get_gspread_client().worksheet("grades")
+                  if st.form_submit_button("💾 حفظ درجات الطالب وتحديث المجموع", type="primary", use_container_width=True):
+                    save_grades([{"student_id":sid_g, "p1":v1, "p2":v2, "expected":expected_grade}])
+                    st.session_state.toast_msg = f"تم حفظ درجات {s_nm_g}."
+                    st.rerun()
+              else:
+                st.info("💡 وضع القراءة فقط.")
 
-                  all_g_vals = ws_g.get_all_values()
-                  headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
-                  if "period" not in headers:
-                    ws_g.update_cell(1, len(headers) + 1, "period")
-                    headers.append("period")
+          # --- ب) القائمة السفلية الذكية: الرصد الجماعي داخل st.form لمنع إعادة التحميل مع كل رقم ---
+          st.markdown("<br>", unsafe_allow_html=True)
+          with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط لفتح جدول الرصد الجماعي", expanded=False):
+            st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب بحرية تامة داخل الجدول، ثم اضغط زر الحفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
 
-                  p_col_idx = headers.index("period")
-                  row_to_update = None
+            bulk_gr_cls = st.selectbox("🏫 اختر الفصل لرصد درجاته جماعياً:", st.session_state.class_options, key="bulk_grades_cls_sel")
+            cls_st_df = df_ev_g[df_ev_g["class"].astype(str).str.strip() == bulk_gr_cls.strip()].sort_values("name")
 
-                  for r_i, r_val in enumerate(all_g_vals[1:], start=2):
-                    r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
-                    r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
-                    if r_per in ["", "الفترة الأولى"]:
-                      r_per = "الفصل الأول - فترة أولى"
-                    elif r_per == "الفترة الثانية":
-                      r_per = "الفصل الأول - فترة ثانية"
-                    if r_id == sid_g and r_per == cp:
-                      row_to_update = r_i
-                      break
+            if not cls_st_df.empty:
+              cur_period_grades = pd.DataFrame()
+              if not df_g.empty:
+                cur_period_grades = df_g[df_g["period"] == cp].drop_duplicates(subset=["clean_id"], keep="last")
 
-                  row_payload = [sid_g, v1, v2, tot, today_s]
-                  while len(row_payload) < len(headers) - 1:
-                    row_payload.append("")
-                  row_payload.append(cp)
+              rows_for_editor, baseline, summary = [], {}, {}
+              for _, st_r in cls_st_df.iterrows():
+                c_sid = st_r["clean_id"]
+                p1_v, p2_v = None, None
+                if not cur_period_grades.empty and c_sid in cur_period_grades["clean_id"].values:
+                  g_row = cur_period_grades[cur_period_grades["clean_id"] == c_sid].iloc[-1]
+                  p1_v = number(g_row.get("p1", 0))
+                  p2_v = number(g_row.get("p2", 0))
+                  summary[c_sid] = grade_pair(g_row)
+                baseline[c_sid] = None if p1_v is None else (str(p1_v), str(p2_v))
 
-                  if row_to_update:
-                    end_cell = rowcol_to_a1(row_to_update, len(row_payload))
-                    ws_g.update(range_name=f"A{row_to_update}:{end_cell}", values=[row_payload])
+                rows_for_editor.append({
+                    "الرقم الأكاديمي": c_sid,
+                    "اسم الطالب": st_r["name"],
+                    "المشاركة والمهام": p1_v,
+                    "الاختبارات": p2_v,
+                    "المجموع الكلي": None if p1_v is None else p1_v + p2_v,
+                })
+
+              df_bulk_editor = pd.DataFrame(rows_for_editor)
+              for numeric_col in ("المشاركة والمهام", "الاختبارات", "المجموع الكلي"):
+                df_bulk_editor[numeric_col] = pd.array(df_bulk_editor[numeric_col], dtype="Int64")
+
+              if st.session_state.role == "viewer":
+                st.dataframe(df_bulk_editor, use_container_width=True, hide_index=True)
+              else:
+                with st.form(f"form_bulk_grades_{bulk_gr_cls}_{cp}_{st.session_state.current_year}_{fingerprint(summary)}"):
+                  edited_bulk_grades = st.data_editor(
+                      df_bulk_editor,
+                      use_container_width=True,
+                      hide_index=True,
+                      disabled=["الرقم الأكاديمي", "اسم الطالب", "المجموع الكلي"],
+                      column_config={
+                          "الرقم الأكاديمي": st.column_config.TextColumn("🆔 الرقم الأكاديمي"),
+                          "اسم الطالب": st.column_config.TextColumn("👤 اسم الطالب"),
+                          "المشاركة والمهام": st.column_config.NumberColumn(
+                              f"📝 المشاركة (من {max_t_val})", min_value=0, max_value=max_t_val, step=1, required=False
+                          ),
+                          "الاختبارات": st.column_config.NumberColumn(
+                              f"✍️ الاختبارات (من {max_q_val})", min_value=0, max_value=max_q_val, step=1, required=False
+                          ),
+                          "المجموع الكلي": st.column_config.NumberColumn("🏆 المجموع المحفوظ"),
+                      },
+                      key=f"de_bulk_grades_{bulk_gr_cls}_{cp}_{st.session_state.current_year}_{fingerprint(summary)}",
+                  )
+  
+                  save_bulk_gr_btn = st.form_submit_button(
+                      f"🚀 حفظ درجات فصل ({bulk_gr_cls}) بالكامل دفعة واحدة",
+                      type="primary",
+                      use_container_width=True,
+                  )
+
+                if save_bulk_gr_btn:
+                  changes = bulk_grade_changes(edited_bulk_grades, baseline, summary)
+                  if changes:
+                    save_grades(changes)
+                    st.session_state.toast_msg = f"تم حفظ درجات {len(changes)} طالب."
+                    st.rerun()
                   else:
-                    ws_g.append_row(row_payload)
-
-                  fetch_safe.clear()
-                  st.session_state.df_grades = fetch_safe("grades")
-                  st.toast(f"✅ تم حفظ درجات {s_nm_g} (المجموع: {tot}) فوراً!", icon="📊")
-                  st.rerun()
+                    st.info("لم تتغير أي درجة.")
             else:
-              st.info("💡 وضع القراءة فقط.")
+              st.warning("لا يوجد طلاب مسجلين في هذا الفصل.")
+        else:
+          st.info("لا توجد بيانات طلاب.")
 
-        # --- ب) القائمة السفلية الذكية: الرصد الجماعي داخل st.form لمنع إعادة التحميل مع كل رقم ---
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander(f"📋 الرصد الجماعي السريع لدرجات فصل كامل ({cp}) — اضغط لفتح جدول الرصد الجماعي", expanded=False):
-          st.info("💡 اختر الفصل، وعدّل الدرجات لجميع الطلاب بحرية تامة داخل الجدول، ثم اضغط زر الحفظ بالأسفل ليتم رصد الفصل بالكامل دفعة واحدة.")
+      # ---------------------------------------------------------
+      # 4. مدقق رصد الدرجات (كشف النواقص)
+      # ---------------------------------------------------------
+      with eval_tabs[3]:
+        cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+        st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
+        st.info("💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً.")
 
-          bulk_gr_cls = st.selectbox("🏫 اختر الفصل لرصد درجاته جماعياً:", st.session_state.class_options, key="bulk_grades_cls_sel")
-          cls_st_df = df_ev_g[df_ev_g["class"].astype(str).str.strip() == bulk_gr_cls.strip()].sort_values("name")
+        df_st_audit = st.session_state.df_students.copy()
+        df_gr_audit = st.session_state.df_grades.copy()
 
-          if not cls_st_df.empty:
-            cur_period_grades = pd.DataFrame()
-            if not df_g.empty:
-              cur_period_grades = df_g[df_g["period"] == cp].drop_duplicates(subset=["clean_id"], keep="last")
+        if not df_st_audit.empty:
+          df_st_audit["clean_id"] = df_st_audit.iloc[:, 0].astype(str).str.strip()
 
-            rows_for_editor = []
-            for _, st_r in cls_st_df.iterrows():
-              c_sid = st_r["clean_id"]
-              p1_v, p2_v = 0, 0
-              if not cur_period_grades.empty and c_sid in cur_period_grades["clean_id"].values:
-                g_row = cur_period_grades[cur_period_grades["clean_id"] == c_sid].iloc[-1]
-                p1_v = int(pd.to_numeric(g_row.get("p1", 0), errors="coerce") or 0)
-                p2_v = int(pd.to_numeric(g_row.get("p2", 0), errors="coerce") or 0)
+          if not df_gr_audit.empty:
+            df_gr_audit["clean_id"] = df_gr_audit.iloc[:, 0].astype(str).str.strip()
+            if "period" not in df_gr_audit.columns:
+              df_gr_audit["period"] = "الفصل الأول - فترة أولى"
+            df_gr_audit["period"] = df_gr_audit["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+            df_gr_curr = df_gr_audit[df_gr_audit["period"] == cp_aud]
 
-              rows_for_editor.append({
-                  "الرقم الأكاديمي": c_sid,
-                  "اسم الطالب": st_r["name"],
-                  "المشاركة والمهام": p1_v,
-                  "الاختبارات": p2_v,
-                  "المجموع الكلي": p1_v + p2_v,
-              })
-
-            df_bulk_editor = pd.DataFrame(rows_for_editor)
-
-            with st.form(f"form_bulk_grades_{bulk_gr_cls}"):
-              edited_bulk_grades = st.data_editor(
-                  df_bulk_editor,
-                  use_container_width=True,
-                  hide_index=True,
-                  disabled=["الرقم الأكاديمي", "اسم الطالب", "المجموع الكلي"],
-                  column_config={
-                      "الرقم الأكاديمي": st.column_config.TextColumn("🆔 الرقم الأكاديمي"),
-                      "اسم الطالب": st.column_config.TextColumn("👤 اسم الطالب"),
-                      "المشاركة والمهام": st.column_config.NumberColumn(
-                          f"📝 المشاركة (من {max_t_val})", min_value=0, max_value=max_t_val, step=1, required=True
-                      ),
-                      "الاختبارات": st.column_config.NumberColumn(
-                          f"✍️ الاختبارات (من {max_q_val})", min_value=0, max_value=max_q_val, step=1, required=True
-                      ),
-                      "المجموع الكلي": st.column_config.NumberColumn("🏆 المجموع المحفوظ"),
-                  },
-                  key=f"de_bulk_grades_{bulk_gr_cls}_{cp}",
-              )
-
-              save_bulk_gr_btn = st.form_submit_button(
-                  f"🚀 حفظ درجات فصل ({bulk_gr_cls}) بالكامل دفعة واحدة",
-                  type="primary",
-                  use_container_width=True,
-              )
-
-            if save_bulk_gr_btn and st.session_state.role == "teacher":
-              try:
-                with st.spinner(f"⏳ جاري حفظ درجات طلاب ({bulk_gr_cls}) وتحديث المجاميع..."):
-                  ws_g = get_gspread_client().worksheet("grades")
-                  all_g_vals = ws_g.get_all_values()
-                  headers = all_g_vals[0] if all_g_vals else ["student_id", "p1", "p2", "perf", "date", "period"]
-                  if "period" not in headers:
-                    ws_g.update_cell(1, len(headers) + 1, "period")
-                    headers.append("period")
-
-                  p_col_idx = headers.index("period")
-                  existing_row_map = {}
-                  for r_i, r_val in enumerate(all_g_vals[1:], start=2):
-                    r_id = str(r_val[0]).strip().split(".")[0] if len(r_val) > 0 else ""
-                    r_per = str(r_val[p_col_idx]).strip() if len(r_val) > p_col_idx else "الفصل الأول - فترة أولى"
-                    if r_per in ["", "الفترة الأولى"]:
-                      r_per = "الفصل الأول - فترة أولى"
-                    elif r_per == "الفترة الثانية":
-                      r_per = "الفصل الأول - فترة ثانية"
-                    if r_id and r_per == cp:
-                      existing_row_map[r_id] = r_i
-
-                  today_s = str(datetime.date.today())
-                  batch_updates = []
-                  new_rows_to_append = []
-
-                  for _, erow in edited_bulk_grades.iterrows():
-                    st_id_b = str(erow["الرقم الأكاديمي"]).strip().split(".")[0]
-                    v1_b = int(pd.to_numeric(erow["المشاركة والمهام"], errors="coerce") or 0)
-                    v2_b = int(pd.to_numeric(erow["الاختبارات"], errors="coerce") or 0)
-                    tot_b = v1_b + v2_b
-
-                    row_payload = [st_id_b, v1_b, v2_b, tot_b, today_s]
-                    while len(row_payload) < len(headers) - 1:
-                      row_payload.append("")
-                    row_payload.append(cp)
-
-                    if st_id_b in existing_row_map:
-                      target_r = existing_row_map[st_id_b]
-                      end_c = rowcol_to_a1(target_r, len(row_payload))
-                      batch_updates.append({"range": f"A{target_r}:{end_c}", "values": [row_payload]})
-                    else:
-                      new_rows_to_append.append(row_payload)
-
-                  if batch_updates:
-                    ws_g.batch_update(batch_updates)
-                  if new_rows_to_append:
-                    ws_g.append_rows(new_rows_to_append)
-
-                  fetch_safe.clear()
-                  st.session_state.df_grades = fetch_safe("grades")
-                  st.success(f"✅ تم حفظ وتحديث درجات ({len(edited_bulk_grades)}) طالب في فصل ({bulk_gr_cls}) بنجاح!")
-                  st.rerun()
-              except Exception as e:
-                st.error(f"❌ حدث خطأ أثناء الحفظ الجماعي للدرجات: {e}")
+            audit_merge = pd.merge(
+                df_st_audit[["clean_id", "name", "class", "sem"]],
+                df_gr_curr[["clean_id", "perf"]],
+                on="clean_id",
+                how="left",
+            )
+            missing_grades = audit_merge[pd.to_numeric(audit_merge["perf"], errors="coerce").isna()]
           else:
-            st.warning("لا يوجد طلاب مسجلين في هذا الفصل.")
-      else:
-        st.info("لا توجد بيانات طلاب.")
+            missing_grades = df_st_audit[["clean_id", "name", "class", "sem"]]
 
-    # ---------------------------------------------------------
-    # 4. مدقق رصد الدرجات (كشف النواقص)
-    # ---------------------------------------------------------
-    with eval_tabs[3]:
-      cp_aud = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      st.markdown(f"#### 🔍 مدقق رصد الدرجات ({cp_aud})")
-      st.info("💡 يعرض هذا المدقق قائمة الطلاب الذين لم تُرصد لهم درجات في الفترة النشطة حالياً.")
+          if not missing_grades.empty:
+            st.warning(f"⚠️ يوجد ({len(missing_grades)}) طالب لم ترصد لهم درجات في ({cp_aud}).")
+            display_missing = missing_grades[["clean_id", "name", "class", "sem"]].rename(
+                columns={"clean_id": "الرقم الأكاديمي", "name": "اسم الطالب", "class": "الصف", "sem": "المرحلة"}
+            )
+            st.dataframe(display_missing, use_container_width=True, hide_index=True)
 
-      df_st_audit = st.session_state.df_students.copy()
-      df_gr_audit = st.session_state.df_grades.copy()
-
-      if not df_st_audit.empty:
-        df_st_audit["clean_id"] = df_st_audit.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
-
-        if not df_gr_audit.empty:
-          df_gr_audit["clean_id"] = df_gr_audit.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
-          if "period" not in df_gr_audit.columns:
-            df_gr_audit["period"] = "الفصل الأول - فترة أولى"
-          df_gr_audit["period"] = df_gr_audit["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-          df_gr_curr = df_gr_audit[df_gr_audit["period"] == cp_aud]
-
-          audit_merge = pd.merge(
-              df_st_audit[["clean_id", "name", "class", "sem"]],
-              df_gr_curr[["clean_id", "perf"]],
-              on="clean_id",
-              how="left",
-          )
-          missing_grades = audit_merge[audit_merge["perf"].isna()]
+            st.download_button(
+                label="📥 تحميل قائمة نواقص الرصد (Excel)",
+                data=build_excel_bytes(display_missing, sheet_name="Missing_Grades"),
+                file_name=f"missing_grades_{datetime.date.today()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True,
+            )
+          else:
+            st.success(f"✅ ممتاز! جميع الطلاب المسجلين تم رصد درجاتهم في ({cp_aud}) بنجاح.")
         else:
-          missing_grades = df_st_audit[["clean_id", "name", "class", "sem"]]
+          st.info("لا توجد بيانات طلاب للتدقيق.")
 
-        if not missing_grades.empty:
-          st.warning(f"⚠️ يوجد ({len(missing_grades)}) طالب لم ترصد لهم درجات في ({cp_aud}).")
-          display_missing = missing_grades[["clean_id", "name", "class", "sem"]].rename(
-              columns={"clean_id": "الرقم الأكاديمي", "name": "اسم الطالب", "class": "الصف", "sem": "المرحلة"}
-          )
-          st.dataframe(display_missing, use_container_width=True, hide_index=True)
+  # ==========================================
+  # 🏆 7. التبويب الثالث: الشرف والشهادات الإلكترونية
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_honor:
+      st.subheader("🏆 لوحات الشرف وإصدار الشهادات الإلكترونية")
+      df_st_h = st.session_state.df_students.copy()
+      if not df_st_h.empty:
+        df_st_h["clean_id"] = df_st_h.iloc[:, 0].astype(str).str.strip()
+        df_st_h["النقاط"] = pd.to_numeric(df_st_h["النقاط"], errors="coerce").fillna(0)
 
-          st.download_button(
-              label="📥 تحميل قائمة نواقص الرصد (Excel)",
-              data=build_excel_bytes(display_missing, sheet_name="Missing_Grades"),
-              file_name=f"missing_grades_{datetime.date.today()}.xlsx",
-              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              type="primary",
-              use_container_width=True,
-          )
-        else:
-          st.success(f"✅ ممتاز! جميع الطلاب المسجلين تم رصد درجاتهم في ({cp_aud}) بنجاح.")
-      else:
-        st.info("لا توجد بيانات طلاب للتدقيق.")
+      honor_tabs = st.tabs([
+          "🌟 لوحة الشرف",
+          "🎓 المتفوقون (90%+)",
+          "📜 إصدار الشهادات",
+      ])
 
-# ==========================================
-# 🏆 7. التبويب الثالث: الشرف والشهادات الإلكترونية
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_honor:
-    st.subheader("🏆 لوحات الشرف وإصدار الشهادات الإلكترونية")
-    df_st_h = st.session_state.df_students.copy()
-    if not df_st_h.empty:
-      df_st_h["clean_id"] = df_st_h.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-      df_st_h["النقاط"] = pd.to_numeric(df_st_h["النقاط"], errors="coerce").fillna(0)
-
-    honor_tabs = st.tabs([
-        "🌟 لوحة الشرف",
-        "🎓 المتفوقون (90%+)",
-        "📜 إصدار الشهادات",
-    ])
-
-    lux_css = """
+      lux_css = """
         * { box-sizing: border-box; } 
         body { margin: 0; padding: 0; background: #F8FAFC; font-family: 'Cairo', sans-serif; text-align: center; direction: rtl; }
         .page { width: 210mm; padding: 10mm; display: flex; flex-wrap: wrap; justify-content: center; gap: 4%; margin: 0 auto; }
@@ -3428,19 +3797,19 @@ if st.session_state.role in ["teacher", "viewer"]:
         @media print { @page { size: A4 portrait; margin: 5mm; } body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .card { box-shadow: none; margin-bottom: 10mm; border-width: 10px; } }
     """
 
-    # --- 1. لوحة الشرف (النقاط) ---
-    with honor_tabs[0]:
-      st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
-      if not df_st_h.empty:
-        active_students = df_st_h[df_st_h["النقاط"] > 0]
-        if not active_students.empty:
-          top_10 = active_students.sort_values("النقاط", ascending=False).head(10)
+      # --- 1. لوحة الشرف (النقاط) ---
+      with honor_tabs[0]:
+        st.markdown("#### 🌟 أفضل 10 طلاب (حسب نقاط التميز)")
+        if not df_st_h.empty:
+          active_students = df_st_h[df_st_h["النقاط"] > 0]
+          if not active_students.empty:
+            top_10 = active_students.sort_values("النقاط", ascending=False).head(10)
 
-          for i, (_, r) in enumerate(top_10.iterrows(), 1):
-            ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-            brd_col = "#F59E0B" if i <= 3 else "rgba(148, 163, 184, 0.35)"
-            st.markdown(
-                f"""
+            for i, (_, r) in enumerate(top_10.iterrows(), 1):
+              ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
+              brd_col = "#F59E0B" if i <= 3 else "rgba(148, 163, 184, 0.35)"
+              st.markdown(
+                  f"""
                 <div style='background:var(--secondary-background-color); border:1.5px solid rgba(148,163,184,0.28); border-right:5px solid {brd_col}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                     <div style='display:flex; align-items:center; gap:15px;'>
                         <span style='font-size:1.5rem; font-weight:bold; min-width:45px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
@@ -3454,32 +3823,32 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
+                  unsafe_allow_html=True,
+              )
 
-          st.markdown("---")
-          honor_cards_content = ""
-          summary_list_html = ""
+            st.markdown("---")
+            honor_cards_content = ""
+            summary_list_html = ""
 
-          for rank, (_, row) in enumerate(top_10.iterrows(), 1):
-            student_name = row.get("name", "اسم غير متوفر")
-            s_cls = row.get("class", "")
-            score = int(row.get("النقاط", 0))
+            for rank, (_, row) in enumerate(top_10.iterrows(), 1):
+              student_name = row.get("name", "اسم غير متوفر")
+              s_cls = row.get("class", "")
+              score = int(row.get("النقاط", 0))
 
-            if rank == 1:
-              rank_text, icon, ribbon_html, badge_class = "المركز الأول", "🏆", '<div class="ribbon gold">الأول</div>', "rank-1"
-              med, bg, brd, txt = "🥇", "linear-gradient(135deg, #FFF8DC, #FFFAF0)", "#DAA520", "#8B4513"
-            elif rank == 2:
-              rank_text, icon, ribbon_html, badge_class = "المركز الثاني", "🥈", '<div class="ribbon silver">الثاني</div>', "rank-2"
-              med, bg, brd, txt = "🥈", "linear-gradient(135deg, #F8F9FA, #FFFFFF)", "#94A3B8", "#1E293B"
-            elif rank == 3:
-              rank_text, icon, ribbon_html, badge_class = "المركز الثالث", "🥉", '<div class="ribbon bronze">الثالث</div>', "rank-3"
-              med, bg, brd, txt = "🥉", "linear-gradient(135deg, #FFF1F2, #FFFBFB)", "#CD7F32", "#92400E"
-            else:
-              rank_text, icon, ribbon_html, badge_class = f"المركز {rank}", "🌟", "", ""
-              med, bg, brd, txt = f"#{rank}", "#FFFFFF", "#E2E8F0", "#334155"
+              if rank == 1:
+                rank_text, icon, ribbon_html, badge_class = "المركز الأول", "🏆", '<div class="ribbon gold">الأول</div>', "rank-1"
+                med, bg, brd, txt = "🥇", "linear-gradient(135deg, #FFF8DC, #FFFAF0)", "#DAA520", "#8B4513"
+              elif rank == 2:
+                rank_text, icon, ribbon_html, badge_class = "المركز الثاني", "🥈", '<div class="ribbon silver">الثاني</div>', "rank-2"
+                med, bg, brd, txt = "🥈", "linear-gradient(135deg, #F8F9FA, #FFFFFF)", "#94A3B8", "#1E293B"
+              elif rank == 3:
+                rank_text, icon, ribbon_html, badge_class = "المركز الثالث", "🥉", '<div class="ribbon bronze">الثالث</div>', "rank-3"
+                med, bg, brd, txt = "🥉", "linear-gradient(135deg, #FFF1F2, #FFFBFB)", "#CD7F32", "#92400E"
+              else:
+                rank_text, icon, ribbon_html, badge_class = f"المركز {rank}", "🌟", "", ""
+                med, bg, brd, txt = f"#{rank}", "#FFFFFF", "#E2E8F0", "#334155"
 
-            honor_cards_content += f"""
+              honor_cards_content += f"""
             <div class="card theme-honor">
                 {ribbon_html}
                 <div class="card-inner">
@@ -3496,7 +3865,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             </div>
             """
 
-            summary_list_html += f"""
+              summary_list_html += f"""
             <div class="row-card" style="background:{bg}; border-color:{brd};">
                 <div style="display:flex; align-items:center; gap:15px;">
                     <div class="rank-icon">{med}</div>
@@ -3511,9 +3880,9 @@ if st.session_state.role in ["teacher", "viewer"]:
             </div>
             """
 
-          honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
+            honor_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{honor_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
 
-          top10_summary_html = f"""
+            top10_summary_html = f"""
           <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>لوحة الشرف - أفضل 10 طلاب</title>
           <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
           <style>
@@ -3541,52 +3910,52 @@ if st.session_state.role in ["teacher", "viewer"]:
           </div><script>window.onload = function() {{ window.print(); }}</script></body></html>
           """
 
-          c_btn1, c_btn2 = st.columns(2)
-          c_btn1.download_button(
-              label="🎴 طباعة البطاقات الفردية للمتصدرين",
-              data=honor_full_html,
-              file_name=f"Honor_Cards_{datetime.date.today()}.html",
-              mime="text/html",
-              use_container_width=True,
-              type="primary",
-          )
-          c_btn2.download_button(
-              label="📋 طباعة كشف الشرف الشامل (أفضل 10)",
-              data=top10_summary_html,
-              file_name=f"Top10_Summary_{datetime.date.today()}.html",
-              mime="text/html",
-              type="secondary",
-              use_container_width=True,
-          )
-        else:
-          st.info("لم يحصل أي طالب على نقاط تميز حتى الآن.")
+            c_btn1, c_btn2 = st.columns(2)
+            c_btn1.download_button(
+                label="🎴 طباعة البطاقات الفردية للمتصدرين",
+                data=honor_full_html,
+                file_name=f"Honor_Cards_{datetime.date.today()}.html",
+                mime="text/html",
+                use_container_width=True,
+                type="primary",
+            )
+            c_btn2.download_button(
+                label="📋 طباعة كشف الشرف الشامل (أفضل 10)",
+                data=top10_summary_html,
+                file_name=f"Top10_Summary_{datetime.date.today()}.html",
+                mime="text/html",
+                type="secondary",
+                use_container_width=True,
+            )
+          else:
+            st.info("لم يحصل أي طالب على نقاط تميز حتى الآن.")
 
-    # --- 2. المتفوقون أكاديمياً (90%+) ---
-    with honor_tabs[1]:
-      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
+      # --- 2. المتفوقون أكاديمياً (90%+) ---
+      with honor_tabs[1]:
+        cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+        st.markdown(f"#### 🎓 لوحة المتفوقين أكاديمياً ({cp})")
 
-      if "df_grades" in st.session_state and not st.session_state.df_grades.empty and not df_st_h.empty:
-        df_g = st.session_state.df_grades.copy()
-        df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
-        if "period" not in df_g.columns:
-          df_g["period"] = "الفصل الأول - فترة أولى"
-        df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-        df_g = df_g[df_g["period"] == cp]
+        if "df_grades" in st.session_state and not st.session_state.df_grades.empty and not df_st_h.empty:
+          df_g = st.session_state.df_grades.copy()
+          df_g["clean_id"] = df_g.iloc[:, 0].astype(str)
+          if "period" not in df_g.columns:
+            df_g["period"] = "الفصل الأول - فترة أولى"
+          df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+          df_g = df_g[df_g["period"] == cp]
 
-        merged_df = pd.merge(df_g, df_st_h[["clean_id", "name", "class", "الجوال"]], on="clean_id", how="inner")
+          merged_df = pd.merge(df_g, df_st_h[["clean_id", "name", "class", "الجوال"]], on="clean_id", how="inner")
 
-        if not merged_df.empty:
-          max_total = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
-          if max_total > 0:
-            merged_df["perf_num"] = pd.to_numeric(merged_df["perf"], errors="coerce").fillna(0)
-            merged_df["percentage"] = (merged_df["perf_num"] / max_total) * 100
-            top_academic = merged_df[merged_df["percentage"] >= 90].sort_values("percentage", ascending=False)
+          if not merged_df.empty:
+            max_total = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
+            if max_total > 0:
+              merged_df["perf_num"] = pd.to_numeric(merged_df["perf"], errors="coerce").fillna(0)
+              merged_df["percentage"] = (merged_df["perf_num"] / max_total) * 100
+              top_academic = merged_df[merged_df["percentage"] >= 90].sort_values("percentage", ascending=False)
 
-            if not top_academic.empty:
-              for _, r in top_academic.iterrows():
-                st.markdown(
-                    f"""
+              if not top_academic.empty:
+                for _, r in top_academic.iterrows():
+                  st.markdown(
+                      f"""
                     <div style='background:var(--secondary-background-color); border:1.5px solid rgba(148,163,184,0.28); border-right:5px solid {success_color}; padding:15px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                         <div style='display:flex; align-items:center; gap:15px;'>
                             <span style='font-size:1.5rem;'>🎓</span>
@@ -3600,13 +3969,13 @@ if st.session_state.role in ["teacher", "viewer"]:
                         </div>
                     </div>
                     """,
-                    unsafe_allow_html=True,
-                )
+                      unsafe_allow_html=True,
+                  )
 
-              st.markdown("---")
-              academic_cards_content = ""
-              for _, row in top_academic.iterrows():
-                academic_cards_content += f"""
+                st.markdown("---")
+                academic_cards_content = ""
+                for _, row in top_academic.iterrows():
+                  academic_cards_content += f"""
                 <div class="card theme-academic">
                     <div class="ribbon gold">متفوق</div>
                     <div class="card-inner">
@@ -3623,214 +3992,214 @@ if st.session_state.role in ["teacher", "viewer"]:
                 </div>
                 """
 
-              academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{academic_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
+                academic_full_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>{lux_css}</style></head><body><div class="page">{academic_cards_content}</div><script>window.onload = function() {{ window.print(); }}</script></body></html>"""
 
-              st.download_button(
-                  label="🌐 تحميل بطاقات المتفوقين (تصميم واقعي للطباعة)",
-                  data=academic_full_html,
-                  file_name=f"Excellence_Cards_{datetime.date.today()}.html",
-                  mime="text/html",
-                  use_container_width=True,
-                  type="primary",
-              )
-            else:
-              st.info(f"لم يصل أحد لنسبة 90% في ({cp}) حتى الآن.")
-        else:
-          st.info(f"لا توجد درجات مطابقة للطلاب في ({cp}).")
-      else:
-        st.info("لم يتم رصد درجات بعد.")
-
-    # --- 3. مركز إصدار شهادات المتفوقين والشكر الإلكترونية ---
-    with honor_tabs[2]:
-      st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
-      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) أو اختيار طالب/عدة طلاب بالاسم لاستخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة دفعة واحدة.")
-
-      DEFAULT_CERT_PHRASES = {
-          "وسام التميز الأكاديمي": [
-              "وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
-              "تقديراً لتميزه الأكاديمي وتفوقه الدراسي وحرصه المستمر على تحقيق أعلى مستويات الإنجاز.",
-              "إشادةً باجتهاده ومثابرته وتميزه العلمي، وتحقيقه نتائج دراسية متميزة.",
-              "تقديراً لإنجازه العلمي المتميز وحرصه على التفوق والارتقاء بمستواه الدراسي.",
-          ],
-          "وسام التفوق والإبداع": [
-              "تقديراً لتفوقه وإبداعه وتميزه في الأداء، وما أظهره من مبادرة وابتكار وروح إيجابية في التعلم.",
-              "تقديراً لإبداعه ومبادراته المتميزة وأفكاره الإبداعية التي تعكس شغفه بالتعلم.",
-              "نظير تميزه وإبداعه ومشاركته الفاعلة وجهوده المتميزة في الأنشطة التعليمية.",
-              "إشادةً بموهبته وإبداعه وقدرته على تقديم أعمال وأفكار متميزة.",
-          ],
-          "وسام التميز السلوكي والانضباط الصفي": [
-              "تقديراً لتميزه في السلوك والانضباط داخل حصة اللغة الإنجليزية، والتزامه بتعليمات المعلم، واحترامه لزملائه، وحرصه على المشاركة الإيجابية.",
-              "نظير التزامه بآداب الحوار والانضباط داخل الحصة، وتفاعله الإيجابي واحترامه للمعلم والزملاء.",
-              "تقديراً لحسن سلوكه وتعاونه والتزامه بتعليمات حصة اللغة الإنجليزية، وحرصه على توفير بيئة تعليمية إيجابية.",
-              "إشادةً بتميزه في الانضباط الصفي، وحسن تعامله، ومشاركته الفاعلة التي تعكس روح المسؤولية والاحترام.",
-              "نظير التزامه وهدوئه واحترامه لقواعد الحصة الدراسية، وتميزه في التعامل الإيجابي مع المعلم وزملائه.",
-          ],
-      }
-
-      if "cert_phrases_config" not in st.session_state:
-        s_map_cert = get_cached_settings()
-        saved_json = s_map_cert.get("cert_phrases", "")
-        if saved_json:
-          try:
-            loaded_cfg = json.loads(saved_json)
-            for k, v in DEFAULT_CERT_PHRASES.items():
-              if k not in loaded_cfg or not loaded_cfg[k]:
-                loaded_cfg[k] = v
-            st.session_state.cert_phrases_config = loaded_cfg
-          except Exception:
-            st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
-        else:
-          st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
-
-      phrases_cfg = st.session_state.cert_phrases_config
-      badge_titles_list = list(phrases_cfg.keys())
-
-      if "cert_gen_title" not in st.session_state or st.session_state.cert_gen_title not in badge_titles_list:
-        st.session_state.cert_gen_title = badge_titles_list[0]
-      if "cert_phrase_preset" not in st.session_state:
-        st.session_state.cert_phrase_preset = phrases_cfg[st.session_state.cert_gen_title][0]
-      if "cert_custom_reason" not in st.session_state:
-        st.session_state.cert_custom_reason = phrases_cfg[st.session_state.cert_gen_title][0]
-
-      def on_badge_change():
-        chosen_badge = st.session_state.cert_gen_title
-        default_phrase = st.session_state.cert_phrases_config.get(chosen_badge, [""])[0]
-        st.session_state.cert_phrase_preset = default_phrase
-        st.session_state.cert_custom_reason = default_phrase
-        st.session_state.ready_certs_pdf = None
-
-      def on_preset_change():
-        st.session_state.cert_custom_reason = st.session_state.cert_phrase_preset
-        st.session_state.ready_certs_pdf = None
-
-      if not df_st_h.empty:
-        c_cert1, c_cert2, c_cert3 = st.columns(3)
-        cert_mode = c_cert1.selectbox(
-            "1️⃣ نظام الإصدار:",
-            [
-                "🌟 جميع المتفوقين (90%+) في الفصول",
-                "👤 طالب محدد (أو عدة طلاب بالاسم)",
-                "🏆 أبطال لوحة الشرف (أعلى النقاط)",
-            ],
-            key="cert_gen_mode",
-        )
-        cert_period = c_cert2.selectbox(
-            "2️⃣ الفترة الدراسية:",
-            [
-                "الفصل الأول - فترة أولى",
-                "الفصل الأول - فترة ثانية",
-                "الفصل الثاني - فترة أولى",
-                "الفصل الثاني - فترة ثانية",
-            ],
-            index=0,
-            key="cert_gen_period",
-        )
-        cert_title_opt = c_cert3.selectbox(
-            "3️⃣ عنوان الوسام:",
-            badge_titles_list,
-            key="cert_gen_title",
-            on_change=on_badge_change,
-        )
-
-        avail_cert_classes = list(df_st_h["class"].dropna().unique())
-        target_students_cert = pd.DataFrame()
-
-        if cert_mode == "🌟 جميع المتفوقين (90%+) في الفصول":
-          sel_cls_cert_list = st.multiselect(
-              "🏫 اختر الفصول المستهدفة (يمكنك تحديد أكثر من فصل معاً أو الكل):",
-              options=["الكل"] + avail_cert_classes,
-              default=["الكل"],
-              key="cert_cls_sel_multi",
-          )
-
-          df_g_c = st.session_state.df_grades.copy()
-          if not df_g_c.empty and sel_cls_cert_list:
-            df_g_c["clean_id"] = df_g_c.iloc[:, 0].astype(str).str.split(".").str[0]
-            if "period" not in df_g_c.columns:
-              df_g_c["period"] = "الفصل الأول - فترة أولى"
-            df_g_c["period"] = df_g_c["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-            df_g_c = df_g_c[df_g_c["period"] == cert_period]
-
-            m_cert = pd.merge(df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner")
-            if "الكل" not in sel_cls_cert_list:
-              m_cert = m_cert[m_cert["class"].isin(sel_cls_cert_list)]
-
-            max_t = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
-            if max_t > 0 and not m_cert.empty:
-              m_cert["perf_num"] = pd.to_numeric(m_cert["perf"], errors="coerce").fillna(0)
-              m_cert["pct"] = (m_cert["perf_num"] / max_t) * 100
-              target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values(["class", "pct"], ascending=[True, False])
-
-        elif cert_mode == "👤 طالب محدد (أو عدة طلاب بالاسم)":
-          col_f_c1, col_f_c2 = st.columns([1.3, 2])
-          sel_cls_filter_c = col_f_c1.multiselect(
-              "🏫 تصفية بالفصول:",
-              options=["الكل"] + avail_cert_classes,
-              default=["الكل"],
-              key="cert_single_cls_f_multi",
-          )
-          if not sel_cls_filter_c:
-            df_st_c_filtered = df_st_h.iloc[0:0]
-          elif "الكل" in sel_cls_filter_c:
-            df_st_c_filtered = df_st_h
+                st.download_button(
+                    label="🌐 تحميل بطاقات المتفوقين (تصميم واقعي للطباعة)",
+                    data=academic_full_html,
+                    file_name=f"Excellence_Cards_{datetime.date.today()}.html",
+                    mime="text/html",
+                    use_container_width=True,
+                    type="primary",
+                )
+              else:
+                st.info(f"لم يصل أحد لنسبة 90% في ({cp}) حتى الآن.")
           else:
-            df_st_c_filtered = df_st_h[df_st_h["class"].isin(sel_cls_filter_c)]
+            st.info(f"لا توجد درجات مطابقة للطلاب في ({cp}).")
+        else:
+          st.info("لم يتم رصد درجات بعد.")
 
-          st_cert_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_st_c_filtered.iterrows()}
-          sel_st_cert_list = col_f_c2.multiselect(
-              "🎯 ابحث واختر طالباً أو أكثر:",
-              options=list(st_cert_dict.keys()),
-              default=[list(st_cert_dict.keys())[0]] if st_cert_dict else [],
-              key="cert_st_sel_multi",
+      # --- 3. مركز إصدار شهادات المتفوقين والشكر الإلكترونية ---
+      with honor_tabs[2]:
+        st.markdown("#### 📜 مركز إصدار شهادات التفوق والشكر الإلكترونية (A4 Landscape)")
+        st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) أو اختيار طالب/عدة طلاب بالاسم لاستخراج شهادات شكر وتقدير إلكترونية رسمية ومختومة دفعة واحدة.")
+
+        DEFAULT_CERT_PHRASES = {
+            "وسام التميز الأكاديمي": [
+                "وذلك نظير تفوقه العلمي وتميزه وحصوله على تقدير ممتاز في مادة اللغة الإنجليزية.",
+                "تقديراً لتميزه الأكاديمي وتفوقه الدراسي وحرصه المستمر على تحقيق أعلى مستويات الإنجاز.",
+                "إشادةً باجتهاده ومثابرته وتميزه العلمي، وتحقيقه نتائج دراسية متميزة.",
+                "تقديراً لإنجازه العلمي المتميز وحرصه على التفوق والارتقاء بمستواه الدراسي.",
+            ],
+            "وسام التفوق والإبداع": [
+                "تقديراً لتفوقه وإبداعه وتميزه في الأداء، وما أظهره من مبادرة وابتكار وروح إيجابية في التعلم.",
+                "تقديراً لإبداعه ومبادراته المتميزة وأفكاره الإبداعية التي تعكس شغفه بالتعلم.",
+                "نظير تميزه وإبداعه ومشاركته الفاعلة وجهوده المتميزة في الأنشطة التعليمية.",
+                "إشادةً بموهبته وإبداعه وقدرته على تقديم أعمال وأفكار متميزة.",
+            ],
+            "وسام التميز السلوكي والانضباط الصفي": [
+                "تقديراً لتميزه في السلوك والانضباط داخل حصة اللغة الإنجليزية، والتزامه بتعليمات المعلم، واحترامه لزملائه، وحرصه على المشاركة الإيجابية.",
+                "نظير التزامه بآداب الحوار والانضباط داخل الحصة، وتفاعله الإيجابي واحترامه للمعلم والزملاء.",
+                "تقديراً لحسن سلوكه وتعاونه والتزامه بتعليمات حصة اللغة الإنجليزية، وحرصه على توفير بيئة تعليمية إيجابية.",
+                "إشادةً بتميزه في الانضباط الصفي، وحسن تعامله، ومشاركته الفاعلة التي تعكس روح المسؤولية والاحترام.",
+                "نظير التزامه وهدوئه واحترامه لقواعد الحصة الدراسية، وتميزه في التعامل الإيجابي مع المعلم وزملائه.",
+            ],
+        }
+
+        if "cert_phrases_config" not in st.session_state:
+          s_map_cert = get_cached_settings()
+          saved_json = s_map_cert.get("cert_phrases", "")
+          if saved_json:
+            try:
+              loaded_cfg = json.loads(saved_json)
+              for k, v in DEFAULT_CERT_PHRASES.items():
+                if k not in loaded_cfg or not loaded_cfg[k]:
+                  loaded_cfg[k] = v
+              st.session_state.cert_phrases_config = loaded_cfg
+            except Exception:
+              st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+          else:
+            st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+
+        phrases_cfg = st.session_state.cert_phrases_config
+        badge_titles_list = list(phrases_cfg.keys())
+
+        if "cert_gen_title" not in st.session_state or st.session_state.cert_gen_title not in badge_titles_list:
+          st.session_state.cert_gen_title = badge_titles_list[0]
+        if "cert_phrase_preset" not in st.session_state:
+          st.session_state.cert_phrase_preset = phrases_cfg[st.session_state.cert_gen_title][0]
+        if "cert_custom_reason" not in st.session_state:
+          st.session_state.cert_custom_reason = phrases_cfg[st.session_state.cert_gen_title][0]
+
+        def on_badge_change():
+          chosen_badge = st.session_state.cert_gen_title
+          default_phrase = st.session_state.cert_phrases_config.get(chosen_badge, [""])[0]
+          st.session_state.cert_phrase_preset = default_phrase
+          st.session_state.cert_custom_reason = default_phrase
+          st.session_state.ready_certs_pdf = None
+
+        def on_preset_change():
+          st.session_state.cert_custom_reason = st.session_state.cert_phrase_preset
+          st.session_state.ready_certs_pdf = None
+
+        if not df_st_h.empty:
+          c_cert1, c_cert2, c_cert3 = st.columns(3)
+          cert_mode = c_cert1.selectbox(
+              "1️⃣ نظام الإصدار:",
+              [
+                  "🌟 جميع المتفوقين (90%+) في الفصول",
+                  "👤 طالب محدد (أو عدة طلاب بالاسم)",
+                  "🏆 أبطال لوحة الشرف (أعلى النقاط)",
+              ],
+              key="cert_gen_mode",
           )
-          if sel_st_cert_list:
-            chosen_ids = [st_cert_dict[k] for k in sel_st_cert_list if k in st_cert_dict]
-            target_students_cert = df_st_h[df_st_h["clean_id"].isin(chosen_ids)]
-
-        elif cert_mode == "🏆 أبطال لوحة الشرف (أعلى النقاط)":
-          sel_cls_honor_list = st.multiselect(
-              "🏫 اختر الفصول (اتركه 'الكل' لأفضل 10 على مستوى المدرسة أو حدد فصولاً معينة):",
-              options=["الكل"] + avail_cert_classes,
-              default=["الكل"],
-              key="cert_honor_cls_multi",
+          cert_period = c_cert2.selectbox(
+              "2️⃣ الفترة الدراسية:",
+              [
+                  "الفصل الأول - فترة أولى",
+                  "الفصل الأول - فترة ثانية",
+                  "الفصل الثاني - فترة أولى",
+                  "الفصل الثاني - فترة ثانية",
+              ],
+              index=0,
+              key="cert_gen_period",
           )
-          df_h_pool = df_st_h[df_st_h["النقاط"] > 0].copy()
-          if sel_cls_honor_list and "الكل" not in sel_cls_honor_list:
-            df_h_pool = df_h_pool[df_h_pool["class"].isin(sel_cls_honor_list)]
-          elif not sel_cls_honor_list:
-            df_h_pool = df_h_pool.iloc[0:0]
-          target_students_cert = df_h_pool.sort_values("النقاط", ascending=False).head(10)
+          cert_title_opt = c_cert3.selectbox(
+              "3️⃣ عنوان الوسام:",
+              badge_titles_list,
+              key="cert_gen_title",
+              on_change=on_badge_change,
+          )
 
-        available_phrases_for_badge = phrases_cfg.get(cert_title_opt, [""])
-        if st.session_state.cert_phrase_preset not in available_phrases_for_badge:
-          st.session_state.cert_phrase_preset = available_phrases_for_badge[0]
+          avail_cert_classes = list(df_st_h["class"].dropna().unique())
+          target_students_cert = pd.DataFrame()
 
-        st.selectbox(
-            "📋 اختر صيغة جاهزة للعبارة (تتحدث تلقائياً حسب نوع الوسام):",
-            available_phrases_for_badge,
-            key="cert_phrase_preset",
-            on_change=on_preset_change,
-            format_func=lambda x: f"⭐ (الافتراضية) {x}" if x == available_phrases_for_badge[0] else f"🔹 {x}",
-        )
+          if cert_mode == "🌟 جميع المتفوقين (90%+) في الفصول":
+            sel_cls_cert_list = st.multiselect(
+                "🏫 اختر الفصول المستهدفة (يمكنك تحديد أكثر من فصل معاً أو الكل):",
+                options=["الكل"] + avail_cert_classes,
+                default=["الكل"],
+                key="cert_cls_sel_multi",
+            )
 
-        custom_reason = st.text_area(
-            "✍️ عبارة التكريم في الشهادة (يمكنك التعديل اليدوي بحرية):",
-            key="cert_custom_reason",
-            height=85,
-        )
+            df_g_c = st.session_state.df_grades.copy()
+            if not df_g_c.empty and sel_cls_cert_list:
+              df_g_c["clean_id"] = df_g_c.iloc[:, 0].astype(str)
+              if "period" not in df_g_c.columns:
+                df_g_c["period"] = "الفصل الأول - فترة أولى"
+              df_g_c["period"] = df_g_c["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+              df_g_c = df_g_c[df_g_c["period"] == cert_period]
 
-        if not target_students_cert.empty:
-          st.success(f"✅ تم تجهيز ({len(target_students_cert)}) شهادة إلكترونية جاهزة للإصدار والطباعة.")
+              m_cert = pd.merge(df_st_h, df_g_c[["clean_id", "perf"]], on="clean_id", how="inner")
+              if "الكل" not in sel_cls_cert_list:
+                m_cert = m_cert[m_cert["class"].isin(sel_cls_cert_list)]
 
-          star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
-          all_certs_pages_html = ""
+              max_t = st.session_state.get("max_tasks", 60) + st.session_state.get("max_quiz", 40)
+              if max_t > 0 and not m_cert.empty:
+                m_cert["perf_num"] = pd.to_numeric(m_cert["perf"], errors="coerce").fillna(0)
+                m_cert["pct"] = (m_cert["perf_num"] / max_t) * 100
+                target_students_cert = m_cert[m_cert["pct"] >= 90].sort_values(["class", "pct"], ascending=[True, False])
 
-          for _, s_row in target_students_cert.iterrows():
-            st_name_c = s_row.get("name", "طالب متفوق")
-            st_cls_c = s_row.get("class", "")
-            school_c = get_school_name_dynamic(st_cls_c).replace("<br>", " - ")
+          elif cert_mode == "👤 طالب محدد (أو عدة طلاب بالاسم)":
+            col_f_c1, col_f_c2 = st.columns([1.3, 2])
+            sel_cls_filter_c = col_f_c1.multiselect(
+                "🏫 تصفية بالفصول:",
+                options=["الكل"] + avail_cert_classes,
+                default=["الكل"],
+                key="cert_single_cls_f_multi",
+            )
+            if not sel_cls_filter_c:
+              df_st_c_filtered = df_st_h.iloc[0:0]
+            elif "الكل" in sel_cls_filter_c:
+              df_st_c_filtered = df_st_h
+            else:
+              df_st_c_filtered = df_st_h[df_st_h["class"].isin(sel_cls_filter_c)]
 
-            all_certs_pages_html += f"""
+            st_cert_dict = {f"{r['name']} - ({r.get('class', '')}) · {r['clean_id']}": r["clean_id"] for _, r in df_st_c_filtered.iterrows()}
+            sel_st_cert_list = col_f_c2.multiselect(
+                "🎯 ابحث واختر طالباً أو أكثر:",
+                options=list(st_cert_dict.keys()),
+                default=[list(st_cert_dict.keys())[0]] if st_cert_dict else [],
+                key="cert_st_sel_multi",
+            )
+            if sel_st_cert_list:
+              chosen_ids = [st_cert_dict[k] for k in sel_st_cert_list if k in st_cert_dict]
+              target_students_cert = df_st_h[df_st_h["clean_id"].isin(chosen_ids)]
+
+          elif cert_mode == "🏆 أبطال لوحة الشرف (أعلى النقاط)":
+            sel_cls_honor_list = st.multiselect(
+                "🏫 اختر الفصول (اتركه 'الكل' لأفضل 10 على مستوى المدرسة أو حدد فصولاً معينة):",
+                options=["الكل"] + avail_cert_classes,
+                default=["الكل"],
+                key="cert_honor_cls_multi",
+            )
+            df_h_pool = df_st_h[df_st_h["النقاط"] > 0].copy()
+            if sel_cls_honor_list and "الكل" not in sel_cls_honor_list:
+              df_h_pool = df_h_pool[df_h_pool["class"].isin(sel_cls_honor_list)]
+            elif not sel_cls_honor_list:
+              df_h_pool = df_h_pool.iloc[0:0]
+            target_students_cert = df_h_pool.sort_values("النقاط", ascending=False).head(10)
+
+          available_phrases_for_badge = phrases_cfg.get(cert_title_opt, [""])
+          if st.session_state.cert_phrase_preset not in available_phrases_for_badge:
+            st.session_state.cert_phrase_preset = available_phrases_for_badge[0]
+
+          st.selectbox(
+              "📋 اختر صيغة جاهزة للعبارة (تتحدث تلقائياً حسب نوع الوسام):",
+              available_phrases_for_badge,
+              key="cert_phrase_preset",
+              on_change=on_preset_change,
+              format_func=lambda x: f"⭐ (الافتراضية) {x}" if x == available_phrases_for_badge[0] else f"🔹 {x}",
+          )
+
+          custom_reason = st.text_area(
+              "✍️ عبارة التكريم في الشهادة (يمكنك التعديل اليدوي بحرية):",
+              key="cert_custom_reason",
+              height=85,
+          )
+
+          if not target_students_cert.empty:
+            st.success(f"✅ تم تجهيز ({len(target_students_cert)}) شهادة إلكترونية جاهزة للإصدار والطباعة.")
+
+            star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
+            all_certs_pages_html = ""
+
+            for _, s_row in target_students_cert.iterrows():
+              st_name_c = s_row.get("name", "طالب متفوق")
+              st_cls_c = s_row.get("class", "")
+              school_c = get_school_name_dynamic(st_cls_c).replace("<br>", " - ")
+
+              all_certs_pages_html += f"""
             <div class="cert-page">
                 <div class="border-outer">
                     <div class="border-inner">
@@ -3886,7 +4255,7 @@ if st.session_state.role in ["teacher", "viewer"]:
             </div>
             """
 
-          master_certs_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادات التفوق الإلكترونية</title>
+            master_certs_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>شهادات التفوق الإلكترونية</title>
           <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
           <style>
               @page {{ size: 297mm 210mm; margin: 0mm !important; }}
@@ -3922,209 +4291,192 @@ if st.session_state.role in ["teacher", "viewer"]:
           <script>window.onload = function() {{ window.print(); }}</script>
           </body></html>
           """
+            cert_key = fingerprint([st.session_state.current_year, cert_period, target_students_cert["clean_id"].tolist(), master_certs_html])
 
-          btn_c1, btn_c2 = st.columns(2)
-          with btn_c1:
-            st.download_button(
-                label=f"🖨️ فتح وطباعة الشهادات فوراً ({len(target_students_cert)} شهادة - سريع)",
-                data=master_certs_html,
-                file_name=f"Print_Certificates_{datetime.date.today()}.html",
-                mime="text/html",
-                type="primary",
-                use_container_width=True,
-            )
-          with btn_c2:
-            if st.button(
-                f"⚙️ تجهيز ملف PDF مباشر ({len(target_students_cert)} شهادة)",
-                type="secondary",
-                use_container_width=True,
-                key="btn_build_certs_pdf",
-            ):
-              try:
-                with st.spinner("⏳ جاري رسم الشهادات وتحويلها إلى PDF..."):
-                  st.session_state.ready_certs_pdf = generate_pdf_bytes_cached(master_certs_html)
-              except Exception as e:
-                st.error(f"تعذر توليد الـ PDF المباشر، استخدم زر الطباعة الفوري: {e}")
-
-            if st.session_state.get("ready_certs_pdf"):
+            btn_c1, btn_c2 = st.columns(2)
+            with btn_c1:
               st.download_button(
-                  label=f"📥 اضغط لتنزيل ملف الـ PDF الجاهز ({len(target_students_cert)} شهادة)",
-                  data=st.session_state.ready_certs_pdf,
-                  file_name=f"Certificates_{datetime.date.today()}.pdf",
-                  mime="application/pdf",
+                  label=f"🖨️ فتح وطباعة الشهادات فوراً ({len(target_students_cert)} شهادة - سريع)",
+                  data=master_certs_html,
+                  file_name=f"Print_Certificates_{datetime.date.today()}.html",
+                  mime="text/html",
                   type="primary",
                   use_container_width=True,
               )
+            with btn_c2:
+              if st.button(
+                  f"⚙️ تجهيز ملف PDF مباشر ({len(target_students_cert)} شهادة)",
+                  type="secondary",
+                  use_container_width=True,
+                  key="btn_build_certs_pdf",
+              ):
+                try:
+                  with st.spinner("⏳ جاري رسم الشهادات وتحويلها إلى PDF..."):
+                    pdf = generate_pdf_bytes_cached(master_certs_html)
+                    st.session_state.ready_certs_pdf = (cert_key, pdf) if pdf else None
+                    if not pdf:
+                      st.info("يتوفر تنزيل نسخة الطباعة بصيغة HTML.")
+                except Exception as e:
+                  st.error(f"تعذر توليد الـ PDF المباشر، استخدم زر الطباعة الفوري: {e}")
 
-          with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المكرمين عبر واتساب"):
-            for _, s_row in target_students_cert.iterrows():
-              s_n = s_row.get("name", "")
-              s_p = clean_phone_number(s_row.get("الجوال", ""))
-              congrats_msg = urllib.parse.quote(
-                  f"🌟 *تهنئة تفوق وتميز من منصة الأستاذ زياد المعمري* 🌟\n\n"
+              prepared = st.session_state.get("ready_certs_pdf")
+              if isinstance(prepared, tuple) and prepared[0] == cert_key:
+                st.download_button(
+                    label=f"📥 اضغط لتنزيل ملف الـ PDF الجاهز ({len(target_students_cert)} شهادة)",
+                    data=prepared[1],
+                    file_name=f"Certificates_{datetime.date.today()}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+            with st.expander("📲 إرسال تهنئة سريعة لأولياء أمور المكرمين عبر واتساب"):
+              for _, s_row in target_students_cert.iterrows():
+                s_n = s_row.get("name", "")
+                s_p = clean_phone_number(s_row.get("الجوال", ""))
+                congrats_msg = urllib.parse.quote(
+                    f"🌟 *تهنئة تفوق وتميز من منصة الأستاذ زياد المعمري* 🌟\n\n"
                   f"يسرنا تهنئتكم بحصول الابن المبدع: *{s_n}*\n"
                   f"على *{cert_title_opt}* في مادة اللغة الإنجليزية ({cert_period}).\n"
                   f"📝 *{custom_reason}*\n"
                   f"مع خالص تمنياتنا له بدوام التوفيق والنجاح! 🎉"
+                )
+                col_w1, col_w2 = st.columns([3, 1])
+                col_w1.markdown(f"<div style='padding-top:10px; font-weight:bold;'>🎓 {s_n} ({s_row.get('class', '')})</div>", unsafe_allow_html=True)
+                col_w2.link_button("📲 إرسال تهنئة واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={congrats_msg}", use_container_width=True)
+          else:
+            st.warning("⚠️ لا يوجد طلاب يطابقون معيار الشهادات المحدد حالياً.")
+
+          if st.session_state.role == "teacher":
+            st.markdown("---")
+            with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
+              st.caption("يمكنك إضافة عبارات جديدة لأي وسام أو تعديل العبارات الحالية، وسيتم حفظها في قاعدة البيانات المركزية (`settings`).")
+              edit_badge_target = st.selectbox("اختر الوسام لتحرير عباراته:", badge_titles_list, key="cfg_badge_sel")
+              current_lines = "\n".join(phrases_cfg.get(edit_badge_target, []))
+              updated_lines_text = st.text_area(
+                  "عبارات الوسام (كل سطر يمثل عبارة مستقلة، والسطر الأول هو العبارة الافتراضية):",
+                  value=current_lines,
+                  height=150,
+                  key=f"cfg_lines_{edit_badge_target}",
               )
-              col_w1, col_w2 = st.columns([3, 1])
-              col_w1.markdown(f"<div style='padding-top:10px; font-weight:bold;'>🎓 {s_n} ({s_row.get('class', '')})</div>", unsafe_allow_html=True)
-              col_w2.link_button("📲 إرسال تهنئة واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={congrats_msg}", use_container_width=True)
-        else:
-          st.warning("⚠️ لا يوجد طلاب يطابقون معيار الشهادات المحدد حالياً.")
+              col_sv1, col_sv2 = st.columns([2, 1])
+              if col_sv1.button("💾 حفظ عبارات هذا الوسام في قاعدة البيانات", type="primary", use_container_width=True):
+                new_list = [line.strip() for line in updated_lines_text.split("\n") if line.strip()]
+                if new_list:
+                  new_cfg = dict(phrases_cfg)
+                  new_cfg[edit_badge_target] = new_list
+                  try:
+                    setting_write({"cert_phrases": json.dumps(new_cfg, ensure_ascii=False)})
+                    st.session_state.cert_phrases_config = new_cfg
+                    st.success(f"✅ تم حفظ عبارات ({edit_badge_target}) بنجاح!")
+                    st.rerun()
+                  except Exception as e:
+                    st.error(f"❌ خطأ أثناء الحفظ في السيرفر: {e}")
+                else:
+                  st.warning("⚠️ يجب إدخال عبارة واحدة على الأقل.")
 
-        if st.session_state.role == "teacher":
-          st.markdown("---")
-          with st.expander("⚙️ إعدادات قوالب العبارات (إضافة أو تعديل عبارات الأوسمة مستقبلاً دون تعديل الكود)"):
-            st.caption("يمكنك إضافة عبارات جديدة لأي وسام أو تعديل العبارات الحالية، وسيتم حفظها في قاعدة البيانات المركزية (`settings`).")
-            edit_badge_target = st.selectbox("اختر الوسام لتحرير عباراته:", badge_titles_list, key="cfg_badge_sel")
-            current_lines = "\n".join(phrases_cfg.get(edit_badge_target, []))
-            updated_lines_text = st.text_area(
-                "عبارات الوسام (كل سطر يمثل عبارة مستقلة، والسطر الأول هو العبارة الافتراضية):",
-                value=current_lines,
-                height=150,
-                key=f"cfg_lines_{edit_badge_target}",
-            )
-            col_sv1, col_sv2 = st.columns([2, 1])
-            if col_sv1.button("💾 حفظ عبارات هذا الوسام في قاعدة البيانات", type="primary", use_container_width=True):
-              new_list = [line.strip() for line in updated_lines_text.split("\n") if line.strip()]
-              if new_list:
-                phrases_cfg[edit_badge_target] = new_list
-                st.session_state.cert_phrases_config = phrases_cfg
-                try:
-                  ws_sett = get_gspread_client().worksheet("settings")
-                  records_s = ws_sett.get_all_records()
-                  row_found = None
-                  for idx_s, r_s in enumerate(records_s):
-                    if str(r_s.get("key", "")).strip() == "cert_phrases":
-                      row_found = idx_s + 2
-                      break
-                  json_str = json.dumps(phrases_cfg, ensure_ascii=False)
-                  if row_found:
-                    ws_sett.update_cell(row_found, 2, json_str)
-                  else:
-                    ws_sett.append_row(["cert_phrases", json_str])
-                  get_cached_settings.clear()
-                  on_badge_change()
-                  st.success(f"✅ تم حفظ عبارات ({edit_badge_target}) بنجاح!")
-                  st.rerun()
-                except Exception as e:
-                  st.error(f"❌ خطأ أثناء الحفظ في السيرفر: {e}")
-              else:
-                st.warning("⚠️ يجب إدخال عبارة واحدة على الأقل.")
+              if col_sv2.button("🔄 استعادة العبارات الافتراضية", type="secondary", use_container_width=True):
+                setting_write({"cert_phrases": json.dumps(DEFAULT_CERT_PHRASES, ensure_ascii=False)})
+                st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
+                st.rerun()
+  # ==========================================
+  # 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (يدعم اختيار عدة فصول معاً)
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_reports:
+      st.subheader("🖨️ مركز التقارير والطباعة والاستخراج")
+      st.caption("جميع تقارير الطباعة، شواهد الأداء، الكشوفات المرنة، وتصدير ملفات Excel في مكان واحد مع دعم تحديد عدة فصول دفعة واحدة")
 
-            if col_sv2.button("🔄 استعادة العبارات الافتراضية", type="secondary", use_container_width=True):
-              st.session_state.cert_phrases_config = DEFAULT_CERT_PHRASES.copy()
-              try:
-                ws_sett = get_gspread_client().worksheet("settings")
-                records_s = ws_sett.get_all_records()
-                for idx_s, r_s in enumerate(records_s):
-                  if str(r_s.get("key", "")).strip() == "cert_phrases":
-                    ws_sett.update_cell(idx_s + 2, 2, json.dumps(DEFAULT_CERT_PHRASES, ensure_ascii=False))
-                    break
-                get_cached_settings.clear()
-              except Exception:
-                pass
-              on_badge_change()
-              st.rerun()
-# ==========================================
-# 🖨️ 8. التبويب الرابع: مركز التقارير والطباعة الشامل (يدعم اختيار عدة فصول معاً)
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_reports:
-    st.subheader("🖨️ مركز التقارير والطباعة والاستخراج")
-    st.caption("جميع تقارير الطباعة، شواهد الأداء، الكشوفات المرنة، وتصدير ملفات Excel في مكان واحد مع دعم تحديد عدة فصول دفعة واحدة")
-
-    df_s_rep = st.session_state.df_students.copy()
-    if not df_s_rep.empty:
-      df_s_rep["clean_id"] = df_s_rep.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-      df_s_rep["النقاط"] = pd.to_numeric(df_s_rep["النقاط"], errors="coerce").fillna(0)
-
-    def resolve_multi_classes(selected_list, all_available_classes):
-      if not selected_list:
-        return [], "ابتدائية عبادة بن قيس الأنصاري", ""
-      if "الكل" in selected_list:
-        target_cls = list(all_available_classes)
-        label_str = "الكل"
-      else:
-        target_cls = list(selected_list)
-        label_str = " ، ".join(target_cls)
-
-      cs_map = st.session_state.get("class_stage_map", {})
-      stages_found = set()
-      for c_name in target_cls:
-        st_g = cs_map.get(str(c_name).strip(), "")
-        if st_g == "متوسط" or "متوسط" in str(c_name):
-          stages_found.add("متوسط")
-        else:
-          stages_found.add("ابتدائي")
-
-      if stages_found == {"متوسط"}:
-        sch_name = "متوسطة عبدالرحمن الناصر"
-      elif stages_found == {"ابتدائي"}:
-        sch_name = "ابتدائية عبادة بن قيس الأنصاري"
-      else:
-        sch_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
-
-      return target_cls, sch_name, label_str
-
-    all_cls_in_db = (
-        list(df_s_rep["class"].dropna().unique())
-        if not df_s_rep.empty and "class" in df_s_rep.columns
-        else st.session_state.get("class_options", [])
-    )
-
-    rep_tabs = st.tabs([
-        "📑 تقرير طالب",
-        "📊 كشف الدرجات",
-        "📝 كشف متابعة",
-        "🖨️ التفريغ الورقي",
-        "📈 فرز المستويات",
-        "🧠 أنماط التعلم",
-        "📱 أرقام التواصل",
-    ])
-
-    # ---------------------------------------------------------
-    # 1. تقرير الطالب الشامل المفصل
-    # ---------------------------------------------------------
-    with rep_tabs[0]:
-      st.markdown("#### 📑 التقرير الشامل المفصل للطالب")
+      df_s_rep = st.session_state.df_students.copy()
       if not df_s_rep.empty:
-        col_r_cls, col_r_st = st.columns([1.3, 2.2])
-        sel_r_cls = col_r_cls.multiselect(
-            "🏫 تصفية بالفصول:",
-            ["الكل"] + all_cls_in_db,
-            default=["الكل"],
-            key="rep_single_cls_filter",
-        )
+        df_s_rep["clean_id"] = df_s_rep.iloc[:, 0].astype(str).str.strip()
+        df_s_rep["النقاط"] = pd.to_numeric(df_s_rep["النقاط"], errors="coerce").fillna(0)
 
-        target_r_cls, _, _ = resolve_multi_classes(sel_r_cls, all_cls_in_db)
-        df_s_rep_f = df_s_rep[df_s_rep["class"].isin(target_r_cls)] if target_r_cls else df_s_rep
+      def resolve_multi_classes(selected_list, all_available_classes):
+        if not selected_list:
+          return [], "ابتدائية عبادة بن قيس الأنصاري", ""
+        if "الكل" in selected_list:
+          target_cls = list(all_available_classes)
+          label_str = "الكل"
+        else:
+          target_cls = list(selected_list)
+          label_str = " ، ".join(target_cls)
 
-        st_dict = {f"{r['name']} - ({r.get('class', '')})": r["clean_id"] for _, r in df_s_rep_f.iterrows()}
-        sel_rep = col_r_st.selectbox("🔍 ابحث عن الطالب لاستخراج التقرير:", [""] + list(st_dict.keys()), key="rep_sel")
+        cs_map = st.session_state.get("class_stage_map", {})
+        stages_found = set()
+        for c_name in target_cls:
+          st_g = cs_map.get(str(c_name).strip(), "")
+          if st_g == "متوسط" or "متوسط" in str(c_name):
+            stages_found.add("متوسط")
+          else:
+            stages_found.add("ابتدائي")
 
-        if sel_rep:
-          sid = st_dict[sel_rep]
-          s_inf = df_s_rep[df_s_rep["clean_id"] == sid].iloc[0]
-          st.markdown("---")
+        if stages_found == {"متوسط"}:
+          sch_name = "متوسطة عبدالرحمن الناصر"
+        elif stages_found == {"ابتدائي"}:
+          sch_name = "ابتدائية عبادة بن قيس الأنصاري"
+        else:
+          sch_name = "ابتدائية عبادة بن قيس الأنصاري<br>متوسطة عبدالرحمن الناصر"
 
-          l_style = "لم يختبر ⏳"
-          if "نمط التعلم" in df_s_rep.columns:
-            val = s_inf.get("نمط التعلم", "")
-            if pd.notna(val) and str(val).strip() not in ["", "nan", "None"]:
-              l_style = str(val).strip()
+        return target_cls, sch_name, label_str
 
-          style_color = (
-              "#3B82F6" if "بصري" in l_style
-              else "#10B981" if "سمعي" in l_style
-              else "#F59E0B" if "حركي" in l_style
-              else "#8B5CF6" if "متعدد" in l_style
-              else "#94A3B8"
+      all_cls_in_db = (
+          list(df_s_rep["class"].dropna().unique())
+          if not df_s_rep.empty and "class" in df_s_rep.columns
+          else st.session_state.get("class_options", [])
+      )
+
+      rep_tabs = st.tabs([
+          "📑 تقرير طالب",
+          "📊 كشف الدرجات",
+          "📝 كشف متابعة",
+          "🖨️ التفريغ الورقي",
+          "📈 فرز المستويات",
+          "🧠 أنماط التعلم",
+          "📱 أرقام التواصل",
+      ])
+
+      # ---------------------------------------------------------
+      # 1. تقرير الطالب الشامل المفصل
+      # ---------------------------------------------------------
+      with rep_tabs[0]:
+        st.markdown("#### 📑 التقرير الشامل المفصل للطالب")
+        if not df_s_rep.empty:
+          col_r_cls, col_r_st = st.columns([1.3, 2.2])
+          sel_r_cls = col_r_cls.multiselect(
+              "🏫 تصفية بالفصول:",
+              ["الكل"] + all_cls_in_db,
+              default=["الكل"],
+              key="rep_single_cls_filter",
           )
 
-          st.markdown(
-              f"""
+          target_r_cls, _, _ = resolve_multi_classes(sel_r_cls, all_cls_in_db)
+          df_s_rep_f = df_s_rep[df_s_rep["class"].isin(target_r_cls)] if target_r_cls else df_s_rep
+
+          st_dict = {f"{r['name']} - ({r.get('class', '')}) · {r['clean_id']}": r["clean_id"] for _, r in df_s_rep_f.iterrows()}
+          sel_rep = col_r_st.selectbox("🔍 ابحث عن الطالب لاستخراج التقرير:", [""] + list(st_dict.keys()), key="rep_sel")
+
+          if sel_rep:
+            sid = st_dict[sel_rep]
+            s_inf = df_s_rep[df_s_rep["clean_id"] == sid].iloc[0]
+            st.markdown("---")
+
+            l_style = "لم يختبر ⏳"
+            if "نمط التعلم" in df_s_rep.columns:
+              val = s_inf.get("نمط التعلم", "")
+              if pd.notna(val) and str(val).strip() not in ["", "nan", "None"]:
+                l_style = str(val).strip()
+
+            style_color = (
+                "#3B82F6" if "بصري" in l_style
+                else "#10B981" if "سمعي" in l_style
+                else "#F59E0B" if "حركي" in l_style
+                else "#8B5CF6" if "متعدد" in l_style
+                else "#94A3B8"
+            )
+
+            st.markdown(
+                f"""
               <div style='background:var(--secondary-background-color); padding:18px; border-radius:14px; border:1.5px solid rgba(148,163,184,0.28); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;'>
                   <div>
                       <div style='color:var(--text-color); font-size:1.2rem;'><b>الاسم:</b> <span style='color:{accent_color}; font-weight:900;'>{s_inf['name']}</span></div>
@@ -4142,32 +4494,32 @@ if st.session_state.role in ["teacher", "viewer"]:
                   </div>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
-          st.markdown("<br>", unsafe_allow_html=True)
+                unsafe_allow_html=True,
+            )
+            st.markdown("<br>", unsafe_allow_html=True)
 
-          grades_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>لا توجد درجات مرصودة لهذا الطالب في هذه الفترة.</div>"
-          behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>✨ سجل السلوك نظيف.</div>"
+            grades_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>لا توجد درجات مرصودة لهذا الطالب في هذه الفترة.</div>"
+            behavior_html_table = "<div style='text-align:center; padding:20px; color:#64748B;'>✨ سجل السلوك نظيف.</div>"
 
-          st.markdown("##### 📊 الدرجات الأكاديمية")
-          df_g = st.session_state.df_grades.copy()
-          cp_report = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+            st.markdown("##### 📊 الدرجات الأكاديمية")
+            df_g = st.session_state.df_grades.copy()
+            cp_report = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
 
-          if not df_g.empty:
-            df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
-            if "period" not in df_g.columns:
-              df_g["period"] = "الفصل الأول - فترة أولى"
-            df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-            my_g = df_g[(df_g["clean_id"] == sid) & (df_g["period"] == cp_report)]
+            if not df_g.empty:
+              df_g["clean_id"] = df_g.iloc[:, 0].astype(str)
+              if "period" not in df_g.columns:
+                df_g["period"] = "الفصل الأول - فترة أولى"
+              df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+              my_g = df_g[(df_g["clean_id"] == sid) & (df_g["period"] == cp_report)]
 
-            if not my_g.empty:
-              g_inf = my_g.iloc[-1]
-              k1, k2, k3 = st.columns(3)
-              k1.metric("📝 المشاركة والواجبات", g_inf.get("p1", 0))
-              k2.metric("✍️ الاختبارات", g_inf.get("p2", 0))
-              k3.metric("🏆 المجموع الكلي", g_inf.get("perf", 0))
+              if not my_g.empty:
+                g_inf = my_g.iloc[-1]
+                k1, k2, k3 = st.columns(3)
+                k1.metric("📝 المشاركة والواجبات", g_inf.get("p1", 0))
+                k2.metric("✍️ الاختبارات", g_inf.get("p2", 0))
+                k3.metric("🏆 المجموع الكلي", g_inf.get("perf", 0))
 
-              grades_html_table = f"""
+                grades_html_table = f"""
               <table>
                   <tr><th>الفترة النشطة</th><th>المشاركة والواجبات</th><th>الاختبارات</th><th>المجموع الكلي</th></tr>
                   <tr>
@@ -4178,37 +4530,37 @@ if st.session_state.role in ["teacher", "viewer"]:
                   </tr>
               </table>
               """
+              else:
+                st.info(f"لم يتم رصد درجات أكاديمية لهذا الطالب في ({cp_report}) بعد.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### 📜 سجل السلوك والملاحظات")
+            df_b = st.session_state.df_behavior.copy()
+            if not df_b.empty:
+              df_b["clean_id"] = df_b.iloc[:, 0].astype(str)
+              my_b = df_b[df_b["clean_id"] == sid].copy()
+
+              if not my_b.empty:
+                my_b["date_parsed"] = pd.to_datetime(my_b["date"], errors="coerce")
+                my_b = my_b.sort_values(by="date_parsed", ascending=False)
+
+                display_df = my_b[["date", "type", "note"]].rename(
+                    columns={"date": "📅 التاريخ", "type": "🎯 نوع السلوك", "note": "📝 التفاصيل"}
+                )
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+                rows_html = ""
+                for _, r_b in display_df.iterrows():
+                  rows_html += f"<tr><td>{r_b['📅 التاريخ']}</td><td>{r_b['🎯 نوع السلوك']}</td><td>{r_b['📝 التفاصيل']}</td></tr>"
+
+                behavior_html_table = f"<table><tr><th>التاريخ</th><th>نوع السلوك</th><th>التفاصيل</th></tr>{rows_html}</table>"
+              else:
+                st.success("✨ سجله نظيف، لا توجد ملاحظات مسجلة في السجل.")
             else:
-              st.info(f"لم يتم رصد درجات أكاديمية لهذا الطالب في ({cp_report}) بعد.")
+              st.info("سجل السلوك فارغ تماماً في المنصة.")
 
-          st.markdown("<br>", unsafe_allow_html=True)
-          st.markdown("##### 📜 سجل السلوك والملاحظات")
-          df_b = st.session_state.df_behavior.copy()
-          if not df_b.empty:
-            df_b["clean_id"] = df_b.iloc[:, 0].astype(str).str.split(".").str[0]
-            my_b = df_b[df_b["clean_id"] == sid].copy()
-
-            if not my_b.empty:
-              my_b["date_parsed"] = pd.to_datetime(my_b["date"], errors="coerce")
-              my_b = my_b.sort_values(by="date_parsed", ascending=False)
-
-              display_df = my_b[["date", "type", "note"]].rename(
-                  columns={"date": "📅 التاريخ", "type": "🎯 نوع السلوك", "note": "📝 التفاصيل"}
-              )
-              st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-              rows_html = ""
-              for _, r_b in display_df.iterrows():
-                rows_html += f"<tr><td>{r_b['📅 التاريخ']}</td><td>{r_b['🎯 نوع السلوك']}</td><td>{r_b['📝 التفاصيل']}</td></tr>"
-
-              behavior_html_table = f"<table><tr><th>التاريخ</th><th>نوع السلوك</th><th>التفاصيل</th></tr>{rows_html}</table>"
-            else:
-              st.success("✨ سجله نظيف، لا توجد ملاحظات مسجلة في السجل.")
-          else:
-            st.info("سجل السلوك فارغ تماماً في المنصة.")
-
-          st.divider()
-          final_report = f"""
+            st.divider()
+            final_report = f"""
           <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الطالب: {s_inf['name']}</title>
           <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
           <style>
@@ -4254,85 +4606,85 @@ if st.session_state.role in ["teacher", "viewer"]:
               <script>window.onload = function() {{ window.print(); }}</script>
           </body></html>
           """
-          st.download_button(
-              label="🖨️ تحميل وطباعة تقرير الطالب الشامل",
-              data=final_report,
-              file_name=f"Report_{sid}_{s_inf['name']}.html",
-              mime="text/html",
-              type="primary",
-              use_container_width=True,
+            st.download_button(
+                label="🖨️ تحميل وطباعة تقرير الطالب الشامل",
+                data=final_report,
+                file_name=f"Report_{sid}_{s_inf['name']}.html",
+                mime="text/html",
+                type="primary",
+                use_container_width=True,
+            )
+        else:
+          st.info("لا توجد بيانات طلاب.")
+
+      # ---------------------------------------------------------
+      # 2. كشف الدرجات المرصودة (يدعم عدة فصول في ملف طباعة واحد أو Excel)
+      # ---------------------------------------------------------
+      with rep_tabs[1]:
+        st.markdown("#### 📊 استخراج كشف الدرجات المرصودة للطباعة")
+        st.info("💡 يمكنك اختيار عدة فصول معاً (مثل جميع فصول الخامس) ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد جاهز للطباعة دفعة واحدة.")
+
+        if not df_s_rep.empty:
+          col_g1, col_g2 = st.columns([2, 1.2])
+          avail_g_cls = st.session_state.get("class_options", all_cls_in_db)
+          grades_print_cls_list = col_g1.multiselect(
+              "1️⃣ اختر الفصول (يمكنك تحديد أكثر من فصل أو الكل):",
+              options=["الكل"] + avail_g_cls,
+              default=[avail_g_cls[0]] if avail_g_cls else ["الكل"],
+              key="grades_print_cls_multi",
           )
-      else:
-        st.info("لا توجد بيانات طلاب.")
+          grades_print_period = col_g2.selectbox(
+              "2️⃣ اختر الفترة:",
+              [
+                  "الفصل الأول - فترة أولى",
+                  "الفصل الأول - فترة ثانية",
+                  "الفصل الثاني - فترة أولى",
+                  "الفصل الثاني - فترة ثانية",
+              ],
+              key="grades_print_period",
+          )
 
-    # ---------------------------------------------------------
-    # 2. كشف الدرجات المرصودة (يدعم عدة فصول في ملف طباعة واحد أو Excel)
-    # ---------------------------------------------------------
-    with rep_tabs[1]:
-      st.markdown("#### 📊 استخراج كشف الدرجات المرصودة للطباعة")
-      st.info("💡 يمكنك اختيار عدة فصول معاً (مثل جميع فصول الخامس) ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد جاهز للطباعة دفعة واحدة.")
-
-      if not df_s_rep.empty:
-        col_g1, col_g2 = st.columns([2, 1.2])
-        avail_g_cls = st.session_state.get("class_options", all_cls_in_db)
-        grades_print_cls_list = col_g1.multiselect(
-            "1️⃣ اختر الفصول (يمكنك تحديد أكثر من فصل أو الكل):",
-            options=["الكل"] + avail_g_cls,
-            default=[avail_g_cls[0]] if avail_g_cls else ["الكل"],
-            key="grades_print_cls_multi",
-        )
-        grades_print_period = col_g2.selectbox(
-            "2️⃣ اختر الفترة:",
-            [
-                "الفصل الأول - فترة أولى",
-                "الفصل الأول - فترة ثانية",
-                "الفصل الثاني - فترة أولى",
-                "الفصل الثاني - فترة ثانية",
-            ],
-            key="grades_print_period",
-        )
-
-        if st.button("🖨️ توليد كشف الدرجات للفصول المحددة", type="primary", use_container_width=True):
-          target_g_cls, _, label_g_cls = resolve_multi_classes(grades_print_cls_list, avail_g_cls)
-          if not target_g_cls:
-            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
-          else:
-            df_g = st.session_state.get("df_grades", pd.DataFrame()).copy()
-            if not df_g.empty:
-              df_g["clean_id"] = df_g.iloc[:, 0].astype(str).str.split(".").str[0]
-              if "period" not in df_g.columns:
-                df_g["period"] = "الفصل الأول - فترة أولى"
-              df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-              df_g_period = df_g[df_g["period"] == grades_print_period].drop_duplicates(subset=["clean_id"], keep="last")
+          if st.button("🖨️ توليد كشف الدرجات للفصول المحددة", type="primary", use_container_width=True):
+            target_g_cls, _, label_g_cls = resolve_multi_classes(grades_print_cls_list, avail_g_cls)
+            if not target_g_cls:
+              st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
             else:
-              df_g_period = pd.DataFrame(columns=["clean_id", "p1", "p2", "perf"])
+              df_g = st.session_state.get("df_grades", pd.DataFrame()).copy()
+              if not df_g.empty:
+                df_g["clean_id"] = df_g.iloc[:, 0].astype(str)
+                if "period" not in df_g.columns:
+                  df_g["period"] = "الفصل الأول - فترة أولى"
+                df_g["period"] = df_g["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+                df_g_period = df_g[df_g["period"] == grades_print_period].drop_duplicates(subset=["clean_id"], keep="last")
+              else:
+                df_g_period = pd.DataFrame(columns=["clean_id", "p1", "p2", "perf"])
 
-            all_pages_html = ""
-            excel_rows_list = []
+              all_pages_html = ""
+              excel_rows_list = []
 
-            for c_name in target_g_cls:
-              df_cls_st = df_s_rep[df_s_rep["class"] == c_name].sort_values("name")
-              if df_cls_st.empty:
-                continue
+              for c_name in target_g_cls:
+                df_cls_st = df_s_rep[df_s_rep["class"] == c_name].sort_values("name")
+                if df_cls_st.empty:
+                  continue
 
-              df_merged = pd.merge(df_cls_st, df_g_period, on="clean_id", how="left")
-              rows_html = ""
-              for i, (_, row) in enumerate(df_merged.iterrows(), 1):
-                p1 = str(row.get("p1", "")) if pd.notna(row.get("p1")) else ""
-                p2 = str(row.get("p2", "")) if pd.notna(row.get("p2")) else ""
-                perf = str(row.get("perf", "")) if pd.notna(row.get("perf")) else ""
-                rows_html += f"<tr><td>{i}</td><td class='name-col'>{row['name']}</td><td>{p1}</td><td>{p2}</td><td style='font-weight:bold; color:#174A5B; font-size:14px; background-color:#f5f5f5;'>{perf}</td></tr>"
-                excel_rows_list.append({
-                    "الرقم الأكاديمي": row["clean_id"],
-                    "اسم الطالب": row["name"],
-                    "الصف": c_name,
-                    "المشاركة والمهام": p1,
-                    "الاختبارات القصيرة": p2,
-                    "المجموع الكلي": perf,
-                })
+                df_merged = pd.merge(df_cls_st, df_g_period, on="clean_id", how="left")
+                rows_html = ""
+                for i, (_, row) in enumerate(df_merged.iterrows(), 1):
+                  p1 = str(row.get("p1", "")) if pd.notna(row.get("p1")) else ""
+                  p2 = str(row.get("p2", "")) if pd.notna(row.get("p2")) else ""
+                  perf = str(row.get("perf", "")) if pd.notna(row.get("perf")) else ""
+                  rows_html += f"<tr><td>{i}</td><td class='name-col'>{row['name']}</td><td>{p1}</td><td>{p2}</td><td style='font-weight:bold; color:#174A5B; font-size:14px; background-color:#f5f5f5;'>{perf}</td></tr>"
+                  excel_rows_list.append({
+                      "الرقم الأكاديمي": row["clean_id"],
+                      "اسم الطالب": row["name"],
+                      "الصف": c_name,
+                      "المشاركة والمهام": p1,
+                      "الاختبارات القصيرة": p2,
+                      "المجموع الكلي": perf,
+                  })
 
-              school_name = get_school_name_dynamic(c_name)
-              all_pages_html += f"""
+                school_name = get_school_name_dynamic(c_name)
+                all_pages_html += f"""
               <div class="page-sheet">
                   <div class="header-box">
                       <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
@@ -4359,10 +4711,10 @@ if st.session_state.role in ["teacher", "viewer"]:
               </div>
               """
 
-            if not all_pages_html:
-              st.warning("⚠️ لا يوجد طلاب مسجلين في الفصول المحددة.")
-            else:
-              grades_sheet_html = f"""
+              if not all_pages_html:
+                st.warning("⚠️ لا يوجد طلاب مسجلين في الفصول المحددة.")
+              else:
+                grades_sheet_html = f"""
               <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف الدرجات - {label_g_cls}</title>
               <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
               <style>
@@ -4383,90 +4735,90 @@ if st.session_state.role in ["teacher", "viewer"]:
                   <script>window.onload = function() {{ window.print(); }}</script>
               </body></html>
               """
-              dl_g1, dl_g2 = st.columns(2)
-              dl_g1.download_button(
-                  label=f"🖨️ تحميل للطباعة المباشرة ({len(target_g_cls)} فصول)",
-                  data=grades_sheet_html,
-                  file_name=f"Filled_Grades_{datetime.date.today()}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
-              )
-              if excel_rows_list:
-                df_ex_g = pd.DataFrame(excel_rows_list)
-                dl_g2.download_button(
-                    label=f"📥 تصدير الدرجات (Excel - {len(target_g_cls)} فصول)",
-                    data=build_excel_bytes(df_ex_g, sheet_name="الدرجات"),
-                    file_name=f"Grades_Export_{datetime.date.today()}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="secondary",
+                dl_g1, dl_g2 = st.columns(2)
+                dl_g1.download_button(
+                    label=f"🖨️ تحميل للطباعة المباشرة ({len(target_g_cls)} فصول)",
+                    data=grades_sheet_html,
+                    file_name=f"Filled_Grades_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="primary",
                     use_container_width=True,
                 )
+                if excel_rows_list:
+                  df_ex_g = pd.DataFrame(excel_rows_list)
+                  dl_g2.download_button(
+                      label=f"📥 تصدير الدرجات (Excel - {len(target_g_cls)} فصول)",
+                      data=build_excel_bytes(df_ex_g, sheet_name="الدرجات"),
+                      file_name=f"Grades_Export_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
 
-    # ---------------------------------------------------------
-    # 3. كشف متابعة فارغ مرن (يدعم طباعة عدة فصول في ملف واحد)
-    # ---------------------------------------------------------
-    with rep_tabs[2]:
-      st.markdown("#### 📝 استخراج كشف متابعة مرن (فارغ للرصد اليدوي)")
-      st.info("💡 اختر عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد دون الحاجة لتكرار الطباعة لكل فصل.")
+      # ---------------------------------------------------------
+      # 3. كشف متابعة فارغ مرن (يدعم طباعة عدة فصول في ملف واحد)
+      # ---------------------------------------------------------
+      with rep_tabs[2]:
+        st.markdown("#### 📝 استخراج كشف متابعة مرن (فارغ للرصد اليدوي)")
+        st.info("💡 اختر عدة فصول معاً ليتم توليد كشف مستقل لكل فصل في ملف طباعة واحد دون الحاجة لتكرار الطباعة لكل فصل.")
 
-      if not df_s_rep.empty:
-        col_opt1, col_opt2 = st.columns([2, 1])
-        all_classes = st.session_state.get("class_options", all_cls_in_db)
-        print_cls_choices = col_opt1.multiselect(
-            "1️⃣ اختر الفصول المطلوبة:",
-            options=["الكل"] + all_classes,
-            default=[all_classes[0]] if all_classes else ["الكل"],
-            key="print_cls_flex_multi",
-        )
-        page_orientation = col_opt2.radio("2️⃣ اتجاه الطباعة:", ["أفقي (Landscape)", "عمودي (Portrait)"])
-        css_orientation = "landscape" if "أفقي" in page_orientation else "portrait"
+        if not df_s_rep.empty:
+          col_opt1, col_opt2 = st.columns([2, 1])
+          all_classes = st.session_state.get("class_options", all_cls_in_db)
+          print_cls_choices = col_opt1.multiselect(
+              "1️⃣ اختر الفصول المطلوبة:",
+              options=["الكل"] + all_classes,
+              default=[all_classes[0]] if all_classes else ["الكل"],
+              key="print_cls_flex_multi",
+          )
+          page_orientation = col_opt2.radio("2️⃣ اتجاه الطباعة:", ["أفقي (Landscape)", "عمودي (Portrait)"])
+          css_orientation = "landscape" if "أفقي" in page_orientation else "portrait"
 
-        available_fields = {
-            "الحضور والغياب": 10,
-            "المشاركة والتفاعل": 5,
-            "الواجبات والمهام": 5,
-            "الاختبارات القصيرة": 2,
-            "المشاريع والبحوث": 5,
-            "السلوك والانضباط": 5,
-        }
+          available_fields = {
+              "الحضور والغياب": 10,
+              "المشاركة والتفاعل": 5,
+              "الواجبات والمهام": 5,
+              "الاختبارات القصيرة": 2,
+              "المشاريع والبحوث": 5,
+              "السلوك والانضباط": 5,
+          }
 
-        selected_fields = st.multiselect(
-            "3️⃣ اختر الحقول المطلوبة في الكشف:",
-            list(available_fields.keys()),
-            default=["المشاركة والتفاعل", "الواجبات والمهام", "الاختبارات القصيرة"],
-        )
+          selected_fields = st.multiselect(
+              "3️⃣ اختر الحقول المطلوبة في الكشف:",
+              list(available_fields.keys()),
+              default=["المشاركة والتفاعل", "الواجبات والمهام", "الاختبارات القصيرة"],
+          )
 
-        if st.button("🖨️ توليد الكشف المرن للفصول المحددة", type="primary", use_container_width=True):
-          target_flx_cls, _, label_flx = resolve_multi_classes(print_cls_choices, all_classes)
-          if not target_flx_cls:
-            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
-          elif not selected_fields:
-            st.warning("⚠️ الرجاء اختيار حقل واحد على الأقل ليتم رسم الكشف.")
-          else:
-            main_th_html, sub_th_html = "", ""
-            total_empty_cells = 0
-            for field in selected_fields:
-              colspan = available_fields[field]
-              main_th_html += f'<th colspan="{colspan}" class="main-th">{field}</th>'
-              for i in range(1, colspan + 1):
-                sub_th_html += f"<th>{i}</th>"
-              total_empty_cells += colspan
+          if st.button("🖨️ توليد الكشف المرن للفصول المحددة", type="primary", use_container_width=True):
+            target_flx_cls, _, label_flx = resolve_multi_classes(print_cls_choices, all_classes)
+            if not target_flx_cls:
+              st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
+            elif not selected_fields:
+              st.warning("⚠️ الرجاء اختيار حقل واحد على الأقل ليتم رسم الكشف.")
+            else:
+              main_th_html, sub_th_html = "", ""
+              total_empty_cells = 0
+              for field in selected_fields:
+                colspan = available_fields[field]
+                main_th_html += f'<th colspan="{colspan}" class="main-th">{field}</th>'
+                for i in range(1, colspan + 1):
+                  sub_th_html += f"<th>{i}</th>"
+                total_empty_cells += colspan
 
-            empty_cells_str = "<td></td>" * total_empty_cells
-            all_flex_pages = ""
+              empty_cells_str = "<td></td>" * total_empty_cells
+              all_flex_pages = ""
 
-            for c_name in target_flx_cls:
-              df_print = df_s_rep[df_s_rep["class"] == c_name].sort_values("name")
-              if df_print.empty:
-                continue
+              for c_name in target_flx_cls:
+                df_print = df_s_rep[df_s_rep["class"] == c_name].sort_values("name")
+                if df_print.empty:
+                  continue
 
-              rows_html = ""
-              for i, (_, row) in enumerate(df_print.iterrows(), 1):
-                rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells_str}<td class='total-col'></td></tr>"
+                rows_html = ""
+                for i, (_, row) in enumerate(df_print.iterrows(), 1):
+                  rows_html += f"<tr><td>{i}</td><td style='text-align: right; padding-right: 5px; font-weight: bold; white-space: nowrap;'>{row['name']}</td>{empty_cells_str}<td class='total-col'></td></tr>"
 
-              school_name = get_school_name_dynamic(c_name)
-              all_flex_pages += f"""
+                school_name = get_school_name_dynamic(c_name)
+                all_flex_pages += f"""
               <div class="page-sheet">
                   <div class="header-box">
                       <div class="header-text">المملكة العربية السعودية<br>وزارة التعليم<br>{school_name}</div>
@@ -4493,10 +4845,10 @@ if st.session_state.role in ["teacher", "viewer"]:
               </div>
               """
 
-            if not all_flex_pages:
-              st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
-            else:
-              sheet_html = f"""
+              if not all_flex_pages:
+                st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
+              else:
+                sheet_html = f"""
               <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف متابعة مخصص - {label_flx}</title>
               <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
               <style>
@@ -4521,255 +4873,249 @@ if st.session_state.role in ["teacher", "viewer"]:
                   <script>window.onload = function() {{ window.print(); }}</script>
               </body></html>
               """
+                st.download_button(
+                    label=f"📥 تحميل الكشوفات المخصصة للطباعة ({len(target_flx_cls)} فصول في ملف واحد)",
+                    data=sheet_html,
+                    file_name=f"Custom_Sheets_{datetime.date.today()}.html",
+                    mime="text/html",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+      # ---------------------------------------------------------
+      # 4. مساعد التفريغ للسجلات الورقية (يدعم عدة فصول معاً)
+      # ---------------------------------------------------------
+      with rep_tabs[3]:
+        st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
+        st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً لحصر وتجميع جميع المشاركات والملاحظات وتصديرها إلى Excel.")
+
+        df_b = st.session_state.df_behavior.copy()
+        if not df_b.empty and not df_s_rep.empty:
+          df_b["clean_id"] = df_b.iloc[:, 0].astype(str).str.strip()
+          merged_df = pd.merge(df_b, df_s_rep[["clean_id", "name", "class"]], on="clean_id", how="inner")
+          beh_col = "type" if "type" in merged_df.columns else merged_df.columns[1]
+
+          col1, col2 = st.columns([2, 1.5])
+          available_classes = st.session_state.get("class_options", all_cls_in_db)
+          cls_choices_p = col1.multiselect(
+              "1️⃣ اختر الفصول لفرز بياناتها:",
+              options=["الكل"] + available_classes,
+              default=[available_classes[0]] if available_classes else ["الكل"],
+              key="paper_helper_cls_multi",
+          )
+          target_p_cls, _, label_p_cls = resolve_multi_classes(cls_choices_p, available_classes)
+          class_data = merged_df[merged_df["class"].isin(target_p_cls)]
+
+          if not class_data.empty:
+            unique_notes = list(class_data[beh_col].unique())
+            type_choice = col2.selectbox(
+                "2️⃣ نوع الملاحظة المطلوبة:",
+                ["الكل (جدول تجميعي لكشف المتابعة)"] + unique_notes,
+                key="paper_helper_type",
+            )
+            st.divider()
+
+            if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
+              st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات ({label_p_cls})")
+              keys = ["class","name","clean_id"]
+              pivot_table = pd.crosstab([class_data[k] for k in keys], class_data[beh_col])
+
+              if "note" in class_data.columns:
+                notes_series = class_data.groupby(keys)["note"].agg(lambda vals: " ، ".join(v for v in vals.astype(str) if v.strip()))
+                pivot_table["الملاحظات النصية التفصيلية"] = notes_series
+
+              all_st_multi = df_s_rep[df_s_rep["class"].isin(target_p_cls)].sort_values(keys)[keys]
+              multi_idx = pd.MultiIndex.from_frame(all_st_multi)
+              pivot_table = pivot_table.reindex(multi_idx)
+
+              for col in pivot_table.columns:
+                if col == "الملاحظات النصية التفصيلية":
+                  pivot_table[col] = pivot_table[col].fillna("")
+                else:
+                  pivot_table[col] = pd.to_numeric(pivot_table[col], errors="coerce").fillna(0).astype(int).astype(str)
+
+              pivot_display = pivot_table.reset_index().rename(columns={"class":"الصف","name":"اسم الطالب","clean_id":"الرقم الأكاديمي"})
+              st.dataframe(pivot_display, use_container_width=True, hide_index=True)
+
               st.download_button(
-                  label=f"📥 تحميل الكشوفات المخصصة للطباعة ({len(target_flx_cls)} فصول في ملف واحد)",
-                  data=sheet_html,
-                  file_name=f"Custom_Sheets_{datetime.date.today()}.html",
-                  mime="text/html",
+                  f"📥 تحميل كشف التفريغ الورقي (Excel - {len(target_p_cls)} فصول)",
+                  data=build_excel_bytes(pivot_display, sheet_name="التفريغ الورقي"),
+                  file_name=f"Behavior_Summary_{datetime.date.today()}.xlsx",
+                  mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                   type="primary",
                   use_container_width=True,
               )
-
-    # ---------------------------------------------------------
-    # 4. مساعد التفريغ للسجلات الورقية (يدعم عدة فصول معاً)
-    # ---------------------------------------------------------
-    with rep_tabs[3]:
-      st.markdown("#### 🖨️ مساعد التفريغ للسجلات الورقية (حصر الملاحظات)")
-      st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً لحصر وتجميع جميع المشاركات والملاحظات وتصديرها إلى Excel.")
-
-      df_b = st.session_state.df_behavior.copy()
-      if not df_b.empty and not df_s_rep.empty:
-        df_b["clean_id"] = df_b.iloc[:, 0].astype(str).str.strip().str.split(".").str[0]
-        merged_df = pd.merge(df_b, df_s_rep[["clean_id", "name", "class"]], on="clean_id", how="inner")
-        beh_col = "type" if "type" in merged_df.columns else merged_df.columns[1]
-
-        col1, col2 = st.columns([2, 1.5])
-        available_classes = st.session_state.get("class_options", all_cls_in_db)
-        cls_choices_p = col1.multiselect(
-            "1️⃣ اختر الفصول لفرز بياناتها:",
-            options=["الكل"] + available_classes,
-            default=[available_classes[0]] if available_classes else ["الكل"],
-            key="paper_helper_cls_multi",
-        )
-        target_p_cls, _, label_p_cls = resolve_multi_classes(cls_choices_p, available_classes)
-        class_data = merged_df[merged_df["class"].isin(target_p_cls)]
-
-        if not class_data.empty:
-          unique_notes = list(class_data[beh_col].unique())
-          type_choice = col2.selectbox(
-              "2️⃣ نوع الملاحظة المطلوبة:",
-              ["الكل (جدول تجميعي لكشف المتابعة)"] + unique_notes,
-              key="paper_helper_type",
-          )
-          st.divider()
-
-          if type_choice == "الكل (جدول تجميعي لكشف المتابعة)":
-            st.markdown(f"##### 📊 حصر شامل لجميع ملاحظات ({label_p_cls})")
-            pivot_table = pd.crosstab([class_data["class"], class_data["name"]], class_data[beh_col])
-            pivot_table.index.names = ["الصف", "اسم الطالب"]
-
-            if "note" in class_data.columns:
-              def combine_notes(group):
-                valid = group[group["note"].astype(str).str.strip() != ""]
-                if valid.empty:
-                  return ""
-                return " ، ".join(valid["note"].astype(str).str.strip())
-
-              notes_series = class_data.groupby(["class", "name"]).apply(combine_notes)
-              pivot_table["الملاحظات النصية التفصيلية"] = notes_series
-
-            all_st_multi = df_s_rep[df_s_rep["class"].isin(target_p_cls)].sort_values(["class", "name"])[["class", "name"]]
-            multi_idx = pd.MultiIndex.from_frame(all_st_multi, names=["الصف", "اسم الطالب"])
-            pivot_table = pivot_table.reindex(multi_idx)
-
-            for col in pivot_table.columns:
-              if col == "الملاحظات النصية التفصيلية":
-                pivot_table[col] = pivot_table[col].fillna("")
+            else:
+              st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في ({label_p_cls})")
+              specific_data = class_data[class_data[beh_col] == type_choice]
+              if not specific_data.empty:
+                summary = specific_data.groupby(["class","name","clean_id","note"]).size().reset_index(name="عدد المرات")
+                summary.rename(columns={"class":"الصف","name":"اسم الطالب","clean_id":"الرقم الأكاديمي","note":"التفاصيل المكتوبة"}, inplace=True)
+                summary = summary.sort_values(["الصف", "عدد المرات"], ascending=[True, False])
+                st.dataframe(summary, use_container_width=True, hide_index=True)
               else:
-                pivot_table[col] = pd.to_numeric(pivot_table[col], errors="coerce").fillna(0).astype(int).astype(str)
+                st.info("لا يوجد أي طالب مسجل عليه هذه الملاحظة.")
+          else:
+            st.info(f"لا توجد أي ملاحظات مسجلة لطلاب ({label_p_cls}) حتى الآن.")
+        else:
+          st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
 
-            pivot_display = pivot_table.reset_index()
-            st.dataframe(pivot_display, use_container_width=True, hide_index=True)
+      # ---------------------------------------------------------
+      # 5. منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور
+      # ---------------------------------------------------------
+      with rep_tabs[4]:
+        st.markdown("#### 📈 منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور")
+        st.info("💡 منظومة تشخيصية ذكية تربط درجات الطالب (المشاركة والاختبارات) بنمط تعلمه (VAK) لعرض **إحصائية تحليلية تفاعلية للمستويات** وتوليد: **خطة إثرائية للمتفوقين**، و**خطة علاجية تشخيصية (قبلي/بعدي)**، و**إشعارات أولياء الأمور (ورقية + واتساب)** كشواهد أداء رسمية جاهزة للطباعة (PDF / HTML / Excel).")
 
-            st.download_button(
-                f"📥 تحميل كشف التفريغ الورقي (Excel - {len(target_p_cls)} فصول)",
-                data=build_excel_bytes(pivot_display, sheet_name="التفريغ الورقي"),
-                file_name=f"Behavior_Summary_{datetime.date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="primary",
-                use_container_width=True,
+        if not df_s_rep.empty:
+          c1, c2 = st.columns([2.2, 1.3])
+          avail_lvl_cls = st.session_state.get("class_options", all_cls_in_db)
+          rep_cls_list = c1.multiselect(
+              "🏫 اختر الفصول المستهدفة (يمكنك اختيار أكثر من فصل أو الكل):",
+              options=["الكل"] + avail_lvl_cls,
+              default=["الكل"],
+              key="rep_lvl_cls_multi",
+          )
+          rep_per = c2.selectbox(
+              "📅 الفترة الدراسية:",
+              [
+                  "الفصل الأول - فترة أولى",
+                  "الفصل الأول - فترة ثانية",
+                  "الفصل الثاني - فترة أولى",
+                  "الفصل الثاني - فترة ثانية",
+              ],
+              key="rep_lvl_per",
+          )
+
+          max_t_lvl = int(st.session_state.get("max_tasks", 60))
+          max_q_lvl = int(st.session_state.get("max_quiz", 40))
+          max_tot_lvl = max_t_lvl + max_q_lvl
+          default_high = int(round(max_tot_lvl * 0.90)) if max_tot_lvl > 0 else 54
+          default_low = int(round(max_tot_lvl * 0.60)) if max_tot_lvl > 0 else 36
+
+          c3, c4, c5 = st.columns([1.4, 1.8, 1])
+          rep_type = c3.selectbox("🎯 الفئة المستهدفة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
+          is_top_cat = "المتفوقين" in rep_type
+
+          if is_top_cat:
+            sub_rep_mode = c4.selectbox(
+                "📑 نوع التقرير المطلوب:",
+                [
+                    "🚀 تقرير الخطة الإثرائية للمتفوقين (مخصص حسب VAK)",
+                    "📋 كشف حصر الطلاب المتفوقين (عام)",
+                ],
+                key="sub_rep_mode_top",
             )
           else:
-            st.markdown(f"##### 📌 حصر الطلاب الذين لديهم ({type_choice}) في ({label_p_cls})")
-            specific_data = class_data[class_data[beh_col] == type_choice]
-            if not specific_data.empty:
-              summary = specific_data.groupby(["class", "name", "note"]).size().reset_index(name="عدد المرات")
-              summary.rename(columns={"class": "الصف", "name": "اسم الطالب", "note": "التفاصيل المكتوبة"}, inplace=True)
-              summary = summary.sort_values(["الصف", "عدد المرات"], ascending=[True, False])
-              st.dataframe(summary, use_container_width=True, hide_index=True)
+            sub_rep_mode = c4.selectbox(
+                "📑 نوع التقرير المطلوب:",
+                [
+                    "🛠️ تقرير الخطة العلاجية التشخيصية المقترحة (قبلي/بعدي)",
+                    "📩 إشعارات أولياء الأمور الرسمية (للطباعة والتوقيع + واتساب)",
+                    "📋 كشف حصر الطلاب متدني المستوى (عام)",
+                ],
+                key="sub_rep_mode_low",
+            )
+
+          default_thresh = default_high if is_top_cat else default_low
+          threshold = c5.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}_{max_tot_lvl}")
+
+          target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(rep_cls_list, avail_lvl_cls)
+          if not target_lvl_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
+          else:
+            df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
+            df_st_copy = df_s_rep[df_s_rep["class"].isin(target_lvl_cls)].copy()
+            tot_cls_students = len(df_st_copy)
+
+            if not df_g_all.empty:
+              df_g_all["clean_id"] = df_g_all.iloc[:, 0].astype(str)
+              if "period" not in df_g_all.columns:
+                df_g_all["period"] = "الفصل الأول - فترة أولى"
+              df_g_all["period"] = df_g_all["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+              df_g_filtered = df_g_all[df_g_all["period"] == rep_per].drop_duplicates(subset=["clean_id"], keep="last")
+              df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on="clean_id", how="inner")
             else:
-              st.info("لا يوجد أي طالب مسجل عليه هذه الملاحظة.")
-        else:
-          st.info(f"لا توجد أي ملاحظات مسجلة لطلاب ({label_p_cls}) حتى الآن.")
-      else:
-        st.warning("لا توجد بيانات سلوكية كافية لإنشاء التقرير.")
+              df_merged_lvl = pd.DataFrame()
 
-    # ---------------------------------------------------------
-    # 5. منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور
-    # ---------------------------------------------------------
-    with rep_tabs[4]:
-      st.markdown("#### 📈 منظومة فرز المستويات والخطط الإثرائية والعلاجية وإشعارات أولياء الأمور")
-      st.info("💡 منظومة تشخيصية ذكية تربط درجات الطالب (المشاركة والاختبارات) بنمط تعلمه (VAK) لعرض **إحصائية تحليلية تفاعلية للمستويات** وتوليد: **خطة إثرائية للمتفوقين**، و**خطة علاجية تشخيصية (قبلي/بعدي)**، و**إشعارات أولياء الأمور (ورقية + واتساب)** كشواهد أداء رسمية جاهزة للطباعة (PDF / HTML / Excel).")
-
-      if not df_s_rep.empty:
-        c1, c2 = st.columns([2.2, 1.3])
-        avail_lvl_cls = st.session_state.get("class_options", all_cls_in_db)
-        rep_cls_list = c1.multiselect(
-            "🏫 اختر الفصول المستهدفة (يمكنك اختيار أكثر من فصل أو الكل):",
-            options=["الكل"] + avail_lvl_cls,
-            default=["الكل"],
-            key="rep_lvl_cls_multi",
-        )
-        rep_per = c2.selectbox(
-            "📅 الفترة الدراسية:",
-            [
-                "الفصل الأول - فترة أولى",
-                "الفصل الأول - فترة ثانية",
-                "الفصل الثاني - فترة أولى",
-                "الفصل الثاني - فترة ثانية",
-            ],
-            key="rep_lvl_per",
-        )
-
-        max_t_lvl = int(st.session_state.get("max_tasks", 60))
-        max_q_lvl = int(st.session_state.get("max_quiz", 40))
-        max_tot_lvl = max_t_lvl + max_q_lvl
-        default_high = int(round(max_tot_lvl * 0.90)) if max_tot_lvl > 0 else 54
-        default_low = int(round(max_tot_lvl * 0.60)) if max_tot_lvl > 0 else 36
-
-        c3, c4, c5 = st.columns([1.4, 1.8, 1])
-        rep_type = c3.selectbox("🎯 الفئة المستهدفة:", ["المتفوقين 🌟", "متدني المستوى 📉"], key="rep_lvl_type")
-        is_top_cat = "المتفوقين" in rep_type
-
-        if is_top_cat:
-          sub_rep_mode = c4.selectbox(
-              "📑 نوع التقرير المطلوب:",
-              [
-                  "🚀 تقرير الخطة الإثرائية للمتفوقين (مخصص حسب VAK)",
-                  "📋 كشف حصر الطلاب المتفوقين (عام)",
-              ],
-              key="sub_rep_mode_top",
-          )
-        else:
-          sub_rep_mode = c4.selectbox(
-              "📑 نوع التقرير المطلوب:",
-              [
-                  "🛠️ تقرير الخطة العلاجية التشخيصية المقترحة (قبلي/بعدي)",
-                  "📩 إشعارات أولياء الأمور الرسمية (للطباعة والتوقيع + واتساب)",
-                  "📋 كشف حصر الطلاب متدني المستوى (عام)",
-              ],
-              key="sub_rep_mode_low",
-          )
-
-        default_thresh = default_high if is_top_cat else default_low
-        threshold = c5.number_input("الدرجة الفاصلة:", value=default_thresh, step=1, key=f"thresh_{rep_type}_{max_tot_lvl}")
-
-        target_lvl_cls, school_name, label_lvl_cls = resolve_multi_classes(rep_cls_list, avail_lvl_cls)
-        if not target_lvl_cls:
-          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
-        else:
-          df_g_all = st.session_state.get("df_grades", pd.DataFrame()).copy()
-          df_st_copy = df_s_rep[df_s_rep["class"].isin(target_lvl_cls)].copy()
-          tot_cls_students = len(df_st_copy)
-
-          if not df_g_all.empty:
-            df_g_all["clean_id"] = df_g_all.iloc[:, 0].astype(str).str.split(".").str[0]
-            if "period" not in df_g_all.columns:
-              df_g_all["period"] = "الفصل الأول - فترة أولى"
-            df_g_all["period"] = df_g_all["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
-            df_g_filtered = df_g_all[df_g_all["period"] == rep_per].drop_duplicates(subset=["clean_id"], keep="last")
-            df_merged_lvl = pd.merge(df_st_copy, df_g_filtered, on="clean_id", how="inner")
-          else:
-            df_merged_lvl = pd.DataFrame()
-
-          if not df_merged_lvl.empty:
-            df_merged_lvl["p1_num"] = pd.to_numeric(df_merged_lvl.get("p1", 0), errors="coerce").fillna(0).astype(int)
-            df_merged_lvl["p2_num"] = pd.to_numeric(df_merged_lvl.get("p2", 0), errors="coerce").fillna(0).astype(int)
-            df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl.get("perf", 0), errors="coerce").fillna(0).astype(int)
-          else:
-            df_merged_lvl["p1_num"] = pd.Series(dtype=int)
-            df_merged_lvl["p2_num"] = pd.Series(dtype=int)
-            df_merged_lvl["perf_num"] = pd.Series(dtype=int)
-
-          tot_graded_lvl = len(df_merged_lvl)
-          high_cut_val = int(threshold) if is_top_cat else int(default_high)
-          low_cut_val = int(default_low) if is_top_cat else int(threshold)
-          if high_cut_val < low_cut_val:
-            high_cut_val = low_cut_val
-
-          if tot_graded_lvl > 0:
-            df_top_all = df_merged_lvl[df_merged_lvl["perf_num"] >= high_cut_val]
-            df_low_all = df_merged_lvl[df_merged_lvl["perf_num"] < low_cut_val]
-            df_mid_all = df_merged_lvl[(df_merged_lvl["perf_num"] >= low_cut_val) & (df_merged_lvl["perf_num"] < high_cut_val)]
-            avg_score_scope = round(float(df_merged_lvl["perf_num"].mean()), 1)
-          else:
-            df_top_all = pd.DataFrame()
-            df_low_all = pd.DataFrame()
-            df_mid_all = pd.DataFrame()
-            avg_score_scope = 0.0
-
-          top_cnt_lvl = len(df_top_all)
-          mid_cnt_lvl = len(df_mid_all)
-          low_cnt_lvl = len(df_low_all)
-
-          top_pct_lvl = round((top_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
-          mid_pct_lvl = round((mid_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
-          low_pct_lvl = round((low_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
-
-          max_lvl_bar = max(top_cnt_lvl, mid_cnt_lvl, low_cnt_lvl, 1)
-          h_top_bar = max(int((top_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
-          h_mid_bar = max(int((mid_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
-          h_low_bar = max(int((low_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
-
-          if tot_graded_lvl > 0:
-            if is_top_cat:
-              final_df = df_merged_lvl[df_merged_lvl["perf_num"] >= threshold].sort_values(by=["class", "perf_num"], ascending=[True, False])
+            if not df_merged_lvl.empty:
+              df_merged_lvl["p1_num"] = pd.to_numeric(df_merged_lvl.get("p1", 0), errors="coerce").fillna(0).astype(int)
+              df_merged_lvl["p2_num"] = pd.to_numeric(df_merged_lvl.get("p2", 0), errors="coerce").fillna(0).astype(int)
+              df_merged_lvl["perf_num"] = pd.to_numeric(df_merged_lvl.get("perf", 0), errors="coerce").fillna(0).astype(int)
             else:
-              final_df = df_merged_lvl[df_merged_lvl["perf_num"] < threshold].sort_values(by=["class", "perf_num"], ascending=[True, True])
-          else:
-            final_df = pd.DataFrame()
+              df_merged_lvl["p1_num"] = pd.Series(dtype=int)
+              df_merged_lvl["p2_num"] = pd.Series(dtype=int)
+              df_merged_lvl["perf_num"] = pd.Series(dtype=int)
 
-          # إحصائية أنماط التعلم (VAK) للفئة المستهدفة حالياً (المتفوقين أو متدني المستوى)
-          tot_target_grp = len(final_df)
-          target_grp_pct = round((tot_target_grp / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
-          target_grp_avg = round(float(final_df["perf_num"].mean()), 1) if tot_target_grp > 0 else 0.0
+            tot_graded_lvl = len(df_merged_lvl)
+            high_cut_val = int(threshold) if is_top_cat else int(default_high)
+            low_cut_val = int(default_low) if is_top_cat else int(threshold)
+            if high_cut_val < low_cut_val:
+              high_cut_val = low_cut_val
 
-          if tot_target_grp > 0 and "نمط التعلم" in final_df.columns:
-            tv_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
-            tk_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
-            ta_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
-          else:
-            tv_cnt, tk_cnt, ta_cnt = 0, 0, 0
+            if tot_graded_lvl > 0:
+              df_top_all = df_merged_lvl[df_merged_lvl["perf_num"] >= high_cut_val]
+              df_low_all = df_merged_lvl[df_merged_lvl["perf_num"] < low_cut_val]
+              df_mid_all = df_merged_lvl[(df_merged_lvl["perf_num"] >= low_cut_val) & (df_merged_lvl["perf_num"] < high_cut_val)]
+              avg_score_scope = round(float(df_merged_lvl["perf_num"].mean()), 1)
+            else:
+              df_top_all = pd.DataFrame()
+              df_low_all = pd.DataFrame()
+              df_mid_all = pd.DataFrame()
+              avg_score_scope = 0.0
 
-          tv_pct = round((tv_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
-          tk_pct = round((tk_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
-          ta_pct = round((ta_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+            top_cnt_lvl = len(df_top_all)
+            mid_cnt_lvl = len(df_mid_all)
+            low_cnt_lvl = len(df_low_all)
 
-          # --- 1) عرض البطاقات الإحصائية ولوحة فرز المستويات التفاعلية على الشاشة ---
-          st.markdown(
-              f"""
+            top_pct_lvl = round((top_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+            mid_pct_lvl = round((mid_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+            low_pct_lvl = round((low_cnt_lvl / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+
+            max_lvl_bar = max(top_cnt_lvl, mid_cnt_lvl, low_cnt_lvl, 1)
+            h_top_bar = max(int((top_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+            h_mid_bar = max(int((mid_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+            h_low_bar = max(int((low_cnt_lvl / max_lvl_bar) * 100), 8) if tot_graded_lvl > 0 else 8
+
+            if tot_graded_lvl > 0:
+              if is_top_cat:
+                final_df = df_merged_lvl[df_merged_lvl["perf_num"] >= threshold].sort_values(by=["class", "perf_num"], ascending=[True, False])
+              else:
+                final_df = df_merged_lvl[df_merged_lvl["perf_num"] < threshold].sort_values(by=["class", "perf_num"], ascending=[True, True])
+            else:
+              final_df = pd.DataFrame()
+
+            # إحصائية أنماط التعلم (VAK) للفئة المستهدفة حالياً (المتفوقين أو متدني المستوى)
+            tot_target_grp = len(final_df)
+            target_grp_pct = round((tot_target_grp / tot_graded_lvl) * 100, 1) if tot_graded_lvl > 0 else 0.0
+            target_grp_avg = round(float(final_df["perf_num"].mean()), 1) if tot_target_grp > 0 else 0.0
+
+            if tot_target_grp > 0 and "نمط التعلم" in final_df.columns:
+              tv_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+              tk_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+              ta_cnt = len(final_df[final_df["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+            else:
+              tv_cnt, tk_cnt, ta_cnt = 0, 0, 0
+
+            tv_pct = round((tv_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+            tk_pct = round((tk_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+            ta_pct = round((ta_cnt / tot_target_grp) * 100, 1) if tot_target_grp > 0 else 0.0
+
+            # --- 1) عرض البطاقات الإحصائية ولوحة فرز المستويات التفاعلية على الشاشة ---
+            st.markdown(
+                f"""
               <div class="dashboard-stats-container">
                   <div class="dash-card total"><div class="dash-title">👥 المرصودون ({rep_per})</div><div class="dash-value">{tot_graded_lvl} <span style="font-size:15px; font-weight:700; color:#64748B;">/ {tot_cls_students}</span></div></div>
                   <div class="dash-card completed"><div class="dash-title">🌟 المتفوقون ({high_cut_val}+ درجة)</div><div class="dash-value">{top_cnt_lvl} <span style="font-size:15px; font-weight:800; color:#059669;">({top_pct_lvl}%)</span></div></div>
                   <div class="dash-card pending"><div class="dash-title">📉 بحاجة لدعم (أقل من {low_cut_val})</div><div class="dash-value">{low_cnt_lvl} <span style="font-size:15px; font-weight:800; color:#D97706;">({low_pct_lvl}%)</span></div></div>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
+                unsafe_allow_html=True,
+            )
 
-          with st.container(border=True):
-            st.markdown(
-                f"""
+            with st.container(border=True):
+              st.markdown(
+                  f"""
                 <div style="text-align: center; margin-bottom: 6px;">
                     <div style="font-size: 19px; font-weight: 900; color: #0F172A; margin-bottom: 4px;">📊 إحصائية توزيع المستويات التحصيلية — ({label_lvl_cls})</div>
                     <span style="display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 14px; font-size: 12.5px; font-weight: 800;">
@@ -4831,96 +5177,96 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
+                  unsafe_allow_html=True,
+              )
 
-            if len(target_lvl_cls) > 1 and tot_graded_lvl > 0:
-              with st.expander("📋 تفصيل إحصائية المستويات التحصيلية لكل فصل ضمن النطاق المحدد"):
-                lvl_cls_rows = []
-                for c_nm in target_lvl_cls:
-                  sub_st = df_st_copy[df_st_copy["class"] == c_nm]
-                  sub_gr = df_merged_lvl[df_merged_lvl["class"] == c_nm]
-                  g_cnt = len(sub_gr)
-                  tc = len(sub_gr[sub_gr["perf_num"] >= high_cut_val]) if g_cnt > 0 else 0
-                  mc = len(sub_gr[(sub_gr["perf_num"] >= low_cut_val) & (sub_gr["perf_num"] < high_cut_val)]) if g_cnt > 0 else 0
-                  lc = len(sub_gr[sub_gr["perf_num"] < low_cut_val]) if g_cnt > 0 else 0
-                  avg_c = round(float(sub_gr["perf_num"].mean()), 1) if g_cnt > 0 else 0.0
-                  lvl_cls_rows.append({
-                      "الفصل": c_nm,
-                      "إجمالي الطلاب": len(sub_st),
-                      "المرصودون": g_cnt,
-                      "متوسط الدرجات": f"{avg_c} / {max_tot_lvl}" if g_cnt > 0 else "-",
-                      "🌟 المتفوقون": f"{tc} ({round(tc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
-                      "👍 المتوسطون": f"{mc} ({round(mc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
-                      "📉 بحاجة لدعم": f"{lc} ({round(lc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
-                  })
-                st.dataframe(pd.DataFrame(lvl_cls_rows), use_container_width=True, hide_index=True)
+              if len(target_lvl_cls) > 1 and tot_graded_lvl > 0:
+                with st.expander("📋 تفصيل إحصائية المستويات التحصيلية لكل فصل ضمن النطاق المحدد"):
+                  lvl_cls_rows = []
+                  for c_nm in target_lvl_cls:
+                    sub_st = df_st_copy[df_st_copy["class"] == c_nm]
+                    sub_gr = df_merged_lvl[df_merged_lvl["class"] == c_nm]
+                    g_cnt = len(sub_gr)
+                    tc = len(sub_gr[sub_gr["perf_num"] >= high_cut_val]) if g_cnt > 0 else 0
+                    mc = len(sub_gr[(sub_gr["perf_num"] >= low_cut_val) & (sub_gr["perf_num"] < high_cut_val)]) if g_cnt > 0 else 0
+                    lc = len(sub_gr[sub_gr["perf_num"] < low_cut_val]) if g_cnt > 0 else 0
+                    avg_c = round(float(sub_gr["perf_num"].mean()), 1) if g_cnt > 0 else 0.0
+                    lvl_cls_rows.append({
+                        "الفصل": c_nm,
+                        "إجمالي الطلاب": len(sub_st),
+                        "المرصودون": g_cnt,
+                        "متوسط الدرجات": f"{avg_c} / {max_tot_lvl}" if g_cnt > 0 else "-",
+                        "🌟 المتفوقون": f"{tc} ({round(tc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                        "👍 المتوسطون": f"{mc} ({round(mc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                        "📉 بحاجة لدعم": f"{lc} ({round(lc/g_cnt*100, 1)}%)" if g_cnt > 0 else "0 (0%)",
+                    })
+                  st.dataframe(pd.DataFrame(lvl_cls_rows), use_container_width=True, hide_index=True)
 
-          # --- 2) زر توليد التقارير والنماذج الرسمية متضمنةً الإحصائية ---
-          if st.button("🖨️ توليد التقرير والنماذج مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
-            if tot_graded_lvl == 0:
-              st.warning("⚠️ لا توجد درجات مرصودة لهذه الفترة في قاعدة البيانات بعد.")
-            elif final_df.empty:
-              st.success(f"✅ لا يوجد طلاب يطابقون المعيار المحدد في ({label_lvl_cls}).")
-            else:
-              def get_student_vak_label(row_obj):
-                raw_v = str(row_obj.get("نمط التعلم", "")).strip()
-                if not raw_v or raw_v.lower() in ["nan", "none"]:
-                  return "متنوع 🌟"
-                return raw_v
+            # --- 2) زر توليد التقارير والنماذج الرسمية متضمنةً الإحصائية ---
+            if st.button("🖨️ توليد التقرير والنماذج مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
+              if tot_graded_lvl == 0:
+                st.warning("⚠️ لا توجد درجات مرصودة لهذه الفترة في قاعدة البيانات بعد.")
+              elif final_df.empty:
+                st.success(f"✅ لا يوجد طلاب يطابقون المعيار المحدد في ({label_lvl_cls}).")
+              else:
+                def get_student_vak_label(row_obj):
+                  raw_v = str(row_obj.get("نمط التعلم", "")).strip()
+                  if not raw_v or raw_v.lower() in ["nan", "none"]:
+                    return "متنوع 🌟"
+                  return raw_v
 
-              def get_enrichment_plan_for_student(vak_str):
-                if "بصري" in vak_str:
+                def get_enrichment_plan_for_student(vak_str):
+                  if "بصري" in vak_str:
+                    return (
+                        "تصميم خريطة مفاهيم / عرض مرئي للمفردات والقواعد",
+                        "بطاقات تحدي إثرائية مصورة (Super Goal Challenge)",
+                        "تنمية مهارات التلخيص البصري والكتابة الإبداعية",
+                    )
+                  if "سمعي" in vak_str:
+                    return (
+                        "قيادة الحوار الصفي وتقديم فقرة إذاعية باللغة الإنجليزية",
+                        "تدريبات استماع ونطق متقدمة (Speaking & Fluency)",
+                        "تعزيز الطلاقة اللغوية والثقة في التحدث أمام الزملاء",
+                    )
+                  if "حركي" in vak_str:
+                    return (
+                        "قيادة مجموعات التعلم التعاوني (دور المعلم الصغير)",
+                        "تنفيذ مشروع تطبيقي ومسابقات تفاعلية صفية",
+                        "تنمية مهارات القيادة والتعلم بالممارسة والتطبيق",
+                    )
                   return (
-                      "تصميم خريطة مفاهيم / عرض مرئي للمفردات والقواعد",
-                      "بطاقات تحدي إثرائية مصورة (Super Goal Challenge)",
-                      "تنمية مهارات التلخيص البصري والكتابة الإبداعية",
+                      "تكليف بمهام قيادية (المعلم الصغير) + أنشطة تفكير عليا",
+                      "أوراق عمل إثرائية متقدمة ومسابقات تحدي الأبطال",
+                      "استدامة التفوق وتحفيز الدافعية الذاتية والإبداع",
                   )
-                if "سمعي" in vak_str:
-                  return (
-                      "قيادة الحوار الصفي وتقديم فقرة إذاعية باللغة الإنجليزية",
-                      "تدريبات استماع ونطق متقدمة (Speaking & Fluency)",
-                      "تعزيز الطلاقة اللغوية والثقة في التحدث أمام الزملاء",
-                  )
-                if "حركي" in vak_str:
-                  return (
-                      "قيادة مجموعات التعلم التعاوني (دور المعلم الصغير)",
-                      "تنفيذ مشروع تطبيقي ومسابقات تفاعلية صفية",
-                      "تنمية مهارات القيادة والتعلم بالممارسة والتطبيق",
-                  )
-                return (
-                    "تكليف بمهام قيادية (المعلم الصغير) + أنشطة تفكير عليا",
-                    "أوراق عمل إثرائية متقدمة ومسابقات تحدي الأبطال",
-                    "استدامة التفوق وتحفيز الدافعية الذاتية والإبداع",
-                )
 
-              def get_remedial_diagnosis_and_plan(p1_v, p2_v, vak_str):
-                p1_ratio = (p1_v / max_t_lvl) if max_t_lvl > 0 else 1.0
-                p2_ratio = (p2_v / max_q_lvl) if max_q_lvl > 0 else 1.0
-                if p1_ratio < 0.60 and p2_ratio < 0.60:
-                  diag = "ضعف في إتقان المهارات الأساسية + قصور في استكمال المهام والواجبات"
-                elif p1_ratio < p2_ratio:
-                  diag = "قصور في أداء المهام الأدائية والواجبات والمشاركة الصفية"
-                else:
-                  diag = "ضعف في مهارات الورقة الامتحانية (المفردات والقواعد والقراءة)"
+                def get_remedial_diagnosis_and_plan(p1_v, p2_v, vak_str):
+                  p1_ratio = (p1_v / max_t_lvl) if max_t_lvl > 0 else 1.0
+                  p2_ratio = (p2_v / max_q_lvl) if max_q_lvl > 0 else 1.0
+                  if p1_ratio < 0.60 and p2_ratio < 0.60:
+                    diag = "ضعف في إتقان المهارات الأساسية + قصور في استكمال المهام والواجبات"
+                  elif p1_ratio < p2_ratio:
+                    diag = "قصور في أداء المهام الأدائية والواجبات والمشاركة الصفية"
+                  else:
+                    diag = "ضعف في مهارات الورقة الامتحانية (المفردات والقواعد والقراءة)"
 
-                if "بصري" in vak_str:
-                  strategy = "ملخصات بصرية ملونة + بطاقات مفردات مصورة (Flashcards) + أوراق عمل علاجية"
-                elif "سمعي" in vak_str:
-                  strategy = "شرح صوتي مباشر + تكرار النطق السمعي + متابعة فردية داخل الحصة"
-                elif "حركي" in vak_str:
-                  strategy = "تعلم بالأقران (قرين متفوق) + تدريبات تطبيقية مجزأة قصيرة"
-                else:
-                  strategy = "أوراق عمل علاجية مركزة + تعلم بالأقران + إعادة تقييم المهارات"
+                  if "بصري" in vak_str:
+                    strategy = "ملخصات بصرية ملونة + بطاقات مفردات مصورة (Flashcards) + أوراق عمل علاجية"
+                  elif "سمعي" in vak_str:
+                    strategy = "شرح صوتي مباشر + تكرار النطق السمعي + متابعة فردية داخل الحصة"
+                  elif "حركي" in vak_str:
+                    strategy = "تعلم بالأقران (قرين متفوق) + تدريبات تطبيقية مجزأة قصيرة"
+                  else:
+                    strategy = "أوراق عمل علاجية مركزة + تعلم بالأقران + إعادة تقييم المهارات"
 
-                return diag, strategy
+                  return diag, strategy
 
-              issue_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
-              curr_yr_str = st.session_state.get("current_year", "1448هـ")
+                issue_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+                curr_yr_str = st.session_state.get("current_year", "1448هـ")
 
-              # صندوق الإحصائية التحليلية الموحد داخل تقارير فرز المستويات
-              crit_badge_txt = f"معيار التفوق: {threshold} من {max_tot_lvl} فأعلى" if is_top_cat else f"حد التدني: أقل من {threshold} من {max_tot_lvl}"
-              lvl_summary_box_html = f"""
+                # صندوق الإحصائية التحليلية الموحد داخل تقارير فرز المستويات
+                crit_badge_txt = f"معيار التفوق: {threshold} من {max_tot_lvl} فأعلى" if is_top_cat else f"حد التدني: أقل من {threshold} من {max_tot_lvl}"
+                lvl_summary_box_html = f"""
               <div class="summary-box">
                   <div class="summary-head">
                       <span class="summary-head-title">الإحصائية التحليلية للفصول</span>
@@ -4955,7 +5301,7 @@ if st.session_state.role in ["teacher", "viewer"]:
               </div>
               """
 
-              summary_box_css = """
+                summary_box_css = """
                   .summary-box { border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 9px; margin-bottom: 10px; background-color: #f8fafc; page-break-inside: avoid; }
                   .summary-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 7px; margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #0f172a; }
                   .summary-head-title { font-size: 13px; font-weight: 900; color: #0f172a; white-space: nowrap; }
@@ -4975,17 +5321,17 @@ if st.session_state.role in ["teacher", "viewer"]:
                   .stat-sub { font-size: 10.5px; font-weight: 700; opacity: 0.9; text-align: center !important; }
               """
 
-              # ---------------------------------------------------------
-              # أ) تقرير الخطة الإثرائية للمتفوقين
-              # ---------------------------------------------------------
-              if is_top_cat and "الإثرائية" in sub_rep_mode:
-                rows_enrich_html = ""
-                excel_enrich_rows = []
-                for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                  vak_lbl = get_student_vak_label(row)
-                  prog_name, resource_name, impact_name = get_enrichment_plan_for_student(vak_lbl)
-                  pct_s = round((row["perf_num"] / max_tot_lvl) * 100, 1) if max_tot_lvl > 0 else 100
-                  rows_enrich_html += f"""
+                # ---------------------------------------------------------
+                # أ) تقرير الخطة الإثرائية للمتفوقين
+                # ---------------------------------------------------------
+                if is_top_cat and "الإثرائية" in sub_rep_mode:
+                  rows_enrich_html = ""
+                  excel_enrich_rows = []
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    vak_lbl = get_student_vak_label(row)
+                    prog_name, resource_name, impact_name = get_enrichment_plan_for_student(vak_lbl)
+                    pct_s = round((row["perf_num"] / max_tot_lvl) * 100, 1) if max_tot_lvl > 0 else 100
+                    rows_enrich_html += f"""
                   <tr>
                       <td>{i}</td>
                       <td style="text-align:right; font-weight:800;">{row['name']}</td>
@@ -4997,19 +5343,19 @@ if st.session_state.role in ["teacher", "viewer"]:
                       <td style="font-size:11px; color:#059669; font-weight:700;">{impact_name}</td>
                   </tr>
                   """
-                  excel_enrich_rows.append({
-                      "م": i,
-                      "اسم الطالب": row["name"],
-                      "الصف": row.get("class", ""),
-                      "الدرجة": f"{row['perf_num']} / {max_tot_lvl}",
-                      "النسبة": f"{pct_s}%",
-                      "نمط التعلم": vak_lbl,
-                      "البرنامج الإثرائي المخصص": prog_name,
-                      "الأدوات والأنشطة الإثرائية": resource_name,
-                      "الأثر المتوقع": impact_name,
-                  })
+                    excel_enrich_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        "الدرجة": f"{row['perf_num']} / {max_tot_lvl}",
+                        "النسبة": f"{pct_s}%",
+                        "نمط التعلم": vak_lbl,
+                        "البرنامج الإثرائي المخصص": prog_name,
+                        "الأدوات والأنشطة الإثرائية": resource_name,
+                        "الأثر المتوقع": impact_name,
+                    })
 
-                enrich_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة الإثرائية للمتفوقين</title>
+                  enrich_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة الإثرائية للمتفوقين</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     @page {{ size: A4 landscape; margin: 8mm; }}
@@ -5067,70 +5413,70 @@ if st.session_state.role in ["teacher", "viewer"]:
                     <script>window.onload = function() {{ window.print(); }}</script>
                 </body></html>"""
 
-                st.success(f"✅ تم إعداد تقرير الخطة الإثرائية متضمناً الإحصائية لعدد ({len(final_df)}) طالباً متفوقاً مخصصاً وفق أنماط تعلمهم.")
-                enrich_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", enrich_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
-                pdf_bytes_enr = None
-                try:
-                  pdf_bytes_enr = generate_pdf_bytes_cached(enrich_pdf_clean)
-                except Exception:
+                  st.success(f"✅ تم إعداد تقرير الخطة الإثرائية متضمناً الإحصائية لعدد ({len(final_df)}) طالباً متفوقاً مخصصاً وفق أنماط تعلمهم.")
+                  enrich_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", enrich_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
                   pdf_bytes_enr = None
+                  try:
+                    pdf_bytes_enr = generate_pdf_bytes_cached(enrich_pdf_clean)
+                  except Exception:
+                    pdf_bytes_enr = None
 
-                if pdf_bytes_enr:
-                  dl_e1, dl_e2, dl_e3 = st.columns(3)
-                  dl_e1.download_button(
-                      label="📄 تحميل الخطة الإثرائية (PDF A4)",
-                      data=pdf_bytes_enr,
-                      file_name=f"Enrichment_Plan_{datetime.date.today()}.pdf",
-                      mime="application/pdf",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_e2.download_button(
-                      label="🖨️ تحميل للطباعة (HTML)",
-                      data=enrich_html,
-                      file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                  dl_e3.download_button(
-                      label="📥 تصدير (Excel)",
-                      data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
-                      file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                else:
-                  dl_e1, dl_e2 = st.columns(2)
-                  dl_e1.download_button(
-                      label="🖨️ تحميل وطباعة تقرير الخطة الإثرائية (A4 جاهز للطباعة)",
-                      data=enrich_html,
-                      file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_e2.download_button(
-                      label="📥 تصدير الخطة الإثرائية (Excel)",
-                      data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
-                      file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
+                  if pdf_bytes_enr:
+                    dl_e1, dl_e2, dl_e3 = st.columns(3)
+                    dl_e1.download_button(
+                        label="📄 تحميل الخطة الإثرائية (PDF A4)",
+                        data=pdf_bytes_enr,
+                        file_name=f"Enrichment_Plan_{datetime.date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_e2.download_button(
+                        label="🖨️ تحميل للطباعة (HTML)",
+                        data=enrich_html,
+                        file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                    dl_e3.download_button(
+                        label="📥 تصدير (Excel)",
+                        data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
+                        file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                  else:
+                    dl_e1, dl_e2 = st.columns(2)
+                    dl_e1.download_button(
+                        label="🖨️ تحميل وطباعة تقرير الخطة الإثرائية (A4 جاهز للطباعة)",
+                        data=enrich_html,
+                        file_name=f"Enrichment_Plan_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_e2.download_button(
+                        label="📥 تصدير الخطة الإثرائية (Excel)",
+                        data=build_excel_bytes(pd.DataFrame(excel_enrich_rows), sheet_name="الخطة الإثرائية"),
+                        file_name=f"Enrichment_Plan_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
 
-              # ---------------------------------------------------------
-              # ب) تقرير الخطة العلاجية التشخيصية المقترحة (لمتدني المستوى)
-              # ---------------------------------------------------------
-              elif (not is_top_cat) and "العلاجية" in sub_rep_mode:
-                rows_rem_html = ""
-                excel_rem_rows = []
-                target_pass_score = max(threshold, int(round(max_tot_lvl * 0.65)))
-                for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                  vak_lbl = get_student_vak_label(row)
-                  diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
-                  rows_rem_html += f"""
+                # ---------------------------------------------------------
+                # ب) تقرير الخطة العلاجية التشخيصية المقترحة (لمتدني المستوى)
+                # ---------------------------------------------------------
+                elif (not is_top_cat) and "العلاجية" in sub_rep_mode:
+                  rows_rem_html = ""
+                  excel_rem_rows = []
+                  target_pass_score = max(threshold, int(round(max_tot_lvl * 0.65)))
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    vak_lbl = get_student_vak_label(row)
+                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+                    rows_rem_html += f"""
                   <tr>
                       <td>{i}</td>
                       <td style="text-align:right; font-weight:800;">{row['name']}</td>
@@ -5144,20 +5490,20 @@ if st.session_state.role in ["teacher", "viewer"]:
                       <td style="color:#059669; font-weight:800;">{target_pass_score}+ / ____</td>
                   </tr>
                   """
-                  excel_rem_rows.append({
-                      "م": i,
-                      "اسم الطالب": row["name"],
-                      "الصف": row.get("class", ""),
-                      f"المشاركة ({max_t_lvl})": row["p1_num"],
-                      f"الاختبارات ({max_q_lvl})": row["p2_num"],
-                      f"القياس القبلي ({max_tot_lvl})": row["perf_num"],
-                      "نمط التعلم": vak_lbl,
-                      "تشخيص مكمن الضعف": diag_txt,
-                      "الإجراء العلاجي المخصص": strat_txt,
-                      "المستهدف / القياس البعدي": f"{target_pass_score}+",
-                  })
+                    excel_rem_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        f"المشاركة ({max_t_lvl})": row["p1_num"],
+                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                        f"القياس القبلي ({max_tot_lvl})": row["perf_num"],
+                        "نمط التعلم": vak_lbl,
+                        "تشخيص مكمن الضعف": diag_txt,
+                        "الإجراء العلاجي المخصص": strat_txt,
+                        "المستهدف / القياس البعدي": f"{target_pass_score}+",
+                    })
 
-                remedial_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة العلاجية المقترحة</title>
+                  remedial_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير الخطة العلاجية المقترحة</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     @page {{ size: A4 landscape; margin: 8mm; }}
@@ -5218,72 +5564,72 @@ if st.session_state.role in ["teacher", "viewer"]:
                     <script>window.onload = function() {{ window.print(); }}</script>
                 </body></html>"""
 
-                st.success(f"✅ تم توليد الخطة العلاجية التشخيصية متضمنةً الإحصائية لعدد ({len(final_df)}) طالباً مع تحديد مكمن الضعف والإجراء المقترح تلقائياً.")
-                rem_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", remedial_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
-                pdf_bytes_rem = None
-                try:
-                  pdf_bytes_rem = generate_pdf_bytes_cached(rem_pdf_clean)
-                except Exception:
+                  st.success(f"✅ تم توليد الخطة العلاجية التشخيصية متضمنةً الإحصائية لعدد ({len(final_df)}) طالباً مع تحديد مكمن الضعف والإجراء المقترح تلقائياً.")
+                  rem_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", remedial_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
                   pdf_bytes_rem = None
+                  try:
+                    pdf_bytes_rem = generate_pdf_bytes_cached(rem_pdf_clean)
+                  except Exception:
+                    pdf_bytes_rem = None
 
-                if pdf_bytes_rem:
-                  dl_r1, dl_r2, dl_r3 = st.columns(3)
-                  dl_r1.download_button(
-                      label="📄 تحميل الخطة العلاجية (PDF A4)",
-                      data=pdf_bytes_rem,
-                      file_name=f"Remedial_Plan_{datetime.date.today()}.pdf",
-                      mime="application/pdf",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_r2.download_button(
-                      label="🖨️ تحميل للطباعة (HTML)",
-                      data=remedial_html,
-                      file_name=f"Remedial_Plan_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                  dl_r3.download_button(
-                      label="📥 تصدير (Excel)",
-                      data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
-                      file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                else:
-                  dl_r1, dl_r2 = st.columns(2)
-                  dl_r1.download_button(
-                      label="🖨️ تحميل وطباعة الخطة العلاجية التشخيصية (A4 جاهز للطباعة)",
-                      data=remedial_html,
-                      file_name=f"Remedial_Plan_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_r2.download_button(
-                      label="📥 تصدير الخطة العلاجية (Excel)",
-                      data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
-                      file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
+                  if pdf_bytes_rem:
+                    dl_r1, dl_r2, dl_r3 = st.columns(3)
+                    dl_r1.download_button(
+                        label="📄 تحميل الخطة العلاجية (PDF A4)",
+                        data=pdf_bytes_rem,
+                        file_name=f"Remedial_Plan_{datetime.date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_r2.download_button(
+                        label="🖨️ تحميل للطباعة (HTML)",
+                        data=remedial_html,
+                        file_name=f"Remedial_Plan_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                    dl_r3.download_button(
+                        label="📥 تصدير (Excel)",
+                        data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
+                        file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                  else:
+                    dl_r1, dl_r2 = st.columns(2)
+                    dl_r1.download_button(
+                        label="🖨️ تحميل وطباعة الخطة العلاجية التشخيصية (A4 جاهز للطباعة)",
+                        data=remedial_html,
+                        file_name=f"Remedial_Plan_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_r2.download_button(
+                        label="📥 تصدير الخطة العلاجية (Excel)",
+                        data=build_excel_bytes(pd.DataFrame(excel_rem_rows), sheet_name="الخطة العلاجية"),
+                        file_name=f"Remedial_Plan_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
 
-              # ---------------------------------------------------------
-              # ج) إشعارات أولياء الأمور الرسمية (ورقة A4 واحدة مضبوطة لكل طالب بنسختين + إرسال واتساب)
-              # ---------------------------------------------------------
-              elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
-                notices_cards_html = ""
-                for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                  s_name = row["name"]
-                  s_cls_item = row.get("class", "")
-                  sch_item = get_school_name_dynamic(s_cls_item)
-                  vak_lbl = get_student_vak_label(row)
-                  diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
+                # ---------------------------------------------------------
+                # ج) إشعارات أولياء الأمور الرسمية (ورقة A4 واحدة مضبوطة لكل طالب بنسختين + إرسال واتساب)
+                # ---------------------------------------------------------
+                elif (not is_top_cat) and "إشعارات" in sub_rep_mode:
+                  notices_cards_html = ""
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    s_name = row["name"]
+                    s_cls_item = row.get("class", "")
+                    sch_item = get_school_name_dynamic(s_cls_item)
+                    vak_lbl = get_student_vak_label(row)
+                    diag_txt, strat_txt = get_remedial_diagnosis_and_plan(row["p1_num"], row["p2_num"], vak_lbl)
 
-                  notices_cards_html += f"""
+                    notices_cards_html += f"""
                   <div class="notice-page">
                       <div class="nc-header">
                           <div class="nc-hdr-side">المملكة العربية السعودية<br>وزارة التعليم<br>{sch_item}</div>
@@ -5362,7 +5708,7 @@ if st.session_state.role in ["teacher", "viewer"]:
                   </div>
                   """
 
-                parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية - A4</title>
+                  parent_notices_html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>إشعارات أولياء الأمور الرسمية - A4</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     @page {{ size: A4 portrait; margin: 7mm; }}
@@ -5396,50 +5742,50 @@ if st.session_state.role in ["teacher", "viewer"]:
                     <script>window.onload = function() {{ window.print(); }}</script>
                 </body></html>"""
 
-                st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي (في صفحة A4 واحدة مضبوطة لكل طالب، مع إقرار اطلاع ولي الأمر لحفظ نسخة في الملف وتسليم نسخة لولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
-                notices_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", parent_notices_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
-                pdf_bytes_not = None
-                try:
-                  pdf_bytes_not = generate_pdf_bytes_cached(notices_pdf_clean)
-                except Exception:
+                  st.success(f"✅ تم تجهيز ({len(final_df)}) إشعار رسمي (في صفحة A4 واحدة مضبوطة لكل طالب، مع إقرار اطلاع ولي الأمر لحفظ نسخة في الملف وتسليم نسخة لولي الأمر) بالإضافة إلى الإرسال الفوري عبر واتساب.")
+                  notices_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", parent_notices_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
                   pdf_bytes_not = None
+                  try:
+                    pdf_bytes_not = generate_pdf_bytes_cached(notices_pdf_clean)
+                  except Exception:
+                    pdf_bytes_not = None
 
-                if pdf_bytes_not:
-                  dl_n1, dl_n2 = st.columns(2)
-                  dl_n1.download_button(
-                      label=f"📄 تحميل إشعارات أولياء الأمور ({len(final_df)} إشعار - PDF A4)",
-                      data=pdf_bytes_not,
-                      file_name=f"Parent_Notices_{datetime.date.today()}.pdf",
-                      mime="application/pdf",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_n2.download_button(
-                      label=f"🖨️ تحميل للطباعة المباشرة ({len(final_df)} إشعار - HTML)",
-                      data=parent_notices_html,
-                      file_name=f"Parent_Notices_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                else:
-                  st.download_button(
-                      label=f"🖨️ تحميل وطباعة إشعارات أولياء الأمور الرسمية ({len(final_df)} إشعار - جاهز للطباعة)",
-                      data=parent_notices_html,
-                      file_name=f"Parent_Notices_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="primary",
-                      use_container_width=True,
-                  )
+                  if pdf_bytes_not:
+                    dl_n1, dl_n2 = st.columns(2)
+                    dl_n1.download_button(
+                        label=f"📄 تحميل إشعارات أولياء الأمور ({len(final_df)} إشعار - PDF A4)",
+                        data=pdf_bytes_not,
+                        file_name=f"Parent_Notices_{datetime.date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_n2.download_button(
+                        label=f"🖨️ تحميل للطباعة المباشرة ({len(final_df)} إشعار - HTML)",
+                        data=parent_notices_html,
+                        file_name=f"Parent_Notices_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                  else:
+                    st.download_button(
+                        label=f"🖨️ تحميل وطباعة إشعارات أولياء الأمور الرسمية ({len(final_df)} إشعار - جاهز للطباعة)",
+                        data=parent_notices_html,
+                        file_name=f"Parent_Notices_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="primary",
+                        use_container_width=True,
+                    )
 
-                with st.expander("📲 إرسال إشعار المستوى والخطة العلاجية لأولياء الأمور عبر واتساب فوراً", expanded=True):
-                  for _, s_row in final_df.iterrows():
-                    s_n = s_row.get("name", "")
-                    s_p = clean_phone_number(s_row.get("الجوال", ""))
-                    vak_w = get_student_vak_label(s_row)
-                    diag_w, strat_w = get_remedial_diagnosis_and_plan(s_row["p1_num"], s_row["p2_num"], vak_w)
-                    wa_notice_msg = urllib.parse.quote(
-                        f"🔔 *إشعار متابعة مستوى دراسي وخطة دعم علاجية*\n"
+                  with st.expander("📲 إرسال إشعار المستوى والخطة العلاجية لأولياء الأمور عبر واتساب فوراً", expanded=True):
+                    for _, s_row in final_df.iterrows():
+                      s_n = s_row.get("name", "")
+                      s_p = clean_phone_number(s_row.get("الجوال", ""))
+                      vak_w = get_student_vak_label(s_row)
+                      diag_w, strat_w = get_remedial_diagnosis_and_plan(s_row["p1_num"], s_row["p2_num"], vak_w)
+                      wa_notice_msg = urllib.parse.quote(
+                          f"🔔 *إشعار متابعة مستوى دراسي وخطة دعم علاجية*\n"
                         f"المكرم ولي أمر الطالب: *{s_n}* ({s_row.get('class', '')})\n"
                         f"السلام عليكم ورحمة الله وبركاته،\n"
                         f"حرصاً منا على الارتقاء بالمستوى التحصيلي لابنكم في مادة اللغة الإنجليزية ({rep_per})، نفيدكم بدرجاته الحالية:\n"
@@ -5450,41 +5796,41 @@ if st.session_state.role in ["teacher", "viewer"]:
                         f"🛠️ *خطة الدعم بالمدرسة:* {strat_w}\n"
                         f"🏠 *نأمل منكم:* متابعة استكمال المهام وأوراق العمل العلاجية بالمنزل، شاكرين لكم تعاونكم الدائم.\n"
                         f"معلم المادة: أ. زياد المعمري"
-                    )
-                    cw1, cw2 = st.columns([2.6, 1.2])
-                    cw1.markdown(f"<div style='padding-top:8px; font-weight:800;'>👤 {s_n} — ({s_row.get('class', '')}) | الدرجة: <span style='color:#dc2626;'>{s_row['perf_num']}/{max_tot_lvl}</span></div>", unsafe_allow_html=True)
-                    cw2.link_button("📲 إرسال الإشعار واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={wa_notice_msg}", use_container_width=True)
+                      )
+                      cw1, cw2 = st.columns([2.6, 1.2])
+                      cw1.markdown(f"<div style='padding-top:8px; font-weight:800;'>👤 {s_n} — ({s_row.get('class', '')}) | الدرجة: <span style='color:#dc2626;'>{s_row['perf_num']}/{max_tot_lvl}</span></div>", unsafe_allow_html=True)
+                      cw2.link_button("📲 إرسال الإشعار واتساب", f"https://api.whatsapp.com/send?phone={s_p}&text={wa_notice_msg}", use_container_width=True)
 
-              # ---------------------------------------------------------
-              # د) كشف الحصر العام (للمتفوقين أو متدني المستوى)
-              # ---------------------------------------------------------
-              else:
-                if is_top_cat:
-                  report_title = "حصر الطلاب المتفوقين"
-                  action_text = "تكريم في لوحة الشرف / إدراج في الخطة الإثرائية"
-                  color_theme = "#10B981"
+                # ---------------------------------------------------------
+                # د) كشف الحصر العام (للمتفوقين أو متدني المستوى)
+                # ---------------------------------------------------------
                 else:
-                  report_title = "حصر الطلاب متدني المستوى"
-                  action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
-                  color_theme = "#EF4444"
+                  if is_top_cat:
+                    report_title = "حصر الطلاب المتفوقين"
+                    action_text = "تكريم في لوحة الشرف / إدراج في الخطة الإثرائية"
+                    color_theme = "#10B981"
+                  else:
+                    report_title = "حصر الطلاب متدني المستوى"
+                    action_text = "إشعار ولي الأمر / إدراج في الخطة العلاجية"
+                    color_theme = "#EF4444"
 
-                rows_lvl = ""
-                excel_lvl_rows = []
-                for i, (_, row) in enumerate(final_df.iterrows(), 1):
-                  vak_lbl = get_student_vak_label(row)
-                  rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:700; color:#1E40AF;'>{vak_lbl}</td><td>{row['p1_num']}</td><td>{row['p2_num']}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
-                  excel_lvl_rows.append({
-                      "م": i,
-                      "اسم الطالب": row["name"],
-                      "الصف": row.get("class", ""),
-                      "نمط التعلم": vak_lbl,
-                      f"المشاركة ({max_t_lvl})": row["p1_num"],
-                      f"الاختبارات ({max_q_lvl})": row["p2_num"],
-                      f"المجموع ({rep_per})": row["perf_num"],
-                      "الإجراء المقترح": action_text,
-                  })
+                  rows_lvl = ""
+                  excel_lvl_rows = []
+                  for i, (_, row) in enumerate(final_df.iterrows(), 1):
+                    vak_lbl = get_student_vak_label(row)
+                    rows_lvl += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold;'>{row['name']}</td><td>{row.get('class', '')}</td><td style='font-weight:700; color:#1E40AF;'>{vak_lbl}</td><td>{row['p1_num']}</td><td>{row['p2_num']}</td><td style='font-weight:900; color:{color_theme};'>{row['perf_num']}</td><td style='color:#64748B; font-size:11px;'>{action_text}</td></tr>"
+                    excel_lvl_rows.append({
+                        "م": i,
+                        "اسم الطالب": row["name"],
+                        "الصف": row.get("class", ""),
+                        "نمط التعلم": vak_lbl,
+                        f"المشاركة ({max_t_lvl})": row["p1_num"],
+                        f"الاختبارات ({max_q_lvl})": row["p2_num"],
+                        f"المجموع ({rep_per})": row["perf_num"],
+                        "الإجراء المقترح": action_text,
+                    })
 
-                lvl_report_html = f"""
+                  lvl_report_html = f"""
                 <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>{report_title}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
@@ -5536,134 +5882,134 @@ if st.session_state.role in ["teacher", "viewer"]:
                     <script>window.onload = function() {{ window.print(); }}</script>
                 </body></html>
                 """
-                lvl_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", lvl_report_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
-                pdf_bytes_lvl = None
-                try:
-                  pdf_bytes_lvl = generate_pdf_bytes_cached(lvl_pdf_clean)
-                except Exception:
+                  lvl_pdf_clean = re.sub(r"[𐀀-􏿿]|[☀-➿]|[‍︎️]", "", lvl_report_html).replace("<script>window.onload = function() { window.print(); }</script>", "")
                   pdf_bytes_lvl = None
+                  try:
+                    pdf_bytes_lvl = generate_pdf_bytes_cached(lvl_pdf_clean)
+                  except Exception:
+                    pdf_bytes_lvl = None
 
-                df_ex_lvl = pd.DataFrame(excel_lvl_rows)
-                if pdf_bytes_lvl:
-                  dl_l1, dl_l2, dl_l3 = st.columns(3)
-                  dl_l1.download_button(
-                      label="📄 تحميل كشف الحصر (PDF A4)",
-                      data=pdf_bytes_lvl,
-                      file_name=f"Performance_Report_{datetime.date.today()}.pdf",
-                      mime="application/pdf",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_l2.download_button(
-                      label="🖨️ تحميل للطباعة (HTML)",
-                      data=lvl_report_html,
-                      file_name=f"Performance_Report_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                  dl_l3.download_button(
-                      label="📥 تصدير (Excel)",
-                      data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
-                      file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
-                else:
-                  dl_l1, dl_l2 = st.columns(2)
-                  dl_l1.download_button(
-                      label="🖨️ تحميل كشف الحصر للطباعة المباشرة",
-                      data=lvl_report_html,
-                      file_name=f"Performance_Report_{datetime.date.today()}.html",
-                      mime="text/html",
-                      type="primary",
-                      use_container_width=True,
-                  )
-                  dl_l2.download_button(
-                      label="📥 تصدير كشف الحصر (Excel)",
-                      data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
-                      file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                      type="secondary",
-                      use_container_width=True,
-                  )
+                  df_ex_lvl = pd.DataFrame(excel_lvl_rows)
+                  if pdf_bytes_lvl:
+                    dl_l1, dl_l2, dl_l3 = st.columns(3)
+                    dl_l1.download_button(
+                        label="📄 تحميل كشف الحصر (PDF A4)",
+                        data=pdf_bytes_lvl,
+                        file_name=f"Performance_Report_{datetime.date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_l2.download_button(
+                        label="🖨️ تحميل للطباعة (HTML)",
+                        data=lvl_report_html,
+                        file_name=f"Performance_Report_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                    dl_l3.download_button(
+                        label="📥 تصدير (Excel)",
+                        data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
+                        file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
+                  else:
+                    dl_l1, dl_l2 = st.columns(2)
+                    dl_l1.download_button(
+                        label="🖨️ تحميل كشف الحصر للطباعة المباشرة",
+                        data=lvl_report_html,
+                        file_name=f"Performance_Report_{datetime.date.today()}.html",
+                        mime="text/html",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                    dl_l2.download_button(
+                        label="📥 تصدير كشف الحصر (Excel)",
+                        data=build_excel_bytes(df_ex_lvl, sheet_name=report_title),
+                        file_name=f"Performance_Report_{datetime.date.today()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="secondary",
+                        use_container_width=True,
+                    )
 
-    # ---------------------------------------------------------
-    # 6. تقرير ولوحة إحصائيات أنماط التعلم (VAK) - يدعم تحديد عدة فصول معاً + إحصائية تفاعلية + PDF وHTML وExcel
-    # ---------------------------------------------------------
-    with rep_tabs[5]:
-      st.markdown("#### 🧠 لوحة إحصائيات واستخراج تقارير أنماط التعلم (VAK)")
-      st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً (أو الكل) لاستعراض الإحصائية التحليلية المباشرة لأنماط التعلم وتوليد التقرير الرسمي متضمناً الإحصائية للطباعة (PDF A4 / HTML / Excel).")
+      # ---------------------------------------------------------
+      # 6. تقرير ولوحة إحصائيات أنماط التعلم (VAK) - يدعم تحديد عدة فصول معاً + إحصائية تفاعلية + PDF وHTML وExcel
+      # ---------------------------------------------------------
+      with rep_tabs[5]:
+        st.markdown("#### 🧠 لوحة إحصائيات واستخراج تقارير أنماط التعلم (VAK)")
+        st.info("💡 اختر فصلاً واحداً أو عدة فصول معاً (أو الكل) لاستعراض الإحصائية التحليلية المباشرة لأنماط التعلم وتوليد التقرير الرسمي متضمناً الإحصائية للطباعة (PDF A4 / HTML / Excel).")
 
-      if not df_s_rep.empty:
-        c1, c2 = st.columns([2.2, 1.3])
-        avail_ls_cls = list(df_s_rep["class"].dropna().unique())
-        sel_classes_ls = c1.multiselect(
-            "🏫 اختر الفصول (يمكنك تحديد عدة فصول معاً أو الكل):",
-            options=["الكل"] + avail_ls_cls,
-            default=["الكل"],
-            key="ls_class_multi",
-        )
+        if not df_s_rep.empty:
+          c1, c2 = st.columns([2.2, 1.3])
+          avail_ls_cls = list(df_s_rep["class"].dropna().unique())
+          sel_classes_ls = c1.multiselect(
+              "🏫 اختر الفصول (يمكنك تحديد عدة فصول معاً أو الكل):",
+              options=["الكل"] + avail_ls_cls,
+              default=["الكل"],
+              key="ls_class_multi",
+          )
 
-        style_opts = [
-            "الكل",
-            "تم الاختبار ✅",
-            "بصري 👀",
-            "سمعي 👂",
-            "حركي ✋",
-            "متعدد الأنماط 🌟",
-            "لم يختبر ⏳",
-        ]
-        sel_style = c2.selectbox("🎯 اختر النمط المستهدف في جدول التقرير:", style_opts, key="ls_style")
+          style_opts = [
+              "الكل",
+              "تم الاختبار ✅",
+              "بصري 👀",
+              "سمعي 👂",
+              "حركي ✋",
+              "متعدد الأنماط 🌟",
+              "لم يختبر ⏳",
+          ]
+          sel_style = c2.selectbox("🎯 اختر النمط المستهدف في جدول التقرير:", style_opts, key="ls_style")
 
-        target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
-        if not target_ls_cls:
-          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
-        else:
-          df_scope_ls = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
-          if "نمط التعلم" not in df_scope_ls.columns:
-            df_scope_ls["نمط التعلم"] = ""
+          target_ls_cls, school_name, label_ls_cls = resolve_multi_classes(sel_classes_ls, avail_ls_cls)
+          if not target_ls_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل لعرض الإحصائية والتقارير.")
+          else:
+            df_scope_ls = df_s_rep[df_s_rep["class"].isin(target_ls_cls)].copy()
+            if "نمط التعلم" not in df_scope_ls.columns:
+              df_scope_ls["نمط التعلم"] = ""
 
-          df_scope_tested = df_scope_ls[
-              df_scope_ls["نمط التعلم"].notna()
-              & (~df_scope_ls["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
-          ].copy()
+            df_scope_tested = df_scope_ls[
+                df_scope_ls["نمط التعلم"].notna()
+                & (~df_scope_ls["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+            ].copy()
 
-          tot_scope_students = len(df_scope_ls)
-          tot_scope_tested = len(df_scope_tested)
-          tot_scope_untested = tot_scope_students - tot_scope_tested
+            tot_scope_students = len(df_scope_ls)
+            tot_scope_tested = len(df_scope_tested)
+            tot_scope_untested = tot_scope_students - tot_scope_tested
 
-          v_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
-          k_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
-          a_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
-          m_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("متعدد", na=False)])
+            v_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+            k_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+            a_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+            m_cnt = len(df_scope_tested[df_scope_tested["نمط التعلم"].astype(str).str.contains("متعدد", na=False)])
 
-          v_pct = round((v_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
-          k_pct = round((k_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
-          a_pct = round((a_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
-          m_pct = round((m_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+            v_pct = round((v_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+            k_pct = round((k_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+            a_pct = round((a_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
+            m_pct = round((m_cnt / tot_scope_tested) * 100, 1) if tot_scope_tested > 0 else 0.0
 
-          max_vka = max(v_cnt, k_cnt, a_cnt, 1)
-          h_v = max(int((v_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
-          h_k = max(int((k_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
-          h_a = max(int((a_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+            max_vka = max(v_cnt, k_cnt, a_cnt, 1)
+            h_v = max(int((v_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+            h_k = max(int((k_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
+            h_a = max(int((a_cnt / max_vka) * 100), 8) if tot_scope_tested > 0 else 8
 
-          # --- 1) عرض البطاقات الإحصائية ولوحة التوزيع البصري على الشاشة مباشرة ---
-          st.markdown(
-              f"""
+            # --- 1) عرض البطاقات الإحصائية ولوحة التوزيع البصري على الشاشة مباشرة ---
+            st.markdown(
+                f"""
               <div class="dashboard-stats-container">
                   <div class="dash-card total"><div class="dash-title">👥 إجمالي الطلاب</div><div class="dash-value">{tot_scope_students}</div></div>
                   <div class="dash-card completed"><div class="dash-title">✅ الاختبارات المكتملة</div><div class="dash-value">{tot_scope_tested}</div></div>
                   <div class="dash-card pending"><div class="dash-title">⏳ لم يؤدوا الاختبار</div><div class="dash-value">{tot_scope_untested}</div></div>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
+                unsafe_allow_html=True,
+            )
 
-          with st.container(border=True):
-            st.markdown(
-                f"""
+            with st.container(border=True):
+              st.markdown(
+                  f"""
                 <div style="text-align: center; margin-bottom: 6px;">
                     <div style="font-size: 19px; font-weight: 900; color: #0F172A; margin-bottom: 4px;">📊 توزيع أنماط التعلم — ({label_ls_cls})</div>
                     <span style="display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 14px; font-size: 12.5px; font-weight: 800;">
@@ -5715,91 +6061,91 @@ if st.session_state.role in ["teacher", "viewer"]:
                     </div>
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
-
-            if len(target_ls_cls) > 1:
-              with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المحدد"):
-                cls_breakdown_rows = []
-                for c_nm in target_ls_cls:
-                  sub_c = df_scope_ls[df_scope_ls["class"] == c_nm]
-                  sub_t = sub_c[
-                      sub_c["نمط التعلم"].notna()
-                      & (~sub_c["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
-                  ]
-                  t_cnt = len(sub_t)
-                  vc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
-                  kc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
-                  ac = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
-                  cls_breakdown_rows.append({
-                      "الفصل": c_nm,
-                      "إجمالي الطلاب": len(sub_c),
-                      "المختبرون": t_cnt,
-                      "غير المختبرين": len(sub_c) - t_cnt,
-                      "بصري 👁️": f"{vc} ({round(vc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
-                      "حركي 🏃‍♂️": f"{kc} ({round(kc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
-                      "سمعي 👂": f"{ac} ({round(ac/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
-                  })
-                st.dataframe(pd.DataFrame(cls_breakdown_rows), use_container_width=True, hide_index=True)
-
-          # --- 2) زر توليد التقرير الرسمي للطباعة متضمناً بطاقات الإحصائية ---
-          if st.button("🖨️ توليد تقرير الأنماط مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
-            df_filtered = df_scope_ls.copy()
-
-            if sel_style == "لم يختبر ⏳":
-              df_filtered = df_filtered[
-                  df_filtered["نمط التعلم"].isna()
-                  | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
-              ]
-            elif sel_style == "تم الاختبار ✅":
-              df_filtered = df_filtered[
-                  df_filtered["نمط التعلم"].notna()
-                  & (~df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
-              ]
-            elif sel_style != "الكل":
-              keyword = sel_style.split()[0]
-              df_filtered = df_filtered[df_filtered["نمط التعلم"].astype(str).str.contains(keyword, na=False)]
-
-            if df_filtered.empty:
-              st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
-            else:
-              df_sorted = df_filtered.sort_values(by=["class", "name"])
-              rows_html_print = ""
-              rows_html_pdf = ""
-              excel_ls_rows = []
-
-              for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
-                s_val = r.get("نمط التعلم", "")
-                if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
-                  s_val = "لم يختبر ⏳"
-
-                s_val_clean = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(s_val)).strip()
-
-                clr = (
-                    "#2563EB" if "بصري" in s_val
-                    else "#059669" if "حركي" in s_val
-                    else "#D97706" if "سمعي" in s_val
-                    else "#8B5CF6" if "متعدد" in s_val
-                    else "#64748B"
-                )
-                rows_html_print += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
-                rows_html_pdf += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val_clean}</td></tr>"
-                excel_ls_rows.append({
-                    "م": i,
-                    "الرقم الأكاديمي": r.get("clean_id", ""),
-                    "اسم الطالب": r["name"],
-                    "الصف": r.get("class", ""),
-                    "نمط التعلم": s_val,
-                })
-
-              clean_sel_style_txt = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(sel_style)).strip()
-              multi_card_html = (
-                  f"""<div class="stat-card multi"><div class="stat-title">متعدد الأنماط</div><div class="stat-value">{m_pct}%</div><div class="stat-sub">{m_cnt} طالب</div></div>"""
-                  if m_cnt > 0 else ""
+                  unsafe_allow_html=True,
               )
 
-              def build_ls_report_doc(rows_body, is_pdf=False):
-                return f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
+              if len(target_ls_cls) > 1:
+                with st.expander("📋 تفصيل إحصائية أنماط التعلم لكل فصل ضمن النطاق المحدد"):
+                  cls_breakdown_rows = []
+                  for c_nm in target_ls_cls:
+                    sub_c = df_scope_ls[df_scope_ls["class"] == c_nm]
+                    sub_t = sub_c[
+                        sub_c["نمط التعلم"].notna()
+                        & (~sub_c["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+                    ]
+                    t_cnt = len(sub_t)
+                    vc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("بصري", na=False)])
+                    kc = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("حركي", na=False)])
+                    ac = len(sub_t[sub_t["نمط التعلم"].astype(str).str.contains("سمعي", na=False)])
+                    cls_breakdown_rows.append({
+                        "الفصل": c_nm,
+                        "إجمالي الطلاب": len(sub_c),
+                        "المختبرون": t_cnt,
+                        "غير المختبرين": len(sub_c) - t_cnt,
+                        "بصري 👁️": f"{vc} ({round(vc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                        "حركي 🏃‍♂️": f"{kc} ({round(kc/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                        "سمعي 👂": f"{ac} ({round(ac/t_cnt*100, 1)}%)" if t_cnt > 0 else "0 (0%)",
+                    })
+                  st.dataframe(pd.DataFrame(cls_breakdown_rows), use_container_width=True, hide_index=True)
+
+            # --- 2) زر توليد التقرير الرسمي للطباعة متضمناً بطاقات الإحصائية ---
+            if st.button("🖨️ توليد تقرير الأنماط مع الإحصائية للفصول المحددة", type="primary", use_container_width=True):
+              df_filtered = df_scope_ls.copy()
+
+              if sel_style == "لم يختبر ⏳":
+                df_filtered = df_filtered[
+                    df_filtered["نمط التعلم"].isna()
+                    | (df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+                ]
+              elif sel_style == "تم الاختبار ✅":
+                df_filtered = df_filtered[
+                    df_filtered["نمط التعلم"].notna()
+                    & (~df_filtered["نمط التعلم"].astype(str).str.strip().isin(["", "nan", "None", "لم يختبر ⏳"]))
+                ]
+              elif sel_style != "الكل":
+                keyword = sel_style.split()[0]
+                df_filtered = df_filtered[df_filtered["نمط التعلم"].astype(str).str.contains(keyword, na=False)]
+
+              if df_filtered.empty:
+                st.warning("⚠️ لا يوجد طلاب يطابقون خياراتك الحالية.")
+              else:
+                df_sorted = df_filtered.sort_values(by=["class", "name"])
+                rows_html_print = ""
+                rows_html_pdf = ""
+                excel_ls_rows = []
+
+                for i, (_, r) in enumerate(df_sorted.iterrows(), 1):
+                  s_val = r.get("نمط التعلم", "")
+                  if pd.isna(s_val) or str(s_val).strip() in ["", "nan", "None"]:
+                    s_val = "لم يختبر ⏳"
+
+                  s_val_clean = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(s_val)).strip()
+
+                  clr = (
+                      "#2563EB" if "بصري" in s_val
+                      else "#059669" if "حركي" in s_val
+                      else "#D97706" if "سمعي" in s_val
+                      else "#8B5CF6" if "متعدد" in s_val
+                      else "#64748B"
+                  )
+                  rows_html_print += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val}</td></tr>"
+                  rows_html_pdf += f"<tr><td>{i}</td><td style='text-align:right; font-weight:bold; padding-right:10px;'>{r['name']}</td><td>{r.get('class', '')}</td><td style='color:{clr}; font-weight:bold;'>{s_val_clean}</td></tr>"
+                  excel_ls_rows.append({
+                      "م": i,
+                      "الرقم الأكاديمي": r.get("clean_id", ""),
+                      "اسم الطالب": r["name"],
+                      "الصف": r.get("class", ""),
+                      "نمط التعلم": s_val,
+                  })
+
+                clean_sel_style_txt = re.sub(r"[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u200d\ufe0e\ufe0f]", "", str(sel_style)).strip()
+                multi_card_html = (
+                    f"""<div class="stat-card multi"><div class="stat-title">متعدد الأنماط</div><div class="stat-value">{m_pct}%</div><div class="stat-sub">{m_cnt} طالب</div></div>"""
+                    if m_cnt > 0 else ""
+                )
+
+                def build_ls_report_doc(rows_body, is_pdf=False):
+                  return f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير أنماط التعلم</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     @page {{ size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }}
@@ -5902,161 +6248,160 @@ if st.session_state.role in ["teacher", "viewer"]:
                     {'' if is_pdf else '<script>window.onload = function() { window.print(); }</script>'}
                 </body></html>"""
 
-              ls_report_html = build_ls_report_doc(rows_html_print, is_pdf=False)
-              ls_report_pdf_html = build_ls_report_doc(rows_html_pdf, is_pdf=True)
+                ls_report_html = build_ls_report_doc(rows_html_print, is_pdf=False)
+                ls_report_pdf_html = build_ls_report_doc(rows_html_pdf, is_pdf=True)
 
-              st.success(f"✅ تم تجهيز التقرير متضمناً الإحصائية لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
-              pdf_bytes_ls = None
-              try:
-                pdf_bytes_ls = generate_pdf_bytes_cached(ls_report_pdf_html)
-              except Exception:
+                st.success(f"✅ تم تجهيز التقرير متضمناً الإحصائية لعدد ({len(df_filtered)}) طالب من الفصول: ({label_ls_cls}).")
                 pdf_bytes_ls = None
+                try:
+                  pdf_bytes_ls = generate_pdf_bytes_cached(ls_report_pdf_html)
+                except Exception:
+                  pdf_bytes_ls = None
 
-              if pdf_bytes_ls:
-                dl_ls1, dl_ls2, dl_ls3 = st.columns(3)
-                dl_ls1.download_button(
-                    label="📥 تحميل التقرير (PDF - A4)",
-                    data=pdf_bytes_ls,
-                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.pdf",
-                    mime="application/pdf",
-                    type="primary",
-                    use_container_width=True,
-                )
-                dl_ls2.download_button(
-                    label="🖨️ طباعة مباشرة (HTML)",
-                    data=ls_report_html,
-                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
-                    mime="text/html",
-                    type="secondary",
-                    use_container_width=True,
-                )
-                df_ex_ls = pd.DataFrame(excel_ls_rows)
-                dl_ls3.download_button(
-                    label="📥 تصدير (Excel)",
-                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
-                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="secondary",
-                    use_container_width=True,
-                )
-              else:
-                dl_ls1, dl_ls2 = st.columns(2)
-                dl_ls1.download_button(
-                    label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
-                    data=ls_report_html,
-                    file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
-                    mime="text/html",
-                    type="primary",
-                    use_container_width=True,
-                )
-                df_ex_ls = pd.DataFrame(excel_ls_rows)
-                dl_ls2.download_button(
-                    label="📥 تصدير تقرير الأنماط (Excel)",
-                    data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
-                    file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="secondary",
-                    use_container_width=True,
-                )
+                if pdf_bytes_ls:
+                  dl_ls1, dl_ls2, dl_ls3 = st.columns(3)
+                  dl_ls1.download_button(
+                      label="📥 تحميل التقرير (PDF - A4)",
+                      data=pdf_bytes_ls,
+                      file_name=f"Learning_Styles_Report_{datetime.date.today()}.pdf",
+                      mime="application/pdf",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  dl_ls2.download_button(
+                      label="🖨️ طباعة مباشرة (HTML)",
+                      data=ls_report_html,
+                      file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                  df_ex_ls = pd.DataFrame(excel_ls_rows)
+                  dl_ls3.download_button(
+                      label="📥 تصدير (Excel)",
+                      data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                      file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
+                else:
+                  dl_ls1, dl_ls2 = st.columns(2)
+                  dl_ls1.download_button(
+                      label="🖨️ تحميل التقرير للطباعة المباشرة (HTML)",
+                      data=ls_report_html,
+                      file_name=f"Learning_Styles_Report_{datetime.date.today()}.html",
+                      mime="text/html",
+                      type="primary",
+                      use_container_width=True,
+                  )
+                  df_ex_ls = pd.DataFrame(excel_ls_rows)
+                  dl_ls2.download_button(
+                      label="📥 تصدير تقرير الأنماط (Excel)",
+                      data=build_excel_bytes(df_ex_ls, sheet_name="أنماط التعلم"),
+                      file_name=f"Learning_Styles_{datetime.date.today()}.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      type="secondary",
+                      use_container_width=True,
+                  )
 
-    # ---------------------------------------------------------
-    # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
-    # ---------------------------------------------------------
-    with rep_tabs[6]:
-      st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب (واتساب)")
-      st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) لتحميل أرقام تواصلهم في ملف Excel واحد مرتب.")
+      # ---------------------------------------------------------
+      # 7. استخراج كشف أسماء وأرقام تواصل الطلاب (يدعم عدة فصول معاً)
+      # ---------------------------------------------------------
+      with rep_tabs[6]:
+        st.markdown("#### 📱 استخراج كشف أرقام تواصل الطلاب (واتساب)")
+        st.info("💡 يمكنك تحديد عدة فصول معاً (مثل جميع فصول الخامس) لتحميل أرقام تواصلهم في ملف Excel واحد مرتب.")
 
-      if not df_s_rep.empty:
-        all_classes = st.session_state.get("class_options", all_cls_in_db)
-        contact_cls_choices = st.multiselect(
-            "🏫 اختر الفصول المطلوبة:",
-            options=["الكل"] + all_classes,
-            default=[all_classes[0]] if all_classes else ["الكل"],
-            key="contact_cls_multi",
-        )
+        if not df_s_rep.empty:
+          all_classes = st.session_state.get("class_options", all_cls_in_db)
+          contact_cls_choices = st.multiselect(
+              "🏫 اختر الفصول المطلوبة:",
+              options=["الكل"] + all_classes,
+              default=[all_classes[0]] if all_classes else ["الكل"],
+              key="contact_cls_multi",
+          )
 
-        target_cnt_cls, _, label_cnt_cls = resolve_multi_classes(contact_cls_choices, all_classes)
-        if not target_cnt_cls:
-          st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
-        else:
-          df_contact = df_s_rep[df_s_rep["class"].isin(target_cnt_cls)].sort_values(["class", "name"])
-          if not df_contact.empty:
-            df_export = df_contact[["name", "class", "الجوال"]].copy()
-            df_export = df_export.rename(columns={"name": "اسم الطالب", "class": "الصف", "الجوال": "رقم الجوال (واتساب)"})
-
-            st.download_button(
-                label=f"📥 تحميل كشف أرقام الجوال (Excel) - ({label_cnt_cls}) - ({len(df_export)} طالب)",
-                data=build_excel_bytes(df_export, sheet_name="أرقام التواصل"),
-                file_name=f"Contacts_{datetime.date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="primary",
-                use_container_width=True,
-            )
-
-            with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
-              st.dataframe(df_export, use_container_width=True, hide_index=True)
+          target_cnt_cls, _, label_cnt_cls = resolve_multi_classes(contact_cls_choices, all_classes)
+          if not target_cnt_cls:
+            st.warning("⚠️ الرجاء اختيار فصل واحد على الأقل.")
           else:
-            st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
+            df_contact = df_s_rep[df_s_rep["class"].isin(target_cnt_cls)].sort_values(["class", "name"])
+            if not df_contact.empty:
+              df_export = df_contact[["name", "class", "الجوال"]].copy()
+              df_export = df_export.rename(columns={"name": "اسم الطالب", "class": "الصف", "الجوال": "رقم الجوال (واتساب)"})
 
-# ==========================================
-# 📢 9. التبويب الخامس: لوحة الإعلانات والتعاميم (يدعم اختيار عدة فصول معاً)
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_alerts:
-    st.subheader("📢 لوحة الإعلانات والتعاميم")
+              st.download_button(
+                  label=f"📥 تحميل كشف أرقام الجوال (Excel) - ({label_cnt_cls}) - ({len(df_export)} طالب)",
+                  data=build_excel_bytes(df_export, sheet_name="أرقام التواصل"),
+                  file_name=f"Contacts_{datetime.date.today()}.xlsx",
+                  mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  type="primary",
+                  use_container_width=True,
+              )
 
-    def perform_delete(row_index):
-      try:
-        get_gspread_client().worksheet("exams").delete_rows(int(row_index) + 2)
-        fetch_safe.clear()
-        st.toast("✅ تم حذف التنبيه بنجاح")
-      except Exception as e:
-        st.toast(f"❌ حدث خطأ: {e}")
+              with st.expander("👁️ معاينة الأسماء والأرقام قبل التحميل"):
+                st.dataframe(df_export, use_container_width=True, hide_index=True)
+            else:
+              st.warning("لا يوجد طلاب مسجلين في الفصول المحددة.")
 
-    if st.session_state.role == "teacher":
-      with st.form("ann_add", clear_on_submit=True):
-        c1, c2 = st.columns([2, 2])
-        at = c1.text_input("📌 عنوان الإعلان أو التعميم")
-        atg_list = c2.multiselect(
-            "🎯 الفصول المستهدفة (يمكنك اختيار أكثر من فصل معاً):",
-            options=["الكل"] + st.session_state.class_options,
-            default=["الكل"],
-        )
-        ad = st.text_area("📄 تفاصيل الإعلان أو الرابط")
-        au = st.checkbox("🔥 تعميم عاجل (يظهر بوميض أحمر أعلى حساب الطالب)")
+  # ==========================================
+  # 📢 9. التبويب الخامس: لوحة الإعلانات والتعاميم (يدعم اختيار عدة فصول معاً)
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_alerts:
+      st.subheader("📢 لوحة الإعلانات والتعاميم")
 
-        if st.form_submit_button("📣 نشر التعميم للفصول المحددة", type="primary", use_container_width=True):
-          if not at:
-            st.warning("⚠️ يرجى كتابة عنوان الإعلان.")
-          elif not atg_list:
-            st.warning("⚠️ يرجى اختيار فصل واحد على الأقل أو اختيار 'الكل'.")
-          else:
-            target_str = "الكل" if "الكل" in atg_list else " ، ".join(atg_list)
-            safe_append_row(
-                "exams",
-                {
-                    "الصف": target_str,
-                    "عاجل": "نعم" if au else "لا",
-                    "العنوان": at,
-                    "التاريخ": str(datetime.date.today()),
-                    "الرابط": ad,
-                },
-            )
-            st.success(f"✅ تم نشر التعميم بنجاح إلى: ({target_str})!")
-            fetch_safe.clear()
-            st.rerun()
+      def perform_delete(expected):
+        try:
+          remove_announcement(expected)
+          st.toast("تم حذف التنبيه.")
+        except Exception as exc:
+          notify_error(exc)
 
-    st.divider()
-    df_a = fetch_safe("exams")
-    if not df_a.empty:
-      for i, r in df_a.iloc[::-1].iterrows():
-        with st.container():
-          is_urgent = str(r.get("عاجل")).strip() == "نعم"
-          anim_class = "urgent-box" if is_urgent else ""
-          border_style = f"2px solid {danger_color}" if is_urgent else "1.5px solid rgba(148, 163, 184, 0.28)"
-          bg_style = "rgba(239, 68, 68, 0.12)" if is_urgent else "var(--secondary-background-color)"
-          st.markdown(
-              f"""
+      if st.session_state.role == "teacher":
+        with st.form("ann_add", clear_on_submit=True):
+          c1, c2 = st.columns([2, 2])
+          at = c1.text_input("📌 عنوان الإعلان أو التعميم")
+          atg_list = c2.multiselect(
+              "🎯 الفصول المستهدفة (يمكنك اختيار أكثر من فصل معاً):",
+              options=["الكل"] + st.session_state.class_options,
+              default=["الكل"],
+          )
+          ad = st.text_area("📄 تفاصيل الإعلان أو الرابط")
+          au = st.checkbox("🔥 تعميم عاجل (يظهر بوميض أحمر أعلى حساب الطالب)")
+
+          if st.form_submit_button("📣 نشر التعميم للفصول المحددة", type="primary", use_container_width=True):
+            if not at:
+              st.warning("⚠️ يرجى كتابة عنوان الإعلان.")
+            elif not atg_list:
+              st.warning("⚠️ يرجى اختيار فصل واحد على الأقل أو اختيار 'الكل'.")
+            else:
+              target_str = "الكل" if "الكل" in atg_list else " ، ".join(atg_list)
+              fresh_append(
+                  "exams",
+                  {
+                      "الصف": target_str,
+                      "عاجل": "نعم" if au else "لا",
+                      "العنوان": at,
+                      "التاريخ": str(datetime.date.today()),
+                      "الرابط": ad,
+                  },
+              )
+              st.success(f"✅ تم نشر التعميم بنجاح إلى: ({target_str})!")
+              fetch_safe.clear()
+              st.rerun()
+
+      st.divider()
+      df_a = fetch_safe("exams")
+      if not df_a.empty:
+        for i, r in df_a.iloc[::-1].iterrows():
+          with st.container():
+            is_urgent = str(r.get("عاجل")).strip() == "نعم"
+            anim_class = "urgent-box" if is_urgent else ""
+            border_style = f"2px solid {danger_color}" if is_urgent else "1.5px solid rgba(148, 163, 184, 0.28)"
+            bg_style = "rgba(239, 68, 68, 0.12)" if is_urgent else "var(--secondary-background-color)"
+            st.markdown(
+                f"""
               <div class="{anim_class}" style="background:{bg_style}; border:{border_style}; border-radius:14px; padding:16px; margin-bottom:10px; text-align:right; direction:rtl;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                       <h4 style="margin:0; color:var(--text-color); font-weight:900;">{r.get('العنوان')}</h4>
@@ -6066,837 +6411,651 @@ if st.session_state.role in ["teacher", "viewer"]:
                   <small style="color:{accent_color}; font-weight:800;">🎯 الفصول المستهدفة: {r.get('الصف')}</small>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
-          kc1, kc2 = st.columns([1, 4])
-          msg_text = (
-              "📢 *تعميم هام من منصة الأستاذ زياد*\n━━━━━━━━━━━━\n📌 *العنوان:*"
+                unsafe_allow_html=True,
+            )
+            kc1, kc2 = st.columns([1, 4])
+            msg_text = (
+                "📢 *تعميم هام من منصة الأستاذ زياد*\n━━━━━━━━━━━━\n📌 *العنوان:*"
               f" {r.get('العنوان')}\n🎯 *الفصل:* {r.get('الصف')}\n📄 *التفاصيل:* {r.get('الرابط')}\n📅"
               f" *التاريخ:* {r.get('التاريخ')}\n━━━━━━━━━━━━"
-          )
-          grp_msg = urllib.parse.quote(msg_text)
-          kc2.link_button(
-              "📲 مشاركة التعميم عبر واتساب",
-              f"https://api.whatsapp.com/send?text={grp_msg}",
-              use_container_width=True,
-          )
-          if st.session_state.role == "teacher":
-            kc1.button(
-                "🗑️ حذف",
-                key=f"del_btn_unique_{i}",
-                type="secondary",
-                on_click=perform_delete,
-                args=(i,),
+            )
+            grp_msg = urllib.parse.quote(msg_text)
+            kc2.link_button(
+                "📲 مشاركة التعميم عبر واتساب",
+                f"https://api.whatsapp.com/send?text={grp_msg}",
                 use_container_width=True,
             )
-    else:
-      st.info("💡 لا توجد تنبيهات منشورة حالياً.")
+            if st.session_state.role == "teacher":
+              kc1.button(
+                  "🗑️ حذف",
+                  key=f"del_btn_unique_{i}",
+                  type="secondary",
+                  on_click=perform_delete,
+                  args=(r.to_dict(),),
+                  use_container_width=True,
+              )
+      else:
+        st.info("💡 لا توجد تنبيهات منشورة حالياً.")
 
-# ==========================================
-# ⚙️ 10. التبويب السادس: الإعدادات والبيانات ورفع أنماط التعلم (للمعلم فقط)
-# ==========================================
-if st.session_state.role == "teacher" and tab_settings is not None:
-  with tab_settings:
-    st.subheader("⚙️ إعدادات النظام وإدارة البيانات")
+  # ==========================================
+  # ⚙️ 10. التبويب السادس: الإعدادات والبيانات ورفع أنماط التعلم (للمعلم فقط)
+  # ==========================================
+  if st.session_state.role == "teacher" and tab_settings is not None:
+    with tab_settings:
+      st.subheader("⚙️ إعدادات النظام وإدارة البيانات")
 
-    set_tabs = st.tabs([
-        "🛠️ الصيانة والنسخ الاحتياطي",
-        "🎨 الهوية والإعدادات الأكاديمية",
-        "📤 استيراد البيانات وأنماط التعلم",
-        "🔐 إدارة المستخدمين",
-    ])
+      set_tabs = st.tabs([
+          "🛠️ الصيانة والنسخ الاحتياطي",
+          "🎨 الهوية والإعدادات الأكاديمية",
+          "📤 استيراد البيانات وأنماط التعلم",
+          "🔐 إدارة المستخدمين",
+      ])
 
-    # --- 1. الصيانة والنسخ الاحتياطي (بأزرار مميزة وحماية تأكيد قبل التصفير) ---
-    with set_tabs[0]:
-      st.markdown("#### 🛠️ أدوات الصيانة ومزامنة الأرصدة")
+      # --- 1. الصيانة والنسخ الاحتياطي (بأزرار مميزة وحماية تأكيد قبل التصفير) ---
+      with set_tabs[0]:
+        st.markdown("#### 🛠️ أدوات الصيانة ومزامنة الأرصدة")
 
-      c1, c2 = st.columns(2)
-      with c1:
-        if st.button("🔄 تحديث البيانات ومزامنة السيرفر (Refresh)", type="secondary", use_container_width=True):
-          st.cache_data.clear()
-          if "db_loaded" in st.session_state:
-            del st.session_state["db_loaded"]
-          st.session_state["show_refresh_success"] = True
-          st.rerun()
+        c1, c2 = st.columns(2)
+        with c1:
+          if st.button("🔄 تحديث البيانات ومزامنة السيرفر (Refresh)", type="secondary", use_container_width=True):
+            st.cache_data.clear()
+            if "db_loaded" in st.session_state:
+              del st.session_state["db_loaded"]
+            st.session_state["show_refresh_success"] = True
+            st.rerun()
 
-      with c2:
-        if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
-          try:
-            with st.spinner("جاري مراجعة السجلات وتصحيح أرصدة الطلاب..."):
-              df_beh = fetch_safe("behavior")
-              ws_st = get_gspread_client().worksheet("students")
-              students_data = ws_st.get_all_records()
-              true_scores = {}
-
-              if not df_beh.empty:
-                beh_id_col = df_beh.columns[0]
-                beh_type_col = "type" if "type" in df_beh.columns else df_beh.columns[2]
-
-                for _, row in df_beh.iterrows():
-                  raw_id = str(row.get(beh_id_col, "")).strip().split(".")[0]
-                  if not raw_id:
-                    continue
-                  match = re.search(r"\(([\+\-]?\d+)\)", str(row.get(beh_type_col, "")))
-                  if match:
-                    pts = int(match.group(1))
-                    true_scores[raw_id] = true_scores.get(raw_id, 0) + pts
-
-              headers = ws_st.row_values(1)
-              if "النقاط" in headers:
-                col_idx = headers.index("النقاط") + 1
-                new_values = []
-                id_key = headers[0]
-
-                for st_row in students_data:
-                  sid_v = str(st_row.get(id_key, "")).strip().split(".")[0]
-                  new_values.append([str(true_scores.get(sid_v, 0))])
-
-                ws_st.update(
-                    f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(new_values) + 1, col_idx)}",
-                    new_values,
-                )
-
-                st.cache_data.clear()
-                if "db_loaded" in st.session_state:
-                  del st.session_state["db_loaded"]
-                st.success("✅ تم تصحيح جميع الأرصدة بنجاح وفق السجلات الفعلية!")
+        with c2:
+          if st.button("🧮 إعادة احتساب النقاط من السجل (تصحيح شامل)", type="primary", use_container_width=True):
+            changes, signature = point_changes()
+            st.session_state.points_preview = (changes, signature)
+          if "points_preview" in st.session_state:
+            changes, signature = st.session_state.points_preview
+            st.caption(f"معاينة إعادة الاحتساب: سيتغير رصيد {len(changes)} طالب.")
+            if changes:
+              st.dataframe(pd.DataFrame(changes, columns=["الرقم الأكاديمي","الرصيد الحالي","الرصيد المحسوب"]), hide_index=True)
+              if st.button("اعتماد تصحيح الأرصدة", key="apply_points_preview"):
+                point_changes(signature)
+                st.session_state.pop("points_preview", None)
+                st.session_state.toast_msg = "تم تصحيح الأرصدة."
                 st.rerun()
-              else:
-                st.error("لم يتم العثور على عمود 'النقاط'")
-          except Exception as e:
-            st.error(f"حدث خطأ: {e}")
 
-      st.divider()
-      st.markdown("#### 📥 تنزيل نسخة احتياطية كاملة من البيانات (Backup)")
-      b_col1, b_col2 = st.columns(2)
-      df_st_full = st.session_state.df_students.copy()
-      if not df_st_full.empty:
-        b_col1.download_button(
-            label="📂 تنزيل بيانات الطلاب (Excel)",
-            data=build_excel_bytes(df_st_full, sheet_name="Students"),
-            file_name=f"students_backup_{datetime.date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="secondary",
-            use_container_width=True,
-        )
+        st.divider()
+        st.markdown("#### 📥 النسخ الاحتياطي للبيانات")
+        if st.button("تجهيز نسخة بيانات جميع أوراق المصنف", key="prepare_complete_backup"):
+          st.session_state.full_backup = workbook_backup()
+        if st.session_state.get("full_backup"):
+          st.download_button("تحميل النسخة الكاملة للبيانات (Excel)", st.session_state.full_backup,
+                             file_name=f"school_data_{datetime.date.today()}.xlsx", key="full_backup_download")
+          st.caption("تشمل بيانات جميع الأوراق، ومنها الحسابات. احفظ الملف في مكان خاص.")
+        legacy = st.session_state.legacy_grades
+        if not legacy.empty:
+          with st.expander("تحديد العام الدراسي للدرجات القديمة"):
+            st.caption("اختر السجلات التي يخصّها العام فعلاً. تبقى القيم الأصلية محفوظة حتى الاعتماد.")
+            target_year = st.text_input("العام الدراسي لهذه السجلات", value=st.session_state.current_year, key="legacy_target_year").strip()
+            legacy_rows = legacy.to_dict("records")
+            choices = list(range(len(legacy_rows)))
+            selected_legacy = st.multiselect("الدرجات القديمة", choices, format_func=lambda i:
+                f"{i+1} · {legacy_rows[i]['student_id']} · {legacy_rows[i]['period']} · {legacy_rows[i]['date']} · {legacy_rows[i]['perf']}")
+            all_legacy = st.checkbox("جميع السجلات المعروضة تخص العام المحدد", key="all_legacy_confirm")
+            if st.button("اعتماد العام للسجلات المحددة", key="apply_legacy_year"):
+              migrate_grades(legacy_rows if all_legacy else [legacy_rows[i] for i in selected_legacy], target_year)
+              st.session_state.toast_msg = "تم ربط السجلات بالعام الدراسي."
+              st.rerun()
+        b_col1, b_col2 = st.columns(2)
+        df_st_full = st.session_state.df_students.copy()
+        if not df_st_full.empty:
+          b_col1.download_button(
+              label="📂 تنزيل بيانات الطلاب (Excel)",
+              data=build_excel_bytes(df_st_full, sheet_name="Students"),
+              file_name=f"students_backup_{datetime.date.today()}.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              type="secondary",
+              use_container_width=True,
+          )
 
-      df_gr_full = st.session_state.df_grades.copy()
-      if not df_gr_full.empty:
-        b_col2.download_button(
-            label="📊 تنزيل سجل الدرجات (Excel)",
-            data=build_excel_bytes(df_gr_full, sheet_name="Grades"),
-            file_name=f"grades_backup_{datetime.date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="secondary",
-            use_container_width=True,
-        )
+        df_gr_full = fetch_safe("grades").copy()
+        if not df_gr_full.empty:
+          b_col2.download_button(
+              label="📊 تنزيل سجل الدرجات (Excel)",
+              data=build_excel_bytes(df_gr_full, sheet_name="Grades"),
+              file_name=f"grades_backup_{datetime.date.today()}.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              type="secondary",
+              use_container_width=True,
+          )
 
-      st.divider()
-      st.markdown(
-          """
+        st.divider()
+        st.markdown(
+            """
           <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px dashed #EF4444; border-radius: 14px; padding: 15px; margin-bottom: 10px;">
               <h5 style="color: #EF4444; margin: 0 0 5px 0; font-weight: 900;">🚨 منطقة إجراءات حساسة (تصفير النقاط)</h5>
               <p style="color: #94A3B8; font-size: 0.9rem; margin: 0;">تصفير النقاط يقوم بإرجاع رصيد نقاط جميع الطلاب في الجدول إلى (0). هذا الإجراء يتطلب تأكيداً إضافياً لمنع الضغط بالخطأ.</p>
           </div>
           """,
-          unsafe_allow_html=True,
-      )
-
-      if "confirm_reset_points" not in st.session_state:
-        st.session_state.confirm_reset_points = False
-
-      if not st.session_state.confirm_reset_points:
-        if st.button("⚠️ طلب تصفير جميع النقاط (يتطلب تأكيداً)", type="secondary", use_container_width=True, key="btn_ask_reset_pts"):
-          st.session_state.confirm_reset_points = True
-          st.rerun()
-      else:
-        st.error("🚨 **تأكيد نهائي:** هل أنت متأكد تماماً من رغبتك في تصفير نقاط جميع الطلاب إلى (0)؟ لا يمكن التراجع عن هذا الإجراء إلا بإعادة الاحتساب من السجل.")
-        conf_c1, conf_c2 = st.columns(2)
-        if conf_c1.button("🧹 نعم، أؤكد تصفير جميع النقاط الآن", type="primary", use_container_width=True, key="btn_confirm_reset_yes"):
-          try:
-            ws = get_gspread_client().worksheet("students")
-            d = ws.get_all_values()
-            if len(d) > 1:
-              headers = d[0]
-              if "النقاط" in headers:
-                col_idx = headers.index("النقاط") + 1
-                ws.update(
-                    range_name=f"{rowcol_to_a1(2, col_idx)}:{rowcol_to_a1(len(d), col_idx)}",
-                    values=[[0]] * (len(d) - 1),
-                )
-                st.session_state.confirm_reset_points = False
-                st.success("✅ تم تصفير جميع النقاط بنجاح")
-                if "db_loaded" in st.session_state:
-                  del st.session_state["db_loaded"]
-                st.cache_data.clear()
-                st.rerun()
-          except Exception as e:
-            st.error(f"خطأ: {e}")
-
-        if conf_c2.button("❌ إلغاء التصفير", type="secondary", use_container_width=True, key="btn_confirm_reset_no"):
-          st.session_state.confirm_reset_points = False
-          st.rerun()
-
-    # --- 2. الهوية البصرية والإعدادات الأكاديمية (بدون شريط جانبي) ---
-    with set_tabs[1]:
-      s_map_academic = get_cached_settings()
-      current_yr_init = str(st.session_state.get("current_year", "1448هـ")).strip()
-
-      if "years_list" not in st.session_state:
-        raw_years = s_map_academic.get("years_list", "")
-        if raw_years:
-          yrs = [y.strip() for y in str(raw_years).split(",") if y.strip()]
-        else:
-          yrs = ["1447هـ", "1448هـ"]
-        if current_yr_init not in yrs:
-          yrs.append(current_yr_init)
-        st.session_state.years_list = sorted(list(set(yrs)))
-
-      if "year_classes_map" not in st.session_state:
-        raw_yc_json = s_map_academic.get("year_classes_map", "")
-        loaded_yc = {}
-        if raw_yc_json:
-          try:
-            loaded_yc = json.loads(raw_yc_json)
-          except Exception:
-            loaded_yc = {}
-        if current_yr_init not in loaded_yc:
-          loaded_yc[current_yr_init] = list(st.session_state.get("class_options", ["الأول"]))
-        st.session_state.year_classes_map = loaded_yc
-
-      if "class_stage_map" not in st.session_state:
-        raw_cs_json = s_map_academic.get("class_stage_map", "")
-        loaded_cs = {}
-        if raw_cs_json:
-          try:
-            loaded_cs = json.loads(raw_cs_json)
-          except Exception:
-            loaded_cs = {}
-        if not loaded_cs:
-          for c_item in st.session_state.get("class_options", ["الأول"]):
-            loaded_cs[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
-        st.session_state.class_stage_map = loaded_cs
-
-      for c_curr in st.session_state.get("class_options", []):
-        if c_curr not in st.session_state.class_stage_map:
-          st.session_state.class_stage_map[c_curr] = "متوسط" if "متوسط" in str(c_curr) else "ابتدائي"
-
-      def sync_academic_settings_to_db(target_year, target_period, target_theme, cs_map_dict, max_t, max_q):
-        classes_list = list(cs_map_dict.keys())
-        stages_list = list(dict.fromkeys(cs_map_dict.values()))
-        cls_str = ",".join([c.strip() for c in classes_list if c.strip()])
-        stg_str = ",".join([s.strip() for s in stages_list if s.strip()])
-        yrs_str = ",".join(st.session_state.years_list)
-
-        st.session_state.year_classes_map[target_year] = classes_list
-        yc_json_str = json.dumps(st.session_state.year_classes_map, ensure_ascii=False)
-        cs_json_str = json.dumps(cs_map_dict, ensure_ascii=False)
-
-        ws_s = get_gspread_client().worksheet("settings")
-        all_s_vals = ws_s.get_all_values()
-        keys_row_map = {
-            str(r[0]).strip(): idx + 2
-            for idx, r in enumerate(all_s_vals[1:])
-            if len(r) > 0 and str(r[0]).strip()
-        } if all_s_vals else {}
-
-        desired_settings = [
-            ("max_tasks", max_t),
-            ("max_quiz", max_q),
-            ("current_year", target_year),
-            ("class_list", cls_str),
-            ("stage_list", stg_str),
-            ("current_period", target_period),
-            ("app_theme", target_theme),
-            ("years_list", yrs_str),
-            ("year_classes_map", yc_json_str),
-            ("class_stage_map", cs_json_str),
-        ]
-
-        batch_s_updates = []
-        new_s_rows = []
-        for k_name, k_val in desired_settings:
-          if k_name in keys_row_map:
-            r_num = keys_row_map[k_name]
-            batch_s_updates.append({"range": f"A{r_num}:B{r_num}", "values": [[k_name, k_val]]})
-          else:
-            new_s_rows.append([k_name, k_val])
-
-        if batch_s_updates:
-          ws_s.batch_update(batch_s_updates)
-        if new_s_rows:
-          ws_s.append_rows(new_s_rows)
-
-        st.session_state.max_tasks = max_t
-        st.session_state.max_quiz = max_q
-        st.session_state.current_year = target_year
-        st.session_state.current_period = target_period
-        st.session_state.class_options = classes_list
-        st.session_state.stage_options = stages_list
-        st.session_state.class_stage_map = cs_map_dict
-        st.session_state.app_theme = target_theme
-        get_cached_settings.clear()
-
-      st.markdown("#### 🎨 المظهر والهوية البصرية")
-      theme_options = list(themes.keys())
-      current_theme_val = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
-      th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
-      selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
-      if selected_theme != current_theme_val:
-        st.session_state.app_theme = selected_theme
-        try:
-          update_single_setting_safe("app_theme", selected_theme)
-          get_cached_settings.clear()
-        except Exception:
-          pass
-        st.rerun()
-
-      st.markdown("---")
-      st.markdown("#### ⚙️ العام الدراسي والفترة النشطة")
-
-      col_yr_sel, col_yr_btns, col_per_sel = st.columns([2, 1.3, 2.2])
-
-      with col_yr_sel:
-        if st.session_state.current_year not in st.session_state.years_list:
-          st.session_state.years_list.append(st.session_state.current_year)
-        cy_idx = st.session_state.years_list.index(st.session_state.current_year)
-        cy = st.selectbox("📅 العام الدراسي النشط:", st.session_state.years_list, index=cy_idx, key="main_tab_year_sel")
-
-      with col_yr_btns:
-        st.markdown("<div style='padding-top:28px;'></div>", unsafe_allow_html=True)
-        b_y1, b_y2 = st.columns(2)
-        if b_y1.button("➕ عام", help="إضافة عام دراسي جديد", type="secondary", use_container_width=True, key="btn_open_new_yr"):
-          st.session_state.show_add_year_inline = not st.session_state.get("show_add_year_inline", False)
-
-        prev_yrs = [y for y in st.session_state.years_list if y != cy]
-        if b_y2.button("📋 نسخ", help="نسخ صفوف العام السابق", type="secondary", disabled=(len(prev_yrs) == 0), use_container_width=True, key="btn_clone_inline"):
-          last_yr = prev_yrs[-1]
-          copied_cls = st.session_state.year_classes_map.get(last_yr, [])
-          if copied_cls:
-            for c_item in copied_cls:
-              if c_item not in st.session_state.class_stage_map:
-                st.session_state.class_stage_map[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
-            st.toast(f"✅ تم نسخ ({len(copied_cls)}) صفوف من عام {last_yr}!", icon="📋")
-            st.rerun()
-
-      with col_per_sel:
-        current_period_val = st.session_state.get("current_period", "الفصل الأول - فترة أولى")
-        period_options = [
-            "الفصل الأول - فترة أولى",
-            "الفصل الأول - فترة ثانية",
-            "الفصل الثاني - فترة أولى",
-            "الفصل الثاني - فترة ثانية",
-        ]
-        if current_period_val not in period_options:
-          period_options.insert(0, current_period_val)
-        cp_index = period_options.index(current_period_val)
-        cp = st.selectbox("🗓️ الفترة الدراسية النشطة:", period_options, index=cp_index)
-
-      if st.session_state.get("show_add_year_inline", False):
-        with st.container(border=True):
-          st.markdown("###### ➕ إنشاء عام دراسي جديد بصيغة موحدة")
-          nums_in_years = [int(re.sub(r"\D", "", y)) for y in st.session_state.years_list if re.sub(r"\D", "", y)]
-          next_hijri = (max(nums_in_years) + 1) if nums_in_years else 1449
-          suggested_years = [f"{next_hijri}هـ", f"{next_hijri+1}هـ", f"{next_hijri-1}هـ"]
-
-          ny_c1, ny_c2, ny_c3 = st.columns([2, 2, 1.2])
-          new_yr_input = ny_c1.selectbox("اختر العام الجديد:", suggested_years, label_visibility="collapsed", key="new_yr_inline_sel")
-          clone_prev = ny_c2.checkbox("📋 نسخ صفوف العام السابق تلقائياً", value=True, key="chk_clone_inline")
-
-          if ny_c3.button("✅ تفعيل العام", type="primary", use_container_width=True, key="confirm_new_yr_inline"):
-            if new_yr_input not in st.session_state.years_list:
-              st.session_state.years_list.append(new_yr_input)
-              st.session_state.years_list = sorted(list(set(st.session_state.years_list)))
-
-            if not clone_prev:
-              st.session_state.class_stage_map = {"الخامس/1": "ابتدائي"}
-
-            st.session_state.show_add_year_inline = False
-            sync_academic_settings_to_db(
-                new_yr_input,
-                cp,
-                selected_theme,
-                st.session_state.class_stage_map,
-                st.session_state.get("max_tasks", 60),
-                st.session_state.get("max_quiz", 40),
-            )
-            st.toast(f"✅ تم إنشاء وتفعيل العام الدراسي {new_yr_input} بنجاح!", icon="🎉")
-            st.rerun()
-
-      st.markdown("---")
-      st.markdown("#### 🏫 إدارة الصفوف وربطها بالمراحل الدراسية")
-      st.info("💡 كل صف يرتبط بمرحلته الدراسية مباشرة (ابتدائي / متوسط) ليقوم النظام بتحديد المرحلة وترويسة المدرسة تلقائياً.")
-
-      STAGE_CHOICES = ["ابتدائي", "متوسط", "ثانوي", "عام"]
-
-      ui_mode = st.radio(
-          "طريقة عرض وتحرير الصفوف:",
-          ["📊 الجدول التفاعلي الموحد (الصف + المرحلة)", "🏷️ نظام البطاقات والوسوم السريعة (Tags)"],
-          horizontal=True,
-          key="cls_editor_mode",
-      )
-
-      if ui_mode == "📊 الجدول التفاعلي الموحد (الصف + المرحلة)":
-        df_unified = pd.DataFrame([
-            {"اسم الصف": k, "المرحلة": v if v in STAGE_CHOICES else "ابتدائي"}
-            for k, v in st.session_state.class_stage_map.items()
-            if str(k).strip() not in ["", "nan", "None"]
-        ])
-        if df_unified.empty:
-          df_unified = pd.DataFrame([{"اسم الصف": "الخامس/1", "المرحلة": "ابتدائي"}])
-
-        edited_unified_df = st.data_editor(
-            df_unified,
-            num_rows="dynamic",
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "اسم الصف": st.column_config.TextColumn(
-                    "🏫 اسم الصف",
-                    help="اكتب اسم الصف مثل: الخامس/1 أو أول متوسط/1",
-                    required=True,
-                ),
-                "المرحلة": st.column_config.SelectboxColumn(
-                    "🎓 المرحلة الدراسية (قائمة منسدلة)",
-                    help="اختر المرحلة التي يتبع لها هذا الصف",
-                    options=STAGE_CHOICES,
-                    required=True,
-                    default="ابتدائي",
-                ),
-            },
-            key="de_unified_cls_stage_table",
-        )
-
-        # ✳️ فلترة محمية تمنع دخول أي صفوف فارغة أو None عند الضغط على +
-        new_cs_map = {}
-        for _, r_u in edited_unified_df.iterrows():
-          raw_c = r_u.get("اسم الصف", "")
-          raw_s = r_u.get("المرحلة", "ابتدائي")
-          if pd.notna(raw_c):
-            c_val = str(raw_c).strip().replace(",", "")
-            if c_val and c_val.lower() not in ["nan", "none"]:
-              s_val = str(raw_s).strip() if pd.notna(raw_s) and str(raw_s).strip().lower() not in ["", "nan", "none"] else "ابتدائي"
-              new_cs_map[c_val] = s_val
-        st.session_state.class_stage_map = new_cs_map
-
-      else:
-        with st.container(border=True):
-          st.markdown("##### ➕ إضافة صف جديد مربوط بمرحلته")
-          add_c1, add_c2, add_c3 = st.columns([2.2, 1.3, 1])
-          new_cls_name = add_c1.text_input("اسم الصف الجديد:", placeholder="مثال: الخامس/1 أو أول متوسط/1", label_visibility="collapsed", key="inp_new_cls_tag")
-          new_cls_stage = add_c2.selectbox("المرحلة:", STAGE_CHOICES, label_visibility="collapsed", key="sel_new_cls_stage")
-          if add_c3.button("➕ ربط وإضافة", key="btn_add_cls_tag", use_container_width=True):
-            clean_c = new_cls_name.strip().replace(",", "")
-            if clean_c:
-              st.session_state.class_stage_map[clean_c] = new_cls_stage
-              st.rerun()
-
-          st.markdown("---")
-          curr_keys = [k for k in st.session_state.class_stage_map.keys() if str(k).strip().lower() not in ["", "nan", "none"]]
-          selected_keys = st.multiselect(
-              "الصفوف المعتمدة ومراحلها (احذف أي صف بالضغط على ×):",
-              options=curr_keys,
-              default=curr_keys,
-              format_func=lambda k: f"{k} ⬅️ ({st.session_state.class_stage_map.get(k, 'ابتدائي')})",
-              key="ms_unified_tags",
-          )
-          st.session_state.class_stage_map = {k: st.session_state.class_stage_map[k] for k in selected_keys}
-
-      st.markdown("---")
-      st.markdown("#### 📊 توزيع الدرجات العظمى")
-      c1, c2 = st.columns(2)
-      mt = c1.number_input("الدرجة العظمى (مشاركة ومهام)", 0, 100, st.session_state.get("max_tasks", 60))
-      mq = c2.number_input("الدرجة العظمى (اختبارات)", 0, 100, st.session_state.get("max_quiz", 40))
-
-      if st.button("💾 حفظ الإعدادات وتطبيق التغييرات", type="primary", use_container_width=True):
-        if not st.session_state.class_stage_map:
-          st.warning("⚠️ يجب إبقاء صف دراسي واحد على الأقل.")
-        else:
-          sync_academic_settings_to_db(cy, cp, selected_theme, st.session_state.class_stage_map, mt, mq)
-          st.success(f"✅ تم الحفظ بنجاح! العام النشط: ({cy}) | الفترة: ({cp}) | عدد الصفوف: ({len(st.session_state.class_stage_map)})")
-          st.rerun()
-
-    # --- 3. استيراد البيانات + رفع بيانات أنماط التعلم ---
-    with set_tabs[2]:
-      import_sub = st.tabs([
-          "🧠 رفع وتحديث بيانات أنماط التعلم",
-          "📂 استيراد الطلاب أو الدرجات (Excel)",
-      ])
-
-      with import_sub[0]:
-        st.markdown("#### 🧠 رفع وتحديث بيانات أنماط التعلم (VARK) دفعة واحدة")
-        st.info("💡 يمكنك رفع ملف Excel يحتوي على نتائج استبيان أنماط التعلم (سواء من نماذج جوجل أو القالب الجاهز). سيقوم النظام بمطابقة الطلاب تلقائياً عبر **الرقم الأكاديمي (`id`)** أو **اسم الطالب (`name`)** وتحديث ملفاتهم.")
-
-        df_curr_st = st.session_state.df_students.copy()
-        if not df_curr_st.empty:
-          template_ls_df = pd.DataFrame({
-              "id": df_curr_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip(),
-              "name": df_curr_st.get("name", ""),
-              "class": df_curr_st.get("class", ""),
-              "نمط التعلم": df_curr_st.get("نمط التعلم", ""),
-          })
-        else:
-          template_ls_df = pd.DataFrame(columns=["id", "name", "class", "نمط التعلم"])
-
-        st.download_button(
-            label="📥 تحميل قالب أنماط التعلم بأسماء طلابك الحاليين (Excel)",
-            data=build_excel_bytes(template_ls_df, sheet_name="Learning_Styles"),
-            file_name=f"Learning_Styles_Template_{datetime.date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="secondary",
-            use_container_width=True,
-        )
-
-        st.markdown("---")
-        up_ls = st.file_uploader("📤 ارفع ملف أنماط التعلم (Excel أو CSV):", type=["xlsx", "csv"], key="ls_file_uploader")
-
-        if st.button("🚀 بدء مزامنة وتحديث أنماط التعلم", type="primary", use_container_width=True) and up_ls:
-          try:
-            with st.spinner("⏳ جاري تحليل الملف وتحديث أنماط تعلم الطلاب..."):
-              if up_ls.name.endswith(".csv"):
-                df_up_ls = pd.read_csv(up_ls).fillna("")
-              else:
-                df_up_ls = pd.read_excel(up_ls).fillna("")
-
-              ws_st = get_gspread_client().worksheet("students")
-              headers = ws_st.row_values(1)
-
-              if "نمط التعلم" not in headers:
-                ws_st.update_cell(1, len(headers) + 1, "نمط التعلم")
-                headers.append("نمط التعلم")
-
-              style_col_idx = headers.index("نمط التعلم") + 1
-              all_st_records = ws_st.get_all_records()
-
-              id_to_row = {}
-              name_to_row = {}
-              for idx_r, r_st in enumerate(all_st_records):
-                row_num = idx_r + 2
-                c_id = str(r_st.get("id", "")).strip().split(".")[0]
-                c_nm = normalize_arabic(str(r_st.get("name", "")))
-                if c_id:
-                  id_to_row[c_id] = row_num
-                if c_nm:
-                  name_to_row[c_nm] = row_num
-
-              id_col_candidates = [
-                  c for c in df_up_ls.columns
-                  if str(c).strip().lower() in ["id", "student_id", "الرقم الأكاديمي", "رقم الهوية", "السجل المدني"]
-              ]
-              name_col_candidates = [
-                  c for c in df_up_ls.columns
-                  if "اسم" in str(c) or str(c).strip().lower() == "name"
-              ]
-              style_col_candidates = [
-                  c for c in df_up_ls.columns
-                  if "نمط" in str(c) or "style" in str(c).lower()
-              ]
-
-              id_col_ls = id_col_candidates[0] if id_col_candidates else None
-              name_col_ls = name_col_candidates[0] if name_col_candidates else None
-              style_col_ls = style_col_candidates[0] if style_col_candidates else df_up_ls.columns[-1]
-
-              def format_style_badge(raw_s):
-                s = str(raw_s).strip()
-                if not s or s.lower() in ["nan", "none"]:
-                  return ""
-                if "بصري" in s:
-                  return "بصري 👀"
-                if "سمعي" in s:
-                  return "سمعي 👂"
-                if "حركي" in s:
-                  return "حركي ✋"
-                if "متعدد" in s:
-                  return "متعدد الأنماط 🌟"
-                return s
-
-              cells_to_update = []
-              updated_count = 0
-
-              for _, r_up in df_up_ls.iterrows():
-                raw_style = format_style_badge(r_up.get(style_col_ls, ""))
-                if not raw_style:
-                  continue
-
-                target_row = None
-                if id_col_ls:
-                  up_id = str(r_up.get(id_col_ls, "")).strip().split(".")[0]
-                  if up_id in id_to_row:
-                    target_row = id_to_row[up_id]
-
-                if target_row is None and name_col_ls:
-                  up_nm = normalize_arabic(str(r_up.get(name_col_ls, "")))
-                  if up_nm in name_to_row:
-                    target_row = name_to_row[up_nm]
-
-                if target_row is not None:
-                  cells_to_update.append(Cell(row=target_row, col=style_col_idx, value=raw_style))
-                  updated_count += 1
-
-              if cells_to_update:
-                ws_st.update_cells(cells_to_update)
-                st.success(f"✅ تم تحديث أنماط التعلم لـ ({updated_count}) طالب بنجاح!")
-                if "db_loaded" in st.session_state:
-                  del st.session_state["db_loaded"]
-                fetch_safe.clear()
-                st.rerun()
-              else:
-                st.warning("⚠️ لم يتم العثور على طلاب مطابقين أو أن حقل 'نمط التعلم' فارغ في الملف المرفوع.")
-          except Exception as e:
-            st.error(f"❌ حدث خطأ أثناء رفع أنماط التعلم: {e}")
-
-      with import_sub[1]:
-        st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام**.\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة**.")
-        up = st.file_uploader("رفع ملف Excel للطلاب أو الدرجات", type=["xlsx"], key="std_gr_up")
-        ts = st.radio(
-            "نوع البيانات المرفوعة",
-            ["students", "grades"],
-            horizontal=True,
-            format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات الأكاديمية",
-        )
-        if st.button("🚀 بدء المزامنة السريعة", type="primary", use_container_width=True) and up:
-          try:
-            with st.spinner("جاري معالجة ورفع البيانات دفعة واحدة..."):
-              df = pd.read_excel(up).fillna("").dropna(how="all")
-              ws = get_gspread_client().worksheet(ts)
-
-              hd = ws.row_values(1)
-              if ts == "grades" and "period" not in hd:
-                ws.update_cell(1, len(hd) + 1, "period")
-                hd.append("period")
-
-              records = ws.get_all_records()
-              if ts == "grades":
-                existing_keys = set(
-                    f"{str(r.get('student_id', '')).strip().split('.')[0]}_{str(r.get('period', 'الفصل الأول - فترة أولى')).strip()}"
-                    for r in records
-                )
-              else:
-                existing_keys = set(str(r.get("id", "")).strip().split(".")[0] for r in records)
-
-              new_rows_to_append = []
-              progress_bar = st.progress(0)
-              cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-
-              for idx, row in df.iterrows():
-                d = row.to_dict()
-                raw_id = str(d.get("student_id", d.get("id", ""))).strip().split(".")[0]
-                if not raw_id or raw_id == "0" or raw_id.lower() == "nan":
-                  continue
-
-                if ts == "grades":
-                  p1_in = int(pd.to_numeric(d.get("p1", 0), errors="coerce") or 0)
-                  p2_in = int(pd.to_numeric(d.get("p2", 0), errors="coerce") or 0)
-                  d.update({
-                      "student_id": raw_id,
-                      "p1": p1_in,
-                      "p2": p2_in,
-                      "perf": p1_in + p2_in,
-                      "date": str(datetime.date.today()),
-                      "period": str(d.get("period", cp)).strip() or cp,
-                  })
-                  if "id" in d:
-                    del d["id"]
-                  check_key = f"{raw_id}_{d['period']}"
-                else:
-                  d["id"] = raw_id
-                  d["الجوال"] = clean_phone_number(d.get("الجوال", ""))
-                  if "النقاط" not in d or str(d.get("النقاط", "")).strip() == "":
-                    d["النقاط"] = 0
-                  check_key = raw_id
-
-                if check_key not in existing_keys:
-                  new_rows_to_append.append([str(d.get(k, "")) for k in hd])
-
-                progress_bar.progress(min((idx + 1) / len(df), 1.0))
-
-              if new_rows_to_append:
-                ws.append_rows(new_rows_to_append)
-                st.success(f"✅ تم إضافة {len(new_rows_to_append)} سجل جديد بنجاح لـ ({cp})!")
-              else:
-                st.info(f"💡 جميع البيانات المرفوعة موجودة مسبقاً في ({cp})، لم يتم إضافة جديد.")
-
-              if "db_loaded" in st.session_state:
-                del st.session_state["db_loaded"]
-              fetch_safe.clear()
-              st.rerun()
-          except Exception as e:
-            st.error(f"حدث خطأ أثناء المزامنة: {e}")
-
-        st.divider()
-        c1, c2 = st.columns(2)
-        empty_st_tmpl = pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط", "نمط التعلم"])
-        c1.download_button(
-            "📥 قالب فارغ (طلاب)",
-            data=build_excel_bytes(empty_st_tmpl, sheet_name="Students_Template"),
-            file_name="students_template.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="secondary",
-            use_container_width=True,
-        )
-        empty_gr_tmpl = pd.DataFrame(columns=["student_id", "p1", "p2"])
-        c2.download_button(
-            "📥 قالب فارغ (درجات)",
-            data=build_excel_bytes(empty_gr_tmpl, sheet_name="Grades_Template"),
-            file_name="grades_template.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="secondary",
-            use_container_width=True,
-        )
-
-    # --- 4. إدارة المستخدمين ---
-    with set_tabs[3]:
-      st.markdown("#### 🔐 إدارة حسابات المعلمين والإدارة")
-      u_tabs = st.tabs([
-          "➕ إضافة مستخدم",
-          "🔑 تعديل كلمة المرور",
-          "🗑️ حذف مستخدم",
-          "🕒 سجل آخر ظهور",
-      ])
-
-      with u_tabs[0]:
-        with st.form("add_u"):
-          nu = st.text_input("اسم المستخدم الجديد")
-          np = st.text_input("كلمة المرور", type="password")
-          nrole_label = st.selectbox("نوع الحساب والصلاحية", ["👨‍🏫 معلم (صلاحيات كاملة)", "👁️ إدارة (مشاهد وقراءة فقط)"])
-          if st.form_submit_button("إضافة المستخدم", type="primary", use_container_width=True):
-            if nu and np:
-              role_val = "teacher" if "معلم" in nrole_label else "viewer"
-              safe_append_row(
-                  "users",
-                  {
-                      "username": nu.strip(),
-                      "password_hash": hashlib.sha256(np.encode()).hexdigest(),
-                      "role": role_val,
-                  },
-              )
-              st.success(f"✅ تمت إضافة الحساب ({nu}) بنجاح كـ {role_val}.")
-              fetch_safe.clear()
-            else:
-              st.warning("الرجاء إكمال البيانات.")
-
-      with u_tabs[1]:
-        with st.form("chg_pass"):
-          df_u_edit = fetch_safe("users")
-          if not df_u_edit.empty:
-            target_u = st.selectbox("اختر المستخدم لتعديل رقمه السري:", df_u_edit["username"].tolist())
-            npwd = st.text_input("كلمة المرور الجديدة", type="password")
-            if st.form_submit_button("تحديث كلمة المرور", type="primary", use_container_width=True):
-              if npwd:
-                ws_u_ed = get_gspread_client().worksheet("users")
-                c_u_ed = ws_u_ed.find(target_u, in_column=1)
-                idx = c_u_ed.row if c_u_ed else (int(df_u_edit[df_u_edit["username"] == target_u].index[0]) + 2)
-                ws_u_ed.update_cell(idx, 2, hashlib.sha256(npwd.encode()).hexdigest())
-                st.success(f"✅ تم تحديث كلمة المرور لـ ({target_u}).")
-                fetch_safe.clear()
-              else:
-                st.warning("الرجاء إدخال كلمة المرور الجديدة.")
-          else:
-            st.info("لا يوجد مستخدمين بعد.")
-
-      with u_tabs[2]:
-        df_u_del = fetch_safe("users")
-        if not df_u_del.empty:
-          del_u = st.selectbox("اختر المستخدم المراد حذفه:", [""] + df_u_del["username"].tolist())
-          if st.button("🗑️ حذف المستخدم نهائياً", type="primary", use_container_width=True):
-            if del_u:
-              if del_u == st.session_state.username:
-                st.error("⚠️ لا يمكنك حذف حسابك الحالي!")
-              else:
-                ws_u_dl = get_gspread_client().worksheet("users")
-                c_u_dl = ws_u_dl.find(del_u, in_column=1)
-                idx = c_u_dl.row if c_u_dl else (int(df_u_del[df_u_del["username"] == del_u].index[0]) + 2)
-                ws_u_dl.delete_rows(int(idx))
-                st.success(f"✅ تم حذف المستخدم ({del_u}).")
-                fetch_safe.clear()
-                st.rerun()
-            else:
-              st.warning("الرجاء اختيار مستخدم للحذف.")
-
-      with u_tabs[3]:
-        df_users_log = fetch_safe("users")
-        if not df_users_log.empty:
-          if "last_login" in df_users_log.columns:
-            disp_df = df_users_log[["username", "role", "last_login"]].rename(
-                columns={"username": "المستخدم", "role": "الصلاحية", "last_login": "آخر تسجيل دخول"}
-            )
-            disp_df["الصلاحية"] = disp_df["الصلاحية"].replace({"teacher": "👨‍🏫 معلم", "viewer": "👁️ إدارة"})
-            st.dataframe(disp_df, use_container_width=True, hide_index=True)
-          else:
-            st.info("لم يتم تسجيل أي عمليات دخول حديثة بعد التحديث.")
-        else:
-          st.info("لا توجد بيانات للمستخدمين.")
-
-# ==========================================
-# 🛑 11. التبويب السابع: تسجيل الخروج (للمعلم والإدارة)
-# ==========================================
-if st.session_state.role in ["teacher", "viewer"]:
-  with tab_logout:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.info("هل ترغب في تسجيل الخروج من لوحة التحكم والعودة لشاشة الدخول؟")
-    if st.button("🚪 تأكيد تسجيل الخروج", type="primary", use_container_width=True):
-      st.session_state.role = None
-      if "db_loaded" in st.session_state:
-        del st.session_state["db_loaded"]
-      st.rerun()
-
-  show_footer()
-
-# ==========================================
-# 👨‍🎓 12. واجهة الطالب الكاملة (محدثة ومضبوطة المحاذاة والـ PDF المخبأ في الكاش)
-# ==========================================
-if st.session_state.role == "student":
-  sid = str(st.session_state.get("username", "")).strip()
-  df_st = st.session_state.df_students.copy()
-  df_gr = st.session_state.df_grades.copy()
-  df_beh = st.session_state.df_behavior.copy()
-  df_ann = fetch_safe("exams")
-
-  if not df_st.empty:
-    df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.split(".").str[0].str.strip()
-    info = df_st[df_st["clean_id"] == sid]
-  else:
-    info = pd.DataFrame()
-
-  if not info.empty:
-    s_dat = info.iloc[0]
-    s_nm = s_dat.get("name", "طالب")
-    s_cls = str(s_dat.get("class", "")).strip()
-    pts = int(pd.to_numeric(s_dat.get("النقاط", 0), errors="coerce") or 0)
-
-    # 1. إشعار التعاميم العاجلة (يدعم الفصول المتعددة)
-    if not df_ann.empty:
-      df_ann["عاجل"] = df_ann["عاجل"].astype(str).str.strip()
-      def is_cls_targeted(cell_val):
-        targets = [x.strip() for x in str(cell_val).replace("،", ",").split(",") if x.strip()]
-        return "الكل" in targets or s_cls in targets
-      urg = df_ann[(df_ann["عاجل"] == "نعم") & (df_ann["الصف"].apply(is_cls_targeted))]
-      if not urg.empty:
-        u = urg.tail(1).iloc[0]
-        link_text = str(u.get("الرابط", ""))
-        link_display = (
-            f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>"
-            if link_text.startswith("http")
-            else link_text
-            if link_text.lower() != "none"
-            else ""
-        )
-        st.markdown(
-            f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>",
             unsafe_allow_html=True,
         )
 
-    # 2. إشعار المخالفات السلوكية والغياب لولي الأمر
-    if not df_beh.empty:
-      df_beh["clean_id"] = df_beh.iloc[:, 0].astype(str).str.split(".").str[0]
-      my_beh_alerts = df_beh[df_beh["clean_id"] == sid]
+        if "confirm_reset_points" not in st.session_state:
+          st.session_state.confirm_reset_points = False
 
-      if not my_beh_alerts.empty:
-        last_record = my_beh_alerts.iloc[-1]
-        b_type = str(last_record.get("type", ""))
-        if any(k in b_type for k in ["-", "سلبي", "تنبيه", "غائب", "عدم", "نقص", "تأخر"]):
+        if not st.session_state.confirm_reset_points:
+          if st.button("⚠️ طلب تصفير جميع النقاط (يتطلب تأكيداً)", type="secondary", use_container_width=True, key="btn_ask_reset_pts"):
+            st.session_state.confirm_reset_points = True
+            st.rerun()
+        else:
+          st.error("🚨 **تأكيد نهائي:** هل أنت متأكد تماماً من رغبتك في تصفير نقاط جميع الطلاب إلى (0)؟ لا يمكن التراجع عن هذا الإجراء إلا بإعادة الاحتساب من السجل.")
+          conf_c1, conf_c2 = st.columns(2)
+          if conf_c1.button("🧹 نعم، أؤكد تصفير جميع النقاط الآن", type="primary", use_container_width=True, key="btn_confirm_reset_yes"):
+            try:
+              point_changes(reset=True)
+              st.session_state.confirm_reset_points = False
+              st.session_state.toast_msg = "تم تصفير الأرصدة."
+              st.rerun()
+            except Exception as e:
+              st.error(f"خطأ: {e}")
+
+          if conf_c2.button("❌ إلغاء التصفير", type="secondary", use_container_width=True, key="btn_confirm_reset_no"):
+            st.session_state.confirm_reset_points = False
+            st.rerun()
+
+      # --- 2. الهوية البصرية والإعدادات الأكاديمية (بدون شريط جانبي) ---
+      with set_tabs[1]:
+        s_map_academic = get_cached_settings()
+        current_yr_init = str(st.session_state.get("current_year", "1448هـ")).strip()
+
+        if "years_list" not in st.session_state:
+          raw_years = s_map_academic.get("years_list", "")
+          if raw_years:
+            yrs = [y.strip() for y in str(raw_years).split(",") if y.strip()]
+          else:
+            yrs = ["1447هـ", "1448هـ"]
+          if current_yr_init not in yrs:
+            yrs.append(current_yr_init)
+          st.session_state.years_list = sorted(list(set(yrs)))
+
+        if "year_classes_map" not in st.session_state:
+          raw_yc_json = s_map_academic.get("year_classes_map", "")
+          loaded_yc = {}
+          if raw_yc_json:
+            try:
+              loaded_yc = json.loads(raw_yc_json)
+              if not isinstance(loaded_yc, dict):
+                loaded_yc = {}
+            except Exception:
+              loaded_yc = {}
+          if current_yr_init not in loaded_yc:
+            loaded_yc[current_yr_init] = list(st.session_state.get("class_options", ["الأول"]))
+          st.session_state.year_classes_map = loaded_yc
+
+        if "class_stage_map" not in st.session_state:
+          raw_cs_json = s_map_academic.get("class_stage_map", "")
+          loaded_cs = {}
+          if raw_cs_json:
+            try:
+              loaded_cs = json.loads(raw_cs_json)
+            except Exception:
+              loaded_cs = {}
+          if not loaded_cs:
+            for c_item in st.session_state.get("class_options", ["الأول"]):
+              loaded_cs[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
+          st.session_state.class_stage_map = loaded_cs
+
+        for c_curr in st.session_state.get("class_options", []):
+          if c_curr not in st.session_state.class_stage_map:
+            st.session_state.class_stage_map[c_curr] = "متوسط" if "متوسط" in str(c_curr) else "ابتدائي"
+
+        def sync_academic_settings_to_db(target_year, target_period, target_theme, cs_map_dict, max_t, max_q):
+          classes_list = list(cs_map_dict.keys())
+          stages_list = list(dict.fromkeys(cs_map_dict.values()))
+          cls_str = ",".join([c.strip() for c in classes_list if c.strip()])
+          stg_str = ",".join([s.strip() for s in stages_list if s.strip()])
+          yrs_str = ",".join(st.session_state.years_list)
+
+          st.session_state.year_classes_map[target_year] = classes_list
+          yc_json_str = json.dumps(st.session_state.year_classes_map, ensure_ascii=False)
+          cs_json_str = json.dumps(cs_map_dict, ensure_ascii=False)
+
+          desired_settings = [
+              ("max_tasks", max_t),
+              ("max_quiz", max_q),
+              ("current_year", target_year),
+              ("class_list", cls_str),
+              ("stage_list", stg_str),
+              ("current_period", target_period),
+              ("app_theme", target_theme),
+              ("years_list", yrs_str),
+              ("year_classes_map", yc_json_str),
+              ("class_stage_map", cs_json_str),
+          ]
+
+          setting_write(dict(desired_settings))
+
+          st.session_state.max_tasks = max_t
+          st.session_state.max_quiz = max_q
+          st.session_state.current_year = target_year
+          st.session_state.current_period = target_period
+          st.session_state.class_options = classes_list
+          st.session_state.stage_options = stages_list
+          st.session_state.class_stage_map = cs_map_dict
+          st.session_state.app_theme = target_theme
+          get_cached_settings.clear()
+
+        st.markdown("#### 🎨 المظهر والهوية البصرية")
+        theme_options = list(themes.keys())
+        current_theme_val = st.session_state.get("app_theme", "الرئيسي (الافتراضي)")
+        th_index = theme_options.index(current_theme_val) if current_theme_val in theme_options else 0
+        selected_theme = st.selectbox("اختر هوية المنصة (تطبق فوراً للجميع):", theme_options, index=th_index)
+        if selected_theme != current_theme_val:
+          setting_write({"app_theme": selected_theme})
+          st.session_state.app_theme = selected_theme
+          st.rerun()
+
+        st.markdown("---")
+        st.markdown("#### ⚙️ العام الدراسي والفترة النشطة")
+
+        col_yr_sel, col_yr_btns, col_per_sel = st.columns([2, 1.3, 2.2])
+
+        with col_yr_sel:
+          if st.session_state.current_year not in st.session_state.years_list:
+            st.session_state.years_list.append(st.session_state.current_year)
+          cy_idx = st.session_state.years_list.index(st.session_state.current_year)
+          cy = st.selectbox("📅 العام الدراسي النشط:", st.session_state.years_list, index=cy_idx, key="main_tab_year_sel")
+
+        with col_yr_btns:
+          st.markdown("<div style='padding-top:28px;'></div>", unsafe_allow_html=True)
+          b_y1, b_y2 = st.columns(2)
+          if b_y1.button("➕ عام", help="إضافة عام دراسي جديد", type="secondary", use_container_width=True, key="btn_open_new_yr"):
+            st.session_state.show_add_year_inline = not st.session_state.get("show_add_year_inline", False)
+
+          prev_yrs = [y for y in st.session_state.years_list if y != cy]
+          if b_y2.button("📋 نسخ", help="نسخ صفوف العام السابق", type="secondary", disabled=(len(prev_yrs) == 0), use_container_width=True, key="btn_clone_inline"):
+            last_yr = prev_yrs[-1]
+            copied_cls = st.session_state.year_classes_map.get(last_yr, [])
+            if copied_cls:
+              for c_item in copied_cls:
+                if c_item not in st.session_state.class_stage_map:
+                  st.session_state.class_stage_map[c_item] = "متوسط" if "متوسط" in str(c_item) else "ابتدائي"
+              st.toast(f"✅ تم نسخ ({len(copied_cls)}) صفوف من عام {last_yr}!", icon="📋")
+              st.rerun()
+
+        with col_per_sel:
+          current_period_val = st.session_state.get("current_period", "الفصل الأول - فترة أولى")
+          period_options = [
+              "الفصل الأول - فترة أولى",
+              "الفصل الأول - فترة ثانية",
+              "الفصل الثاني - فترة أولى",
+              "الفصل الثاني - فترة ثانية",
+          ]
+          if current_period_val not in period_options:
+            period_options.insert(0, current_period_val)
+          cp_index = period_options.index(current_period_val)
+          cp = st.selectbox("🗓️ الفترة الدراسية النشطة:", period_options, index=cp_index)
+
+        if st.session_state.get("show_add_year_inline", False):
+          with st.container(border=True):
+            st.markdown("###### ➕ إنشاء عام دراسي جديد بصيغة موحدة")
+            nums_in_years = [int(re.sub(r"\D", "", y)) for y in st.session_state.years_list if re.sub(r"\D", "", y)]
+            next_hijri = (max(nums_in_years) + 1) if nums_in_years else 1449
+            suggested_years = [f"{next_hijri}هـ", f"{next_hijri+1}هـ", f"{next_hijri-1}هـ"]
+
+            ny_c1, ny_c2, ny_c3 = st.columns([2, 2, 1.2])
+            new_yr_input = ny_c1.selectbox("اختر العام الجديد:", suggested_years, label_visibility="collapsed", key="new_yr_inline_sel")
+            clone_prev = ny_c2.checkbox("📋 نسخ صفوف العام السابق تلقائياً", value=True, key="chk_clone_inline")
+
+            if ny_c3.button("✅ تفعيل العام", type="primary", use_container_width=True, key="confirm_new_yr_inline"):
+              if new_yr_input not in st.session_state.years_list:
+                st.session_state.years_list.append(new_yr_input)
+                st.session_state.years_list = sorted(list(set(st.session_state.years_list)))
+
+              if not clone_prev:
+                st.session_state.class_stage_map = {"الخامس/1": "ابتدائي"}
+
+              st.session_state.show_add_year_inline = False
+              sync_academic_settings_to_db(
+                  new_yr_input,
+                  cp,
+                  selected_theme,
+                  st.session_state.class_stage_map,
+                  st.session_state.get("max_tasks", 60),
+                  st.session_state.get("max_quiz", 40),
+              )
+              st.toast(f"✅ تم إنشاء وتفعيل العام الدراسي {new_yr_input} بنجاح!", icon="🎉")
+              st.rerun()
+
+        st.markdown("---")
+        st.markdown("#### 🏫 إدارة الصفوف وربطها بالمراحل الدراسية")
+        st.info("💡 كل صف يرتبط بمرحلته الدراسية مباشرة (ابتدائي / متوسط) ليقوم النظام بتحديد المرحلة وترويسة المدرسة تلقائياً.")
+
+        STAGE_CHOICES = ["ابتدائي", "متوسط", "ثانوي", "عام"]
+
+        ui_mode = st.radio(
+            "طريقة عرض وتحرير الصفوف:",
+            ["📊 الجدول التفاعلي الموحد (الصف + المرحلة)", "🏷️ نظام البطاقات والوسوم السريعة (Tags)"],
+            horizontal=True,
+            key="cls_editor_mode",
+        )
+
+        if ui_mode == "📊 الجدول التفاعلي الموحد (الصف + المرحلة)":
+          df_unified = pd.DataFrame([
+              {"اسم الصف": k, "المرحلة": v if v in STAGE_CHOICES else "ابتدائي"}
+              for k, v in st.session_state.class_stage_map.items()
+              if str(k).strip() not in ["", "nan", "None"]
+          ])
+          if df_unified.empty:
+            df_unified = pd.DataFrame([{"اسم الصف": "الخامس/1", "المرحلة": "ابتدائي"}])
+
+          edited_unified_df = st.data_editor(
+              df_unified,
+              num_rows="dynamic",
+              use_container_width=True,
+              hide_index=True,
+              column_config={
+                  "اسم الصف": st.column_config.TextColumn(
+                      "🏫 اسم الصف",
+                      help="اكتب اسم الصف مثل: الخامس/1 أو أول متوسط/1",
+                      required=True,
+                  ),
+                  "المرحلة": st.column_config.SelectboxColumn(
+                      "🎓 المرحلة الدراسية (قائمة منسدلة)",
+                      help="اختر المرحلة التي يتبع لها هذا الصف",
+                      options=STAGE_CHOICES,
+                      required=True,
+                      default="ابتدائي",
+                  ),
+              },
+              key="de_unified_cls_stage_table",
+          )
+
+          # ✳️ فلترة محمية تمنع دخول أي صفوف فارغة أو None عند الضغط على +
+          new_cs_map = {}
+          for _, r_u in edited_unified_df.iterrows():
+            raw_c = r_u.get("اسم الصف", "")
+            raw_s = r_u.get("المرحلة", "ابتدائي")
+            if pd.notna(raw_c):
+              c_val = str(raw_c).strip().replace(",", "")
+              if c_val and c_val.lower() not in ["nan", "none"]:
+                s_val = str(raw_s).strip() if pd.notna(raw_s) and str(raw_s).strip().lower() not in ["", "nan", "none"] else "ابتدائي"
+                new_cs_map[c_val] = s_val
+          st.session_state.class_stage_map = new_cs_map
+
+        else:
+          with st.container(border=True):
+            st.markdown("##### ➕ إضافة صف جديد مربوط بمرحلته")
+            add_c1, add_c2, add_c3 = st.columns([2.2, 1.3, 1])
+            new_cls_name = add_c1.text_input("اسم الصف الجديد:", placeholder="مثال: الخامس/1 أو أول متوسط/1", label_visibility="collapsed", key="inp_new_cls_tag")
+            new_cls_stage = add_c2.selectbox("المرحلة:", STAGE_CHOICES, label_visibility="collapsed", key="sel_new_cls_stage")
+            if add_c3.button("➕ ربط وإضافة", key="btn_add_cls_tag", use_container_width=True):
+              clean_c = new_cls_name.strip().replace(",", "")
+              if clean_c:
+                st.session_state.class_stage_map[clean_c] = new_cls_stage
+                st.rerun()
+
+            st.markdown("---")
+            curr_keys = [k for k in st.session_state.class_stage_map.keys() if str(k).strip().lower() not in ["", "nan", "none"]]
+            selected_keys = st.multiselect(
+                "الصفوف المعتمدة ومراحلها (احذف أي صف بالضغط على ×):",
+                options=curr_keys,
+                default=curr_keys,
+                format_func=lambda k: f"{k} ⬅️ ({st.session_state.class_stage_map.get(k, 'ابتدائي')})",
+                key="ms_unified_tags",
+            )
+            st.session_state.class_stage_map = {k: st.session_state.class_stage_map[k] for k in selected_keys}
+
+        st.markdown("---")
+        st.markdown("#### 📊 توزيع الدرجات العظمى")
+        c1, c2 = st.columns(2)
+        mt = c1.number_input("الدرجة العظمى (مشاركة ومهام)", 0, 100, st.session_state.get("max_tasks", 60))
+        mq = c2.number_input("الدرجة العظمى (اختبارات)", 0, 100, st.session_state.get("max_quiz", 40))
+
+        if st.button("💾 حفظ الإعدادات وتطبيق التغييرات", type="primary", use_container_width=True):
+          if not st.session_state.class_stage_map:
+            st.warning("⚠️ يجب إبقاء صف دراسي واحد على الأقل.")
+          else:
+            sync_academic_settings_to_db(cy, cp, selected_theme, st.session_state.class_stage_map, mt, mq)
+            st.success(f"✅ تم الحفظ بنجاح! العام النشط: ({cy}) | الفترة: ({cp}) | عدد الصفوف: ({len(st.session_state.class_stage_map)})")
+            st.rerun()
+
+      # --- 3. استيراد البيانات + رفع بيانات أنماط التعلم ---
+      with set_tabs[2]:
+        import_sub = st.tabs([
+            "🧠 رفع وتحديث بيانات أنماط التعلم",
+            "📂 استيراد الطلاب أو الدرجات (Excel)",
+        ])
+
+        with import_sub[0]:
+          st.markdown("#### 🧠 رفع وتحديث بيانات أنماط التعلم (VARK) دفعة واحدة")
+          st.info("💡 يمكنك رفع ملف Excel يحتوي على نتائج استبيان أنماط التعلم (سواء من نماذج جوجل أو القالب الجاهز). سيقوم النظام بمطابقة الطلاب تلقائياً عبر **الرقم الأكاديمي (`id`)** أو **اسم الطالب (`name`)** وتحديث ملفاتهم.")
+
+          df_curr_st = st.session_state.df_students.copy()
+          if not df_curr_st.empty:
+            template_ls_df = pd.DataFrame({
+                "id": df_curr_st.iloc[:, 0].astype(str).str.strip(),
+                "name": df_curr_st.get("name", ""),
+                "class": df_curr_st.get("class", ""),
+                "نمط التعلم": df_curr_st.get("نمط التعلم", ""),
+            })
+          else:
+            template_ls_df = pd.DataFrame(columns=["id", "name", "class", "نمط التعلم"])
+
+          st.download_button(
+              label="📥 تحميل قالب أنماط التعلم بأسماء طلابك الحاليين (Excel)",
+              data=build_excel_bytes(template_ls_df, sheet_name="Learning_Styles"),
+              file_name=f"Learning_Styles_Template_{datetime.date.today()}.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              type="secondary",
+              use_container_width=True,
+          )
+
+          st.markdown("---")
+          up_ls = st.file_uploader("📤 ارفع ملف أنماط التعلم (Excel أو CSV):", type=["xlsx", "csv"], key="ls_file_uploader")
+
+          if st.button("🚀 بدء مزامنة وتحديث أنماط التعلم", type="primary", use_container_width=True) and up_ls:
+            try:
+              with st.spinner("⏳ جاري تحليل الملف وتحديث أنماط تعلم الطلاب..."):
+                if up_ls.name.lower().endswith(".csv"):
+                  frame = pd.read_csv(up_ls, dtype=str, keep_default_na=False)
+                else:
+                  frame = pd.read_excel(up_ls, dtype=str, keep_default_na=False)
+                updated = import_styles(frame)
+                if updated:
+                  st.session_state.toast_msg = f"تم تحديث {updated} سجل."
+                  st.rerun()
+                else:
+                  st.info("لا توجد أنماط لرفعها.")
+            except Exception as e:
+              st.error(f"❌ حدث خطأ أثناء رفع أنماط التعلم: {e}")
+
+        with import_sub[1]:
+          st.info("📌 **دليل رصد ورفع الدرجات في المنصة:** \n\n* **عمود (p1):** مخصص لـ **المشاركة والمهام**.\n* **عمود (p2):** مخصص لـ **الاختبارات القصيرة**.")
+          up = st.file_uploader("رفع ملف Excel للطلاب أو الدرجات", type=["xlsx"], key="std_gr_up")
+          ts = st.radio(
+              "نوع البيانات المرفوعة",
+              ["students", "grades"],
+              horizontal=True,
+              format_func=lambda x: "بيانات الطلاب" if x == "students" else "الدرجات الأكاديمية",
+          )
+          if st.button("🚀 بدء المزامنة السريعة", type="primary", use_container_width=True) and up:
+            try:
+              with st.spinner("جاري معالجة ورفع البيانات دفعة واحدة..."):
+                df = pd.read_excel(up, dtype=str, keep_default_na=False)
+                df.columns = df.columns.astype(str).str.strip()
+                df = df.loc[df.apply(lambda r: any(str(v).strip() for v in r), axis=1)]
+                records = df.to_dict("records")
+                if ts == "grades":
+                  if not {"p1","p2"} <= set(df.columns) or not ({"id","student_id"} & set(df.columns)):
+                    raise ValueError("ملف الدرجات يحتاج رقم الطالب وعمودي p1 وp2.")
+                  for r in records:
+                    r["student_id"] = r.get("student_id") or r.get("id","")
+                    r["period"] = r.get("period") or st.session_state.current_period
+                  save_grades(records, importing=True)
+                  message = "تم التحقق من الملف وحفظ الدرجات الجديدة."
+                else:
+                  count = import_students(records)
+                  message = f"تمت إضافة {count} طالب. جرى تجاوز الأرقام المسجلة مسبقاً."
+                st.session_state.toast_msg = message
+                st.rerun()
+            except Exception as e:
+              st.error(f"حدث خطأ أثناء المزامنة: {e}")
+
+          st.divider()
+          c1, c2 = st.columns(2)
+          empty_st_tmpl = pd.DataFrame(columns=["id", "name", "class", "year", "sem", "الجوال", "الإيميل", "النقاط", "نمط التعلم"])
+          c1.download_button(
+              "📥 قالب فارغ (طلاب)",
+              data=build_excel_bytes(empty_st_tmpl, sheet_name="Students_Template"),
+              file_name="students_template.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              type="secondary",
+              use_container_width=True,
+          )
+          empty_gr_tmpl = pd.DataFrame(columns=["student_id", "p1", "p2"])
+          c2.download_button(
+              "📥 قالب فارغ (درجات)",
+              data=build_excel_bytes(empty_gr_tmpl, sheet_name="Grades_Template"),
+              file_name="grades_template.xlsx",
+              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              type="secondary",
+              use_container_width=True,
+          )
+
+      # --- 4. إدارة المستخدمين ---
+      with set_tabs[3]:
+        st.markdown("#### 🔐 إدارة حسابات المعلمين والإدارة")
+        u_tabs = st.tabs([
+            "➕ إضافة مستخدم",
+            "🔑 تعديل كلمة المرور",
+            "🗑️ حذف مستخدم",
+            "🕒 سجل آخر ظهور",
+        ])
+
+        with u_tabs[0]:
+          with st.form("add_u"):
+            nu = st.text_input("اسم المستخدم الجديد")
+            np = st.text_input("كلمة المرور", type="password")
+            st.selectbox("نوع الحساب والصلاحية", ["👁️ إدارة (مشاهد وقراءة فقط)"])
+            if st.form_submit_button("إضافة المستخدم", type="primary", use_container_width=True):
+              if nu.strip() and np:
+                fresh_append("users", {"username":nu.strip(), "password_hash":hash_password(np), "role":"viewer"})
+                st.session_state.toast_msg = "تمت إضافة حساب الإدارة."
+                st.rerun()
+              else:
+                st.warning("الرجاء إكمال البيانات.")
+
+        with u_tabs[1]:
+          with st.form("chg_pass"):
+            df_u_edit = fetch_safe("users")
+            if not df_u_edit.empty:
+              target_u = st.selectbox("اختر المستخدم لتعديل رقمه السري:", df_u_edit["username"].tolist())
+              npwd = st.text_input("كلمة المرور الجديدة", type="password")
+              if st.form_submit_button("تحديث كلمة المرور", type="primary", use_container_width=True):
+                if npwd:
+                  change_staff(target_u, npwd)
+                  st.session_state.toast_msg = "تم تحديث كلمة المرور."
+                  st.rerun()
+                else:
+                  st.warning("الرجاء إدخال كلمة المرور الجديدة.")
+            else:
+              st.info("لا يوجد مستخدمين بعد.")
+
+        with u_tabs[2]:
+          df_u_del = fetch_safe("users")
+          if not df_u_del.empty:
+            del_u = st.selectbox("اختر المستخدم المراد حذفه:", [""] + df_u_del["username"].tolist())
+            if st.button("🗑️ حذف المستخدم نهائياً", type="primary", use_container_width=True):
+              if del_u:
+                if del_u == st.session_state.username:
+                  st.error("⚠️ لا يمكنك حذف حسابك الحالي!")
+                else:
+                  change_staff(del_u)
+                  st.session_state.toast_msg = "تم حذف حساب المشاهد."
+                  st.rerun()
+              else:
+                st.warning("الرجاء اختيار مستخدم للحذف.")
+
+        with u_tabs[3]:
+          df_users_log = fetch_safe("users")
+          if not df_users_log.empty:
+            if "last_login" in df_users_log.columns:
+              disp_df = df_users_log[["username", "role", "last_login"]].rename(
+                  columns={"username": "المستخدم", "role": "الصلاحية", "last_login": "آخر تسجيل دخول"}
+              )
+              disp_df["الصلاحية"] = disp_df["الصلاحية"].replace({"teacher": "👨‍🏫 معلم", "viewer": "👁️ إدارة"})
+              st.dataframe(disp_df, use_container_width=True, hide_index=True)
+            else:
+              st.info("لم يتم تسجيل أي عمليات دخول حديثة بعد التحديث.")
+          else:
+            st.info("لا توجد بيانات للمستخدمين.")
+
+  # ==========================================
+  # 🛑 11. التبويب السابع: تسجيل الخروج (للمعلم والإدارة)
+  # ==========================================
+  if st.session_state.role in ["teacher", "viewer"]:
+    with tab_logout:
+      st.markdown("<br>", unsafe_allow_html=True)
+      st.info("هل ترغب في تسجيل الخروج من لوحة التحكم والعودة لشاشة الدخول؟")
+      if st.button("🚪 تأكيد تسجيل الخروج", type="primary", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+
+    show_footer()
+
+  # ==========================================
+  # 👨‍🎓 12. واجهة الطالب الكاملة (محدثة ومضبوطة المحاذاة والـ PDF المخبأ في الكاش)
+  # ==========================================
+  if st.session_state.role == "student":
+    sid = str(st.session_state.get("username", "")).strip()
+    if "student_message" in st.session_state:
+      st.toast(st.session_state.pop("student_message"))
+    df_st = st.session_state.df_students.copy()
+    df_gr = st.session_state.df_grades.copy()
+    df_beh = st.session_state.df_behavior.copy()
+    df_ann = fetch_safe("exams")
+
+    if not df_st.empty:
+      df_st["clean_id"] = df_st.iloc[:, 0].astype(str).str.strip()
+      info = df_st[df_st["clean_id"] == sid]
+    else:
+      info = pd.DataFrame()
+
+    if not info.empty:
+      s_dat = info.iloc[0]
+      s_nm = s_dat.get("name", "طالب")
+      s_cls = str(s_dat.get("class", "")).strip()
+      pts = number(s_dat.get("النقاط", 0))
+
+      # 1. إشعار التعاميم العاجلة (يدعم الفصول المتعددة)
+      if not df_ann.empty:
+        df_ann["عاجل"] = df_ann["عاجل"].astype(str).str.strip()
+        def is_cls_targeted(cell_val):
+          targets = [x.strip() for x in str(cell_val).replace("،", ",").split(",") if x.strip()]
+          return "الكل" in targets or s_cls in targets
+        urg = df_ann[(df_ann["عاجل"] == "نعم") & (df_ann["الصف"].apply(is_cls_targeted))]
+        if not urg.empty:
+          u = urg.tail(1).iloc[0]
+          link_text = str(u.get("الرابط", ""))
+          link_display = (
+              f"<a href='{link_text}' target='_blank' style='color:{danger_color}; text-decoration:underline;'>اضغط هنا</a>"
+              if link_text.startswith("http")
+              else link_text
+              if link_text.lower() != "none"
+              else ""
+          )
           st.markdown(
-              f"""
+              f"<div class='urgent-box'>🚨 {u.get('العنوان')}<br><small style='color:{danger_color}'>{link_display}</small></div>",
+              unsafe_allow_html=True,
+          )
+
+      # 2. إشعار المخالفات السلوكية والغياب لولي الأمر
+      if not df_beh.empty:
+        df_beh["clean_id"] = df_beh.iloc[:, 0].astype(str)
+        my_beh_alerts = df_beh[df_beh["clean_id"] == sid]
+
+        if not my_beh_alerts.empty:
+          last_record = my_beh_alerts.iloc[-1]
+          b_type = str(last_record.get("type", ""))
+          if any(k in b_type for k in ["-", "سلبي", "تنبيه", "غائب", "عدم", "نقص", "تأخر"]):
+            st.markdown(
+                f"""
               <div class="urgent-box" style="margin-bottom: 15px; padding-bottom: 10px;">
                   <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 5px;">⚠️ إشعار سلوكي لولي الأمر</div>
                   <div style="color: var(--text-color); margin: 0; font-weight: bold; font-size: 1.05rem;">{b_type}</div>
@@ -6906,12 +7065,12 @@ if st.session_state.role == "student":
                   </div>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
+                unsafe_allow_html=True,
+            )
 
-    # 3. بطاقة الطالب المنسقة وبطاقة النقاط
-    st.markdown(
-        f"""
+      # 3. بطاقة الطالب المنسقة وبطاقة النقاط
+      st.markdown(
+          f"""
         <div class="welcome-card" style="text-align: right; direction: rtl; padding: 18px 20px;">
             <div style="color: #FFFFFF; font-size: 1.2rem; font-weight: 900; line-height: 1.4; margin-bottom: 12px; text-align: right;">
                 👋 أهلاً بك، {s_nm}
@@ -6936,39 +7095,39 @@ if st.session_state.role == "student":
             <div class="m-card m-active" style="color: #D97706;">🥉<br><b>برونزي</b></div>
         </div>
         """,
-        unsafe_allow_html=True,
-    )
+          unsafe_allow_html=True,
+      )
 
-    tabs = st.tabs([
-        "📢 التنبيهات",
-        "📝 السلوك",
-        "📊 الدرجات والشهادة",
-        "🏆 لوحة الشرف",
-        "🧠 نمط التعلم",
-        "⚙️ حسابي والخروج",
-    ])
+      tabs = st.tabs([
+          "📢 التنبيهات",
+          "📝 السلوك",
+          "📊 الدرجات والشهادة",
+          "🏆 لوحة الشرف",
+          "🧠 نمط التعلم",
+          "⚙️ حسابي والخروج",
+      ])
 
-    # --- تبويب 1: التنبيهات ---
-    with tabs[0]:
-      st.caption("التعاميم والتنبيهات الموجهة لصفك")
-      if not df_ann.empty:
-        def match_student_class(val):
-          targets = [x.strip() for x in str(val).replace("،", ",").split(",") if x.strip()]
-          return "الكل" in targets or s_cls in targets
+      # --- تبويب 1: التنبيهات ---
+      with tabs[0]:
+        st.caption("التعاميم والتنبيهات الموجهة لصفك")
+        if not df_ann.empty:
+          def match_student_class(val):
+            targets = [x.strip() for x in str(val).replace("،", ",").split(",") if x.strip()]
+            return "الكل" in targets or s_cls in targets
 
-        anns = df_ann[df_ann["الصف"].apply(match_student_class)]
-        if not anns.empty:
-          for _, r in anns.iloc[::-1].iterrows():
-            row_link = str(r.get("الرابط", ""))
-            row_link_display = (
-                f"<a href='{row_link}' target='_blank' style='color:{accent_color}; text-decoration:underline; font-weight:bold;'>اضغط هنا للفتح 🔗</a>"
-                if row_link.startswith("http")
-                else row_link
-                if row_link.lower() != "none"
-                else ""
-            )
-            st.markdown(
-                f"""
+          anns = df_ann[df_ann["الصف"].apply(match_student_class)]
+          if not anns.empty:
+            for _, r in anns.iloc[::-1].iterrows():
+              row_link = str(r.get("الرابط", ""))
+              row_link_display = (
+                  f"<a href='{row_link}' target='_blank' style='color:{accent_color}; text-decoration:underline; font-weight:bold;'>اضغط هنا للفتح 🔗</a>"
+                  if row_link.startswith("http")
+                  else row_link
+                  if row_link.lower() != "none"
+                  else ""
+              )
+              st.markdown(
+                  f"""
                 <div class="student-list-card">
                     <div class="student-card-header">
                         <div class="student-card-title" style="color: var(--text-color);">📢 {r.get('العنوان')}</div>
@@ -6977,37 +7136,37 @@ if st.session_state.role == "student":
                     <div class="student-card-body" style="color: #94A3B8; font-weight: 600;">{row_link_display}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
+                  unsafe_allow_html=True,
+              )
+          else:
+            st.info("لا توجد تنبيهات حالياً.")
         else:
           st.info("لا توجد تنبيهات حالياً.")
-      else:
-        st.info("لا توجد تنبيهات حالياً.")
 
-    # --- تبويب 2: السلوك ---
-    with tabs[1]:
-      st.caption("سجل السلوك والملاحظات")
-      if not df_beh.empty:
-        df_beh["clean_id"] = df_beh.iloc[:, 0].astype(str).str.split(".").str[0]
-        nts = df_beh[df_beh["clean_id"] == sid].copy()
+      # --- تبويب 2: السلوك ---
+      with tabs[1]:
+        st.caption("سجل السلوك والملاحظات")
+        if not df_beh.empty:
+          df_beh["clean_id"] = df_beh.iloc[:, 0].astype(str)
+          nts = df_beh[df_beh["clean_id"] == sid].copy()
 
-        if not nts.empty:
-          nts = nts.iloc[::-1]
-          nts["date_parsed"] = pd.to_datetime(nts["date"], errors="coerce")
-          nts = nts.sort_values(by="date_parsed", ascending=False, kind="mergesort")
+          if not nts.empty:
+            nts = nts.iloc[::-1]
+            nts["date_parsed"] = pd.to_datetime(nts["date"], errors="coerce")
+            nts = nts.sort_values(by="date_parsed", ascending=False, kind="mergesort")
 
-          for _, n in nts.iterrows():
-            b_t_str = str(n.get("type", ""))
-            if "-" in b_t_str or "سلبي" in b_t_str:
-              color = danger_color
-            elif "(0)" in b_t_str or "غائب" in b_t_str or "تنبيه" in b_t_str:
-              color = warning_color
-            else:
-              color = success_color
-            note_txt = str(n.get("note", "")).strip()
-            note_html = f"<div class='student-card-body' style='color: var(--text-color); font-weight: 700;'>{note_txt}</div>" if note_txt else ""
-            st.markdown(
-                f"""
+            for _, n in nts.iterrows():
+              b_t_str = str(n.get("type", ""))
+              if "-" in b_t_str or "سلبي" in b_t_str:
+                color = danger_color
+              elif "(0)" in b_t_str or "غائب" in b_t_str or "تنبيه" in b_t_str:
+                color = warning_color
+              else:
+                color = success_color
+              note_txt = str(n.get("note", "")).strip()
+              note_html = f"<div class='student-card-body' style='color: var(--text-color); font-weight: 700;'>{note_txt}</div>" if note_txt else ""
+              st.markdown(
+                  f"""
                 <div class="student-list-card" style="border-right: 5px solid {color};">
                     <div class="student-card-header">
                         <div class="student-card-title" style="color: {color};">{n.get('type')}</div>
@@ -7016,45 +7175,45 @@ if st.session_state.role == "student":
                     {note_html}
                 </div>
                 """,
-                unsafe_allow_html=True,
-            )
+                  unsafe_allow_html=True,
+              )
+          else:
+            st.success("🌟 سجلك نظيف تماماً!")
         else:
           st.success("🌟 سجلك نظيف تماماً!")
-      else:
-        st.success("🌟 سجلك نظيف تماماً!")
 
-    # --- تبويب 3: الدرجات والشهادة (محمية بالكاش السريع) ---
-    with tabs[2]:
-      cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
-      st.caption(f"درجاتي الأكاديمية - {cp}")
+      # --- تبويب 3: الدرجات والشهادة (محمية بالكاش السريع) ---
+      with tabs[2]:
+        cp = st.session_state.get("current_period", "الفصل الأول - فترة أولى").strip()
+        st.caption(f"درجاتي الأكاديمية - {cp}")
 
-      if not df_gr.empty:
-        df_gr["clean_id"] = df_gr.iloc[:, 0].astype(str).str.split(".").str[0]
-        if "period" not in df_gr.columns:
-          df_gr["period"] = "الفصل الأول - فترة أولى"
-        df_gr["period"] = df_gr["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
+        if not df_gr.empty:
+          df_gr["clean_id"] = df_gr.iloc[:, 0].astype(str)
+          if "period" not in df_gr.columns:
+            df_gr["period"] = "الفصل الأول - فترة أولى"
+          df_gr["period"] = df_gr["period"].replace(["", None, "nan", "NaN"], "الفصل الأول - فترة أولى").astype(str).str.strip()
 
-        grs = df_gr[(df_gr["clean_id"] == sid) & (df_gr["period"] == cp)]
+          grs = df_gr[(df_gr["clean_id"] == sid) & (df_gr["period"] == cp)]
 
-        if not grs.empty:
-          g = grs.iloc[-1]
-          max_total = st.session_state.max_tasks + st.session_state.max_quiz
-          perf_score = int(pd.to_numeric(g.get("perf", 0), errors="coerce") or 0)
-          percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
+          if not grs.empty:
+            g = grs.iloc[-1]
+            max_total = st.session_state.max_tasks + st.session_state.max_quiz
+            perf_score = number(g.get("perf", 0))
+            percentage = (perf_score / max_total) * 100 if max_total > 0 else 0
 
-          if percentage >= 90:
-            title, title_color = "🌟 أسطورة المنصة", warning_color
-          elif percentage >= 80:
-            title, title_color = "🚀 بطل مبدع", accent_color
-          elif percentage >= 70:
-            title, title_color = "👍 متألق ومجتهد", success_color
-          elif percentage >= 60:
-            title, title_color = "💪 واصل تقدمك", primary_color
-          else:
-            title, title_color = "🌱 أنت قادر على الأفضل", sub_text
+            if percentage >= 90:
+              title, title_color = "🌟 أسطورة المنصة", warning_color
+            elif percentage >= 80:
+              title, title_color = "🚀 بطل مبدع", accent_color
+            elif percentage >= 70:
+              title, title_color = "👍 متألق ومجتهد", success_color
+            elif percentage >= 60:
+              title, title_color = "💪 واصل تقدمك", primary_color
+            else:
+              title, title_color = "🌱 أنت قادر على الأفضل", sub_text
 
-          st.markdown(
-              f"""
+            st.markdown(
+                f"""
               <div class='mobile-list-item' style="direction: rtl;">
                   <span style="font-weight:800;">📝 المشاركة والواجبات</span>
                   <div style="direction: ltr;">
@@ -7082,16 +7241,16 @@ if st.session_state.role == "student":
                   </div>
               </div>
               """,
-              unsafe_allow_html=True,
-          )
+                unsafe_allow_html=True,
+            )
 
-          if percentage >= 90:
-            st.divider()
-            st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، يمكنك الآن تنزيل شهادة التفوق بصيغة PDF جاهزة للطباعة.")
-            school_st = get_school_name_dynamic(s_cls).replace("<br>", " - ")
-            star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
+            if percentage >= 90:
+              st.divider()
+              st.success("🎉 مبروك! لتفوقك وحصولك على درجة الامتياز، يمكنك الآن تنزيل شهادة التفوق بصيغة PDF جاهزة للطباعة.")
+              school_st = get_school_name_dynamic(s_cls).replace("<br>", " - ")
+              star_svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjY4YTM2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDE1LjA5IDguMjYgMjIgOS4yNyAxNyAxNC4xNCAxOC4xOCAyMS4wMiAxMiAxNy43NyA1LjgyIDIxLjAyIDcgMTQuMTQgMiA5LjI3IDguOTEgOC4yNiAxMiAyIiBmaWxsPSIjYjY4YTM2IiAvPjwvc3ZnPg=="
 
-            certificate_html = f"""<!DOCTYPE html>
+              certificate_html = f"""<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -7184,42 +7343,49 @@ if st.session_state.role == "student":
 </body>
 </html>"""
 
-            try:
-              pdf_bytes = generate_pdf_bytes_cached(certificate_html)
-              st.download_button(
-                  label="📥 تنزيل شهادة التفوق (PDF جاهز للطباعة)",
-                  data=pdf_bytes,
-                  file_name=f"Certificate_{sid}_{s_nm}.pdf",
-                  mime="application/pdf",
-                  type="primary",
-                  use_container_width=True,
-              )
-            except Exception:
-              st.download_button(
-                  label="📜 تنزيل شهادة التفوق (جاهزة للطباعة A4)",
-                  data=certificate_html,
-                  file_name=f"Certificate_{sid}_{s_nm}.html",
-                  mime="text/html",
-                  type="primary",
-                  use_container_width=True,
-              )
+              try:
+                pdf_bytes = generate_pdf_bytes_cached(certificate_html)
+                if not pdf_bytes:
+                  raise RuntimeError("HTML print fallback")
+                st.download_button(
+                    label="📥 تنزيل شهادة التفوق (PDF جاهز للطباعة)",
+                    data=pdf_bytes,
+                    file_name=f"Certificate_{sid}_{s_nm}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+              except Exception:
+                st.download_button(
+                    label="📜 تنزيل شهادة التفوق (جاهزة للطباعة A4)",
+                    data=certificate_html,
+                    file_name=f"Certificate_{sid}_{s_nm}.html",
+                    mime="text/html",
+                    type="primary",
+                    use_container_width=True,
+                )
+          else:
+            st.info(f"لم يتم رصد درجات لك في ({cp}) حتى الآن.")
         else:
-          st.info(f"لم يتم رصد درجات لك في ({cp}) حتى الآن.")
-      else:
-        st.info("لم يتم رصد درجات حتى الآن.")
+          if (st.session_state.legacy_grades["student_id"] == sid).any():
+            st.info("توجد درجات قديمة بانتظار تحديد عامها الدراسي من المعلم.")
+          else:
+            st.info("لم يتم رصد درجات حتى الآن.")
 
-    # --- تبويب 4: لوحة الشرف ---
-    with tabs[3]:
-      st.caption("لوحة الشرف (أفضل 10 طلاب في المنصة)")
-      df_st["p_num"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
-      active_students = df_st[df_st["p_num"] > 0]
+      # --- تبويب 4: لوحة الشرف ---
+      with tabs[3]:
+        st.caption("موقعي في لوحة الشرف")
+        df_st["p_num"] = pd.to_numeric(df_st["النقاط"], errors="coerce").fillna(0)
+        rank = int((df_st["p_num"] > pts).sum()) + 1
+        active_students = df_st[(df_st["clean_id"] == sid) & (df_st["p_num"] > 0)]
 
-      if not active_students.empty:
-        for i, (_, r) in enumerate(active_students.sort_values("p_num", ascending=False).head(10).iterrows(), 1):
-          ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-          sty = f"border:2px solid {warning_color}; background:rgba(245, 158, 11, 0.1);" if str(r["clean_id"]) == sid else ""
-          st.markdown(
-              f"""
+        if not active_students.empty:
+          for _, r in active_students.iterrows():
+            i = rank
+            ic = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
+            sty = f"border:2px solid {warning_color}; background:rgba(245, 158, 11, 0.1);" if str(r["clean_id"]) == sid else ""
+            st.markdown(
+                f"""
               <div class='mobile-list-item' style='{sty} direction: rtl;'>
                   <div style='display:flex; align-items:center; gap:10px;'>
                       <span style='font-weight:900; font-size:1.2rem; min-width:40px; display:inline-block; text-align:center; white-space:nowrap;'>{ic}</span>
@@ -7228,190 +7394,174 @@ if st.session_state.role == "student":
                   <span style='color:{warning_color}; font-weight:900; font-size:1.1rem; white-space:nowrap;'>{int(r['p_num'])} نقطة</span>
               </div>
               """,
-              unsafe_allow_html=True,
+                unsafe_allow_html=True,
+            )
+        else:
+          st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
+
+      # --- تبويب 5: نمط التعلم ---
+      with tabs[4]:
+        st.subheader("🧠 اكتشف نمط تعلمك")
+        st.caption("أجب عن هذه المواقف السبعة لنعرف الطريقة التي تفضلها وتتفوق بها في التعلم!")
+
+        current_style = str(s_dat.get("نمط التعلم","")).strip() or "مسجل"
+        if style_done(s_dat):
+          color = (
+              "#3B82F6" if "بصري" in current_style
+              else "#10B981" if "سمعي" in current_style
+              else "#F59E0B" if "حركي" in current_style
+              else "#8B5CF6"
           )
-      else:
-        st.info("لوحة الشرف فارغة حالياً. كن أنت أول المبادرين وتصدر القائمة! 🚀")
-
-    # --- تبويب 5: نمط التعلم ---
-    with tabs[4]:
-      st.subheader("🧠 اكتشف نمط تعلمك")
-      st.caption("أجب عن هذه المواقف السبعة لنعرف الطريقة التي تفضلها وتتفوق بها في التعلم!")
-
-      current_style = ""
-      if "نمط التعلم" in df_st.columns:
-        val = df_st.loc[df_st["clean_id"] == sid, "نمط التعلم"].values
-        if len(val) > 0 and pd.notna(val[0]) and str(val[0]).strip() not in ["", "nan", "None"]:
-          current_style = str(val[0]).strip()
-
-      if current_style:
-        color = (
-            "#3B82F6" if "بصري" in current_style
-            else "#10B981" if "سمعي" in current_style
-            else "#F59E0B" if "حركي" in current_style
-            else "#8B5CF6"
-        )
-        st.markdown(
-            f"""
+          st.markdown(
+              f"""
             <div style='background-color:{color}20; border:2px solid {color}; padding:25px; border-radius:16px; text-align:center; margin-top:15px;'>
                 <div style='font-size:45px; margin-bottom:10px;'>{current_style.split()[-1] if len(current_style.split())>1 else '🎯'}</div>
                 <div style='color:{color}; font-size:1.4rem; margin-bottom:8px; font-weight:900;'>أنت متعلم {current_style.replace('👀', '').replace('👂', '').replace('✋', '').replace('🌟', '').strip()}</div>
                 <p style='color:#94A3B8; font-size:14px; margin:0; font-weight:bold;'>تم حفظ نمط تعلمك في ملفك الأكاديمي بنجاح.</p>
             </div>
             """,
-            unsafe_allow_html=True,
-        )
-      else:
-        with st.form("learning_style_quiz"):
-          st.info("تخيل نفسك في هذه المواقف، واختر الإجابة التي تشبهك أكثر:")
-
-          q1 = st.radio(
-              "1️⃣ عندما تلعب لعبة جديدة (إلكترونية أو ورقية)، كيف تتعلمها؟",
-              [
-                  "👀 أقرأ التعليمات أو أشاهد الصور التوضيحية (بصري)",
-                  "👂 أطلب من صديقي أن يشرح لي طريقة اللعب (سمعي)",
-                  "✋ أبدأ باللعب فوراً وأتعلم من أخطائي والتجربة (حركي)",
-              ],
-              index=None,
+              unsafe_allow_html=True,
           )
-          st.write("---")
+        else:
+          with st.form("learning_style_quiz"):
+            st.info("تخيل نفسك في هذه المواقف، واختر الإجابة التي تشبهك أكثر:")
 
-          q2 = st.radio(
-              "2️⃣ عندما تذاكر لاختبار مهم، ما هي طريقتك المفضلة؟",
-              [
-                  "🖼️ أستخدم الأقلام الملونة، التخطيط، وقراءة الملخصات (بصري)",
-                  "🗣️ أقرأ بصوت عالٍ أو أسمع شرح المعلم في عقلي (سمعي)",
-                  "🚶 أتحرك في الغرفة أثناء الحفظ أو أكتب بيدي عدة مرات (حركي)",
-              ],
-              index=None,
-          )
-          st.write("---")
+            q1 = st.radio(
+                "1️⃣ عندما تلعب لعبة جديدة (إلكترونية أو ورقية)، كيف تتعلمها؟",
+                [
+                    "👀 أقرأ التعليمات أو أشاهد الصور التوضيحية (بصري)",
+                    "👂 أطلب من صديقي أن يشرح لي طريقة اللعب (سمعي)",
+                    "✋ أبدأ باللعب فوراً وأتعلم من أخطائي والتجربة (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          q3 = st.radio(
-              "3️⃣ في وقت فراغك بالمنزل، ما هو نشاطك المفضل؟",
-              [
-                  "🎨 مشاهدة اليوتيوب، أو الرسم والتلوين (بصري)",
-                  "🎧 الاستماع للأناشيد، البودكاست، أو التحدث مع الأصدقاء (سمعي)",
-                  "⚽ اللعب بالكرة، الألعاب الحركية، أو الفك والتركيب (حركي)",
-              ],
-              index=None,
-          )
-          st.write("---")
+            q2 = st.radio(
+                "2️⃣ عندما تذاكر لاختبار مهم، ما هي طريقتك المفضلة؟",
+                [
+                    "🖼️ أستخدم الأقلام الملونة، التخطيط، وقراءة الملخصات (بصري)",
+                    "🗣️ أقرأ بصوت عالٍ أو أسمع شرح المعلم في عقلي (سمعي)",
+                    "🚶 أتحرك في الغرفة أثناء الحفظ أو أكتب بيدي عدة مرات (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          q4 = st.radio(
-              "4️⃣ إذا ذهبت في رحلة لمكان جديد، ما أكثر شيء تتذكره بعد العودة؟",
-              [
-                  "📸 شكل المكان والأشياء الجميلة التي رأيتها (بصري)",
-                  "💬 الأصوات، الأناشيد، والأحاديث التي دارت في الرحلة (سمعي)",
-                  "🏃 الألعاب والأنشطة التي قمت بها وحركتي هناك (حركي)",
-              ],
-              index=None,
-          )
-          st.write("---")
+            q3 = st.radio(
+                "3️⃣ في وقت فراغك بالمنزل، ما هو نشاطك المفضل؟",
+                [
+                    "🎨 مشاهدة اليوتيوب، أو الرسم والتلوين (بصري)",
+                    "🎧 الاستماع للأناشيد، البودكاست، أو التحدث مع الأصدقاء (سمعي)",
+                    "⚽ اللعب بالكرة، الألعاب الحركية، أو الفك والتركيب (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          q5 = st.radio(
-              "5️⃣ عندما يطلب منك المعلم تركيب جهاز أو عمل مشروع، كيف تبدأ؟",
-              [
-                  "📖 أنظر إلى صورة الشكل النهائي لأعرف كيف سيكون (بصري)",
-                  "❓ أسأل المعلم أو زملائي عن الخطوة الأولى (سمعي)",
-                  "🛠️ أمسك القطع بيدي وأبدأ بمحاولة تركيبها مباشرة (حركي)",
-              ],
-              index=None,
-          )
-          st.write("---")
+            q4 = st.radio(
+                "4️⃣ إذا ذهبت في رحلة لمكان جديد، ما أكثر شيء تتذكره بعد العودة؟",
+                [
+                    "📸 شكل المكان والأشياء الجميلة التي رأيتها (بصري)",
+                    "💬 الأصوات، الأناشيد، والأحاديث التي دارت في الرحلة (سمعي)",
+                    "🏃 الألعاب والأنشطة التي قمت بها وحركتي هناك (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          q6 = st.radio(
-              "6️⃣ عندما تحفظ قصة أو آيات من القرآن، ماذا تفعل غالباً؟",
-              [
-                  "👁️ أتذكر شكل الصفحة ومكان الكلمات فيها (بصري)",
-                  "🎤 أكررها بصوت عالٍ أو أستمع لقارئ (سمعي)",
-                  "🖐️ أستخدم أصابعي للعد أو أتحرك ذهاباً وإياباً أثناء الحفظ (حركي)",
-              ],
-              index=None,
-          )
-          st.write("---")
+            q5 = st.radio(
+                "5️⃣ عندما يطلب منك المعلم تركيب جهاز أو عمل مشروع، كيف تبدأ؟",
+                [
+                    "📖 أنظر إلى صورة الشكل النهائي لأعرف كيف سيكون (بصري)",
+                    "❓ أسأل المعلم أو زملائي عن الخطوة الأولى (سمعي)",
+                    "🛠️ أمسك القطع بيدي وأبدأ بمحاولة تركيبها مباشرة (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          q7 = st.radio(
-              "7️⃣ عندما تشتري جهازاً أو لعبة جديدة، ما الذي يلفت انتباهك أولاً؟",
-              [
-                  "✨ الألوان والتصميم وشكل العلبة الخارجي (بصري)",
-                  "🔊 الأصوات التي تصدرها اللعبة أو ما يقوله أصدقاؤك عنها (سمعي)",
-                  "🕹️ الأزرار وملمسها وكيفية تحريكها واللعب بها (حركي)",
-              ],
-              index=None,
-          )
+            q6 = st.radio(
+                "6️⃣ عندما تحفظ قصة أو آيات من القرآن، ماذا تفعل غالباً؟",
+                [
+                    "👁️ أتذكر شكل الصفحة ومكان الكلمات فيها (بصري)",
+                    "🎤 أكررها بصوت عالٍ أو أستمع لقارئ (سمعي)",
+                    "🖐️ أستخدم أصابعي للعد أو أتحرك ذهاباً وإياباً أثناء الحفظ (حركي)",
+                ],
+                index=None,
+            )
+            st.write("---")
 
-          if st.form_submit_button("🚀 إرسال الإجابات واكتشاف نمطي", type="primary", use_container_width=True):
-            answers = [q1, q2, q3, q4, q5, q6, q7]
-            if None in answers:
-              st.warning("⚠️ عذراً يا بطل، يجب عليك اختيار إجابة لجميع المواقف السبعة قبل إرسال النتيجة.")
-            else:
-              v_count = sum(1 for a in answers if "بصري" in a)
-              a_count = sum(1 for a in answers if "سمعي" in a)
-              k_count = sum(1 for a in answers if "حركي" in a)
+            q7 = st.radio(
+                "7️⃣ عندما تشتري جهازاً أو لعبة جديدة، ما الذي يلفت انتباهك أولاً؟",
+                [
+                    "✨ الألوان والتصميم وشكل العلبة الخارجي (بصري)",
+                    "🔊 الأصوات التي تصدرها اللعبة أو ما يقوله أصدقاؤك عنها (سمعي)",
+                    "🕹️ الأزرار وملمسها وكيفية تحريكها واللعب بها (حركي)",
+                ],
+                index=None,
+            )
 
-              if v_count > a_count and v_count > k_count:
-                final_style = "بصري 👀"
-              elif a_count > v_count and a_count > k_count:
-                final_style = "سمعي 👂"
-              elif k_count > v_count and k_count > a_count:
-                final_style = "حركي ✋"
+            if st.form_submit_button("🚀 إرسال الإجابات واكتشاف نمطي", type="primary", use_container_width=True):
+              answers = [q1, q2, q3, q4, q5, q6, q7]
+              if None in answers:
+                st.warning("⚠️ عذراً يا بطل، يجب عليك اختيار إجابة لجميع المواقف السبعة قبل إرسال النتيجة.")
               else:
-                final_style = "متعدد الأنماط 🌟"
+                v_count = sum(1 for a in answers if "بصري" in a)
+                a_count = sum(1 for a in answers if "سمعي" in a)
+                k_count = sum(1 for a in answers if "حركي" in a)
 
-              try:
-                ws = get_gspread_client().worksheet("students")
-                headers = ws.row_values(1)
-                if "نمط التعلم" not in headers:
-                  ws.update_cell(1, len(headers) + 1, "نمط التعلم")
-                  headers.append("نمط التعلم")
+                if v_count > a_count and v_count > k_count:
+                  final_style = "بصري 👀"
+                elif a_count > v_count and a_count > k_count:
+                  final_style = "سمعي 👂"
+                elif k_count > v_count and k_count > a_count:
+                  final_style = "حركي ✋"
+                else:
+                  final_style = "متعدد الأنماط 🌟"
 
-                style_col_idx = headers.index("نمط التعلم") + 1
-                cell = ws.find(sid)
-                if cell:
-                  ws.update_cell(cell.row, style_col_idx, final_style)
-                  st.success(f"🎉 رائع! تم حفظ النتيجة. نمط تعلمك هو: {final_style}")
-                  if "db_loaded" in st.session_state:
-                    del st.session_state["db_loaded"]
-                  fetch_safe.clear()
+                try:
+                  saved = update_student(sid, {"نمط التعلم":final_style}, s_dat, quiz=True)
+                  st.session_state.student_message = "تم حفظ نتيجة الاختبار." if saved else "سبق تسجيل النتيجة."
                   st.rerun()
-              except Exception as e:
-                st.error(f"❌ حدث خطأ أثناء حفظ النتيجة، حاول مرة أخرى. ({e})")
+                except Exception as e:
+                  st.error(f"❌ حدث خطأ أثناء حفظ النتيجة، حاول مرة أخرى. ({e})")
 
-    # --- تبويب 6: حسابي والخروج ---
-    with tabs[5]:
-      st.caption("إدارة الملف الشخصي وتسجيل الخروج")
-      with st.form("my_profile"):
-        nm = st.text_input("📧 البريد الإلكتروني", s_dat.get("الإيميل", ""))
-        np = st.text_input("📱 رقم الجوال", s_dat.get("الجوال", ""))
-        if st.form_submit_button("💾 تحديث بياناتي", type="primary", use_container_width=True):
-          try:
-            fp = clean_phone_number(np) if np else ""
-            ws = get_gspread_client().worksheet("students")
-            c = ws.find(sid)
-            if c:
-              h = ws.row_values(1)
-              if "الإيميل" in h and "الجوال" in h:
-                ws.update_cell(c.row, h.index("الإيميل") + 1, nm)
-                ws.update_cell(c.row, h.index("الجوال") + 1, fp)
-                st.success("✅ تم تحديث بيانات التواصل بنجاح")
-                fetch_safe.clear()
-              else:
-                st.error("خطأ هيكلي في الأعمدة")
-          except Exception as e:
-            st.error(f"خطأ: {e}")
+      # --- تبويب 6: حسابي والخروج ---
+      with tabs[5]:
+        st.caption("إدارة الملف الشخصي وتسجيل الخروج")
+        with st.form(f"my_profile_{sid}_{fingerprint([s_dat.get(k) for k in ('الجوال','الإيميل')])}"):
+          nm = st.text_input("📧 البريد الإلكتروني", s_dat.get("الإيميل", ""))
+          np = st.text_input("📱 رقم الجوال", s_dat.get("الجوال", ""))
+          if st.form_submit_button("💾 تحديث بياناتي", type="primary", use_container_width=True):
+            try:
+              contacts = contact_values(np, nm)
+              changes = {k:v for k,v in contacts.items() if v != s_dat.get(k,"")}
+              update_student(sid, changes, s_dat)
+              st.session_state.student_message = "تم حفظ بيانات التواصل."
+              st.rerun()
+            except Exception as e:
+              st.error(f"خطأ: {e}")
 
-      st.markdown("<br>", unsafe_allow_html=True)
-      if st.button("🚪 تسجيل الخروج من حسابي", type="secondary", use_container_width=True):
-        st.session_state.role = None
-        if "db_loaded" in st.session_state:
-          del st.session_state["db_loaded"]
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚪 تسجيل الخروج من حسابي", type="secondary", use_container_width=True):
+          st.session_state.clear()
+          st.rerun()
+
+    else:
+      st.error("عذراً، لم يتم العثور على بياناتك")
+      if st.button("العودة للقائمة الرئيسية"):
+        st.session_state.clear()
         st.rerun()
 
-  else:
-    st.error("عذراً، لم يتم العثور على بياناتك")
-    if st.button("العودة للقائمة الرئيسية"):
-      st.session_state.role = None
-      st.rerun()
+    show_footer()
 
-  show_footer()
+try:
+  render_app()
+except Exception as exc:
+  logging.getLogger(__name__).exception("Portal request failed")
+  notify_error(exc)
+  if st.button("إعادة تحميل البيانات", key="recover_portal"):
+    with shared_state()["lock"]:
+      invalidate()
+    st.rerun()
